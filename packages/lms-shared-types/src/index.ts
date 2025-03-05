@@ -268,6 +268,7 @@ export {
   ModelInstanceInfoBase,
   modelInstanceInfoBaseSchema,
 } from "./ModelInfoBase.js";
+export { ModelManifest, modelManifestSchema } from "./ModelManifest.js";
 export {
   ModelQuery,
   modelQuerySchema,
