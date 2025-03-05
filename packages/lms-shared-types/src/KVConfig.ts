@@ -27,6 +27,8 @@ export const kvConfigSchema = z.object({
 });
 
 export type KVConfigLayerName =
+  // Config that is currently being edited
+  | "currentlyEditing"
   // Config that is currently loaded by the model
   | "currentlyLoaded"
   // Override provided by the caller of the API
@@ -53,6 +55,7 @@ export type KVConfigLayerName =
   | "hardware";
 
 export const kvConfigLayerNameSchema = z.enum([
+  "currentlyEditing",
   "currentlyLoaded",
   "apiOverride",
   "conversationSpecific",
