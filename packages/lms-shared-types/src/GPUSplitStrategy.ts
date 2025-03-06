@@ -5,6 +5,12 @@ export const gpuSplitStrategies = ["evenly", "priorityOrder"] as const;
 export type GPUSplitStrategy = (typeof gpuSplitStrategies)[number];
 export const gpuSplitStrategySchema = z.enum(gpuSplitStrategies);
 
+export const defaultGPUSplitConfig: GPUSplitConfig = {
+  strategy: "evenly",
+  disabledGpus: [],
+  priority: [],
+};
+
 /**
  * Settings related to splitting work across multiple GPUs.
  *

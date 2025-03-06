@@ -7,6 +7,7 @@
  * 3. Utility types that can be used to work with types of schema.
  */
 
+import { defaultGPUSplitConfig } from "@lmstudio/lms-shared-types";
 import {
   KVConfigSchematicsBuilder,
   type InferConfigFieldFilter,
@@ -291,12 +292,7 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
       ),
   )
   .scope("load", builder =>
-    builder.field(
-      "gpuSplitConfig",
-      "gpuSplitConfig",
-      {},
-      { strategy: "evenly", disabledGpus: [], priority: [] },
-    ),
+    builder.field("gpuSplitConfig", "gpuSplitConfig", {}, defaultGPUSplitConfig),
   )
   .scope("embedding.load", builder =>
     builder

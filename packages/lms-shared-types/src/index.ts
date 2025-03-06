@@ -82,6 +82,7 @@ export {
 export { FileType, fileTypeSchema } from "./files/FileType.js";
 export {
   convertGPUSettingToGPUSplitConfig,
+  defaultGPUSplitConfig,
   GPUSplitConfig,
   gpuSplitConfigSchema,
   gpuSplitStrategies,
