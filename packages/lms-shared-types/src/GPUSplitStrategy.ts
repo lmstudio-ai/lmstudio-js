@@ -25,7 +25,7 @@ export type GPUSplitConfig = {
    */
   strategy: GPUSplitStrategy;
   /**
-   * Indices of GPUs to disable. Used when strategy is "custom" or "priorityOrder".
+   * Indices of GPUs to disable. Not used when strategy is "custom".
    */
   disabledGpus: number[];
   /**
