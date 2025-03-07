@@ -25,15 +25,21 @@ export type GPUSplitConfig = {
    */
   strategy: GPUSplitStrategy;
   /**
-   * Indices of GPUs to disable.
+   * Indices of GPUs to disable. Used when strategy is "custom" or "priorityOrder".
    */
   disabledGpus: number[];
   /**
-   * GPU indices in order of priority.
+   * GPU indices in order of priority for offloading. Only used when strategy is "priorityOrder".
    */
   priority: number[];
   /**
-   * Ratio array to assign how to split offloading between GPUs. Used if strategy is "custom".
+   * Ratio array to assign how to split offloading between GPUs. Only used when strategy is
+   * "custom", and if so ignores disabledGpus and priority.
+   *
+   * Examples:
+   * [5, 2.5, 2,5] - 50% of model offload on GPU 0, 25% on GPU 1, 25% on GPU 2
+   * [1, 1, 1] - Model evenly offloaded on all GPUs
+   * [1, 0, 0] - Model offloaded only onto GPU 0
    */
   customRatio: number[];
 };
