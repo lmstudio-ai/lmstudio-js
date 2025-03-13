@@ -243,7 +243,7 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
               "offloadRatio",
               "llamaAccelerationOffloadRatio",
               { machineDependent: true },
-              "max",
+              "auto",
             ),
           )
           .field("cpuThreadPoolSize", "numeric", { min: 1, machineDependent: true }, 4)

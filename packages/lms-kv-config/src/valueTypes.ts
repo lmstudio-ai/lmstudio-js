@@ -552,6 +552,9 @@ export const kvValueTypesLibrary = new KVFieldValueTypesLibraryBuilder({
       return ratioA === ratioB;
     },
     stringify: (value, { numLayers }, { t }) => {
+      if (value === "auto") {
+        return t("config:customInputs.llamaAccelerationOffloadRatio.auto", "AUTO");
+      }
       if (value === "max" || value === 1) {
         const label = t("config:customInputs.llamaAccelerationOffloadRatio.max", "MAX");
         if (numLayers !== 0) {
