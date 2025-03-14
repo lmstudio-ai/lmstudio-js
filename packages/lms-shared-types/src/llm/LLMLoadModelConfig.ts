@@ -122,6 +122,15 @@ export interface LLMLoadModelConfig {
   gpu?: GPUSetting;
 
   /**
+   * If set to true, detected system limits for VRAM will be strictly enforced. If a model + gpu
+   * offload combination would exceed the detected available VRAM, model offload will be capped to
+   * not exceed the available VRAM.
+   *
+   * @public
+   */
+  gpuStrictVramCap?: boolean;
+
+  /**
    * The size of the context length in number of tokens. This will include both the prompts and the
    * responses. Once the context length is exceeded, the value set in
    * {@link LLMPredictionConfigBase#contextOverflowPolicy} is used to determine the behavior.
@@ -240,6 +249,7 @@ export interface LLMLoadModelConfig {
 }
 export const llmLoadModelConfigSchema = z.object({
   gpu: gpuSettingSchema.optional(),
+  gpuStrictVramCap: z.boolean().optional(),
   contextLength: z.number().int().min(1).optional(),
   ropeFrequencyBase: z.number().optional(),
   ropeFrequencyScale: z.number().optional(),
