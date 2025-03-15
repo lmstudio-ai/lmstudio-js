@@ -206,4 +206,15 @@ describe("LLM.respond", () => {
     expect(JSON.parse(result.content)).toMatchSnapshot();
     expect(result.parsed).toMatchSnapshot();
   });
+  it("should support structured prediction with GBNF grammar", async () => {
+    const gbnfGrammar = `
+      ans ::= "2" | "random"
+      root ::= "Oh no, I am possessed! And 1 + 1 is " ans
+    `;
+    const result = await model.respond("Are you possessed?", {
+      temperature: 0,
+      structured: { type: "gbnf", gbnfGrammar },
+    });
+    expect(result.content).toMatchSnapshot();
+  });
 });

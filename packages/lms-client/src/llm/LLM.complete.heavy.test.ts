@@ -144,4 +144,15 @@ describe("LLM.complete", () => {
     expect(JSON.parse(result.content)).toMatchSnapshot();
     expect(result.parsed).toMatchSnapshot();
   });
+  it("should support structured generation with GBNF grammar", async () => {
+    const gbnfGrammar = `
+      ans ::= "2" | "random"
+      root ::= "Oh no, I am possessed! And 1 + 1 is " ans
+    `;
+    const result = await model.complete("I would say... ", {
+      temperature: 0,
+      structured: { type: "gbnf", gbnfGrammar },
+    });
+    expect(result.content).toMatchSnapshot();
+  });
 });
