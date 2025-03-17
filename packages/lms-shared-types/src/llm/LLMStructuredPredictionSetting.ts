@@ -4,8 +4,8 @@ import { jsonSerializableSchema } from "../JSONSerializable.js";
 /**
  * @public
  */
-export type LLMStructuredPredictionType = "none" | "json";
-export const llmStructuredPredictionTypeSchema = z.enum(["none", "json"]);
+export type LLMStructuredPredictionType = "none" | "json" | "gbnf";
+export const llmStructuredPredictionTypeSchema = z.enum(["none", "json", "gbnf"]);
 
 /**
  * Settings for structured prediction. Structured prediction is a way to force the model to generate
@@ -62,9 +62,11 @@ export const llmStructuredPredictionTypeSchema = z.enum(["none", "json"]);
 export type LLMStructuredPredictionSetting = {
   type: LLMStructuredPredictionType;
   jsonSchema?: any;
+  gbnfGrammar?: string;
 };
 
 export const llmStructuredPredictionSettingSchema = z.object({
   type: llmStructuredPredictionTypeSchema,
   jsonSchema: jsonSerializableSchema.optional(),
+  gbnfGrammar: z.string().optional(),
 });

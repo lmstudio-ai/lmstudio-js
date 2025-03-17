@@ -21,6 +21,8 @@ exports[`LLM.complete should call onPredictionFragment 1`] = `
 ]
 `;
 
+exports[`LLM.complete should support structured generation with GBNF grammar 1`] = `"Oh no, I am possessed! And 1 + 1 is 2"`;
+
 exports[`LLM.complete should support structured prediction with JSON schema 1`] = `
 {
   "answer": 2,

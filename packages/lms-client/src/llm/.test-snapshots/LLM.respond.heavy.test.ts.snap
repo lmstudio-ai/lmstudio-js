@@ -37,6 +37,8 @@ exports[`LLM.respond should call onPredictionFragment callback 1`] = `
 ]
 `;
 
+exports[`LLM.respond should support structured prediction with GBNF grammar 1`] = `"Oh no, I am possessed! And 1 + 1 is 2"`;
+
 exports[`LLM.respond should support structured prediction with JSON schema 1`] = `
 {
   "author": "J.R.R. Tolkien",
