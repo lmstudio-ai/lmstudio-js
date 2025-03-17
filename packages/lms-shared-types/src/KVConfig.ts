@@ -37,6 +37,8 @@ export type KVConfigLayerName =
   | "conversationSpecific"
   // Cross-chat global config in chats
   | "conversationGlobal"
+  // Per-request preset selection
+  | "preset"
   // Server session specific config
   | "serverSession"
   // Override provided in the OpenAI http server
@@ -60,6 +62,7 @@ export const kvConfigLayerNameSchema = z.enum([
   "apiOverride",
   "conversationSpecific",
   "conversationGlobal",
+  "preset",
   "serverSession",
   "httpServerRequestOverride",
   "completeModeFormatting",

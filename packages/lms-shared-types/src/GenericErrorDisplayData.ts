@@ -37,6 +37,15 @@ export type GenericErrorDisplayData =
       engineType: string;
       installedVersion: string;
       supportedVersion: string | null;
+    }
+  | {
+      code: "generic.presetNotFound";
+      specifiedFuzzyPresetIdentifier: string;
+      availablePresetsSample: Array<{
+        identifier: string;
+        name: string;
+      }>;
+      totalAvailablePresets: number;
     };
 export const genericErrorDisplayDataSchema = [
   z.object({
@@ -73,5 +82,16 @@ export const genericErrorDisplayDataSchema = [
     engineType: z.string(),
     installedVersion: z.string(),
     supportedVersion: z.string().nullable(),
+  }),
+  z.object({
+    code: z.literal("generic.presetNotFound"),
+    specifiedFuzzyPresetIdentifier: z.string(),
+    availablePresetsSample: z.array(
+      z.object({
+        identifier: z.string(),
+        name: z.string(),
+      }),
+    ),
+    totalAvailablePresets: z.number().int(),
   }),
 ] as const;

@@ -31,6 +31,10 @@ export function createLlmBackendInterface() {
           modelSpecifier: modelSpecifierSchema,
           history: chatHistoryDataSchema,
           predictionConfigStack: kvConfigStackSchema,
+          /**
+           * Which preset to use. Supports limited fuzzy matching.
+           */
+          fuzzyPresetIdentifier: z.string().optional(),
           ignoreServerSessionConfig: z.boolean().optional(),
         }),
         toClientPacket: z.discriminatedUnion("type", [
