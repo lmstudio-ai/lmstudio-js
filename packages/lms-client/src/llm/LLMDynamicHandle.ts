@@ -868,6 +868,8 @@ export class LLMDynamicHandle extends DynamicHandle<
       let finished = false;
       let firstTokenTriggered = false;
       const contentArray: Array<string> = [];
+      const reasoningContentArray: Array<string> = [];
+      const nonReasoningContentArray: Array<string> = [];
 
       const toolCallRequests: Array<ToolCallRequest> = [];
       let nextToolCallIndex = 0;
@@ -974,6 +976,7 @@ export class LLMDynamicHandle extends DynamicHandle<
         message => {
           switch (message.type) {
             case "fragment": {
+              const fragment = message.fragment;
               if (!firstTokenTriggered) {
                 firstTokenTriggered = true;
                 safeCallCallback(this.logger, "onFirstToken", extraOpts.onFirstToken, [
@@ -981,9 +984,14 @@ export class LLMDynamicHandle extends DynamicHandle<
                 ]);
               }
               safeCallCallback(this.logger, "onFragment", extraOpts.onPredictionFragment, [
-                { roundIndex: predictionsPerformed, ...message.fragment },
+                { roundIndex: predictionsPerformed, ...fragment },
               ]);
-              contentArray.push(message.fragment.content);
+              contentArray.push(fragment.content);
+              if (fragment.reasoningType === "reasoning") {
+                reasoningContentArray.push(fragment.content);
+              } else {
+                nonReasoningContentArray.push(fragment.content);
+              }
               break;
             }
             case "promptProcessingProgress": {
@@ -1074,6 +1082,8 @@ export class LLMDynamicHandle extends DynamicHandle<
             case "success": {
               const predictionResult = new PredictionResult(
                 contentArray.join(""),
+                reasoningContentArray.join(""),
+                nonReasoningContentArray.join(""),
                 message.stats,
                 message.modelInfo,
                 predictionsPerformed,

@@ -1,3 +1,4 @@
+import { type LLMPredictionFragmentReasoningType } from "@lmstudio/lms-shared-types";
 import { z } from "zod";
 import { Chat, ChatMessage, type LLM, LMStudioClient } from "../index.js";
 import { ensureHeavyTestsEnvironment, llmTestingQwen05B } from "../shared.heavy.test.js";
@@ -216,5 +217,31 @@ describe("LLM.respond", () => {
       structured: { type: "gbnf", gbnfGrammar },
     });
     expect(result.content).toMatchSnapshot();
+  });
+  it("should support reasoning content parsing", async () => {
+    const fragmentsWithReasoningType: Array<{
+      content: string;
+      reasoningType: LLMPredictionFragmentReasoningType;
+    }> = [];
+
+    // Assistant message 2
+    //   ---      --
+    //  Start    End
+    const result = await model.respond(chat, {
+      temperature: 0,
+      maxTokens: 20,
+      stopStrings: ["9"],
+      reasoningParsing: { enabled: true, startString: "sis", endString: "es" },
+      onPredictionFragment: fragment => {
+        fragmentsWithReasoningType.push({
+          content: fragment.content,
+          reasoningType: fragment.reasoningType,
+        });
+      },
+    });
+    expect(result.content).toMatchInlineSnapshot(`"Assistant message 2"`);
+    expect(result.reasoningContent).toMatchInlineSnapshot(`"tant m"`);
+    expect(result.nonReasoningContent).toMatchInlineSnapshot(`"Assage 2"`);
+    expect(fragmentsWithReasoningType).toMatchSnapshot();
   });
 });
