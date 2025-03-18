@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z, type ZodSchema } from "zod";
 import { zodSchemaSchema } from "../Zod.js";
 import { llmPromptTemplateSchema, type LLMPromptTemplate } from "./LLMPromptTemplate.js";
 import {
@@ -297,12 +297,13 @@ export const llmPredictionConfigInputSchema = z.object({
 /**
  * @public
  */
-export interface LLMPredictionConfig extends LLMPredictionConfigInput<any> {
+export type LLMPredictionConfig = Omit<LLMPredictionConfigInput<any>, "structured"> & {
   structured?: LLMStructuredPredictionSetting;
-}
-export const llmPredictionConfigSchema = llmPredictionConfigInputSchema.extend({
+};
+export const llmPredictionConfigSchema = z.object({
+  ...llmPredictionConfigInputSchema.shape,
   structured: llmStructuredPredictionSettingSchema.optional(),
-});
+}) as ZodSchema<LLMPredictionConfig>;
 
 export interface LLMLlamaMirostatSamplingConfig {
   /**

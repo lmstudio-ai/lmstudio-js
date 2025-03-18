@@ -77,12 +77,23 @@ export interface LLMPredictionOpts<TStructuredOutputType = unknown>
    * An abort signal that can be used to cancel the prediction.
    */
   signal?: AbortSignal;
+  /**
+   * Which preset to use.
+   *
+   * @remarks
+   *
+   * This preset selection is "layered" between your overrides and the "server session" config.
+   * Which means, other fields you specify in this opts object will override the preset, while the
+   * preset content will override the "server session" config.
+   */
+  preset?: string;
 }
 const llmPredictionOptsSchema = llmPredictionConfigInputSchema.extend({
   onPromptProcessingProgress: z.function().optional(),
   onFirstToken: z.function().optional(),
   onPredictionFragment: z.function().optional(),
   signal: z.instanceof(AbortSignal).optional(),
+  preset: z.string().optional(),
 });
 
 type LLMPredictionExtraOpts<TStructuredOutputType = unknown> = Omit<
@@ -96,9 +107,18 @@ function splitPredictionOpts<TStructuredOutputType>(
   LLMPredictionConfigInput<TStructuredOutputType>,
   LLMPredictionExtraOpts<TStructuredOutputType>,
 ] {
-  const { onPromptProcessingProgress, onFirstToken, onPredictionFragment, signal, ...config } =
-    opts;
-  return [config, { onPromptProcessingProgress, onFirstToken, onPredictionFragment, signal }];
+  const {
+    onPromptProcessingProgress,
+    onFirstToken,
+    onPredictionFragment,
+    signal,
+    preset,
+    ...config
+  } = opts;
+  return [
+    config,
+    { onPromptProcessingProgress, onFirstToken, onPredictionFragment, signal, preset },
+  ];
 }
 
 /**
@@ -304,6 +324,16 @@ export interface LLMActionOpts<TStructuredOutputType = unknown>
    * An abort signal that can be used to cancel the prediction.
    */
   signal?: AbortSignal;
+  /**
+   * Which preset to use.
+   *
+   * @remarks
+   *
+   * This preset selection is "layered" between your overrides and the "server session" config.
+   * Which means, other fields you specify in this opts object will override the preset, while the
+   * preset content will override the "server session" config.
+   */
+  preset?: string;
 }
 const llmActionOptsSchema = llmPredictionConfigInputSchema.extend({
   onFirstToken: z.function().optional(),
@@ -315,6 +345,8 @@ const llmActionOptsSchema = llmPredictionConfigInputSchema.extend({
   onPromptProcessingProgress: z.function().optional(),
   handleInvalidToolRequest: z.function().optional(),
   maxPredictionRounds: z.number().int().min(1).optional(),
+  signal: z.instanceof(AbortSignal).optional(),
+  preset: z.string().optional(),
 });
 
 const defaultHandleInvalidToolRequest = (error: Error, request: ToolCallRequest | undefined) => {
@@ -342,6 +374,8 @@ function splitOperationOpts<TStructuredOutputType>(
     onPromptProcessingProgress,
     handleInvalidToolRequest,
     maxPredictionRounds,
+    signal,
+    preset,
     ...config
   } = opts;
   return [
@@ -356,6 +390,8 @@ function splitOperationOpts<TStructuredOutputType>(
       onPromptProcessingProgress,
       handleInvalidToolRequest,
       maxPredictionRounds,
+      signal,
+      preset,
     },
   ];
 }
@@ -436,6 +472,7 @@ export class LLMDynamicHandle extends DynamicHandle<
         modelSpecifier: this.specifier,
         history,
         predictionConfigStack,
+        fuzzyPresetIdentifier: extraOpts.preset,
         ignoreServerSessionConfig: this.internalIgnoreServerSessionConfig,
       },
       message => {
@@ -971,6 +1008,7 @@ export class LLMDynamicHandle extends DynamicHandle<
           modelSpecifier: this.specifier,
           history: accessMaybeMutableInternals(mutableChat)._internalGetData(),
           predictionConfigStack: configToUse,
+          fuzzyPresetIdentifier: extraOpts.preset,
           ignoreServerSessionConfig: this.internalIgnoreServerSessionConfig,
         },
         message => {

@@ -193,6 +193,40 @@ registerErrorDeserializer(
   },
 );
 
+function formatAvailablePresets(
+  presets: Array<{ identifier: string; name: string }>,
+  totalAvailablePresets: number,
+) {
+  if (presets.length === 0) {
+    return chalk.gray("    You don't have any presets available.");
+  }
+  let text = presets
+    .map(({ identifier, name }) => chalk.cyanBright(` • ${name} (${chalk.cyan(identifier)})`))
+    .join("\n");
+  if (presets.length < totalAvailablePresets) {
+    text += chalk.gray(`\n     ... (and ${totalAvailablePresets - presets.length} more)`);
+  }
+  return text;
+}
+
+registerErrorDeserializer(
+  "generic.presetNotFound",
+  ({ specifiedFuzzyPresetIdentifier, availablePresetsSample, totalAvailablePresets }) => {
+    return makeTitledPrettyError(
+      `Cannot find a preset with identifier "${chalk.yellowBright(specifiedFuzzyPresetIdentifier)}"`,
+      text`
+        Here are your available presets:
+
+        ${formatAvailablePresets(availablePresetsSample, totalAvailablePresets)}
+
+        Note: To specify a preset in the SDK, you need to use its identifier (in parentheses). You
+        can get a preset's identifier by right-clicking on it and then select "Copy Preset
+        Identifier".
+      `,
+    );
+  },
+);
+
 export function friendlyErrorDeserializer(
   serialized: SerializedLMSExtendedError,
   _directCause: string,
