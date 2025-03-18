@@ -139,7 +139,7 @@ export abstract class StreamablePromise<TFragment, TFinal>
       this.hasIterator = true;
     }
     let i = 0;
-    while (this.status === "pending") {
+    while (i < this.buffer.length || this.status === "pending") {
       if (i < this.buffer.length) {
         yield this.buffer[i];
         i++;
