@@ -20,16 +20,16 @@ export class PredictionResult {
      */
     public readonly content: string,
     /**
-     * Part of the generated text that is part of the "reasoning" content, for example, those that
-     * are inside <think> tags. You can adjust what is considered reasoning content by changing the
-     * `reasoningParsing` field when performing the prediction.
+     * Part of the generated text that is "reasoning" content. For example, text inside <think> tags.
+     * You can adjust what is considered reasoning content by changing the `reasoningParsing` field
+     * when performing the prediction.
      *
      * @experimental The name of this field may change in the future.
      */
     public readonly reasoningContent: string,
     /**
-     * Part of the generated that is not part of the reasoning content, for example, those that are
-     * outside <think> tags. You can adjust what is considered reasoning content by changing the
+     * Part of the generated that is not "reasoning" content. For example, text outside 
+     * <think> tags. You can adjust what is considered reasoning content by changing the
      * `reasoningParsing` field when performing the prediction.
      *
      * @experimental The name of this field may change in the future.
