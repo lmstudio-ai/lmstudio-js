@@ -83,8 +83,8 @@ export interface LLMPredictionOpts<TStructuredOutputType = unknown>
    * @remarks
    *
    * This preset selection is "layered" between your overrides and the "server session" config.
-   * Which means, other fields you specify in this opts object will override the preset, while the preset content
-   * will override the "server session" config.
+   * Which means, other fields you specify in this opts object will override the preset, while the
+   * preset content will override the "server session" config.
    */
   preset?: string;
 }
@@ -330,8 +330,8 @@ export interface LLMActionOpts<TStructuredOutputType = unknown>
    * @remarks
    *
    * This preset selection is "layered" between your overrides and the "server session" config.
-   * Which means, other fields you specify in this opts object will override the preset, while the preset content
-   * will override the "server session" config.
+   * Which means, other fields you specify in this opts object will override the preset, while the
+   * preset content will override the "server session" config.
    */
   preset?: string;
 }
