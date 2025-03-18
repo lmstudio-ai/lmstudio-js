@@ -1,3 +1,4 @@
+import { type LLMPredictionFragmentReasoningType } from "@lmstudio/lms-shared-types";
 import { z } from "zod";
 import { type LLM, LMStudioClient } from "../index.js";
 import { ensureHeavyTestsEnvironment, llmTestingQwen05B } from "../shared.heavy.test.js";
@@ -154,5 +155,28 @@ describe("LLM.complete", () => {
       structured: { type: "gbnf", gbnfGrammar },
     });
     expect(result.content).toMatchSnapshot();
+  });
+  it("should support reasoning content parsing", async () => {
+    const fragmentsWithReasoningType: Array<{
+      content: string;
+      reasoningType: LLMPredictionFragmentReasoningType;
+    }> = [];
+
+    const result = await model.complete("1 through 10: 1,2,3,", {
+      temperature: 0,
+      maxTokens: 20,
+      stopStrings: ["9"],
+      reasoningParsing: { enabled: true, startString: "5", endString: "7" },
+      onPredictionFragment: fragment => {
+        fragmentsWithReasoningType.push({
+          content: fragment.content,
+          reasoningType: fragment.reasoningType,
+        });
+      },
+    });
+    expect(result.content).toMatchInlineSnapshot(`"4,5,6,7,8,"`);
+    expect(result.reasoningContent).toMatchInlineSnapshot(`",6,"`);
+    expect(result.nonReasoningContent).toMatchInlineSnapshot(`"4,,8,"`);
+    expect(fragmentsWithReasoningType).toMatchSnapshot();
   });
 });

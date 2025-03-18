@@ -20,6 +20,22 @@ export class PredictionResult {
      */
     public readonly content: string,
     /**
+     * Part of the generated text that is "reasoning" content. For example, text inside <think>
+     * tags. You can adjust what is considered reasoning content by changing the `reasoningParsing`
+     * field when performing the prediction.
+     *
+     * @experimental The name of this field may change in the future.
+     */
+    public readonly reasoningContent: string,
+    /**
+     * Part of the generated that is not "reasoning" content. For example, text outside <think>
+     * tags. You can adjust what is considered reasoning content by changing the `reasoningParsing`
+     * field when performing the prediction.
+     *
+     * @experimental The name of this field may change in the future.
+     */
+    public readonly nonReasoningContent: string,
+    /**
      * Statistics about the prediction.
      */
     public readonly stats: LLMPredictionStats,
@@ -59,6 +75,8 @@ export class PredictionResult {
 export class StructuredPredictionResult<TStructuredOutputType = unknown> extends PredictionResult {
   public constructor(
     content: string,
+    reasoningContent: string,
+    nonReasoningContent: string,
     stats: LLMPredictionStats,
     modelInfo: LLMInstanceInfo,
     roundIndex: number,
@@ -69,6 +87,15 @@ export class StructuredPredictionResult<TStructuredOutputType = unknown> extends
      */
     public readonly parsed: TStructuredOutputType,
   ) {
-    super(content, stats, modelInfo, roundIndex, loadConfig, predictionConfig);
+    super(
+      content,
+      reasoningContent,
+      nonReasoningContent,
+      stats,
+      modelInfo,
+      roundIndex,
+      loadConfig,
+      predictionConfig,
+    );
   }
 }
