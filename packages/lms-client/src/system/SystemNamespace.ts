@@ -77,4 +77,32 @@ export class SystemNamespace {
     const stack = getCurrentStack(1);
     return await this.systemPort.callRpc("version", undefined, { stack });
   }
+
+  /**
+   * Sets an experiment flags for LM Studio. This is an unstable API and may change without notice.
+   *
+   * @experimental
+   */
+  public async unstable_setExperimentFlag(flag: string, value: boolean) {
+    const stack = getCurrentStack(1);
+    [flag, value] = this.validator.validateMethodParamsOrThrow(
+      "client.system",
+      "setExperimentFlag",
+      ["flag", "value"],
+      [z.string(), z.boolean()],
+      [flag, value],
+      stack,
+    );
+    await this.systemPort.callRpc("setExperimentFlag", { code: flag, value }, { stack });
+  }
+
+  /**
+   * Gets all experiment flags for LM Studio. This is an unstable API and may change without notice.
+   *
+   * @experimental
+   */
+  public async unstable_getExperimentFlags(): Promise<Array<string>> {
+    const stack = getCurrentStack(1);
+    return await this.systemPort.callRpc("getExperimentFlags", undefined, { stack });
+  }
 }
