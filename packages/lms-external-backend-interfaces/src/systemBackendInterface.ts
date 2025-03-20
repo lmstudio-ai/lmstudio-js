@@ -35,6 +35,17 @@ export function createSystemBackendInterface() {
           build: z.number(),
         }),
       })
+      .addRpcEndpoint("setExperimentFlag", {
+        parameter: z.object({
+          code: z.string(),
+          value: z.boolean(),
+        }),
+        returns: z.void(),
+      })
+      .addRpcEndpoint("getExperimentFlags", {
+        parameter: z.void(),
+        returns: z.array(z.string()),
+      })
   );
 }
 
