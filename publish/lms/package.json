@@ -1,6 +1,6 @@
 {
   "name": "lms",
-  "version": "0.0.13",
+  "version": "0.0.14",
   "description": "",
   "main": "index.js",
   "files": [
@@ -10,7 +10,7 @@
   "author": "",
   "license": "Apache-2.0",
   "devDependencies": {
-    "@lmstudio/cli": "^0.0.39"
+    "@lmstudio/cli": "^0.0.40"
   },
-  "gitHead": "d3ec4feb6ef411106d8fabac795e8970cf1c657d"
+  "gitHead": "0124e72816202b7e9754cd454f753ae3cc5222f2"
 }
