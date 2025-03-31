@@ -12,17 +12,19 @@ export {
 } from "./AllowableEnvVars.js";
 export { ArtifactManifest, artifactManifestSchema } from "./ArtifactManifest.js";
 export {
+  ArtifactArtifactDependency,
+  artifactArtifactDependencySchema,
   ArtifactDependency,
+  ArtifactDependencyBase,
+  artifactDependencyBaseSchema,
   artifactDependencySchema,
   ArtifactManifestBase,
   artifactManifestBaseSchema,
   ArtifactModelDependency,
-  ArtifactModelDependencyDirectURLDownloadSource,
-  ArtifactModelDependencyDirectURLDownloadSourceFile,
-  artifactModelDependencyDirectURLDownloadSourceFileSchema,
-  artifactModelDependencyDirectURLDownloadSourceSchema,
   ArtifactModelDependencyDownloadSource,
   artifactModelDependencyDownloadSourceSchema,
+  ArtifactModelDependencyHuggingFaceDownloadSource,
+  artifactModelDependencyHuggingFaceDownloadSourceSchema,
   artifactModelDependencySchema,
   kebabCaseRegex,
   kebabCaseSchema,
