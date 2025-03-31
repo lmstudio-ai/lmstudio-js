@@ -117,6 +117,17 @@ export const llmJinjaInputMessagesContentConfigSchema = z.discriminatedUnion("ty
 ]);
 
 /**
+ * Configures how tools should be input to jinja for prompt rendering.
+ * @public
+ */
+export type LLMJinjaInputToolUseType = "noTools" | "inSystemMessage" | "inToolsField";
+export const llmJinjaInputToolUseTypeSchema = z.enum([
+  "noTools",
+  "inSystemMessage",
+  "inToolsField",
+]);
+
+/**
  * Configures how ChatHistoryMessages should be input to jinja for prompt rendering.
  * @public
  */
@@ -135,11 +146,11 @@ export const llmJinjaInputMessagesConfigSchema = z.object({
  */
 export interface LLMJinjaInputConfig {
   messagesConfig: LLMJinjaInputMessagesConfig;
-  useTools: boolean;
+  toolUseType: LLMJinjaInputToolUseType;
 }
 export const llmJinjaInputConfigSchema = z.object({
   messagesConfig: llmJinjaInputMessagesConfigSchema,
-  useTools: z.boolean(),
+  toolUseType: llmJinjaInputToolUseTypeSchema,
 });
 
 /**

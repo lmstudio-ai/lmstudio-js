@@ -405,7 +405,7 @@ const noFormattingInputConfig: LLMJinjaInputConfig = {
       type: "string",
     },
   },
-  useTools: false,
+  toolUseType: "noTools",
 };
 
 /**

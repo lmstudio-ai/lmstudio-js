@@ -187,6 +187,8 @@ export {
   llmJinjaInputMessagesContentConfigTextFieldNameSchema,
   LLMJinjaInputMessagesContentImagesConfig,
   llmJinjaInputMessagesContentImagesConfigSchema,
+  LLMJinjaInputToolUseType,
+  llmJinjaInputToolUseTypeSchema,
   LLMJinjaPromptTemplate,
   llmJinjaPromptTemplateSchema,
   LLMManualPromptTemplate,
