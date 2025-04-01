@@ -1,7 +1,7 @@
 import { z, type ZodSchema } from "zod";
 import { kvConfigSchema, type KVConfig } from "./KVConfig.js";
 
-export interface VirtualModelManifest {
+export interface VirtualModelDefinition {
   /**
    * The self proclaimed indexed model identifier. Should always be in the shape of user/repo.
    */
@@ -15,7 +15,7 @@ export interface VirtualModelManifest {
     operation?: KVConfig;
   };
 }
-export const virtualModelManifestSchema = z.object({
+export const virtualModelDefinitionSchema = z.object({
   model: z.string().regex(/^[^/]+\/[^/]+$/),
   base: z.string(),
   config: z
@@ -24,4 +24,4 @@ export const virtualModelManifestSchema = z.object({
       operation: kvConfigSchema.optional(),
     })
     .optional(),
-}) as ZodSchema<VirtualModelManifest>;
+}) as ZodSchema<VirtualModelDefinition>;

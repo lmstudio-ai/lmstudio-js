@@ -12,8 +12,20 @@ export {
 } from "./AllowableEnvVars.js";
 export { ArtifactManifest, artifactManifestSchema } from "./ArtifactManifest.js";
 export {
+  ArtifactArtifactDependency,
+  artifactArtifactDependencySchema,
+  ArtifactDependency,
+  ArtifactDependencyBase,
+  artifactDependencyBaseSchema,
+  artifactDependencySchema,
   ArtifactManifestBase,
   artifactManifestBaseSchema,
+  ArtifactModelDependency,
+  ArtifactModelDependencyDownloadSource,
+  artifactModelDependencyDownloadSourceSchema,
+  ArtifactModelDependencyHuggingFaceDownloadSource,
+  artifactModelDependencyHuggingFaceDownloadSourceSchema,
+  artifactModelDependencySchema,
   kebabCaseRegex,
   kebabCaseSchema,
 } from "./ArtifactManifestBase.js";
@@ -277,6 +289,12 @@ export {
   modelSpecifierSchema,
 } from "./ModelSpecifier.js";
 export {
+  fileNameRegex,
+  fileNameSchema,
+  relativePathNoLeadingDotSlashRegex,
+  relativePathNoLeadingDotSlashSchema,
+} from "./path.js";
+export {
   PluginManifest,
   pluginManifestSchema,
   PluginRunnerType,
@@ -332,5 +350,5 @@ export {
   serializedKVConfigSchematicsFieldSchema,
   serializedKVConfigSchematicsSchema,
 } from "./SerializedKVConfigSchematics.js";
-export { VirtualModelManifest, virtualModelManifestSchema } from "./VirtualModelManifest.js";
+export { VirtualModelDefinition, virtualModelDefinitionSchema } from "./VirtualModelDefinition.js";
 export { zodSchemaSchema } from "./Zod.js";

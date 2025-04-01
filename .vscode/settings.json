@@ -10,6 +10,7 @@
     "Deserializers",
     "Fcfs",
     "GGUF",
+    "huggingface",
     "immer",
     "inferencing",
     "lmstudio",

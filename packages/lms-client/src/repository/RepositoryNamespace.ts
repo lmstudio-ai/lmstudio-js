@@ -134,11 +134,11 @@ export class RepositoryNamespace {
       message => {
         switch (message.type) {
           case "downloadProgress": {
-            safeCallCallback(this.logger, "onProgress", opts.onProgress, [message.update]);
+            safeCallCallback(this.logger, "onProgress", onProgress, [message.update]);
             break;
           }
           case "startFinalizing": {
-            safeCallCallback(this.logger, "onStartFinalizing", opts.onStartFinalizing, []);
+            safeCallCallback(this.logger, "onStartFinalizing", onStartFinalizing, []);
             break;
           }
           case "success": {
@@ -155,8 +155,8 @@ export class RepositoryNamespace {
     );
     channel.onError.subscribeOnce(reject);
     channel.onClose.subscribeOnce(() => {
-      if (opts.signal?.aborted) {
-        reject(opts.signal.reason);
+      if (signal?.aborted) {
+        reject(signal.reason);
       } else {
         reject(new Error("Channel closed unexpectedly."));
       }
@@ -164,9 +164,9 @@ export class RepositoryNamespace {
     const abortListener = () => {
       channel.send({ type: "cancel" });
     };
-    opts.signal?.addEventListener("abort", abortListener);
+    signal?.addEventListener("abort", abortListener);
     promise.finally(() => {
-      opts.signal?.removeEventListener("abort", abortListener);
+      signal?.removeEventListener("abort", abortListener);
     });
     return await promise;
   }
