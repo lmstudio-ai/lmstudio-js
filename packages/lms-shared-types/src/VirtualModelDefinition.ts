@@ -7,9 +7,12 @@ export interface VirtualModelDefinition {
    */
   model: string;
   /**
-   * The next model in the inheritance chain.
+   * The model key of the next model in the inheritance chain. If multiple models are matched,
+   * LM Studio will pick the best one based on hardware and installed engines.
+   *
+   * If an array is provided, any model matching any of the model keys will be considered.
    */
-  base: string;
+  base: string | Array<string>;
   config?: {
     load?: KVConfig;
     operation?: KVConfig;
@@ -17,7 +20,7 @@ export interface VirtualModelDefinition {
 }
 export const virtualModelDefinitionSchema = z.object({
   model: z.string().regex(/^[^/]+\/[^/]+$/),
-  base: z.string(),
+  base: z.string().or(z.array(z.string())),
   config: z
     .object({
       load: kvConfigSchema.optional(),
