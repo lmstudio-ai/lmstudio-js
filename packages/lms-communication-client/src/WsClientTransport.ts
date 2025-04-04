@@ -98,19 +98,19 @@ export class WsClientTransport extends ClientTransport {
     this.logger.warn("WebSocket error:", error);
     if (error.code === "ECONNREFUSED") {
       this.logger.warnText`
-          WebSocket connection refused. This can happen if the server is not running or the client
-          is trying to connect to the wrong path. The server path that this client is
-          attempting to connect to is:
-          ${this.resolvedUrl ?? "Unknown" /* Should never be Unknown */}.
+        WebSocket connection refused. This can happen if the server is not running or the client
+        is trying to connect to the wrong path. The server path that this client is
+        attempting to connect to is:
+        ${this.resolvedUrl ?? "Unknown" /* Should never be Unknown */}.
 
-          Please make sure the following:
+        Please make sure the following:
 
-            1. LM Studio is running
+          1. LM Studio is running
 
-            2. The API server in LM Studio has started
+          2. The API server in LM Studio has started
 
-            3. The client is attempting to connect to the correct path
-        `;
+          3. The client is attempting to connect to the correct path
+      `;
     }
     try {
       this.ws?.close();
@@ -118,7 +118,7 @@ export class WsClientTransport extends ClientTransport {
       // Ignore
     }
     this.status = WsClientTransportStatus.Disconnected;
-    this.errored(event);
+    this.errored(error);
   }
   protected onWsTimeout() {
     if (this.status === WsClientTransportStatus.Disconnected) {
