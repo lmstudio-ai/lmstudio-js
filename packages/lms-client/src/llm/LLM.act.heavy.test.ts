@@ -51,7 +51,7 @@ describe("LLM.act", () => {
       onRoundEnd,
     });
     expect(addImplementation).toHaveBeenCalledTimes(1);
-    expect(addImplementation.mock.calls[0]).toEqual([{ a: 1, b: 3 }]);
+    expect(addImplementation.mock.calls[0][0]).toEqual({ a: 1, b: 3 });
     expect(onMessage).toHaveBeenCalledTimes(3);
 
     const message0 = onMessage.mock.calls[0][0] as ChatMessage;

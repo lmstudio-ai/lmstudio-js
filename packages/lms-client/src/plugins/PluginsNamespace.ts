@@ -418,7 +418,7 @@ export class PluginsNamespace {
       stack,
     );
 
-    const logger = new SimpleLogger(`Tools Prov.`, this.rootLogger);
+    const logger = new SimpleLogger(`Tools Prvdr.`, this.rootLogger);
     logger.info("Register with LM Studio");
 
     interface OngoingToolCall {
@@ -540,6 +540,11 @@ export class PluginsNamespace {
               });
             },
             signal: ongoingToolCall.abortController.signal,
+            // Call ID is used to match up life cycle events of the same tool call. In this case,
+            // each call does not have different parts, thus call ID is useless. We can just use 0.
+            // If the user wants a "unique" ID, they can just have variable that goes up by one
+            // each time the function is called.
+            callId: 0,
           };
 
           (async () => {

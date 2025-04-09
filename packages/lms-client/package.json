@@ -18,6 +18,7 @@
     "@lmstudio/lms-shared-types": "^0.6.8",
     "boxen": "^5.1.2",
     "chalk": "^4.1.2",
+    "jsonschema": "^1.5.0",
     "process": "^0.11.10",
     "zod": "^3.22.4",
     "zod-to-json-schema": "^3.22.5"

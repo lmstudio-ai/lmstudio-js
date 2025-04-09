@@ -58,6 +58,8 @@ export type {
   PreprocessorController,
   ProcessingController,
 } from "./plugins/processing/ProcessingController.js";
+export type { ToolsProvider } from "./plugins/processing/ToolsProvider.js";
+export type { ToolsProviderController } from "./plugins/processing/ToolsProviderController.js";
 export type {
   DownloadOpts,
   ModelSearchResultDownloadOption,

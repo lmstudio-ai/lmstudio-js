@@ -59,6 +59,8 @@ export type {
   SystemNamespace,
   Tool,
   ToolBase,
+  ToolsProvider,
+  ToolsProviderController,
   VirtualConfigSchematics,
 } from "@lmstudio/lms-client";
 export type { LoggerInterface, StreamablePromise } from "@lmstudio/lms-common";

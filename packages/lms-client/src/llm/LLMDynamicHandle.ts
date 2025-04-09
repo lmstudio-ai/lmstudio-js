@@ -20,6 +20,7 @@ import {
   type ChatHistoryData,
   type ChatMessagePartToolCallRequestData,
   type ChatMessagePartToolCallResultData,
+  type FunctionToolCallRequest,
   type KVConfig,
   type KVConfigStack,
   type LLMApplyPromptTemplateOpts,
@@ -264,6 +265,43 @@ export interface LLMActionOpts<TStructuredOutputType = unknown>
    */
   onPromptProcessingProgress?: (roundIndex: number, progress: number) => void;
   /**
+   * A callback that is called when the model starts generating a tool call request.
+   *
+   * This hook is intended for updating the UI, such as showing "XXX is planning to use a tool...".
+   * At this stage the tool call request has not been generated thus we don't know what tool will be
+   * called. It is guaranteed that each `invocation` of `onToolCallGenerationStart` is paired
+   * with exactly one `onToolCallGenerationEnd` or `onToolCallGenerationFailure`.
+   *
+   * @experimental This option is experimental and may change in the future.
+   */
+  onToolCallGenerationStart?: (roundIndex: number, callId: number) => void;
+  /**
+   * A callback that is called when a tool call is requested by the model.
+   *
+   * You should not use this callback to call the tool - the SDK will automatically call the tools
+   * you provided in the tools array.
+   *
+   * Instead, you can use this callback to update the UI or maintain the context. If you are unsure
+   * what to do with this callback, you can ignore it.
+   *
+   * @experimental This option is experimental and may change in the future. Especially the second
+   * parameter (toolCallRequest) which is very likely to be changed to a nicer type.
+   */
+  onToolCallGenerationEnd?: (
+    roundIndex: number,
+    callId: number,
+    toolCallRequest: FunctionToolCallRequest,
+  ) => void;
+  /**
+   * A callback that is called when a tool call has failed to generate.
+   *
+   * This hook is intended for updating the UI, such as showing "a tool call has failed to
+   * generate.".
+   *
+   * @experimental This option is experimental and may change in the future.
+   */
+  onToolCallGenerationFailure?: (roundIndex: number, callId: number) => void;
+  /**
    * A handler that is called when a tool request is made by the model but is invalid.
    *
    * There are multiple ways for a tool request to be invalid. For example, the model can simply
@@ -343,6 +381,9 @@ const llmActionOptsSchema = llmPredictionConfigInputSchema.extend({
   onRoundEnd: z.function().optional(),
   onPredictionCompleted: z.function().optional(),
   onPromptProcessingProgress: z.function().optional(),
+  onToolCallGenerationStart: z.function().optional(),
+  onToolCallGenerationEnd: z.function().optional(),
+  onToolCallGenerationFailure: z.function().optional(),
   handleInvalidToolRequest: z.function().optional(),
   maxPredictionRounds: z.number().int().min(1).optional(),
   signal: z.instanceof(AbortSignal).optional(),
@@ -372,6 +413,9 @@ function splitOperationOpts<TStructuredOutputType>(
     onRoundEnd,
     onPredictionCompleted,
     onPromptProcessingProgress,
+    onToolCallGenerationStart,
+    onToolCallGenerationEnd,
+    onToolCallGenerationFailure,
     handleInvalidToolRequest,
     maxPredictionRounds,
     signal,
@@ -388,6 +432,9 @@ function splitOperationOpts<TStructuredOutputType>(
       onRoundEnd,
       onPredictionCompleted,
       onPromptProcessingProgress,
+      onToolCallGenerationStart,
+      onToolCallGenerationEnd,
+      onToolCallGenerationFailure,
       handleInvalidToolRequest,
       maxPredictionRounds,
       signal,
@@ -829,6 +876,11 @@ export class LLMDynamicHandle extends DynamicHandle<
     const abortController = new AbortController();
     const mutableChat = Chat.from(chat); // Make a copy
 
+    /**
+     * Our ID that allows users to match up calls.
+     */
+    let currentCallId = 0;
+
     if (extraOpts.signal !== undefined) {
       extraOpts.signal.addEventListener(
         "abort",
@@ -837,6 +889,7 @@ export class LLMDynamicHandle extends DynamicHandle<
         },
         { once: true },
       );
+      console.info("ABORTTTEEEDEDEDEDDED");
     }
 
     if (config.structured !== undefined) {
@@ -1044,6 +1097,16 @@ export class LLMDynamicHandle extends DynamicHandle<
               );
               break;
             }
+            case "toolCallGenerationStart": {
+              currentCallId++;
+              safeCallCallback(
+                this.logger,
+                "onToolCallGenerationStart",
+                extraOpts.onToolCallGenerationStart,
+                [predictionsPerformed, currentCallId],
+              );
+              break;
+            }
             case "toolCallGenerationEnd": {
               const toolCallIndex = nextToolCallIndex;
               nextToolCallIndex++;
@@ -1061,19 +1124,52 @@ export class LLMDynamicHandle extends DynamicHandle<
                     toolCallIndex,
                   ).catch(finalReject),
                 );
+                safeCallCallback(
+                  this.logger,
+                  "onToolCallGenerationFailure",
+                  extraOpts.onToolCallGenerationFailure,
+                  [predictionsPerformed, currentCallId],
+                );
+                break;
+              }
+              const parameters = toolCallRequest.arguments ?? {}; // Defaults to empty object
+              // Try check the parameters:
+              try {
+                tool.checkParameters(parameters); // Defaults to empty object
+              } catch (error: any) {
+                // Failed to parse the parameters
+                toolCallPromises.push(
+                  internalHandleInvalidToolCallRequest(
+                    new Error(text`
+                      Failed to parse arguments for tool ${toolCallRequest.name}: ${error.message}
+                    `),
+                    toolCallRequest,
+                    toolCallIndex,
+                  ).catch(finalReject),
+                );
+                safeCallCallback(
+                  this.logger,
+                  "onToolCallGenerationFailure",
+                  extraOpts.onToolCallGenerationFailure,
+                  [predictionsPerformed, currentCallId],
+                );
                 break;
               }
               const toolCallContext = new SimpleToolCallContext(
                 new SimpleLogger(`Tool(${toolCallRequest.name})`, this.logger),
                 abortController.signal,
+                currentCallId,
+              );
+              safeCallCallback(
+                this.logger,
+                "onToolCallGenerationEnd",
+                extraOpts.onToolCallGenerationEnd,
+                [predictionsPerformed, currentCallId, toolCallRequest],
               );
               // We have successfully parsed the parameters. Let's call the tool.
               toolCallPromises.push(
                 (async () => {
-                  const result = await tool.implementation(
-                    toolCallRequest.arguments ?? {}, // Defaults to empty object
-                    toolCallContext,
-                  );
+                  const result = await tool.implementation(parameters, toolCallContext);
                   let resultString: string;
                   if (result === undefined) {
                     resultString = "undefined";
@@ -1109,6 +1205,12 @@ export class LLMDynamicHandle extends DynamicHandle<
                   // a replacement.
                   0,
                 ).catch(finalReject),
+              );
+              safeCallCallback(
+                this.logger,
+                "onToolCallGenerationFailure",
+                extraOpts.onToolCallGenerationFailure,
+                [predictionsPerformed, currentCallId],
               );
               break;
             }

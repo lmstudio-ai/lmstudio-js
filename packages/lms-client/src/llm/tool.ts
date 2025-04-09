@@ -1,5 +1,6 @@
 import { text, type SimpleLogger } from "@lmstudio/lms-common";
 import { zodSchemaSchema, type LLMTool } from "@lmstudio/lms-shared-types";
+import { Validator, type ValidationError } from "jsonschema";
 import { z, type ZodSchema } from "zod";
 import { zodToJsonSchema } from "zod-to-json-schema";
 
@@ -37,12 +38,24 @@ export interface ToolCallContext {
    * makes multiple network requests.
    */
   signal: AbortSignal;
+  /**
+   * The internal ID of the tool call. This allows you to match up tool calls. Is guaranteed to be
+   * unique within one `.act` call.
+   *
+   * @remarks This field is not the same as the `toolCallId` inside the tool call request, as the
+   * existence and format of that ID is model dependent.
+   *
+   * @experimental This field is not stable and will likely change in the future as we design better
+   * ways to match up tool calls.
+   */
+  callId: number;
 }
 
 export class SimpleToolCallContext implements ToolCallContext {
   public constructor(
     public readonly logger: SimpleLogger,
     public readonly signal: AbortSignal,
+    public readonly callId: number,
   ) {}
   public status(text: string): void {
     this.logger.info(text);
@@ -60,6 +73,10 @@ export class SimpleToolCallContext implements ToolCallContext {
 export interface FunctionTool extends ToolBase {
   type: "function";
   parametersSchema: ZodSchema;
+  /**
+   * Checks the parameters. If not valid, throws an error.
+   */
+  checkParameters: (params: any) => void;
   implementation: (params: Record<string, unknown>, ctx: ToolCallContext) => any | Promise<any>;
 }
 export const functionToolSchema = toolBaseSchema.extend({
@@ -76,6 +93,10 @@ export const functionToolSchema = toolBaseSchema.extend({
 export interface RawFunctionTool extends ToolBase {
   type: "rawFunction";
   parametersJsonSchema: any;
+  /**
+   * Checks the parameters. If not valid, throws an error.
+   */
+  checkParameters: (params: any) => void;
   implementation: (params: Record<string, unknown>, ctx: ToolCallContext) => any | Promise<any>;
 }
 
@@ -138,6 +159,15 @@ export function tool<const TParameters extends Record<string, { parse(input: any
     description,
     type: "function",
     parametersSchema,
+    checkParameters(params) {
+      const parametersParseResult = parametersSchema.safeParse(params);
+      if (!parametersParseResult.success) {
+        throw new Error(text`
+          Failed to parse arguments for tool "${name}":
+          ${parametersParseResult.error.message}
+        `);
+      }
+    },
     implementation: (params, ctx) => {
       const parametersParseResult = parametersSchema.safeParse(params);
       if (!parametersParseResult.success) {
@@ -149,6 +179,18 @@ export function tool<const TParameters extends Record<string, { parse(input: any
       return implementation(parametersParseResult.data as any, ctx); // Erase the types
     },
   };
+}
+
+function jsonSchemaValidationErrorToAIReadableText(
+  root: string,
+  validationErrors: Array<ValidationError>,
+) {
+  return validationErrors
+    .map(validatioNError => {
+      const fullPath = [root, ...validatioNError.path].join(".");
+      return `${fullPath} ${validatioNError.message}`;
+    })
+    .join("\n");
 }
 
 /**
@@ -168,11 +210,21 @@ export function rawFunctionTool({
   parametersJsonSchema: any;
   implementation: (params: Record<string, unknown>, ctx: ToolCallContext) => any | Promise<any>;
 }): Tool {
+  const jsonSchemaValidator = new Validator();
   return {
     name,
     description,
     type: "rawFunction",
     parametersJsonSchema,
+    checkParameters(params) {
+      const validationResult = jsonSchemaValidator.validate(params, parametersJsonSchema);
+      if (validationResult.errors.length > 0) {
+        throw new Error(text`
+          Failed to parse arguments for tool "${name}":
+          ${jsonSchemaValidationErrorToAIReadableText("params", validationResult.errors)}
+        `);
+      }
+    },
     implementation,
   };
 }
