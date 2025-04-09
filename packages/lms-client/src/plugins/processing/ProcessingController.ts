@@ -131,6 +131,7 @@ interface ProcessingControllerHandle {
  * @public
  */
 export interface CreateContentBlockOpts {
+  roleOverride?: "user" | "assistant" | "system" | "tool";
   includeInContext?: boolean;
   style?: ContentBlockStyle;
   prefix?: string;
@@ -281,6 +282,7 @@ export class ProcessingController {
   }
 
   public createContentBlock({
+    roleOverride,
     includeInContext = true,
     style,
     prefix,
@@ -290,6 +292,7 @@ export class ProcessingController {
     this.sendUpdate({
       type: "contentBlock.create",
       id,
+      roleOverride,
       includeInContext,
       style,
       prefix,

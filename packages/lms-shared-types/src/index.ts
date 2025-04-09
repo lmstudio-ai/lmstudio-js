@@ -101,6 +101,7 @@ export {
   GPUSplitStrategy,
   gpuSplitStrategySchema,
 } from "./GPUSplitStrategy.js";
+export { jsonSerializableSchema } from "./JSONSerializable.js";
 export {
   KVConfig,
   KVConfigField,

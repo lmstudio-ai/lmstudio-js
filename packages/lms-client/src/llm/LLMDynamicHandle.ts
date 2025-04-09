@@ -44,7 +44,7 @@ import { ActResult } from "./ActResult.js";
 import { type LLMNamespace } from "./LLMNamespace.js";
 import { OngoingPrediction } from "./OngoingPrediction.js";
 import { PredictionResult } from "./PredictionResult.js";
-import { type Tool, toolToLLMTool } from "./tool.js";
+import { SimpleToolCallContext, type Tool, toolToLLMTool } from "./tool.js";
 
 /**
  * Options for {@link LLMDynamicHandle#complete}.
@@ -958,6 +958,9 @@ export class LLMDynamicHandle extends DynamicHandle<
             request,
           );
         } catch (error) {
+          if (abortController.signal.aborted) {
+            throw abortController.signal.reason;
+          }
           abortController.abort();
           throw error; // Rethrow the error.
         }
@@ -1060,25 +1063,17 @@ export class LLMDynamicHandle extends DynamicHandle<
                 );
                 break;
               }
-              const parseResult = tool.parametersSchema.safeParse(toolCallRequest.arguments ?? {});
-              if (!parseResult.success) {
-                // Failed to parse the parameters
-                toolCallPromises.push(
-                  internalHandleInvalidToolCallRequest(
-                    new Error(text`
-                      Failed to parse arguments for tool ${toolCallRequest.name}:
-                      ${parseResult.error.message}
-                    `),
-                    toolCallRequest,
-                    toolCallIndex,
-                  ).catch(finalReject),
-                );
-                break;
-              }
+              const toolCallContext = new SimpleToolCallContext(
+                new SimpleLogger(`Tool(${toolCallRequest.name})`, this.logger),
+                abortController.signal,
+              );
               // We have successfully parsed the parameters. Let's call the tool.
               toolCallPromises.push(
                 (async () => {
-                  const result = await tool.implementation(parseResult.data);
+                  const result = await tool.implementation(
+                    toolCallRequest.arguments ?? {}, // Defaults to empty object
+                    toolCallContext,
+                  );
                   let resultString: string;
                   if (result === undefined) {
                     resultString = "undefined";

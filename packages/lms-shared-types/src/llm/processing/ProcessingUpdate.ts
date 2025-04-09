@@ -121,6 +121,7 @@ export type ProcessingUpdateContentBlockCreate = {
   type: "contentBlock.create";
   id: string;
   includeInContext: boolean;
+  roleOverride?: "user" | "assistant" | "system" | "tool";
   style?: ContentBlockStyle;
   prefix?: string;
   suffix?: string;
@@ -129,6 +130,7 @@ export const processingUpdateContentBlockCreateSchema = z.object({
   type: z.literal("contentBlock.create"),
   id: z.string(),
   includeInContext: z.boolean(),
+  roleOverride: z.enum(["user", "assistant", "system", "tool"]).optional(),
   style: contentBlockStyleSchema.optional(),
   prefix: z.string().optional(),
   suffix: z.string().optional(),
