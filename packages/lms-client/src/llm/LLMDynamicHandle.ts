@@ -269,12 +269,12 @@ export interface LLMActionOpts<TStructuredOutputType = unknown>
    *
    * This hook is intended for updating the UI, such as showing "XXX is planning to use a tool...".
    * At this stage the tool call request has not been generated thus we don't know what tool will be
-   * called. It is guaranteed that each `invocation` of `onToolCallGenerationStart` is paired
-   * with exactly one `onToolCallGenerationEnd` or `onToolCallGenerationFailure`.
+   * called. It is guaranteed that each `invocation` of `onToolCallRequestStart` is paired
+   * with exactly one `onToolCallRequestEnd` or `onToolCallRequestFailure`.
    *
    * @experimental This option is experimental and may change in the future.
    */
-  onToolCallGenerationStart?: (roundIndex: number, callId: number) => void;
+  onToolCallRequestStart?: (roundIndex: number, callId: number) => void;
   /**
    * A callback that is called when a tool call is requested by the model.
    *
@@ -287,7 +287,7 @@ export interface LLMActionOpts<TStructuredOutputType = unknown>
    * @experimental This option is experimental and may change in the future. Especially the third
    * parameter (toolCallRequest) which is very likely to be changed to a nicer type.
    */
-  onToolCallGenerationEnd?: (
+  onToolCallRequestEnd?: (
     roundIndex: number,
     callId: number,
     toolCallRequest: FunctionToolCallRequest,
@@ -300,7 +300,7 @@ export interface LLMActionOpts<TStructuredOutputType = unknown>
    *
    * @experimental This option is experimental and may change in the future.
    */
-  onToolCallGenerationFailure?: (roundIndex: number, callId: number) => void;
+  onToolCallRequestFailure?: (roundIndex: number, callId: number) => void;
   /**
    * A handler that is called when a tool request is made by the model but is invalid.
    *
@@ -381,9 +381,9 @@ const llmActionOptsSchema = llmPredictionConfigInputSchema.extend({
   onRoundEnd: z.function().optional(),
   onPredictionCompleted: z.function().optional(),
   onPromptProcessingProgress: z.function().optional(),
-  onToolCallGenerationStart: z.function().optional(),
-  onToolCallGenerationEnd: z.function().optional(),
-  onToolCallGenerationFailure: z.function().optional(),
+  onToolCallRequestStart: z.function().optional(),
+  onToolCallRequestEnd: z.function().optional(),
+  onToolCallRequestFailure: z.function().optional(),
   handleInvalidToolRequest: z.function().optional(),
   maxPredictionRounds: z.number().int().min(1).optional(),
   signal: z.instanceof(AbortSignal).optional(),
@@ -413,9 +413,9 @@ function splitOperationOpts<TStructuredOutputType>(
     onRoundEnd,
     onPredictionCompleted,
     onPromptProcessingProgress,
-    onToolCallGenerationStart,
-    onToolCallGenerationEnd,
-    onToolCallGenerationFailure,
+    onToolCallRequestStart,
+    onToolCallRequestEnd,
+    onToolCallRequestFailure,
     handleInvalidToolRequest,
     maxPredictionRounds,
     signal,
@@ -432,9 +432,9 @@ function splitOperationOpts<TStructuredOutputType>(
       onRoundEnd,
       onPredictionCompleted,
       onPromptProcessingProgress,
-      onToolCallGenerationStart,
-      onToolCallGenerationEnd,
-      onToolCallGenerationFailure,
+      onToolCallRequestStart,
+      onToolCallRequestEnd,
+      onToolCallRequestFailure,
       handleInvalidToolRequest,
       maxPredictionRounds,
       signal,
@@ -1101,8 +1101,8 @@ export class LLMDynamicHandle extends DynamicHandle<
               currentCallId++;
               safeCallCallback(
                 this.logger,
-                "onToolCallGenerationStart",
-                extraOpts.onToolCallGenerationStart,
+                "onToolCallRequestStart",
+                extraOpts.onToolCallRequestStart,
                 [predictionsPerformed, currentCallId],
               );
               break;
@@ -1126,8 +1126,8 @@ export class LLMDynamicHandle extends DynamicHandle<
                 );
                 safeCallCallback(
                   this.logger,
-                  "onToolCallGenerationFailure",
-                  extraOpts.onToolCallGenerationFailure,
+                  "onToolCallRequestFailure",
+                  extraOpts.onToolCallRequestFailure,
                   [predictionsPerformed, currentCallId],
                 );
                 break;
@@ -1149,8 +1149,8 @@ export class LLMDynamicHandle extends DynamicHandle<
                 );
                 safeCallCallback(
                   this.logger,
-                  "onToolCallGenerationFailure",
-                  extraOpts.onToolCallGenerationFailure,
+                  "onToolCallRequestFailure",
+                  extraOpts.onToolCallRequestFailure,
                   [predictionsPerformed, currentCallId],
                 );
                 break;
@@ -1162,8 +1162,8 @@ export class LLMDynamicHandle extends DynamicHandle<
               );
               safeCallCallback(
                 this.logger,
-                "onToolCallGenerationEnd",
-                extraOpts.onToolCallGenerationEnd,
+                "onToolCallRequestEnd",
+                extraOpts.onToolCallRequestEnd,
                 [predictionsPerformed, currentCallId, toolCallRequest],
               );
               // We have successfully parsed the parameters. Let's call the tool.
@@ -1208,8 +1208,8 @@ export class LLMDynamicHandle extends DynamicHandle<
               );
               safeCallCallback(
                 this.logger,
-                "onToolCallGenerationFailure",
-                extraOpts.onToolCallGenerationFailure,
+                "onToolCallRequestFailure",
+                extraOpts.onToolCallRequestFailure,
                 [predictionsPerformed, currentCallId],
               );
               break;
