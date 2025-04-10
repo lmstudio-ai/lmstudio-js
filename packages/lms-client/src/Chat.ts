@@ -12,6 +12,7 @@ import {
   chatMessageDataSchema,
   type ChatMessagePartFileData,
   type ChatMessagePartTextData,
+  type ChatMessagePartToolCallResultData,
   type ChatMessageRoleData,
 } from "@lmstudio/lms-shared-types";
 import { z, type ZodSchema } from "zod";
@@ -523,6 +524,15 @@ export class ChatMessage extends MaybeMutable<ChatMessageData> {
       .filter(part => part.type === "text")
       .map(part => (part as ChatMessagePartTextData).text)
       .join(" ");
+  }
+
+  /**
+   * Get all tool call results within this message.
+   *
+   * @experimental This API is not stable and may change in the future.
+   */
+  public getToolCallResults(): Array<ChatMessagePartToolCallResultData> {
+    return this.data.content.filter(part => part.type === "toolCallResult");
   }
 
   /**

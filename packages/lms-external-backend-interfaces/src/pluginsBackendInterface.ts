@@ -3,7 +3,9 @@ import { type InferClientPort } from "@lmstudio/lms-communication-client";
 import {
   chatHistoryDataSchema,
   chatMessageDataSchema,
+  jsonSerializableSchema,
   kvConfigSchema,
+  llmToolSchema,
   pluginManifestSchema,
   processingUpdateSchema,
   serializedKVConfigSchematicsSchema,
@@ -108,6 +110,89 @@ export function createPluginsBackendInterface() {
             type: z.literal("error"),
             taskId: z.string(),
             error: serializedLMSExtendedErrorSchema,
+          }),
+        ]),
+      })
+      .addChannelEndpoint("setToolsProvider", {
+        creationParameter: z.void(),
+        toClientPacket: z.discriminatedUnion("type", [
+          /**
+           * Starts a "tool providing session". Once this is received, the plugin should call the
+           * tools provider and pass the tools to the server using the `sessionInitialized` packet.
+           *
+           * If the initialization failed, the plugin should send the `sessionInitializationFailed`
+           * packet.
+           */
+          z.object({
+            type: z.literal("initSession"),
+            pluginConfig: kvConfigSchema,
+            sessionId: z.string(),
+          }),
+          z.object({
+            type: z.literal("discardSession"),
+            sessionId: z.string(),
+          }),
+          /**
+           * Call a tool within a session. The plugin should call the tool and return the result
+           * using the `toolCallComplete` packet.
+           *
+           * If the tool call fails in an unrecoverable way the plugin can send the `toolCallError`
+           * packet.
+           */
+          z.object({
+            type: z.literal("callTool"),
+            sessionId: z.string(),
+            callId: z.string(),
+            toolName: z.string(),
+            parameters: jsonSerializableSchema,
+          }),
+          /**
+           * Abort a tool call. The plugin should abort the tool call and confirm the abort using
+           * the `toolCallAborted` packet.
+           */
+          z.object({
+            type: z.literal("abortToolCall"),
+            sessionId: z.string(),
+            callId: z.string(),
+          }),
+        ]),
+        toServerPacket: z.discriminatedUnion("type", [
+          /**
+           * The plugin has provided a list of tools in a new session.
+           */
+          z.object({
+            type: z.literal("sessionInitialized"),
+            sessionId: z.string(),
+            toolDefinitions: z.array(llmToolSchema),
+          }),
+          z.object({
+            type: z.literal("sessionInitializationFailed"),
+            sessionId: z.string(),
+            error: serializedLMSExtendedErrorSchema,
+          }),
+          z.object({
+            type: z.literal("toolCallComplete"),
+            sessionId: z.string(),
+            callId: z.string(),
+            result: jsonSerializableSchema,
+          }),
+          z.object({
+            type: z.literal("toolCallError"),
+            sessionId: z.string(),
+            callId: z.string(),
+            error: serializedLMSExtendedErrorSchema,
+          }),
+          z.object({
+            type: z.literal("toolCallStatus"),
+            sessionId: z.string(),
+            callId: z.string(),
+            statusText: z.string(),
+          }),
+          z.object({
+            type: z.literal("toolCallWarn"),
+            sessionId: z.string(),
+            callId: z.string(),
+            warnText: z.string(),
           }),
         ]),
       })

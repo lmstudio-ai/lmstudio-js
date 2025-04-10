@@ -3,13 +3,13 @@ export type { ChatAppendOpts, ChatLike, ChatMessageLike } from "./Chat.js";
 export type { ChatInput, ChatMessageInput } from "./ChatInput.js";
 export {
   ConfigSchematics,
-  ConfigSchematicsBuilder,
-  ParsedConfig,
-  VirtualConfigSchematics,
   configSchematicsBrand,
+  ConfigSchematicsBuilder,
   configSchematicsBuilderBrand,
   createConfigSchematics,
+  ParsedConfig,
   parsedConfigBrand,
+  VirtualConfigSchematics,
 } from "./customConfig.js";
 export type { DiagnosticsNamespace } from "./diagnostics/DiagnosticsNamespace.js";
 export type { EmbeddingDynamicHandle } from "./embedding/EmbeddingDynamicHandle.js";
@@ -31,7 +31,7 @@ export type {
 export type { LLMNamespace } from "./llm/LLMNamespace.js";
 export type { OngoingPrediction } from "./llm/OngoingPrediction.js";
 export type { PredictionResult, StructuredPredictionResult } from "./llm/PredictionResult.js";
-export { tool } from "./llm/tool.js";
+export { rawFunctionTool, tool } from "./llm/tool.js";
 export type { FunctionTool, Tool, ToolBase } from "./llm/tool.js";
 export { LMStudioClient } from "./LMStudioClient.js";
 export type { LMStudioClientConstructorOpts } from "./LMStudioClient.js";
@@ -58,6 +58,8 @@ export type {
   PreprocessorController,
   ProcessingController,
 } from "./plugins/processing/ProcessingController.js";
+export type { ToolsProvider } from "./plugins/processing/ToolsProvider.js";
+export type { ToolsProviderController } from "./plugins/processing/ToolsProviderController.js";
 export type {
   DownloadOpts,
   ModelSearchResultDownloadOption,

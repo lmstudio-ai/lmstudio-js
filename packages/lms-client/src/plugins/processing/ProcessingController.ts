@@ -6,6 +6,7 @@ import {
   kvConfigToLLMPredictionConfig,
 } from "@lmstudio/lms-kv-config";
 import {
+  type ChatMessageRoleData,
   type ContentBlockStyle,
   type KVConfig,
   type KVConfigStack,
@@ -131,6 +132,7 @@ interface ProcessingControllerHandle {
  * @public
  */
 export interface CreateContentBlockOpts {
+  roleOverride?: "user" | "assistant" | "system" | "tool";
   includeInContext?: boolean;
   style?: ContentBlockStyle;
   prefix?: string;
@@ -281,6 +283,7 @@ export class ProcessingController {
   }
 
   public createContentBlock({
+    roleOverride,
     includeInContext = true,
     style,
     prefix,
@@ -290,6 +293,7 @@ export class ProcessingController {
     this.sendUpdate({
       type: "contentBlock.create",
       id,
+      roleOverride,
       includeInContext,
       style,
       prefix,
@@ -298,6 +302,7 @@ export class ProcessingController {
     const contentBlockController = new PredictionProcessContentBlockController(
       this.processingControllerHandle,
       id,
+      roleOverride ?? "assistant",
     );
     return contentBlockController;
   }
@@ -489,6 +494,17 @@ export interface ContentBlockAppendTextOpts {
   fromDraftModel?: boolean;
 }
 
+export interface ContentBlockAppendToolRequestOpts {
+  toolCallId: string;
+  name: string;
+  parameters: Record<string, any>;
+}
+
+export interface ContentBlockAppendToolResultOpts {
+  toolCallId: string;
+  content: string;
+}
+
 /**
  * @public
  *
@@ -500,11 +516,15 @@ export class PredictionProcessContentBlockController {
     /** @internal */
     private readonly handle: ProcessingControllerHandle,
     private readonly id: string,
+    private readonly role: ChatMessageRoleData,
   ) {}
   public appendText(
     text: string,
     { tokensCount, fromDraftModel }: ContentBlockAppendTextOpts = {},
   ) {
+    if (this.role === "tool") {
+      throw new Error("Text cannot be appended to tool blocks.");
+    }
     this.handle.sendUpdate({
       type: "contentBlock.appendText",
       id: this.id,
@@ -513,7 +533,37 @@ export class PredictionProcessContentBlockController {
       fromDraftModel,
     });
   }
+  public appendToolRequest({ toolCallId, name, parameters }: ContentBlockAppendToolRequestOpts) {
+    if (this.role !== "assistant") {
+      throw new Error(
+        `Tool requests can only be appended to assistant blocks. This is a ${this.role} block.`,
+      );
+    }
+    this.handle.sendUpdate({
+      type: "contentBlock.appendToolRequest",
+      id: this.id,
+      requestId: toolCallId,
+      name,
+      arguments: parameters,
+    });
+  }
+  public appendToolResult({ toolCallId, content }: ContentBlockAppendToolResultOpts) {
+    if (this.role !== "tool") {
+      throw new Error(
+        `Tool results can only be appended to tool blocks. This is a ${this.role} block.`,
+      );
+    }
+    this.handle.sendUpdate({
+      type: "contentBlock.appendToolResult",
+      id: this.id,
+      requestId: toolCallId,
+      content,
+    });
+  }
   public replaceText(text: string) {
+    if (this.role === "tool") {
+      throw new Error("Text cannot be set in tool blocks.");
+    }
     this.handle.sendUpdate({
       type: "contentBlock.replaceText",
       id: this.id,

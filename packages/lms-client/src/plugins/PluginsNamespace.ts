@@ -16,6 +16,7 @@ import {
 import { z } from "zod";
 import { ChatMessage } from "../Chat.js";
 import { type ConfigSchematics } from "../customConfig.js";
+import { type Tool, type ToolCallContext, toolToLLMTool } from "../llm/tool.js";
 import { type LMStudioClient } from "../LMStudioClient.js";
 import { type Generator } from "./processing/Generator.js";
 import { type Preprocessor } from "./processing/Preprocessor.js";
@@ -25,6 +26,8 @@ import {
   ProcessingConnector,
   ProcessingController,
 } from "./processing/ProcessingController.js";
+import { type ToolsProvider } from "./processing/ToolsProvider.js";
+import { ToolsProviderController } from "./processing/ToolsProviderController.js";
 
 /**
  * Options to use with {@link PluginsNamespace#registerDevelopmentPlugin}.
@@ -381,7 +384,7 @@ export class PluginsNamespace {
     const stack = getCurrentStack(1);
 
     this.validator.validateMethodParamOrThrow(
-      "llm",
+      "plugins",
       "setConfigSchematics",
       "configSchematics",
       z.instanceof(KVConfigSchematics),
@@ -399,6 +402,227 @@ export class PluginsNamespace {
       { stack },
     );
   }
+
+  /**
+   * @deprecated Plugin support is still in development. Stay tuned for updates.
+   */
+  public async setToolsProvider(toolsProvider: ToolsProvider) {
+    const stack = getCurrentStack(1);
+
+    this.validator.validateMethodParamOrThrow(
+      "plugins",
+      "setToolsProvider",
+      "toolsProvider",
+      z.function(),
+      toolsProvider,
+      stack,
+    );
+
+    const logger = new SimpleLogger(`Tools Prvdr.`, this.rootLogger);
+    logger.info("Register with LM Studio");
+
+    interface OngoingToolCall {
+      settled: boolean;
+      abortController: AbortController;
+    }
+
+    interface OpenSessions {
+      /**
+       * Map from tool name to the tool. Null if not yet initialized.
+       */
+      tools: Map<string, Tool> | null;
+      /**
+       * Map from callId to ongoing tool call.
+       */
+      ongoingToolCalls: Map<string, OngoingToolCall>;
+      /**
+       * Starts with false. Set to true when the session is discarded.
+       */
+      discarded: boolean;
+    }
+
+    /**
+     * Map from sessionId to the open session.
+     */
+    const openSessions = new Map<string, OpenSessions>();
+
+    const channel = this.port.createChannel("setToolsProvider", undefined, message => {
+      const messageType = message.type;
+      switch (messageType) {
+        case "initSession": {
+          const sessionId = message.sessionId;
+          const openSession: OpenSessions = {
+            tools: null,
+            ongoingToolCalls: new Map(),
+            discarded: false,
+          };
+          openSessions.set(sessionId, openSession);
+          const controller = new ToolsProviderController(this.client, message.pluginConfig);
+          toolsProvider(controller).then(
+            tools => {
+              const llmTools = tools.map(toolToLLMTool);
+              if (openSession.discarded) {
+                // By the time initialization is done, the session was already discarded. Don't
+                // do anything.
+                return;
+              }
+              channel.send({
+                type: "sessionInitialized",
+                sessionId,
+                toolDefinitions: llmTools,
+              });
+              openSession.tools = new Map<string, Tool>(tools.map(tool => [tool.name, tool]));
+            },
+            error => {
+              if (openSession.discarded) {
+                // If the session was already discarded, don't do anything.
+                return;
+              }
+              channel.send({
+                type: "sessionInitializationFailed",
+                sessionId,
+                error: serializeError(error),
+              });
+              openSession.discarded = true;
+              openSessions.delete(sessionId);
+            },
+          );
+          break;
+        }
+        case "discardSession": {
+          const sessionId = message.sessionId;
+          const openSession = openSessions.get(sessionId);
+          if (openSession === undefined) {
+            // Session was already discarded or doesn't exist. Ignore.
+            return;
+          }
+          openSession.discarded = true;
+          openSessions.delete(sessionId);
+          break;
+        }
+        case "callTool": {
+          const sessionId = message.sessionId;
+          const openSession = openSessions.get(sessionId);
+          if (openSession === undefined) {
+            // Session was already discarded or doesn't exist. Ignore.
+            return;
+          }
+          if (openSession.tools === null) {
+            throw new Error("Tool called before initialization completed. This is unexpected.");
+          }
+          const tool = openSession.tools.get(message.toolName);
+          if (tool === undefined) {
+            throw new Error(`Tool ${message.toolName} not found.`);
+          }
+          const callId = message.callId;
+          const ongoingToolCall: OngoingToolCall = {
+            settled: false,
+            abortController: new AbortController(),
+          };
+          openSession.ongoingToolCalls.set(callId, ongoingToolCall);
+          const logger = new SimpleLogger(`Tool (${message.toolName})`, this.rootLogger);
+
+          const toolCallContext: ToolCallContext = {
+            status(text: string) {
+              channel.send({
+                type: "toolCallStatus",
+                sessionId,
+                callId,
+                statusText: text,
+              });
+            },
+            warn(text: string) {
+              channel.send({
+                type: "toolCallWarn",
+                sessionId,
+                callId,
+                warnText: text,
+              });
+            },
+            signal: ongoingToolCall.abortController.signal,
+            // Call ID is used to match up life cycle events of the same tool call. In this case,
+            // each call does not have different parts, thus call ID is useless. We can just use 0.
+            // If the user wants a "unique" ID, they can just have variable that goes up by one
+            // each time the function is called.
+            callId: 0,
+          };
+
+          (async () => {
+            return await tool.implementation(message.parameters, toolCallContext);
+          })().then(
+            result => {
+              if (openSession.discarded) {
+                // Session was already discarded. Ignore.
+                return;
+              }
+              if (ongoingToolCall.settled) {
+                // Tool call was already settled. Ignore.
+                return;
+              }
+              if (ongoingToolCall.abortController.signal.aborted) {
+                // Tool call was aborted. Ignore.
+                return;
+              }
+              channel.send({
+                type: "toolCallComplete",
+                sessionId,
+                callId,
+                result,
+              });
+              ongoingToolCall.settled = true;
+              openSession.ongoingToolCalls.delete(callId);
+            },
+            error => {
+              if (openSession.discarded) {
+                // Session was already discarded. Ignore.
+                return;
+              }
+              if (ongoingToolCall.settled) {
+                // Tool call was already settled. Ignore.
+                return;
+              }
+              if (ongoingToolCall.abortController.signal.aborted) {
+                // Tool call was aborted. Ignore.
+                return;
+              }
+              channel.send({
+                type: "toolCallError",
+                sessionId,
+                callId,
+                error: serializeError(error),
+              });
+              ongoingToolCall.settled = true;
+              openSession.ongoingToolCalls.delete(callId);
+            },
+          );
+          break;
+        }
+        case "abortToolCall": {
+          const sessionId = message.sessionId;
+          const callId = message.callId;
+          const openSession = openSessions.get(sessionId);
+          if (openSession === undefined) {
+            // Session was already discarded or doesn't exist. Ignore.
+            return;
+          }
+          const ongoingToolCall = openSession.ongoingToolCalls.get(callId);
+          if (ongoingToolCall === undefined) {
+            // Tool call was already completed or doesn't exist. Ignore.
+            return;
+          }
+          ongoingToolCall.settled = true;
+          ongoingToolCall.abortController.abort();
+          openSession.ongoingToolCalls.delete(callId);
+          break;
+        }
+        default: {
+          const exhaustiveCheck: never = messageType;
+          throw new Error(`Unexpected message type: ${exhaustiveCheck}`);
+        }
+      }
+    });
+  }
+
   /**
    * @deprecated Plugin support is still in development. Stay tuned for updates.
    */

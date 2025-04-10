@@ -17,12 +17,21 @@ const client = new LMStudioClient({
 let generatorSet = false;
 let preprocessorSet = false;
 let configSchematicsSet = false;
+let toolsProviderSet = false;
+let simpleGeneratorSet = false;
 
 const pluginContext: PluginContext = {
   withGenerator: (generate) => {
     if (generatorSet) {
       throw new Error("Generator already registered");
     }
+    if (toolsProviderSet) {
+      throw new Error("Generator cannot be used with a tools provider");
+    }
+    if (simpleGeneratorSet) {
+      throw new Error("Generator cannot be used with a simple generator");
+    }
+
     generatorSet = true;
     client.plugins.setGenerator(generate);
     return pluginContext;
@@ -41,6 +50,30 @@ const pluginContext: PluginContext = {
     }
     configSchematicsSet = true;
     client.plugins.setConfigSchematics(configSchematics);
+    return pluginContext;
+  },
+  withToolsProvider: (toolsProvider) => {
+    if (toolsProviderSet) {
+      throw new Error("Tools provider already registered");
+    }
+    if (generatorSet) {
+      throw new Error("Tools provider cannot be used with a generator");
+    }
+
+    toolsProviderSet = true;
+    client.plugins.setToolsProvider(toolsProvider);
+    return pluginContext;
+  },
+  withSimpleGenerator: (simpleGenerator) => {
+    if (simpleGeneratorSet) {
+      throw new Error("Simple generator already registered");
+    }
+    if (generatorSet) {
+      throw new Error("Simple generator cannot be used with a full generator");
+    }
+
+    simpleGeneratorSet = true;
+    client.plugins.setSimpleGenerator(simpleGenerator);
     return pluginContext;
   },
 };
