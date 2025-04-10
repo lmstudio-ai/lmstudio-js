@@ -2,6 +2,8 @@ import { z } from "zod";
 import {
   processingUpdateCitationBlockCreateSchema,
   processingUpdateContentBlockAppendTextSchema,
+  processingUpdateContentBlockAppendToolRequestSchema,
+  processingUpdateContentBlockAppendToolResultSchema,
   processingUpdateContentBlockAttachGenInfoSchema,
   processingUpdateContentBlockCreateSchema,
   processingUpdateContentBlockReplaceTextSchema,
@@ -13,6 +15,8 @@ import {
   processingUpdateStatusUpdateSchema,
   type ProcessingUpdateCitationBlockCreate,
   type ProcessingUpdateContentBlockAppendText,
+  type ProcessingUpdateContentBlockAppendToolRequest,
+  type ProcessingUpdateContentBlockAppendToolResult,
   type ProcessingUpdateContentBlockAttachGenInfo,
   type ProcessingUpdateContentBlockCreate,
   type ProcessingUpdateContentBlockReplaceText,
@@ -33,6 +37,8 @@ export type GeneratorUpdate =
   | ProcessingUpdateContentBlockCreate
   | ProcessingUpdateContentBlockAppendText
   | ProcessingUpdateContentBlockReplaceText
+  | ProcessingUpdateContentBlockAppendToolRequest
+  | ProcessingUpdateContentBlockAppendToolResult
   | ProcessingUpdateContentBlockAttachGenInfo
   | ProcessingUpdateContentBlockSetStyle
   | ProcessingUpdateSetSenderName;
@@ -45,6 +51,8 @@ export const generatorUpdateSchema = z.discriminatedUnion("type", [
   processingUpdateContentBlockCreateSchema,
   processingUpdateContentBlockAppendTextSchema,
   processingUpdateContentBlockReplaceTextSchema,
+  processingUpdateContentBlockAppendToolRequestSchema,
+  processingUpdateContentBlockAppendToolResultSchema,
   processingUpdateContentBlockAttachGenInfoSchema,
   processingUpdateContentBlockSetStyleSchema,
   processingUpdateSetSenderNameSchema,

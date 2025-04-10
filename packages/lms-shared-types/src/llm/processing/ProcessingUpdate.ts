@@ -151,6 +151,49 @@ export const processingUpdateContentBlockAppendTextSchema = z.object({
   fromDraftModel: z.boolean().optional(),
 });
 
+export type ProcessingUpdateContentBlockAppendToolResult = {
+  type: "contentBlock.appendToolResult";
+  id: string;
+  /**
+   * ID of the tool call request.
+   */
+  requestId: string;
+  /**
+   * Result of the tool call.
+   */
+  content: string;
+};
+export const processingUpdateContentBlockAppendToolRequestSchema = z.object({
+  type: z.literal("contentBlock.appendToolRequest"),
+  id: z.string(),
+  requestId: z.string(),
+  name: z.string(),
+  arguments: z.record(z.unknown()),
+});
+
+export type ProcessingUpdateContentBlockAppendToolRequest = {
+  type: "contentBlock.appendToolRequest";
+  id: string;
+  /**
+   * ID of the tool call request.
+   */
+  requestId: string;
+  /**
+   * Name of the tool called.
+   */
+  name: string;
+  /**
+   * Arguments of the tool call.
+   */
+  arguments: Record<string, unknown>;
+};
+export const processingUpdateContentBlockAppendToolResultSchema = z.object({
+  type: z.literal("contentBlock.appendToolResult"),
+  id: z.string(),
+  requestId: z.string(),
+  content: z.string(),
+});
+
 export type ProcessingUpdateContentBlockReplaceText = {
   type: "contentBlock.replaceText";
   id: string;
@@ -225,6 +268,8 @@ export type ProcessingUpdate =
   | ProcessingUpdateDebugInfoBlockCreate
   | ProcessingUpdateContentBlockCreate
   | ProcessingUpdateContentBlockAppendText
+  | ProcessingUpdateContentBlockAppendToolRequest
+  | ProcessingUpdateContentBlockAppendToolResult
   | ProcessingUpdateContentBlockReplaceText
   | ProcessingUpdateContentBlockSetPrefix
   | ProcessingUpdateContentBlockSetSuffix
@@ -239,6 +284,8 @@ export const processingUpdateSchema = z.discriminatedUnion("type", [
   processingUpdateDebugInfoBlockCreateSchema,
   processingUpdateContentBlockCreateSchema,
   processingUpdateContentBlockAppendTextSchema,
+  processingUpdateContentBlockAppendToolRequestSchema,
+  processingUpdateContentBlockAppendToolResultSchema,
   processingUpdateContentBlockReplaceTextSchema,
   processingUpdateContentBlockSetPrefixSchema,
   processingUpdateContentBlockSetSuffixSchema,

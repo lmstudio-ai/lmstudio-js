@@ -284,7 +284,7 @@ export interface LLMActionOpts<TStructuredOutputType = unknown>
    * Instead, you can use this callback to update the UI or maintain the context. If you are unsure
    * what to do with this callback, you can ignore it.
    *
-   * @experimental This option is experimental and may change in the future. Especially the second
+   * @experimental This option is experimental and may change in the future. Especially the third
    * parameter (toolCallRequest) which is very likely to be changed to a nicer type.
    */
   onToolCallGenerationEnd?: (
