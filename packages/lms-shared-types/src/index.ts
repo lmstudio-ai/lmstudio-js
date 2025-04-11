@@ -17,6 +17,8 @@ export {
   ArtifactDependency,
   ArtifactDependencyBase,
   artifactDependencyBaseSchema,
+  ArtifactDependencyPurpose,
+  artifactDependencyPurposeSchema,
   artifactDependencySchema,
   ArtifactManifestBase,
   artifactManifestBaseSchema,
@@ -28,6 +30,8 @@ export {
   artifactModelDependencySchema,
   kebabCaseRegex,
   kebabCaseSchema,
+  kebabCaseWithDotsRegex,
+  kebabCaseWithDotsSchema,
 } from "./ArtifactManifestBase.js";
 export { BackendNotification, backendNotificationSchema } from "./BackendNotification.js";
 export {
