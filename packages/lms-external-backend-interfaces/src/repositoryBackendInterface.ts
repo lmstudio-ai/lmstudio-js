@@ -3,6 +3,7 @@ import { type InferClientPort } from "@lmstudio/lms-communication-client";
 import {
   downloadProgressUpdateSchema,
   kebabCaseSchema,
+  kebabCaseWithDotsSchema,
   modelSearchOptsSchema,
   modelSearchResultDownloadOptionDataSchema,
   modelSearchResultEntryDataSchema,
@@ -54,7 +55,7 @@ export function createRepositoryBackendInterface() {
     .addChannelEndpoint("downloadArtifact", {
       creationParameter: z.object({
         artifactOwner: kebabCaseSchema,
-        artifactName: kebabCaseSchema,
+        artifactName: kebabCaseWithDotsSchema,
         revisionNumber: z.number().int().nullable(),
         path: z.string(),
       }),

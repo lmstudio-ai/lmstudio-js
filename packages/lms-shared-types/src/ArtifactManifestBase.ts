@@ -4,6 +4,9 @@ import { fileNameSchema } from "./path";
 export const kebabCaseRegex = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 export const kebabCaseSchema = z.string().regex(kebabCaseRegex);
 
+export const kebabCaseWithDotsRegex = /^[a-z0-9]+(?:[-.][a-z0-9]+)*$/;
+export const kebabCaseWithDotsSchema = z.string().regex(kebabCaseWithDotsRegex);
+
 export interface ArtifactModelDependencyHuggingFaceDownloadSource {
   type: "huggingface";
   user: string;
@@ -67,7 +70,7 @@ export const artifactArtifactDependencySchema = z.object({
   type: z.literal("artifact"),
   ...artifactDependencyBaseSchema.shape,
   owner: kebabCaseSchema,
-  name: kebabCaseSchema,
+  name: kebabCaseWithDotsSchema,
 });
 
 export type ArtifactDependency = ArtifactModelDependency | ArtifactArtifactDependency;
@@ -90,7 +93,7 @@ export interface ArtifactManifestBase {
 }
 export const artifactManifestBaseSchema = z.object({
   owner: kebabCaseSchema,
-  name: kebabCaseSchema.min(1, "Name is required").max(100, "Name too long"),
+  name: kebabCaseWithDotsSchema.min(1, "Name is required").max(100, "Name too long"),
   description: z.string().max(1000, "Description too long"),
   revision: z.number().int().optional(),
   dependencies: z.array(artifactDependencySchema).optional(),
