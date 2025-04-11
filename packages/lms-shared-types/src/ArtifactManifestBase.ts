@@ -21,14 +21,18 @@ export const artifactModelDependencyDownloadSourceSchema = z.discriminatedUnion(
   artifactModelDependencyHuggingFaceDownloadSourceSchema,
 ]) as ZodSchema<ArtifactModelDependencyDownloadSource>;
 
+export type ArtifactDependencyPurpose = "baseModel" | "draftModel" | "custom";
+export const artifactDependencyPurposeSchema = z.enum([
+  "baseModel",
+  "draftModel",
+  "custom",
+]) as ZodSchema<ArtifactDependencyPurpose>;
+
 export interface ArtifactDependencyBase {
-  /**
-   * Human readable description of the purpose of the dependency.
-   */
-  purpose?: string;
+  purpose: ArtifactDependencyPurpose;
 }
 export const artifactDependencyBaseSchema = z.object({
-  purpose: z.string().optional(),
+  purpose: artifactDependencyPurposeSchema,
 });
 
 export interface ArtifactModelDependency extends ArtifactDependencyBase {
