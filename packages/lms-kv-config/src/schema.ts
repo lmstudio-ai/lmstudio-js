@@ -397,6 +397,7 @@ export const llmMlxPredictionConfigSchematics = llmSharedPredictionConfigSchemat
     "repeatPenalty",
     "minPSampling",
     "topPSampling",
+    "topKSampling",
     "speculativeDecoding.draftModel",
     "speculativeDecoding.numDraftTokensExact",
   ),
