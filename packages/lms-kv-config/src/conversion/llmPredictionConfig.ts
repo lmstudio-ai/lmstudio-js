@@ -43,11 +43,6 @@ export function kvConfigToLLMPredictionConfig(config: KVConfig) {
   const topKSampling = parsed.get("llm.prediction.topKSampling");
   if (topKSampling !== undefined) {
     result.topKSampling = topKSampling;
-  } else {
-    const mlxTopKSampling = parsed.get("llm.prediction.mlx.topKSampling");
-    if (mlxTopKSampling !== undefined && mlxTopKSampling.checked) {
-      result.topKSampling = mlxTopKSampling.value;
-    }
   }
 
   const repeatPenalty = parsed.get("llm.prediction.repeatPenalty");
@@ -136,7 +131,6 @@ export function llmPredictionConfigToKVConfig(config: LLMPredictionConfig): KVCo
     "structured": config.structured,
     "tools": config.rawTools,
     "topKSampling": config.topKSampling,
-    "mlx.topKSampling": maybeFalseNumberToCheckboxNumeric(config.topKSampling, 10),
     "repeatPenalty": maybeFalseNumberToCheckboxNumeric(config.repeatPenalty, 1.1),
     "minPSampling": maybeFalseNumberToCheckboxNumeric(config.minPSampling, 0.05),
     "topPSampling": maybeFalseNumberToCheckboxNumeric(config.topPSampling, 0.95),
