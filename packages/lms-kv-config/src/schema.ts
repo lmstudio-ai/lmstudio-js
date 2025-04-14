@@ -217,14 +217,6 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
             { checked: false, value: 0.9 },
           )
           .field("logitBias", "llamaLogitBias", {}, []),
-      )
-      .scope("mlx", builder =>
-        builder.field(
-          "topKSampling",
-          "checkboxNumeric",
-          { min: 1, max: 1000 },
-          { checked: false, value: 40 },
-        ),
       ),
   )
   .scope("llm.load", builder =>
