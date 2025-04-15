@@ -4,6 +4,7 @@ import {
   modelCompatibilityTypeSchema,
   type ModelCompatibilityType,
 } from "./ModelCompatibilityType.js";
+import { modelDomainTypeSchema, type ModelDomainType } from "./ModelDomainType.js";
 
 /**
  * The indicator whether the virtual model is trained for tool use. There could be cases where not
@@ -33,6 +34,10 @@ const virtualModelVisionSupportSchema = z.union([
  */
 export interface VirtualModelDefinitionMetadataOverrides {
   /**
+   * Domain type of the model.
+   */
+  domain?: ModelDomainType;
+  /**
    * Architectures of the model. e.g. llama, qwen2, etc.
    */
   architectures?: string[];
@@ -49,6 +54,10 @@ export interface VirtualModelDefinitionMetadataOverrides {
    */
   minMemoryUsageBytes?: number;
   /**
+   * (LLM and embedding models only) The context lengths of the model.
+   */
+  contextLengths?: number[];
+  /**
    * (LLM only) Whether the model is trained for tool use. Models that are trained for tool use
    * generally are more capable of using tools effectively. Could be a mixture of tool use and
    * non-tool use concrete models.
@@ -61,10 +70,12 @@ export interface VirtualModelDefinitionMetadataOverrides {
   vision?: VirtualModelVisionSupport;
 }
 export const virtualModelDefinitionMetadataOverridesSchema = z.object({
+  domain: modelDomainTypeSchema.optional(),
   architectures: z.array(z.string()).optional(),
   compatibilityTypes: z.array(modelCompatibilityTypeSchema).optional(),
   paramsStrings: z.array(z.string()).optional(),
   minMemoryUsageBytes: z.number().optional(),
+  contextLengths: z.array(z.number()).optional(),
   trainedForToolUse: virtualModelTrainedForToolUseSchema.optional(),
   vision: virtualModelVisionSupportSchema.optional(),
 }) as ZodSchema<VirtualModelDefinitionMetadataOverrides>;
