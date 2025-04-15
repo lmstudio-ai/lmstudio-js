@@ -889,11 +889,20 @@ export class LLMDynamicHandle extends DynamicHandle<
         },
         { once: true },
       );
-      console.info("ABORTTTEEEDEDEDEDDED");
     }
 
-    if (config.structured !== undefined) {
-      throw makePrettyError("Structured output is currently not supported in act.", stack);
+    if (
+      config.structured !== undefined &&
+      (config.structured as any).type !== "none" &&
+      tools.length > 0
+    ) {
+      throw makePrettyError(
+        "Structured output is currently not supported in .act() when there are tools.",
+        stack,
+      );
+    }
+    if (config.structured !== undefined && (config.structured as any).parse !== undefined) {
+      throw makePrettyError("zod schema is not supported in .act().", stack);
     }
     if (config.rawTools !== undefined) {
       throw makePrettyError("`rawTools` is not supported in act. Use `tools` instead", stack);
