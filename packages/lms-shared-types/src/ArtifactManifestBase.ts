@@ -90,6 +90,7 @@ export interface ArtifactManifestBase {
   description: string;
   revision?: number;
   dependencies?: Array<ArtifactDependency>;
+  tags?: Array<string>;
 }
 export const artifactManifestBaseSchema = z.object({
   owner: kebabCaseSchema,
@@ -97,4 +98,5 @@ export const artifactManifestBaseSchema = z.object({
   description: z.string().max(1000, "Description too long"),
   revision: z.number().int().optional(),
   dependencies: z.array(artifactDependencySchema).optional(),
+  tags: z.array(z.string()).optional(),
 });
