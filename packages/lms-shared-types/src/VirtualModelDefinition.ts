@@ -6,9 +6,9 @@ import {
 } from "./ModelCompatibilityType.js";
 
 /**
- * The indicator whether the virtual model is trained for tool use.
- * There could be cases where not all concrete models are trained for tool use.
- * In that case, we can use the "mixed" value to indicate that.
+ * The indicator whether the virtual model is trained for tool use. There could be cases where not
+ * all concrete models are trained for tool use. In that case, we can use the "mixed" value to
+ * indicate that.
  */
 export type VirtualModelTrainedForToolUse = true | false | "mixed";
 
@@ -18,9 +18,8 @@ const virtualModelTrainedForToolUseSchema = z.union([
 ]) as ZodSchema<VirtualModelTrainedForToolUse>;
 
 /**
- * The indicator whether the virtual model supports vision.
- * There could be cases where not all concrete models support vision.
- * In that case, we can use the "mixed" value to indicate that.
+ * The indicator whether the virtual model supports vision. There could be cases where not all
+ * concrete models support vision. In that case, we can use the "mixed" value to indicate that.
  */
 export type VirtualModelVisionSupport = true | false | "mixed";
 
@@ -76,8 +75,8 @@ export interface VirtualModelDefinition {
    */
   model: string;
   /**
-   * The model key of the next model in the inheritance chain. If multiple models are matched,
-   * LM Studio will pick the best one based on hardware and installed engines.
+   * The model key of the next model in the inheritance chain. If multiple models are matched, LM
+   * Studio will pick the best one based on hardware and installed engines.
    *
    * If an array is provided, any model matching any of the model keys will be considered.
    */
