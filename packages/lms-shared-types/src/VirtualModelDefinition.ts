@@ -5,6 +5,7 @@ import {
   type ModelCompatibilityType,
 } from "./ModelCompatibilityType.js";
 import { modelDomainTypeSchema, type ModelDomainType } from "./ModelDomainType.js";
+import { modelDownloadSourceSchema, type ModelDownloadSource } from "./ModelDownloadSource.js";
 
 /**
  * The indicator whether the virtual model is trained for tool use. There could be cases where not
@@ -13,10 +14,10 @@ import { modelDomainTypeSchema, type ModelDomainType } from "./ModelDomainType.j
  */
 export type VirtualModelTrainedForToolUse = true | false | "mixed";
 
-const virtualModelTrainedForToolUseSchema = z.union([
+const virtualModelTrainedForToolUseSchema: ZodSchema<VirtualModelTrainedForToolUse> = z.union([
   z.boolean(),
   z.literal("mixed"),
-]) as ZodSchema<VirtualModelTrainedForToolUse>;
+]);
 
 /**
  * The indicator whether the virtual model supports vision. There could be cases where not all
@@ -24,10 +25,10 @@ const virtualModelTrainedForToolUseSchema = z.union([
  */
 export type VirtualModelVisionSupport = true | false | "mixed";
 
-const virtualModelVisionSupportSchema = z.union([
+const virtualModelVisionSupportSchema: ZodSchema<VirtualModelVisionSupport> = z.union([
   z.boolean(),
   z.literal("mixed"),
-]) as ZodSchema<VirtualModelVisionSupport>;
+]);
 
 /**
  * Allows the creator of a model to override certain metadata fields.
@@ -69,16 +70,33 @@ export interface VirtualModelDefinitionMetadataOverrides {
    */
   vision?: VirtualModelVisionSupport;
 }
-export const virtualModelDefinitionMetadataOverridesSchema = z.object({
-  domain: modelDomainTypeSchema.optional(),
-  architectures: z.array(z.string()).optional(),
-  compatibilityTypes: z.array(modelCompatibilityTypeSchema).optional(),
-  paramsStrings: z.array(z.string()).optional(),
-  minMemoryUsageBytes: z.number().optional(),
-  contextLengths: z.array(z.number()).optional(),
-  trainedForToolUse: virtualModelTrainedForToolUseSchema.optional(),
-  vision: virtualModelVisionSupportSchema.optional(),
-}) as ZodSchema<VirtualModelDefinitionMetadataOverrides>;
+export const virtualModelDefinitionMetadataOverridesSchema: ZodSchema<VirtualModelDefinitionMetadataOverrides> =
+  z.object({
+    domain: modelDomainTypeSchema.optional(),
+    architectures: z.array(z.string()).optional(),
+    compatibilityTypes: z.array(modelCompatibilityTypeSchema).optional(),
+    paramsStrings: z.array(z.string()).optional(),
+    minMemoryUsageBytes: z.number().optional(),
+    contextLengths: z.array(z.number()).optional(),
+    trainedForToolUse: virtualModelTrainedForToolUseSchema.optional(),
+    vision: virtualModelVisionSupportSchema.optional(),
+  });
+
+export interface VirtualModelDefinitionConcreteModelBase {
+  /**
+   * The key of the concrete model when downloaded.
+   */
+  key: string;
+  /**
+   * Where this model can be downloaded from.
+   */
+  sources: Array<ModelDownloadSource>;
+}
+export const virtualModelDefinitionConcreteModelBaseSchema: ZodSchema<VirtualModelDefinitionConcreteModelBase> =
+  z.object({
+    key: z.string(),
+    sources: z.array(modelDownloadSourceSchema),
+  });
 
 export interface VirtualModelDefinition {
   /**
@@ -86,21 +104,21 @@ export interface VirtualModelDefinition {
    */
   model: string;
   /**
-   * The model key of the next model in the inheritance chain. If multiple models are matched, LM
-   * Studio will pick the best one based on hardware and installed engines.
-   *
-   * If an array is provided, any model matching any of the model keys will be considered.
+   * How to find the next model in the model chain. This can either be a single string (representing
+   * a virtual model), or an array of concrete model bases.
    */
-  base: string | Array<string>;
+  base: string | Array<VirtualModelDefinitionConcreteModelBase>;
+  description: string;
   config?: {
     load?: KVConfig;
     operation?: KVConfig;
   };
   metadataOverrides?: VirtualModelDefinitionMetadataOverrides;
 }
-export const virtualModelDefinitionSchema = z.object({
+export const virtualModelDefinitionSchema: ZodSchema<VirtualModelDefinition> = z.object({
   model: z.string().regex(/^[^/]+\/[^/]+$/),
-  base: z.string().or(z.array(z.string())),
+  base: z.union([z.string(), z.array(virtualModelDefinitionConcreteModelBaseSchema)]),
+  description: z.string().max(1000),
   config: z
     .object({
       load: kvConfigSchema.optional(),
@@ -108,4 +126,4 @@ export const virtualModelDefinitionSchema = z.object({
     })
     .optional(),
   metadataOverrides: virtualModelDefinitionMetadataOverridesSchema.optional(),
-}) as ZodSchema<VirtualModelDefinition>;
+});

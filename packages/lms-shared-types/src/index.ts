@@ -23,15 +23,7 @@ export {
   ArtifactManifestBase,
   artifactManifestBaseSchema,
   ArtifactModelDependency,
-  ArtifactModelDependencyDownloadSource,
-  artifactModelDependencyDownloadSourceSchema,
-  ArtifactModelDependencyHuggingFaceDownloadSource,
-  artifactModelDependencyHuggingFaceDownloadSourceSchema,
   artifactModelDependencySchema,
-  kebabCaseRegex,
-  kebabCaseSchema,
-  kebabCaseWithDotsRegex,
-  kebabCaseWithDotsSchema,
 } from "./ArtifactManifestBase.js";
 export { BackendNotification, backendNotificationSchema } from "./BackendNotification.js";
 export {
@@ -106,6 +98,12 @@ export {
   gpuSplitStrategySchema,
 } from "./GPUSplitStrategy.js";
 export { jsonSerializableSchema } from "./JSONSerializable.js";
+export {
+  kebabCaseRegex,
+  kebabCaseSchema,
+  kebabCaseWithDotsRegex,
+  kebabCaseWithDotsSchema,
+} from "./kebab.js";
 export {
   KVConfig,
   KVConfigField,

@@ -1,28 +1,6 @@
 import { z, type ZodSchema } from "zod";
-import { fileNameSchema } from "./path";
-
-export const kebabCaseRegex = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-export const kebabCaseSchema = z.string().regex(kebabCaseRegex);
-
-export const kebabCaseWithDotsRegex = /^[a-z0-9]+(?:[-.][a-z0-9]+)*$/;
-export const kebabCaseWithDotsSchema = z.string().regex(kebabCaseWithDotsRegex);
-
-export interface ArtifactModelDependencyHuggingFaceDownloadSource {
-  type: "huggingface";
-  user: string;
-  repo: string;
-}
-export const artifactModelDependencyHuggingFaceDownloadSourceSchema = z.object({
-  type: z.literal("huggingface"),
-  user: fileNameSchema,
-  repo: fileNameSchema,
-});
-
-export type ArtifactModelDependencyDownloadSource =
-  ArtifactModelDependencyHuggingFaceDownloadSource;
-export const artifactModelDependencyDownloadSourceSchema = z.discriminatedUnion("type", [
-  artifactModelDependencyHuggingFaceDownloadSourceSchema,
-]) as ZodSchema<ArtifactModelDependencyDownloadSource>;
+import { kebabCaseSchema, kebabCaseWithDotsSchema } from "./kebab.js";
+import { type ModelDownloadSource, modelDownloadSourceSchema } from "./ModelDownloadSource.js";
 
 export type ArtifactDependencyPurpose = "baseModel" | "draftModel" | "custom";
 export const artifactDependencyPurposeSchema = z.enum([
@@ -49,13 +27,13 @@ export interface ArtifactModelDependency extends ArtifactDependencyBase {
   /**
    * Describes how to download the model. Currently only supports downloading from a URL.
    */
-  sources: Array<ArtifactModelDependencyDownloadSource>;
+  sources: Array<ModelDownloadSource>;
 }
 export const artifactModelDependencySchema = z.object({
   type: z.literal("model"),
   ...artifactDependencyBaseSchema.shape,
   modelKeys: z.array(z.string().min(1)),
-  sources: z.array(artifactModelDependencyDownloadSourceSchema),
+  sources: z.array(modelDownloadSourceSchema),
 });
 
 /**
