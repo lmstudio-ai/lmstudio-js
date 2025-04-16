@@ -273,6 +273,12 @@ export { GetModelOpts, getModelOptsSchema } from "./llm/processing/Processor.js"
 export { ModelCompatibilityType, modelCompatibilityTypeSchema } from "./ModelCompatibilityType.js";
 export { ModelDomainType, modelDomainTypeSchema } from "./ModelDomainType.js";
 export {
+  HuggingFaceModelDownloadSource,
+  huggingFaceModelDownloadSourceSchema,
+  ModelDownloadSource,
+  modelDownloadSourceSchema,
+} from "./ModelDownloadSource.js";
+export {
   ModelInfo,
   modelInfoSchema,
   ModelInstanceInfo,
