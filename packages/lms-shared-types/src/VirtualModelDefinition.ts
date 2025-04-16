@@ -108,7 +108,8 @@ export interface VirtualModelDefinition {
    * a virtual model), or an array of concrete model bases.
    */
   base: string | Array<VirtualModelDefinitionConcreteModelBase>;
-  description: string;
+  description?: string;
+  tags?: Array<string>;
   config?: {
     load?: KVConfig;
     operation?: KVConfig;
@@ -118,7 +119,8 @@ export interface VirtualModelDefinition {
 export const virtualModelDefinitionSchema: ZodSchema<VirtualModelDefinition> = z.object({
   model: z.string().regex(/^[^/]+\/[^/]+$/),
   base: z.union([z.string(), z.array(virtualModelDefinitionConcreteModelBaseSchema)]),
-  description: z.string().max(1000),
+  description: z.string().max(1000).optional(),
+  tags: z.array(z.string().max(100)).optional(),
   config: z
     .object({
       load: kvConfigSchema.optional(),
