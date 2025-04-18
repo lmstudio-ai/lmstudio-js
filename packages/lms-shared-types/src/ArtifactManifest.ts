@@ -9,3 +9,6 @@ export const artifactManifestSchema = z.discriminatedUnion("type", [
   presetManifestSchema,
   modelManifestSchema,
 ]) as ZodSchema<ArtifactManifest>;
+
+export type ArtifactType = "plugin" | "preset" | "model";
+export const artifactTypeSchema = z.enum(["plugin", "preset", "model"]);

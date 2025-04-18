@@ -91,7 +91,13 @@ export class ModelSearchResultDownloadOption {
       },
       { stack },
     );
-    channel.onError.subscribeOnce(reject);
+    channel.onError.subscribeOnce(error => {
+      if (opts.signal?.aborted) {
+        reject(opts.signal.reason);
+      } else {
+        reject(error);
+      }
+    });
     channel.onClose.subscribeOnce(() => {
       if (opts.signal?.aborted) {
         reject(opts.signal.reason);

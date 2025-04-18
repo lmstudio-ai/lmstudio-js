@@ -502,3 +502,22 @@ export type BackendInterfaceWithContext<TBackendInterface extends BackendInterfa
         RWritableSignalEndpoints
       >
     : never;
+export type AnyBackendInterface = BackendInterface<any, any, any, any, any>;
+export type ExtractBackendInterfaceRpcEndpoints<TBackendInterface extends AnyBackendInterface> =
+  TBackendInterface extends BackendInterface<any, infer RRpcEndpoints, any, any, any>
+    ? RRpcEndpoints
+    : never;
+export type ExtractBackendInterfaceChannelEndpoints<TBackendInterface extends AnyBackendInterface> =
+  TBackendInterface extends BackendInterface<any, any, infer RChannelEndpoints, any, any>
+    ? RChannelEndpoints
+    : never;
+export type ExtractBackendInterfaceSignalEndpoints<TBackendInterface extends AnyBackendInterface> =
+  TBackendInterface extends BackendInterface<any, any, any, infer RSignalEndpoints, any>
+    ? RSignalEndpoints
+    : never;
+export type ExtractBackendInterfaceWritableSignalEndpoints<
+  TBackendInterface extends AnyBackendInterface,
+> =
+  TBackendInterface extends BackendInterface<any, any, any, any, infer RWritableSignalEndpoints>
+    ? RWritableSignalEndpoints
+    : never;

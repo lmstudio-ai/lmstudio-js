@@ -1,3 +1,4 @@
+import { type Cleaner } from "./Cleaner.js";
 import {
   isAvailable,
   LazySignal,
@@ -20,12 +21,23 @@ function isSignalLike<TValue>(value: Subscribable<TValue>): value is SignalLike<
  */
 export abstract class Subscribable<TData> {
   public abstract subscribe(listener: (data: TData) => void): () => void;
+
+  public subscribeWithCleaner(cleaner: Cleaner, listener: (data: TData) => void) {
+    const unsubscribe = this.subscribe(listener);
+    cleaner.register(unsubscribe);
+  }
+
   public subscribeOnce(listener: (data: TData) => void): () => void {
     const unsubscribe = this.subscribe(data => {
       unsubscribe();
       listener(data);
     });
     return unsubscribe;
+  }
+
+  public subscribeOnceWithCleaner(cleaner: Cleaner, listener: (data: TData) => void) {
+    const unsubscribe = this.subscribeOnce(listener);
+    cleaner.register(unsubscribe);
   }
 
   public derive<TOutput>(
