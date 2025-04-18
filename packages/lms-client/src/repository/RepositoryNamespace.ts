@@ -9,10 +9,12 @@ import {
 import { type RepositoryPort } from "@lmstudio/lms-external-backend-interfaces";
 import {
   modelSearchOptsSchema,
+  type ArtifactDownloadPlan,
   type DownloadProgressUpdate,
   type ModelSearchOpts,
 } from "@lmstudio/lms-shared-types";
 import { z, type ZodSchema } from "zod";
+import { ArtifactDownloadPlanner } from "./ArtifactDownloadPlanner.js";
 import { ModelSearchResultEntry } from "./ModelSearchResultEntry.js";
 
 /**
@@ -67,6 +69,17 @@ export interface EnsureAuthenticatedOpts {
 export const ensureAuthenticatedOptsSchema = z.object({
   onAuthenticationUrl: z.function(),
 }) as ZodSchema<EnsureAuthenticatedOpts>;
+
+export interface CreateArtifactDownloadPlannerOpts {
+  owner: string;
+  name: string;
+  onPlanUpdated?: (plan: ArtifactDownloadPlan) => void;
+}
+export const createArtifactDownloadPlannerOptsSchema = z.object({
+  owner: z.string(),
+  name: z.string(),
+  onPlanUpdated: z.function().optional(),
+}) as ZodSchema<CreateArtifactDownloadPlannerOpts>;
 
 /** @public */
 export class RepositoryNamespace {
@@ -243,5 +256,43 @@ export class RepositoryNamespace {
     });
     channel.onError.subscribeOnce(reject);
     await promise;
+  }
+
+  private readonly downloadPlanFinalizationRegistry = new FinalizationRegistry<{
+    owner: string;
+    name: string;
+  }>(({ owner, name }) => {
+    this.logger.warn(`
+      A download plan for artifact ${owner}/${name} has been garbage collected without being
+      disposed. Please make sure you are creating the download plan with the "using" keyword.
+
+      This is a memory leak and needs to be fixed.
+    `);
+  });
+  /**
+   * @deprecated Plugin support is still in development. Stay tuned for updates.
+   */
+  public createArtifactDownloadPlanner(
+    opts: CreateArtifactDownloadPlannerOpts,
+  ): ArtifactDownloadPlanner {
+    const { owner, name, onPlanUpdated } = this.validator.validateMethodParamOrThrow(
+      "repository",
+      "createArtifactDownloadPlanner",
+      "opts",
+      createArtifactDownloadPlannerOptsSchema,
+      opts,
+    );
+    const stack = getCurrentStack(1);
+    const channel = this.repositoryPort.createChannel(
+      "createArtifactDownloadPlan",
+      { owner, name },
+      undefined, // Don't listen to the messages yet.
+      { stack },
+    );
+    const planner = new ArtifactDownloadPlanner(owner, name, onPlanUpdated, channel, () => {
+      this.downloadPlanFinalizationRegistry.unregister(planner);
+    });
+    this.downloadPlanFinalizationRegistry.register(planner, { owner, name }, planner);
+    return planner;
   }
 }

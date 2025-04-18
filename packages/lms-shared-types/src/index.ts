@@ -10,7 +10,12 @@ export {
   AllowableEnvVars,
   allowableEnvVarsSchema,
 } from "./AllowableEnvVars.js";
-export { ArtifactManifest, artifactManifestSchema } from "./ArtifactManifest.js";
+export {
+  ArtifactManifest,
+  artifactManifestSchema,
+  ArtifactType,
+  artifactTypeSchema,
+} from "./ArtifactManifest.js";
 export {
   ArtifactArtifactDependency,
   artifactArtifactDependencySchema,
@@ -311,6 +316,16 @@ export {
 } from "./PluginManifest.js";
 export { PresetManifest, presetManifestSchema } from "./PresetManifest.js";
 export { reasonableKeyStringSchema } from "./reasonable.js";
+export {
+  ArtifactDownloadPlan,
+  ArtifactDownloadPlanModelInfo,
+  artifactDownloadPlanModelInfoSchema,
+  ArtifactDownloadPlanNode,
+  artifactDownloadPlanNodeSchema,
+  ArtifactDownloadPlanNodeState,
+  artifactDownloadPlanNodeStateSchema,
+  artifactDownloadPlanSchema,
+} from "./repository/ArtifactDownloadPlan.js";
 export {
   DownloadProgressUpdate,
   downloadProgressUpdateSchema,

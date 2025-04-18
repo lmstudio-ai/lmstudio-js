@@ -386,4 +386,21 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
   public passiveSubscribeFull(subscriber: SignalFullSubscriber<TData>): () => void {
     return this.signal.subscribeFull(subscriber);
   }
+
+  public async until(
+    predicate: (data: StripNotAvailable<TData>) => boolean,
+  ): Promise<StripNotAvailable<TData>> {
+    const current = this.get();
+    if (isAvailable(current) && predicate(current)) {
+      return current;
+    }
+    const { promise, resolve } = makePromise<StripNotAvailable<TData>>();
+    const unsubscribe = this.subscribe(data => {
+      if (isAvailable(data) && predicate(data)) {
+        resolve(data as StripNotAvailable<TData>);
+        unsubscribe();
+      }
+    });
+    return await promise;
+  }
 }
