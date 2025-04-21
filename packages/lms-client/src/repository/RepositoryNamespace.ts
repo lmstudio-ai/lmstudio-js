@@ -11,6 +11,7 @@ import {
   modelSearchOptsSchema,
   type ArtifactDownloadPlan,
   type DownloadProgressUpdate,
+  type LocalArtifactFileList,
   type ModelSearchOpts,
 } from "@lmstudio/lms-shared-types";
 import { z, type ZodSchema } from "zod";
@@ -219,6 +220,27 @@ export class RepositoryNamespace {
     channel.onError.subscribeOnce(reject);
     channel.onClose.subscribeOnce(resolve);
     await promise;
+  }
+
+  /**
+   * @deprecated Plugin support is still in development. Stay tuned for updates.
+   */
+  public async getLocalArtifactFileList(path: string): Promise<LocalArtifactFileList> {
+    const stack = getCurrentStack(1);
+    this.validator.validateMethodParamOrThrow(
+      "repository",
+      "getLocalArtifactFileList",
+      "path",
+      z.string(),
+      path,
+      stack,
+    );
+    const { fileList } = await this.repositoryPort.callRpc(
+      "getLocalArtifactFiles",
+      { path },
+      { stack },
+    );
+    return fileList;
   }
 
   /**

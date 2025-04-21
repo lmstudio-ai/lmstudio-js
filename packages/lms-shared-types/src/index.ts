@@ -327,6 +327,12 @@ export {
   artifactDownloadPlanSchema,
 } from "./repository/ArtifactDownloadPlan.js";
 export {
+  LocalArtifactFileEntry,
+  localArtifactFileEntrySchema,
+  LocalArtifactFileList,
+  localArtifactFileListSchema,
+} from "./repository/ArtifactUpload.js";
+export {
   DownloadProgressUpdate,
   downloadProgressUpdateSchema,
 } from "./repository/DownloadProgressUpdate.js";
