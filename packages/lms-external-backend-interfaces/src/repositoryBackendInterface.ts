@@ -5,6 +5,7 @@ import {
   downloadProgressUpdateSchema,
   kebabCaseSchema,
   kebabCaseWithDotsSchema,
+  localArtifactFileListSchema,
   modelSearchOptsSchema,
   modelSearchResultDownloadOptionDataSchema,
   modelSearchResultEntryDataSchema,
@@ -87,6 +88,18 @@ export function createRepositoryBackendInterface() {
           pluginFolder: z.string(),
         }),
         returns: z.void(),
+      })
+      /**
+       * Given the path to a local artifact folder, returns the list of files in that folder that
+       * would be pushed when invoking the pushArtifact endpoint.
+       */
+      .addRpcEndpoint("getLocalArtifactFiles", {
+        parameter: z.object({
+          path: z.string(),
+        }),
+        returns: z.object({
+          fileList: localArtifactFileListSchema,
+        }),
       })
       .addChannelEndpoint("pushArtifact", {
         creationParameter: z.object({
