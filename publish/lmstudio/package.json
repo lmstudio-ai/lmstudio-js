@@ -1,6 +1,6 @@
 {
   "name": "lmstudio",
-  "version": "0.0.26",
+  "version": "0.0.27",
   "description": "LM Studio Setup Tool",
   "main": "dist/index.js",
   "scripts": {
@@ -15,9 +15,9 @@
   "author": "",
   "license": "Apache-2.0",
   "devDependencies": {
-    "@lmstudio/lms-lmstudio": "^0.0.26",
+    "@lmstudio/lms-lmstudio": "^0.0.27",
     "postject": "^1.0.0-alpha.6",
     "run-script-os": "^1.1.6"
   },
-  "gitHead": "0124e72816202b7e9754cd454f753ae3cc5222f2"
+  "gitHead": "f2a191197ff79aa6c463bdf6d9ff8e5d0ebd1aa0"
 }
