@@ -4,8 +4,8 @@ import { z } from "zod";
 export type LogLevel = "debug" | "info" | "warn" | "error";
 export const logLevelSchema = z.enum(["debug", "info", "warn", "error"]);
 export {
-  allowableEnvVarKeys,
   AllowableEnvVarKeys,
+  allowableEnvVarKeys,
   allowableEnvVarKeysSchema,
   AllowableEnvVars,
   allowableEnvVarsSchema,
@@ -236,6 +236,23 @@ export {
   PreprocessorUpdate,
   preprocessorUpdateSchema,
 } from "./llm/processing/PreprocessorUpdate.js";
+export {
+  ProcessingRequest,
+  ProcessingRequestConfirmToolCall,
+  processingRequestConfirmToolCallSchema,
+  ProcessingRequestOf,
+  ProcessingRequestResponse,
+  ProcessingRequestResponseConfirmToolCall,
+  processingRequestResponseConfirmToolCallSchema,
+  ProcessingRequestResponseOf,
+  processingRequestResponseSchema,
+  ProcessingRequestResponseTextInput,
+  processingRequestResponseTextInputSchema,
+  processingRequestSchema,
+  ProcessingRequestTextInput,
+  processingRequestTextInputSchema,
+  ProcessingRequestType,
+} from "./llm/processing/ProcessingRequest.js";
 export {
   BlockLocation,
   blockLocationSchema,

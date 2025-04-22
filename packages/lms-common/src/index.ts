@@ -24,6 +24,7 @@ export { makeSetter, makeSetterWithPatches, Setter, WriteTag } from "./makeSette
 export { accessMaybeMutableInternals, MaybeMutable } from "./MaybeMutable.js";
 export { OWLSignal } from "./OWLSignal.js";
 export { parseFileIdentifier } from "./parseFileIdentifier.js";
+export { promisifyAbortSignal, raceWithAbortSignal } from "./promisifyAbortSignal.js";
 export { removeUndefinedValues } from "./removeUndefinedValues.js";
 export {
   createResultSchema,

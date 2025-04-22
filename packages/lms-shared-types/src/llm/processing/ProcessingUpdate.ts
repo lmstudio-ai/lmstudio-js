@@ -295,7 +295,6 @@ export const processingUpdateSchema = z.discriminatedUnion("type", [
 ]) as ZodSchema<ProcessingUpdate>;
 
 export type ProcessingUpdateType = ProcessingUpdate["type"];
-
 export type ProcessingUpdateOf<TType extends ProcessingUpdate["type"]> = Extract<
   ProcessingUpdate,
   { type: TType }
