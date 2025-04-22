@@ -1,4 +1,4 @@
-import { Cleaner, type SimpleLogger } from "@lmstudio/lms-common";
+import { Cleaner, raceWithAbortSignal, type SimpleLogger } from "@lmstudio/lms-common";
 import { type PluginsPort } from "@lmstudio/lms-external-backend-interfaces";
 import {
   type GlobalKVFieldValueTypeLibraryMap,
@@ -12,6 +12,8 @@ import {
   type KVConfigStack,
   type LLMGenInfo,
   type LLMPredictionConfig,
+  type ProcessingRequest,
+  type ProcessingRequestResponse,
   type ProcessingUpdate,
   type StatusStepState,
 } from "@lmstudio/lms-shared-types";
@@ -83,6 +85,14 @@ export class ProcessingConnector {
         this.logger.error("Failed to send update", error);
       });
   }
+  public async handleRequest(request: ProcessingRequest): Promise<ProcessingRequestResponse> {
+    const { response } = await this.pluginsPort.callRpc("processingHandleRequest", {
+      pci: this.processingContextIdentifier,
+      token: this.token,
+      request,
+    });
+    return response;
+  }
   public async pullHistory(includeCurrent: boolean): Promise<Chat> {
     const chatHistoryData = await this.pluginsPort.callRpc("processingPullHistory", {
       pci: this.processingContextIdentifier,
@@ -124,6 +134,9 @@ export class ProcessingConnector {
 interface ProcessingControllerHandle {
   abortSignal: AbortSignal;
   sendUpdate: (update: ProcessingUpdate) => void;
+  sendRequest<TType extends ProcessingRequest["type"]>(
+    request: ProcessingRequest & { type: TType },
+  ): Promise<ProcessingRequestResponse & { type: TType }>;
 }
 
 /**
@@ -150,6 +163,32 @@ export interface CreateCitationBlockOpts {
   pageNumber?: number | [start: number, end: number];
   lineNumber?: number | [start: number, end: number];
 }
+
+/**
+ * Options to use with {@link ProcessingController#requestConfirmToolCall}.
+ *
+ * @experimental WIP
+ */
+export interface RequestConfirmToolCallOpts {
+  pluginIdentifier?: string;
+  toolName: string;
+  toolArgs: Record<string, any>;
+}
+
+/**
+ * Return type of {@link ProcessingController#requestConfirmToolCall}.
+ *
+ * @experimental WIP
+ */
+export type RequestConfirmToolCallResult =
+  | {
+      type: "allow";
+      toolArgsOverride?: Record<string, any>;
+    }
+  | {
+      type: "deny";
+      denyReason?: string;
+    };
 
 /**
  * @public
@@ -180,6 +219,16 @@ export class ProcessingController {
       abortSignal: connector.abortSignal,
       sendUpdate: update => {
         connector.handleUpdate(update);
+      },
+      sendRequest: async request => {
+        const type = request.type;
+        const response = await connector.handleRequest(request);
+        if (response.type !== type) {
+          throw new Error(
+            `Expected response type ${type}, but got ${response.type}. This is a bug.`,
+          );
+        }
+        return response as ProcessingRequestResponse & { type: typeof type };
       },
     };
   }
@@ -372,6 +421,43 @@ export class ProcessingController {
   public async suggestName(name: string) {
     await this.connector.suggestName(name);
   }
+
+  public async requestConfirmToolCall({
+    pluginIdentifier,
+    toolName,
+    toolArgs,
+  }: RequestConfirmToolCallOpts): Promise<RequestConfirmToolCallResult> {
+    const { result } = await raceWithAbortSignal(
+      this.processingControllerHandle.sendRequest({
+        type: "confirmToolCall",
+        pluginIdentifier,
+        toolName,
+        toolArgs,
+      }),
+      this.abortSignal,
+    );
+    const resultType = result.type;
+    switch (resultType) {
+      case "allow": {
+        return {
+          type: "allow",
+          toolArgsOverride: result.toolArgsOverride,
+        };
+      }
+      case "deny": {
+        return {
+          type: "deny",
+          denyReason: result.denyReason,
+        };
+      }
+      default: {
+        const exhaustiveCheck: never = resultType;
+        throw new Error(
+          `Unexpected result type ${exhaustiveCheck}. This is a bug. Please report it.`,
+        );
+      }
+    }
+  }
 }
 
 /**
@@ -500,6 +586,12 @@ export interface ContentBlockAppendToolRequestOpts {
   parameters: Record<string, any>;
 }
 
+export interface ContentBlockReplaceToolRequestOpts {
+  toolCallId: string;
+  name: string;
+  parameters: Record<string, any>;
+}
+
 export interface ContentBlockAppendToolResultOpts {
   toolCallId: string;
   content: string;
@@ -541,6 +633,20 @@ export class PredictionProcessContentBlockController {
     }
     this.handle.sendUpdate({
       type: "contentBlock.appendToolRequest",
+      id: this.id,
+      requestId: toolCallId,
+      name,
+      arguments: parameters,
+    });
+  }
+  public replaceToolRequest({ toolCallId, name, parameters }: ContentBlockReplaceToolRequestOpts) {
+    if (this.role !== "assistant") {
+      throw new Error(
+        `Tool requests can only be replaced in assistant blocks. This is a ${this.role} block.`,
+      );
+    }
+    this.handle.sendUpdate({
+      type: "contentBlock.replaceToolRequest",
       id: this.id,
       requestId: toolCallId,
       name,

@@ -163,12 +163,11 @@ export type ProcessingUpdateContentBlockAppendToolResult = {
    */
   content: string;
 };
-export const processingUpdateContentBlockAppendToolRequestSchema = z.object({
-  type: z.literal("contentBlock.appendToolRequest"),
+export const processingUpdateContentBlockAppendToolResultSchema = z.object({
+  type: z.literal("contentBlock.appendToolResult"),
   id: z.string(),
   requestId: z.string(),
-  name: z.string(),
-  arguments: z.record(z.unknown()),
+  content: z.string(),
 });
 
 export type ProcessingUpdateContentBlockAppendToolRequest = {
@@ -187,11 +186,36 @@ export type ProcessingUpdateContentBlockAppendToolRequest = {
    */
   arguments: Record<string, unknown>;
 };
-export const processingUpdateContentBlockAppendToolResultSchema = z.object({
-  type: z.literal("contentBlock.appendToolResult"),
+export const processingUpdateContentBlockAppendToolRequestSchema = z.object({
+  type: z.literal("contentBlock.appendToolRequest"),
   id: z.string(),
   requestId: z.string(),
-  content: z.string(),
+  name: z.string(),
+  arguments: z.record(z.unknown()),
+});
+
+export type ProcessingUpdateContentBlockReplaceToolRequest = {
+  type: "contentBlock.replaceToolRequest";
+  id: string;
+  /**
+   * ID of the tool call request.
+   */
+  requestId: string;
+  /**
+   * Name of the tool called.
+   */
+  name: string;
+  /**
+   * Arguments of the tool call.
+   */
+  arguments: Record<string, unknown>;
+};
+export const processingUpdateContentBlockReplaceToolRequestSchema = z.object({
+  type: z.literal("contentBlock.replaceToolRequest"),
+  id: z.string(),
+  requestId: z.string(),
+  name: z.string(),
+  arguments: z.record(z.unknown()),
 });
 
 export type ProcessingUpdateContentBlockReplaceText = {
@@ -269,6 +293,7 @@ export type ProcessingUpdate =
   | ProcessingUpdateContentBlockCreate
   | ProcessingUpdateContentBlockAppendText
   | ProcessingUpdateContentBlockAppendToolRequest
+  | ProcessingUpdateContentBlockReplaceToolRequest
   | ProcessingUpdateContentBlockAppendToolResult
   | ProcessingUpdateContentBlockReplaceText
   | ProcessingUpdateContentBlockSetPrefix
@@ -285,6 +310,7 @@ export const processingUpdateSchema = z.discriminatedUnion("type", [
   processingUpdateContentBlockCreateSchema,
   processingUpdateContentBlockAppendTextSchema,
   processingUpdateContentBlockAppendToolRequestSchema,
+  processingUpdateContentBlockReplaceToolRequestSchema,
   processingUpdateContentBlockAppendToolResultSchema,
   processingUpdateContentBlockReplaceTextSchema,
   processingUpdateContentBlockSetPrefixSchema,
@@ -295,7 +321,6 @@ export const processingUpdateSchema = z.discriminatedUnion("type", [
 ]) as ZodSchema<ProcessingUpdate>;
 
 export type ProcessingUpdateType = ProcessingUpdate["type"];
-
 export type ProcessingUpdateOf<TType extends ProcessingUpdate["type"]> = Extract<
   ProcessingUpdate,
   { type: TType }

@@ -7,6 +7,8 @@ import {
   kvConfigSchema,
   llmToolSchema,
   pluginManifestSchema,
+  processingRequestResponseSchema,
+  processingRequestSchema,
   processingUpdateSchema,
   serializedKVConfigSchematicsSchema,
   serializedLMSExtendedErrorSchema,
@@ -204,6 +206,17 @@ export function createPluginsBackendInterface() {
           update: processingUpdateSchema,
         }),
         returns: z.void(),
+      })
+      .addRpcEndpoint("processingHandleRequest", {
+        parameter: z.object({
+          /** Processing Context Identifier */
+          pci: z.string(),
+          token: z.string(),
+          request: processingRequestSchema,
+        }),
+        returns: z.object({
+          response: processingRequestResponseSchema,
+        }),
       })
       .addRpcEndpoint("processingPullHistory", {
         parameter: z.object({
