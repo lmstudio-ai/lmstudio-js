@@ -1,4 +1,4 @@
-import { Cleaner, type SimpleLogger } from "@lmstudio/lms-common";
+import { Cleaner, raceWithAbortSignal, type SimpleLogger } from "@lmstudio/lms-common";
 import { type PluginsPort } from "@lmstudio/lms-external-backend-interfaces";
 import {
   type GlobalKVFieldValueTypeLibraryMap,
@@ -427,12 +427,15 @@ export class ProcessingController {
     toolName,
     toolArgs,
   }: RequestConfirmToolCallOpts): Promise<RequestConfirmToolCallResult> {
-    const { result } = await this.processingControllerHandle.sendRequest({
-      type: "confirmToolCall",
-      pluginIdentifier,
-      toolName,
-      toolArgs,
-    });
+    const { result } = await raceWithAbortSignal(
+      this.processingControllerHandle.sendRequest({
+        type: "confirmToolCall",
+        pluginIdentifier,
+        toolName,
+        toolArgs,
+      }),
+      this.abortSignal,
+    );
     const resultType = result.type;
     switch (resultType) {
       case "allow": {
