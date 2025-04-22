@@ -586,6 +586,12 @@ export interface ContentBlockAppendToolRequestOpts {
   parameters: Record<string, any>;
 }
 
+export interface ContentBlockReplaceToolRequestOpts {
+  toolCallId: string;
+  name: string;
+  parameters: Record<string, any>;
+}
+
 export interface ContentBlockAppendToolResultOpts {
   toolCallId: string;
   content: string;
@@ -627,6 +633,20 @@ export class PredictionProcessContentBlockController {
     }
     this.handle.sendUpdate({
       type: "contentBlock.appendToolRequest",
+      id: this.id,
+      requestId: toolCallId,
+      name,
+      arguments: parameters,
+    });
+  }
+  public replaceToolRequest({ toolCallId, name, parameters }: ContentBlockReplaceToolRequestOpts) {
+    if (this.role !== "assistant") {
+      throw new Error(
+        `Tool requests can only be replaced in assistant blocks. This is a ${this.role} block.`,
+      );
+    }
+    this.handle.sendUpdate({
+      type: "contentBlock.replaceToolRequest",
       id: this.id,
       requestId: toolCallId,
       name,
