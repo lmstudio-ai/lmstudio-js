@@ -919,7 +919,6 @@ export class LLMDynamicHandle extends DynamicHandle<
       rawTools = {
         type: "toolArray",
         tools: tools.map(toolToLLMTool),
-        force: false,
       };
     }
 
