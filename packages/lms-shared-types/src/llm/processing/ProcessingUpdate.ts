@@ -294,6 +294,9 @@ export const processingUpdateContentBlockSetStyleSchema = z.object({
   style: contentBlockStyleSchema,
 });
 
+/**
+ * @experimental WIP
+ */
 export type ToolStatusStepStateStatus =
   | {
       type: "generatingToolCall";
@@ -301,6 +304,13 @@ export type ToolStatusStepStateStatus =
   | {
       type: "toolCallGenerationFailed";
       error: string;
+    }
+  | {
+      type: "confirmingToolCall";
+    }
+  | {
+      type: "toolCallDenied";
+      denyReason?: string;
     }
   | {
       type: "callingTool";
@@ -320,6 +330,13 @@ export const toolStatusStepStateStatusSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("toolCallGenerationFailed"),
     error: z.string(),
+  }),
+  z.object({
+    type: z.literal("confirmingToolCall"),
+  }),
+  z.object({
+    type: z.literal("toolCallDenied"),
+    denyReason: z.string().optional(),
   }),
   z.object({
     type: z.literal("callingTool"),

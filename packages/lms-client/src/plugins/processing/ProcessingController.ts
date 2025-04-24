@@ -16,7 +16,7 @@ import {
   type ProcessingRequestResponse,
   type ProcessingUpdate,
   type StatusStepState,
-  type ToolStatusStepState,
+  type ToolStatusStepStateStatus,
 } from "@lmstudio/lms-shared-types";
 import { Chat } from "../../Chat.js";
 import {
@@ -465,18 +465,23 @@ export class ProcessingController {
 
   public createToolStatus(
     callId: number,
-    initialState: ToolStatusStepState,
+    initialStatus: ToolStatusStepStateStatus,
   ): PredictionProcessToolStatusController {
     const id = createId();
     this.sendUpdate({
       type: "toolStatus.create",
       id,
       callId,
-      state: initialState,
+      state: {
+        status: initialStatus,
+        customStatus: "",
+        customWarnings: [],
+      },
     });
     const toolStatusController = new PredictionProcessToolStatusController(
       this.processingControllerHandle,
       id,
+      initialStatus,
     );
     return toolStatusController;
   }
@@ -772,17 +777,39 @@ export class PredictionProcessContentBlockController {
 }
 
 export class PredictionProcessToolStatusController {
+  private status: ToolStatusStepStateStatus;
   /** @internal */
   public constructor(
     /** @internal */
     private readonly handle: ProcessingControllerHandle,
     private readonly id: string,
-  ) {}
-  public setState(state: ToolStatusStepState) {
+    initialStatus: ToolStatusStepStateStatus,
+  ) {
+    this.status = initialStatus;
+  }
+  private customStatus: string = "";
+  private customWarnings: Array<string> = [];
+  private updateState() {
     this.handle.sendUpdate({
       type: "toolStatus.update",
       id: this.id,
-      state,
+      state: {
+        status: this.status,
+        customStatus: this.customStatus,
+        customWarnings: this.customWarnings,
+      },
     });
+  }
+  public setCustomStatusText(status: string) {
+    this.customStatus = status;
+    this.updateState();
+  }
+  public addWarning(warning: string) {
+    this.customWarnings.push(warning);
+    this.updateState();
+  }
+  public setStatus(status: ToolStatusStepStateStatus) {
+    this.status = status;
+    this.updateState();
   }
 }
