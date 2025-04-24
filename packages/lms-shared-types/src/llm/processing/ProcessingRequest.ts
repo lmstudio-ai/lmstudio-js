@@ -5,6 +5,7 @@ import { z, type ZodSchema } from "zod";
  */
 export type ProcessingRequestConfirmToolCall = {
   type: "confirmToolCall";
+  callId: number;
   /**
    * The plugin that provided the tool.
    */
@@ -12,17 +13,18 @@ export type ProcessingRequestConfirmToolCall = {
   /**
    * The name of the tool to call.
    */
-  toolName: string;
+  name: string;
   /**
-   * The arguments to pass to the tool.
+   * The parameters to pass to the tool.
    */
-  toolArgs: Record<string, any>;
+  parameters: Record<string, any>;
 };
 export const processingRequestConfirmToolCallSchema = z.object({
   type: z.literal("confirmToolCall"),
+  callId: z.number().int(),
   pluginIdentifier: z.string().optional(),
-  toolName: z.string(),
-  toolArgs: z.record(z.any()),
+  name: z.string(),
+  parameters: z.record(z.any()),
 });
 
 /**

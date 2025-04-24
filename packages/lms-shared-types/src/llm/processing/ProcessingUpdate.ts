@@ -153,11 +153,18 @@ export const processingUpdateContentBlockAppendTextSchema = z.object({
 
 export type ProcessingUpdateContentBlockAppendToolResult = {
   type: "contentBlock.appendToolResult";
+  /**
+   * ID of the content block.
+   */
   id: string;
   /**
-   * ID of the tool call request.
+   * Call ID created by LM Studio. Used to pair up requests and responses.
    */
-  requestId: string;
+  callId: number;
+  /**
+   * Model specific optional tool call request ID (string).
+   */
+  toolCallRequestId?: string;
   /**
    * Result of the tool call.
    */
@@ -166,17 +173,25 @@ export type ProcessingUpdateContentBlockAppendToolResult = {
 export const processingUpdateContentBlockAppendToolResultSchema = z.object({
   type: z.literal("contentBlock.appendToolResult"),
   id: z.string(),
-  requestId: z.string(),
+  callId: z.number().int(),
+  toolCallRequestId: z.string().optional(),
   content: z.string(),
 });
 
 export type ProcessingUpdateContentBlockAppendToolRequest = {
   type: "contentBlock.appendToolRequest";
+  /**
+   * ID of the content block.
+   */
   id: string;
   /**
-   * ID of the tool call request.
+   * Call ID created by LM Studio. Used to pair up requests and responses.
    */
-  requestId: string;
+  callId: number;
+  /**
+   * Model specific optional tool call request ID (string).
+   */
+  toolCallRequestId?: string;
   /**
    * Name of the tool called.
    */
@@ -184,23 +199,28 @@ export type ProcessingUpdateContentBlockAppendToolRequest = {
   /**
    * Arguments of the tool call.
    */
-  arguments: Record<string, unknown>;
+  parameters: Record<string, unknown>;
 };
 export const processingUpdateContentBlockAppendToolRequestSchema = z.object({
   type: z.literal("contentBlock.appendToolRequest"),
   id: z.string(),
-  requestId: z.string(),
+  callId: z.number().int(),
+  toolCallRequestId: z.string().optional(),
   name: z.string(),
-  arguments: z.record(z.unknown()),
+  parameters: z.record(z.unknown()),
 });
 
 export type ProcessingUpdateContentBlockReplaceToolRequest = {
   type: "contentBlock.replaceToolRequest";
   id: string;
   /**
-   * ID of the tool call request.
+   * Call ID created by LM Studio. Used to pair up requests and responses.
    */
-  requestId: string;
+  callId: number;
+  /**
+   * Model specific optional tool call request ID (string).
+   */
+  toolCallRequestId?: string;
   /**
    * Name of the tool called.
    */
@@ -208,14 +228,15 @@ export type ProcessingUpdateContentBlockReplaceToolRequest = {
   /**
    * Arguments of the tool call.
    */
-  arguments: Record<string, unknown>;
+  parameters: Record<string, unknown>;
 };
 export const processingUpdateContentBlockReplaceToolRequestSchema = z.object({
   type: z.literal("contentBlock.replaceToolRequest"),
   id: z.string(),
-  requestId: z.string(),
+  callId: z.number().int(),
+  toolCallRequestId: z.string().optional(),
   name: z.string(),
-  arguments: z.record(z.unknown()),
+  parameters: z.record(z.unknown()),
 });
 
 export type ProcessingUpdateContentBlockReplaceText = {
@@ -273,6 +294,81 @@ export const processingUpdateContentBlockSetStyleSchema = z.object({
   style: contentBlockStyleSchema,
 });
 
+export type ToolStatusStepStateStatus =
+  | {
+      type: "generatingToolCall";
+    }
+  | {
+      type: "toolCallGenerationFailed";
+      error: string;
+    }
+  | {
+      type: "callingTool";
+    }
+  | {
+      type: "toolCallFailed";
+      error: string;
+    }
+  | {
+      type: "toolCallSucceeded";
+      timeMs: number;
+    };
+export const toolStatusStepStateStatusSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("generatingToolCall"),
+  }),
+  z.object({
+    type: z.literal("toolCallGenerationFailed"),
+    error: z.string(),
+  }),
+  z.object({
+    type: z.literal("callingTool"),
+  }),
+  z.object({
+    type: z.literal("toolCallFailed"),
+    error: z.string(),
+  }),
+  z.object({
+    type: z.literal("toolCallSucceeded"),
+    timeMs: z.number().int(),
+  }),
+]) as z.Schema<ToolStatusStepStateStatus>;
+
+export type ToolStatusStepState = {
+  status: ToolStatusStepStateStatus;
+  customStatus: string;
+  customWarnings: Array<string>;
+};
+export const toolStatusStepStateSchema = z.object({
+  status: toolStatusStepStateStatusSchema,
+  customStatus: z.string(),
+  customWarnings: z.array(z.string()),
+}) as z.Schema<ToolStatusStepState>;
+
+export type ProcessingUpdateToolStatusCreate = {
+  type: "toolStatus.create";
+  id: string;
+  callId: number;
+  state: ToolStatusStepState;
+};
+export const processingUpdateToolStatusCreateSchema = z.object({
+  type: z.literal("toolStatus.create"),
+  id: z.string(),
+  callId: z.number().int(),
+  state: toolStatusStepStateSchema,
+});
+
+export type ProcessingUpdateToolStatusUpdate = {
+  type: "toolStatus.update";
+  id: string;
+  state: ToolStatusStepState;
+};
+export const processingUpdateToolStatusUpdateSchema = z.object({
+  type: z.literal("toolStatus.update"),
+  id: z.string(),
+  state: toolStatusStepStateSchema,
+});
+
 export type ProcessingUpdateSetSenderName = {
   type: "setSenderName";
   name: string;
@@ -300,6 +396,8 @@ export type ProcessingUpdate =
   | ProcessingUpdateContentBlockSetSuffix
   | ProcessingUpdateContentBlockAttachGenInfo
   | ProcessingUpdateContentBlockSetStyle
+  | ProcessingUpdateToolStatusCreate
+  | ProcessingUpdateToolStatusUpdate
   | ProcessingUpdateSetSenderName;
 export const processingUpdateSchema = z.discriminatedUnion("type", [
   processingUpdateStatusCreateSchema,
@@ -317,6 +415,8 @@ export const processingUpdateSchema = z.discriminatedUnion("type", [
   processingUpdateContentBlockSetSuffixSchema,
   processingUpdateContentBlockAttachGenInfoSchema,
   processingUpdateContentBlockSetStyleSchema,
+  processingUpdateToolStatusCreateSchema,
+  processingUpdateToolStatusUpdateSchema,
   processingUpdateSetSenderNameSchema,
 ]) as ZodSchema<ProcessingUpdate>;
 

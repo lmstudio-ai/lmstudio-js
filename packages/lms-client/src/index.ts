@@ -48,6 +48,9 @@ export type { Generator } from "./plugins/processing/Generator.js";
 export type { Preprocessor } from "./plugins/processing/Preprocessor.js";
 export type {
   ContentBlockAppendTextOpts,
+  ContentBlockAppendToolRequestOpts,
+  ContentBlockAppendToolResultOpts,
+  ContentBlockReplaceToolRequestOpts,
   CreateCitationBlockOpts,
   CreateContentBlockOpts,
   GeneratorController,
@@ -55,8 +58,11 @@ export type {
   PredictionProcessContentBlockController,
   PredictionProcessDebugInfoBlockController,
   PredictionProcessStatusController,
+  PredictionProcessToolStatusController,
   PreprocessorController,
   ProcessingController,
+  RequestConfirmToolCallOpts,
+  RequestConfirmToolCallResult,
 } from "./plugins/processing/ProcessingController.js";
 export type { ToolsProvider } from "./plugins/processing/ToolsProvider.js";
 export type { ToolsProviderController } from "./plugins/processing/ToolsProviderController.js";
