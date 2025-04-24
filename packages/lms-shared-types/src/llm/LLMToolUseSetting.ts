@@ -70,6 +70,7 @@ export type LLMToolUseSetting =
   | {
       type: "toolArray";
       tools?: LLMTool[];
+      force: boolean;
     };
 
 export const llmToolUseSettingSchema = z.discriminatedUnion("type", [
@@ -79,5 +80,6 @@ export const llmToolUseSettingSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("toolArray"),
     tools: z.array(llmToolSchema).optional(),
+    force: z.boolean(),
   }),
 ]);
