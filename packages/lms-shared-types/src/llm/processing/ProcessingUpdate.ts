@@ -200,6 +200,10 @@ export type ProcessingUpdateContentBlockAppendToolRequest = {
    * Arguments of the tool call.
    */
   parameters: Record<string, unknown>;
+  /**
+   * Optional identifier of the plugin that provided the tool.
+   */
+  pluginIdentifier?: string;
 };
 export const processingUpdateContentBlockAppendToolRequestSchema = z.object({
   type: z.literal("contentBlock.appendToolRequest"),
@@ -208,6 +212,7 @@ export const processingUpdateContentBlockAppendToolRequestSchema = z.object({
   toolCallRequestId: z.string().optional(),
   name: z.string(),
   parameters: z.record(z.unknown()),
+  pluginIdentifier: z.string().optional(),
 });
 
 export type ProcessingUpdateContentBlockReplaceToolRequest = {
@@ -229,6 +234,10 @@ export type ProcessingUpdateContentBlockReplaceToolRequest = {
    * Arguments of the tool call.
    */
   parameters: Record<string, unknown>;
+  /**
+   * Optional identifier of the plugin that provided the tool.
+   */
+  pluginIdentifier?: string;
 };
 export const processingUpdateContentBlockReplaceToolRequestSchema = z.object({
   type: z.literal("contentBlock.replaceToolRequest"),
@@ -237,6 +246,7 @@ export const processingUpdateContentBlockReplaceToolRequestSchema = z.object({
   toolCallRequestId: z.string().optional(),
   name: z.string(),
   parameters: z.record(z.unknown()),
+  pluginIdentifier: z.string().optional(),
 });
 
 export type ProcessingUpdateContentBlockReplaceText = {

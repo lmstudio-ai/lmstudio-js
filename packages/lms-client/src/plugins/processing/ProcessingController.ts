@@ -612,6 +612,7 @@ export interface ContentBlockAppendToolRequestOpts {
   toolCallRequestId?: string;
   name: string;
   parameters: Record<string, any>;
+  pluginIdentifier?: string;
 }
 
 export interface ContentBlockReplaceToolRequestOpts {
@@ -619,6 +620,7 @@ export interface ContentBlockReplaceToolRequestOpts {
   toolCallRequestId?: string;
   name: string;
   parameters: Record<string, any>;
+  pluginIdentifier?: string;
 }
 
 export interface ContentBlockAppendToolResultOpts {
@@ -660,6 +662,7 @@ export class PredictionProcessContentBlockController {
     toolCallRequestId,
     name,
     parameters,
+    pluginIdentifier,
   }: ContentBlockAppendToolRequestOpts) {
     if (this.role !== "assistant") {
       throw new Error(
@@ -673,6 +676,7 @@ export class PredictionProcessContentBlockController {
       toolCallRequestId,
       name,
       parameters,
+      pluginIdentifier,
     });
   }
   public replaceToolRequest({
@@ -680,6 +684,7 @@ export class PredictionProcessContentBlockController {
     toolCallRequestId,
     name,
     parameters,
+    pluginIdentifier,
   }: ContentBlockReplaceToolRequestOpts) {
     if (this.role !== "assistant") {
       throw new Error(
@@ -693,6 +698,7 @@ export class PredictionProcessContentBlockController {
       toolCallRequestId,
       name,
       parameters,
+      pluginIdentifier,
     });
   }
   public appendToolResult({
