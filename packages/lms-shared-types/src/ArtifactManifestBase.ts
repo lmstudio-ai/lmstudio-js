@@ -65,7 +65,6 @@ export const artifactDependencySchema = z.discriminatedUnion("type", [
 export interface ArtifactManifestBase {
   owner: string;
   name: string;
-  description: string;
   revision?: number;
   dependencies?: Array<ArtifactDependency>;
   tags?: Array<string>;
@@ -73,7 +72,6 @@ export interface ArtifactManifestBase {
 export const artifactManifestBaseSchema = z.object({
   owner: kebabCaseSchema,
   name: kebabCaseWithDotsSchema.min(1, "Name is required").max(100, "Name too long"),
-  description: z.string().max(1000, "Description too long"),
   revision: z.number().int().optional(),
   dependencies: z.array(artifactDependencySchema).optional(),
   tags: z.array(z.string()).optional(),
