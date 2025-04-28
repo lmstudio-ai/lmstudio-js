@@ -1,4 +1,5 @@
 import { z, type ZodSchema } from "zod";
+import { kvConfigSchema, type KVConfig } from "../KVConfig.js";
 import { zodSchemaSchema } from "../Zod.js";
 import { llmPromptTemplateSchema, type LLMPromptTemplate } from "./LLMPromptTemplate.js";
 import {
@@ -272,6 +273,14 @@ export interface LLMPredictionConfigInput<TStructuredOutputType = unknown> {
    * ```
    */
   reasoningParsing?: LLMReasoningParsing;
+  /**
+   * Raw KV Config.
+   *
+   * @experimental
+   * @deprecated Internal mechanism to carry arbitrary config that does not have a public API yet.
+   * May change at any time. Do not use.
+   */
+  raw?: KVConfig;
 }
 export const llmPredictionConfigInputSchema = z.object({
   maxTokens: z.number().int().min(-1).optional().or(z.literal(false)),
@@ -292,6 +301,7 @@ export const llmPredictionConfigInputSchema = z.object({
   speculativeDecodingMinDraftLengthToConsider: z.number().int().min(0).optional(),
   speculativeDecodingMinContinueDraftingProbability: z.number().optional(),
   reasoningParsing: llmReasoningParsingSchema.optional(),
+  raw: kvConfigSchema.optional(),
 });
 
 /**

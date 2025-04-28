@@ -1,4 +1,5 @@
 import { type KVConfig, type LLMPredictionConfig } from "@lmstudio/lms-shared-types";
+import { collapseKVStackRaw } from "../KVConfig.js";
 import { globalConfigSchematics, llmPredictionConfigSchematics } from "../schema.js";
 import { maybeFalseNumberToCheckboxNumeric } from "./utils.js";
 
@@ -118,11 +119,13 @@ export function kvConfigToLLMPredictionConfig(config: KVConfig) {
     result.reasoningParsing = reasoningParsing;
   }
 
+  result.raw = config;
+
   return result;
 }
 
 export function llmPredictionConfigToKVConfig(config: LLMPredictionConfig): KVConfig {
-  return llmPredictionConfigSchematics.buildPartialConfig({
+  const top = llmPredictionConfigSchematics.buildPartialConfig({
     "temperature": config.temperature,
     "contextOverflowPolicy": config.contextOverflowPolicy,
     "maxPredictedTokens": maybeFalseNumberToCheckboxNumeric(config.maxTokens, 1),
@@ -147,4 +150,8 @@ export function llmPredictionConfigToKVConfig(config: LLMPredictionConfig): KVCo
       config.speculativeDecodingMinContinueDraftingProbability,
     "reasoning.parsing": config.reasoningParsing,
   });
+  if (config.raw !== undefined) {
+    return collapseKVStackRaw([config.raw, top]);
+  }
+  return top;
 }
