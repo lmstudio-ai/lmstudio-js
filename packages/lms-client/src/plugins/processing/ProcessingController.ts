@@ -16,6 +16,7 @@ import {
   type ProcessingRequestResponse,
   type ProcessingUpdate,
   type StatusStepState,
+  type ToolStatusStepStateStatus,
 } from "@lmstudio/lms-shared-types";
 import { Chat } from "../../Chat.js";
 import {
@@ -170,9 +171,10 @@ export interface CreateCitationBlockOpts {
  * @experimental WIP
  */
 export interface RequestConfirmToolCallOpts {
+  callId: number;
   pluginIdentifier?: string;
-  toolName: string;
-  toolArgs: Record<string, any>;
+  name: string;
+  parameters: Record<string, any>;
 }
 
 /**
@@ -423,16 +425,18 @@ export class ProcessingController {
   }
 
   public async requestConfirmToolCall({
+    callId,
     pluginIdentifier,
-    toolName,
-    toolArgs,
+    name,
+    parameters,
   }: RequestConfirmToolCallOpts): Promise<RequestConfirmToolCallResult> {
     const { result } = await raceWithAbortSignal(
       this.processingControllerHandle.sendRequest({
         type: "confirmToolCall",
+        callId,
         pluginIdentifier,
-        toolName,
-        toolArgs,
+        name,
+        parameters,
       }),
       this.abortSignal,
     );
@@ -457,6 +461,29 @@ export class ProcessingController {
         );
       }
     }
+  }
+
+  public createToolStatus(
+    callId: number,
+    initialStatus: ToolStatusStepStateStatus,
+  ): PredictionProcessToolStatusController {
+    const id = createId();
+    this.sendUpdate({
+      type: "toolStatus.create",
+      id,
+      callId,
+      state: {
+        status: initialStatus,
+        customStatus: "",
+        customWarnings: [],
+      },
+    });
+    const toolStatusController = new PredictionProcessToolStatusController(
+      this.processingControllerHandle,
+      id,
+      initialStatus,
+    );
+    return toolStatusController;
   }
 }
 
@@ -581,19 +608,24 @@ export interface ContentBlockAppendTextOpts {
 }
 
 export interface ContentBlockAppendToolRequestOpts {
-  toolCallId: string;
+  callId: number;
+  toolCallRequestId?: string;
   name: string;
   parameters: Record<string, any>;
+  pluginIdentifier?: string;
 }
 
 export interface ContentBlockReplaceToolRequestOpts {
-  toolCallId: string;
+  callId: number;
+  toolCallRequestId?: string;
   name: string;
   parameters: Record<string, any>;
+  pluginIdentifier?: string;
 }
 
 export interface ContentBlockAppendToolResultOpts {
-  toolCallId: string;
+  callId: number;
+  toolCallRequestId?: string;
   content: string;
 }
 
@@ -625,7 +657,13 @@ export class PredictionProcessContentBlockController {
       fromDraftModel,
     });
   }
-  public appendToolRequest({ toolCallId, name, parameters }: ContentBlockAppendToolRequestOpts) {
+  public appendToolRequest({
+    callId,
+    toolCallRequestId,
+    name,
+    parameters,
+    pluginIdentifier,
+  }: ContentBlockAppendToolRequestOpts) {
     if (this.role !== "assistant") {
       throw new Error(
         `Tool requests can only be appended to assistant blocks. This is a ${this.role} block.`,
@@ -634,12 +672,20 @@ export class PredictionProcessContentBlockController {
     this.handle.sendUpdate({
       type: "contentBlock.appendToolRequest",
       id: this.id,
-      requestId: toolCallId,
+      callId,
+      toolCallRequestId,
       name,
-      arguments: parameters,
+      parameters,
+      pluginIdentifier,
     });
   }
-  public replaceToolRequest({ toolCallId, name, parameters }: ContentBlockReplaceToolRequestOpts) {
+  public replaceToolRequest({
+    callId,
+    toolCallRequestId,
+    name,
+    parameters,
+    pluginIdentifier,
+  }: ContentBlockReplaceToolRequestOpts) {
     if (this.role !== "assistant") {
       throw new Error(
         `Tool requests can only be replaced in assistant blocks. This is a ${this.role} block.`,
@@ -648,12 +694,18 @@ export class PredictionProcessContentBlockController {
     this.handle.sendUpdate({
       type: "contentBlock.replaceToolRequest",
       id: this.id,
-      requestId: toolCallId,
+      callId,
+      toolCallRequestId,
       name,
-      arguments: parameters,
+      parameters,
+      pluginIdentifier,
     });
   }
-  public appendToolResult({ toolCallId, content }: ContentBlockAppendToolResultOpts) {
+  public appendToolResult({
+    callId,
+    toolCallRequestId,
+    content,
+  }: ContentBlockAppendToolResultOpts) {
     if (this.role !== "tool") {
       throw new Error(
         `Tool results can only be appended to tool blocks. This is a ${this.role} block.`,
@@ -662,7 +714,8 @@ export class PredictionProcessContentBlockController {
     this.handle.sendUpdate({
       type: "contentBlock.appendToolResult",
       id: this.id,
-      requestId: toolCallId,
+      callId,
+      toolCallRequestId,
       content,
     });
   }
@@ -726,5 +779,43 @@ export class PredictionProcessContentBlockController {
     });
     this.handle.abortSignal.throwIfAborted();
     return result;
+  }
+}
+
+export class PredictionProcessToolStatusController {
+  private status: ToolStatusStepStateStatus;
+  /** @internal */
+  public constructor(
+    /** @internal */
+    private readonly handle: ProcessingControllerHandle,
+    private readonly id: string,
+    initialStatus: ToolStatusStepStateStatus,
+  ) {
+    this.status = initialStatus;
+  }
+  private customStatus: string = "";
+  private customWarnings: Array<string> = [];
+  private updateState() {
+    this.handle.sendUpdate({
+      type: "toolStatus.update",
+      id: this.id,
+      state: {
+        status: this.status,
+        customStatus: this.customStatus,
+        customWarnings: this.customWarnings,
+      },
+    });
+  }
+  public setCustomStatusText(status: string) {
+    this.customStatus = status;
+    this.updateState();
+  }
+  public addWarning(warning: string) {
+    this.customWarnings.push(warning);
+    this.updateState();
+  }
+  public setStatus(status: ToolStatusStepStateStatus) {
+    this.status = status;
+    this.updateState();
   }
 }
