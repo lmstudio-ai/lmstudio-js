@@ -411,5 +411,24 @@ export {
   serializedKVConfigSchematicsFieldSchema,
   serializedKVConfigSchematicsSchema,
 } from "./SerializedKVConfigSchematics.js";
-export { VirtualModelDefinition, virtualModelDefinitionSchema } from "./VirtualModelDefinition.js";
+export {
+  VirtualModelBooleanCustomFieldDefinition,
+  virtualModelBooleanCustomFieldDefinitionSchema,
+  VirtualModelCustomFieldDefinition,
+  VirtualModelCustomFieldDefinitionBase,
+  virtualModelCustomFieldDefinitionBaseSchema,
+  VirtualModelCustomFieldJinjaMapTarget,
+  virtualModelCustomFieldJinjaMapTargetSchema,
+  virtualModelCustomFieldSchema,
+  VirtualModelDefinition,
+  VirtualModelDefinitionConcreteModelBase,
+  virtualModelDefinitionConcreteModelBaseSchema,
+  VirtualModelDefinitionMetadataOverrides,
+  virtualModelDefinitionMetadataOverridesSchema,
+  virtualModelDefinitionSchema,
+  VirtualModelStringCustomFieldDefinition,
+  virtualModelStringCustomFieldDefinitionSchema,
+  VirtualModelTrainedForToolUse,
+  VirtualModelVisionSupport,
+} from "./VirtualModelDefinition.js";
 export { zodSchemaSchema } from "./Zod.js";

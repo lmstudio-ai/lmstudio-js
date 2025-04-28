@@ -98,6 +98,67 @@ export const virtualModelDefinitionConcreteModelBaseSchema: ZodSchema<VirtualMod
     sources: z.array(modelDownloadSourceSchema),
   });
 
+export interface VirtualModelCustomFieldJinjaMapTarget {
+  type: "jinja";
+  variable: string;
+}
+export const virtualModelCustomFieldJinjaMapTargetSchema = z.object({
+  type: z.literal("jinja"),
+  variable: z.string(),
+});
+
+export interface VirtualModelCustomFieldDefinitionBase {
+  /**
+   * The key of the custom field. Used in serialization
+   */
+  key: string;
+  /**
+   * The display name of the custom field. Used in the UI.
+   */
+  displayName: string;
+  /**
+   * The description of the custom field. Used in the UI.
+   */
+  description: string;
+}
+export const virtualModelCustomFieldDefinitionBaseSchema = z.object({
+  key: z.string(),
+  displayName: z.string(),
+  description: z.string(),
+});
+
+export type VirtualModelBooleanCustomFieldDefinition = VirtualModelCustomFieldDefinitionBase & {
+  type: "boolean";
+  defaultValue: boolean;
+  mapsTo: Array<VirtualModelCustomFieldJinjaMapTarget>;
+};
+export const virtualModelBooleanCustomFieldDefinitionSchema =
+  virtualModelCustomFieldDefinitionBaseSchema.extend({
+    type: z.literal("boolean"),
+    defaultValue: z.boolean(),
+    mapsTo: z.array(z.discriminatedUnion("type", [virtualModelCustomFieldJinjaMapTargetSchema])),
+  });
+
+export type VirtualModelStringCustomFieldDefinition = VirtualModelCustomFieldDefinitionBase & {
+  type: "string";
+  defaultValue: string;
+  mapsTo: Array<VirtualModelCustomFieldJinjaMapTarget>;
+};
+export const virtualModelStringCustomFieldDefinitionSchema =
+  virtualModelCustomFieldDefinitionBaseSchema.extend({
+    type: z.literal("string"),
+    defaultValue: z.string(),
+    mapsTo: z.array(z.discriminatedUnion("type", [virtualModelCustomFieldJinjaMapTargetSchema])),
+  });
+
+export type VirtualModelCustomFieldDefinition =
+  | VirtualModelBooleanCustomFieldDefinition
+  | VirtualModelStringCustomFieldDefinition;
+export const virtualModelCustomFieldSchema = z.discriminatedUnion("type", [
+  virtualModelBooleanCustomFieldDefinitionSchema,
+  virtualModelStringCustomFieldDefinitionSchema,
+]) as ZodSchema<VirtualModelCustomFieldDefinition>;
+
 export interface VirtualModelDefinition {
   /**
    * The self proclaimed indexed model identifier. Should always be in the shape of user/repo.
@@ -114,6 +175,7 @@ export interface VirtualModelDefinition {
     operation?: KVConfig;
   };
   metadataOverrides?: VirtualModelDefinitionMetadataOverrides;
+  customFields?: Array<VirtualModelCustomFieldDefinition>;
 }
 export const virtualModelDefinitionSchema: ZodSchema<VirtualModelDefinition> = z.object({
   model: z.string().regex(/^[^/]+\/[^/]+$/),
@@ -126,4 +188,5 @@ export const virtualModelDefinitionSchema: ZodSchema<VirtualModelDefinition> = z
     })
     .optional(),
   metadataOverrides: virtualModelDefinitionMetadataOverridesSchema.optional(),
+  customFields: z.array(virtualModelCustomFieldSchema).optional(),
 });
