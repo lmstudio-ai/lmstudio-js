@@ -267,6 +267,12 @@ export class KVConfigSchematicsBuilder<
   TKVConfigSchema extends KVVirtualConfigSchema = {},
 > {
   private readonly fields: Map<string, KVConcreteFieldSchema> = new Map();
+  /**
+   * Prefixes for extensions. Does not affect parsing (i.e. extension fields will still not be
+   * visible). However, if a key starts with a prefix that is specified here, it will not be removed
+   * when going through the lenient zod schema.
+   */
+  private readonly extensionPrefixes: Array<string> = [];
 
   public constructor(
     private readonly valueTypeLibrary: KVFieldValueTypeLibrary<TKVFieldValueTypeLibraryMap>,
@@ -309,6 +315,16 @@ export class KVConfigSchematicsBuilder<
       defaultValue,
     });
     return this as any;
+  }
+
+  /**
+   * Adds an extension point. For example, if called with .extension("hello.world"), then any keys
+   * that match "hello.world.*" will be allowed when going through lenient zod schema. However,
+   * any extension fields will still not be accessible via this schematics.
+   */
+  public extension(prefix: string) {
+    this.extensionPrefixes.push(`${prefix}.`);
+    return this;
   }
 
   /**
@@ -361,11 +377,14 @@ export class KVConfigSchematicsBuilder<
         defaultValue,
       });
     }
+    this.extensionPrefixes.push(
+      ...innerBuilder.extensionPrefixes.map(prefix => `${scopeKey}.${prefix}`),
+    );
     return this as any;
   }
 
   public build(): KVConfigSchematics<TKVFieldValueTypeLibraryMap, TKVConfigSchema> {
-    return new KVConfigSchematics(this.valueTypeLibrary, this.fields);
+    return new KVConfigSchematics(this.valueTypeLibrary, this.fields, this.extensionPrefixes);
   }
 }
 
@@ -378,6 +397,7 @@ export class KVConfigSchematics<
   public constructor(
     private readonly valueTypeLibrary: KVFieldValueTypeLibrary<TKVFieldValueTypeLibraryMap>,
     private readonly fields: Map<string, KVConcreteFieldSchema>,
+    private readonly extensionPrefixes: Array<string>,
   ) {}
 
   public getFieldsMap(): ReadonlyMap<string, KVConcreteFieldSchema> {
@@ -532,7 +552,7 @@ export class KVConfigSchematics<
         }
       }
     }
-    return new KVConfigSchematics(this.valueTypeLibrary, newFields);
+    return new KVConfigSchematics(this.valueTypeLibrary, newFields, this.extensionPrefixes);
   }
 
   /**
@@ -554,7 +574,7 @@ export class KVConfigSchematics<
         newFields.set(key.substring(scopeKey.length + 1), field);
       }
     }
-    return new KVConfigSchematics(this.valueTypeLibrary, newFields);
+    return new KVConfigSchematics(this.valueTypeLibrary, newFields, this.extensionPrefixes);
   }
 
   public union<TOtherKVConfigSchema extends KVVirtualConfigSchema>(
@@ -575,7 +595,10 @@ export class KVConfigSchematics<
       }
       newFields.set(key, field);
     }
-    return new KVConfigSchematics(this.valueTypeLibrary, newFields);
+    return new KVConfigSchematics(this.valueTypeLibrary, newFields, [
+      ...this.extensionPrefixes,
+      ...other.extensionPrefixes,
+    ]);
   }
 
   /**
@@ -586,7 +609,7 @@ export class KVConfigSchematics<
     for (const field of this.fields.values()) {
       newFields.set(field.fullKey, field);
     }
-    return new KVConfigSchematics(this.valueTypeLibrary, newFields);
+    return new KVConfigSchematics(this.valueTypeLibrary, newFields, this.extensionPrefixes);
   }
 
   public parseToMap(config: KVConfig) {
@@ -596,6 +619,17 @@ export class KVConfigSchematics<
       const value = rawConfigMap.get(field.fullKey);
       const parsedValue = this.parseField(field, value);
       parsedConfigMap.set(key, parsedValue);
+    }
+    return parsedConfigMap;
+  }
+
+  public parseToMapWithFullKey(config: KVConfig) {
+    const rawConfigMap = kvConfigToMap(config);
+    const parsedConfigMap = new Map<string, any>();
+    for (const field of this.fields.values()) {
+      const value = rawConfigMap.get(field.fullKey);
+      const parsedValue = this.parseField(field, value);
+      parsedConfigMap.set(field.fullKey, parsedValue);
     }
     return parsedConfigMap;
   }
@@ -668,7 +702,11 @@ export class KVConfigSchematics<
   }
 
   public clone(): KVConfigSchematics<TKVFieldValueTypeLibraryMap, TKVConfigSchema> {
-    return new KVConfigSchematics(this.valueTypeLibrary, new Map(this.fields));
+    return new KVConfigSchematics(
+      this.valueTypeLibrary,
+      new Map(this.fields),
+      this.extensionPrefixes,
+    );
   }
 
   public withTypeParamOverride<
@@ -712,6 +750,11 @@ export class KVConfigSchematics<
       const seenKeys = new Set<string>();
       return {
         fields: value.fields.filter(field => {
+          if (this.extensionPrefixes.some(prefix => field.key.startsWith(prefix))) {
+            // If we matched an extension prefix, we don't care about the key or value type. Just
+            // allow it.
+            return true;
+          }
           if (seenKeys.has(field.key)) {
             return false;
           }
@@ -893,7 +936,12 @@ export class KVConfigSchematics<
     b: TKVConfigSchema[TKey]["type"],
   ) {
     const field = this.obtainField(key);
-    return this.valueTypeLibrary.effectiveEquals(field.valueTypeKey, field.valueTypeParams, a, b);
+    return this.valueTypeLibrary.effectiveEquals(
+      field.valueTypeKey,
+      field.valueTypeParams,
+      field.schema.parse(a),
+      field.schema.parse(b),
+    );
   }
 
   public fieldEffectiveEqualsWithFullKey(fullKey: string, a: any, b: any) {
@@ -902,7 +950,12 @@ export class KVConfigSchematics<
     if (field === undefined) {
       throw new Error(`Field with key ${fullKey} does not exist in the schematics`);
     }
-    return this.valueTypeLibrary.effectiveEquals(field.valueTypeKey, field.valueTypeParams, a, b);
+    return this.valueTypeLibrary.effectiveEquals(
+      field.valueTypeKey,
+      field.valueTypeParams,
+      field.schema.parse(a),
+      field.schema.parse(b),
+    );
   }
 
   private makeInternalFieldStringifyOpts(opts: FieldStringifyOpts): InnerFieldStringifyOpts {
@@ -1075,6 +1128,7 @@ export class KVConfigSchematics<
         typeParams: field.valueTypeParams,
         defaultValue: field.defaultValue!,
       })),
+      extensionPrefixes: this.extensionPrefixes,
     };
   }
   public static deserialize(
@@ -1097,7 +1151,7 @@ export class KVConfigSchematics<
         ];
       }),
     );
-    return new KVConfigSchematics(valueTypeLibrary, fields);
+    return new KVConfigSchematics(valueTypeLibrary, fields, serialized.extensionPrefixes ?? []);
   }
   public static tryDeserialize(
     valueTypeLibrary: KVFieldValueTypeLibrary<any>,
@@ -1127,7 +1181,11 @@ export class KVConfigSchematics<
       }
     }
     return {
-      schematics: new KVConfigSchematics(valueTypeLibrary, fields),
+      schematics: new KVConfigSchematics(
+        valueTypeLibrary,
+        fields,
+        serialized.extensionPrefixes ?? [],
+      ),
       errors,
     };
   }

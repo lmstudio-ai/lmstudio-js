@@ -25,6 +25,7 @@ import { kvValueTypesLibrary } from "./valueTypes.js";
 // ---------------------------
 
 export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypesLibrary)
+  .extension("ext.virtualModel.customField")
   .field("envVars", "envVars", {}, {})
   .scope("llm.prediction", builder =>
     builder
