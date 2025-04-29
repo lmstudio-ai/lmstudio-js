@@ -25,9 +25,11 @@ export const serializedKVConfigSchematicsFieldSchema = z.object({
  */
 export interface SerializedKVConfigSchematics {
   fields: Array<SerializedKVConfigSchematicsField>;
+  extensionPrefixes?: Array<string>;
 }
 export const serializedKVConfigSchematicsSchema = z.object({
   fields: z.array(serializedKVConfigSchematicsFieldSchema),
+  extensionPrefixes: z.array(z.string()).optional(),
 }) as z.ZodSchema<SerializedKVConfigSchematics>;
 
 export interface KVConfigSchematicsDeserializationError {

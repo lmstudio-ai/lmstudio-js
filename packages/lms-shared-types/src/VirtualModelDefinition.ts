@@ -1,5 +1,11 @@
 import { z, type ZodSchema } from "zod";
-import { kvConfigSchema, type KVConfig } from "./KVConfig.js";
+import { jsonSerializableSchema } from "./JSONSerializable.js";
+import {
+  kvConfigFieldSchema,
+  kvConfigSchema,
+  type KVConfig,
+  type KVConfigField,
+} from "./KVConfig.js";
 import {
   modelCompatibilityTypeSchema,
   type ModelCompatibilityType,
@@ -98,13 +104,31 @@ export const virtualModelDefinitionConcreteModelBaseSchema: ZodSchema<VirtualMod
     sources: z.array(modelDownloadSourceSchema),
   });
 
-export interface VirtualModelCustomFieldJinjaMapTarget {
-  type: "jinja";
+export interface VirtualModelCustomFieldSetJinjaVariableEffect {
+  type: "setJinjaVariable";
   variable: string;
 }
-export const virtualModelCustomFieldJinjaMapTargetSchema = z.object({
-  type: z.literal("jinja"),
+export const virtualModelCustomFieldSetJinjaVariableEffectSchema = z.object({
+  type: z.literal("setJinjaVariable"),
   variable: z.string(),
+});
+
+export interface VirtualModelCustomFieldPrependSystemPromptEffect {
+  type: "prependSystemPrompt";
+  content: string;
+}
+export const virtualModelCustomFieldPrependSystemPromptEffectSchema = z.object({
+  type: z.literal("prependSystemPrompt"),
+  content: z.string(),
+});
+
+export interface VirtualModelCustomFieldAppendSystemPromptEffect {
+  type: "appendSystemPrompt";
+  content: string;
+}
+export const virtualModelCustomFieldAppendSystemPromptEffectSchema = z.object({
+  type: z.literal("appendSystemPrompt"),
+  content: z.string(),
 });
 
 export interface VirtualModelCustomFieldDefinitionBase {
@@ -130,25 +154,37 @@ export const virtualModelCustomFieldDefinitionBaseSchema = z.object({
 export type VirtualModelBooleanCustomFieldDefinition = VirtualModelCustomFieldDefinitionBase & {
   type: "boolean";
   defaultValue: boolean;
-  mapsTo: Array<VirtualModelCustomFieldJinjaMapTarget>;
+  effects: Array<
+    | VirtualModelCustomFieldSetJinjaVariableEffect
+    | VirtualModelCustomFieldPrependSystemPromptEffect
+    | VirtualModelCustomFieldAppendSystemPromptEffect
+  >;
 };
 export const virtualModelBooleanCustomFieldDefinitionSchema =
   virtualModelCustomFieldDefinitionBaseSchema.extend({
     type: z.literal("boolean"),
     defaultValue: z.boolean(),
-    mapsTo: z.array(z.discriminatedUnion("type", [virtualModelCustomFieldJinjaMapTargetSchema])),
+    effects: z.array(
+      z.discriminatedUnion("type", [
+        virtualModelCustomFieldSetJinjaVariableEffectSchema,
+        virtualModelCustomFieldPrependSystemPromptEffectSchema,
+        virtualModelCustomFieldAppendSystemPromptEffectSchema,
+      ]),
+    ),
   });
 
 export type VirtualModelStringCustomFieldDefinition = VirtualModelCustomFieldDefinitionBase & {
   type: "string";
   defaultValue: string;
-  mapsTo: Array<VirtualModelCustomFieldJinjaMapTarget>;
+  effects: Array<VirtualModelCustomFieldSetJinjaVariableEffect>;
 };
 export const virtualModelStringCustomFieldDefinitionSchema =
   virtualModelCustomFieldDefinitionBaseSchema.extend({
     type: z.literal("string"),
     defaultValue: z.string(),
-    mapsTo: z.array(z.discriminatedUnion("type", [virtualModelCustomFieldJinjaMapTargetSchema])),
+    effects: z.array(
+      z.discriminatedUnion("type", [virtualModelCustomFieldSetJinjaVariableEffectSchema]),
+    ),
   });
 
 export type VirtualModelCustomFieldDefinition =
@@ -158,6 +194,50 @@ export const virtualModelCustomFieldSchema = z.discriminatedUnion("type", [
   virtualModelBooleanCustomFieldDefinitionSchema,
   virtualModelStringCustomFieldDefinitionSchema,
 ]) as ZodSchema<VirtualModelCustomFieldDefinition>;
+
+/**
+ * Represents a condition that compares whether a config item equals a certain value.
+ */
+export type VirtualModelConditionEquals = {
+  type: "equals";
+  key: string;
+  value: any;
+};
+export const virtualModelConditionEqualsSchema = z.object({
+  type: z.literal("equals"),
+  key: z.string(),
+  value: jsonSerializableSchema,
+});
+
+/**
+ * Represents a condition that can be evaluated in a virtual model context.
+ */
+export type VirtualModelCondition = VirtualModelConditionEquals;
+export const virtualModelConditionSchema = z.discriminatedUnion("type", [
+  virtualModelConditionEqualsSchema,
+]) as ZodSchema<VirtualModelCondition>;
+
+export interface VirtualModelSuggestion {
+  /**
+   * The message to display when this suggestion is triggered.
+   */
+  message: string;
+  /**
+   * The conditions that must all be met for this suggestion to be triggered.
+   */
+  conditions: Array<VirtualModelCondition>;
+  /**
+   * The suggested config options. If specified, will surface a button in the UI to apply these
+   * options. Also, if all the fields are already set to the suggested values, the suggestion will
+   * not be shown.
+   */
+  fields?: Array<KVConfigField>;
+}
+export const virtualModelSuggestionSchema = z.object({
+  message: z.string(),
+  conditions: z.array(virtualModelConditionSchema),
+  fields: z.array(kvConfigFieldSchema).optional(),
+}) as ZodSchema<VirtualModelSuggestion>;
 
 export interface VirtualModelDefinition {
   /**
@@ -176,6 +256,7 @@ export interface VirtualModelDefinition {
   };
   metadataOverrides?: VirtualModelDefinitionMetadataOverrides;
   customFields?: Array<VirtualModelCustomFieldDefinition>;
+  suggestions?: Array<VirtualModelSuggestion>;
 }
 export const virtualModelDefinitionSchema: ZodSchema<VirtualModelDefinition> = z.object({
   model: z.string().regex(/^[^/]+\/[^/]+$/),
@@ -189,4 +270,5 @@ export const virtualModelDefinitionSchema: ZodSchema<VirtualModelDefinition> = z
     .optional(),
   metadataOverrides: virtualModelDefinitionMetadataOverridesSchema.optional(),
   customFields: z.array(virtualModelCustomFieldSchema).optional(),
+  suggestions: z.array(virtualModelSuggestionSchema).optional(),
 });
