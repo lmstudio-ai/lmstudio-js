@@ -1131,6 +1131,19 @@ export class KVConfigSchematics<
       extensionPrefixes: this.extensionPrefixes,
     };
   }
+
+  /**
+   * Check if any of the fields in the schematics has a full key that starts with the given prefix.
+   */
+  public hasFieldsWithPrefix(prefix: string): boolean {
+    for (const field of this.fields.values()) {
+      if (field.fullKey.startsWith(prefix)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   public static deserialize(
     valueTypeLibrary: KVFieldValueTypeLibrary<any>,
     serialized: SerializedKVConfigSchematics,
