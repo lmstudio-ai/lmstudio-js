@@ -131,7 +131,7 @@ export interface LLMLoadModelConfig {
   gpuStrictVramCap?: boolean;
 
   /**
-   * If set to true, KV cache will not be offloaded to GPU memory.
+   * If set to true, KV cache will be offloaded to RAM instead of GPU memory.
    *
    * @public
    */
