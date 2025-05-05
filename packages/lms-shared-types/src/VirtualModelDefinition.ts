@@ -190,7 +190,7 @@ export const virtualModelStringCustomFieldDefinitionSchema =
 export type VirtualModelCustomFieldDefinition =
   | VirtualModelBooleanCustomFieldDefinition
   | VirtualModelStringCustomFieldDefinition;
-export const virtualModelCustomFieldSchema = z.discriminatedUnion("type", [
+export const virtualModelCustomFieldDefinitionSchema = z.discriminatedUnion("type", [
   virtualModelBooleanCustomFieldDefinitionSchema,
   virtualModelStringCustomFieldDefinitionSchema,
 ]) as ZodSchema<VirtualModelCustomFieldDefinition>;
@@ -269,6 +269,6 @@ export const virtualModelDefinitionSchema: ZodSchema<VirtualModelDefinition> = z
     })
     .optional(),
   metadataOverrides: virtualModelDefinitionMetadataOverridesSchema.optional(),
-  customFields: z.array(virtualModelCustomFieldSchema).optional(),
+  customFields: z.array(virtualModelCustomFieldDefinitionSchema).optional(),
   suggestions: z.array(virtualModelSuggestionSchema).optional(),
 });
