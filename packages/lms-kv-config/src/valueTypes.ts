@@ -69,6 +69,11 @@ export const kvValueTypesLibrary = new KVFieldValueTypesLibraryBuilder({
    */
   nonConfigurable: z.boolean().optional(),
   /**
+   * A field can be marked as engineDoesNotSupport when when the engine running the model does not
+   * support the field.
+   */
+  engineDoesNotSupport: z.boolean().optional(),
+  /**
    * A field can be marked as machine dependent when its value is highly dependent on the machine
    * that is being used. When exporting the config, one may decide to not include machine dependent
    * fields by default.
