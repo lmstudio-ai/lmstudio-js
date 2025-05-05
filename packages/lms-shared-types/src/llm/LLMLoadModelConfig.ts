@@ -131,6 +131,13 @@ export interface LLMLoadModelConfig {
   gpuStrictVramCap?: boolean;
 
   /**
+   * If set to true, KV Cache will not be offloaded to GPU memory.
+   *
+   * @public
+   */
+  noKvOffload?: boolean;
+
+  /**
    * The size of the context length in number of tokens. This will include both the prompts and the
    * responses. Once the context length is exceeded, the value set in
    * {@link LLMPredictionConfigBase#contextOverflowPolicy} is used to determine the behavior.
@@ -250,6 +257,7 @@ export interface LLMLoadModelConfig {
 export const llmLoadModelConfigSchema = z.object({
   gpu: gpuSettingSchema.optional(),
   gpuStrictVramCap: z.boolean().optional(),
+  noKvOffload: z.boolean().optional(),
   contextLength: z.number().int().min(1).optional(),
   ropeFrequencyBase: z.number().optional(),
   ropeFrequencyScale: z.number().optional(),

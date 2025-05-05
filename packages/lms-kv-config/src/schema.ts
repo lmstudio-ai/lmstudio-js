@@ -295,7 +295,8 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
   .scope("load", builder =>
     builder
       .field("gpuSplitConfig", "gpuSplitConfig", {}, defaultGPUSplitConfig)
-      .field("gpuStrictVramCap", "boolean", {}, false),
+      .field("gpuStrictVramCap", "boolean", {}, false)
+      .field("noKvOffload", "boolean", {}, false),
   )
   .scope("embedding.load", builder =>
     builder
