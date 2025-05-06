@@ -237,6 +237,7 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
         { int: true, min: -1, uncheckedHint: "config:seedUncheckedHint" },
         { checked: false, value: -1 },
       )
+      .field("offloadKVCacheToGpu", "boolean", {}, true)
       .scope("llama", builder =>
         builder
           .scope("acceleration", builder =>
@@ -295,8 +296,7 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
   .scope("load", builder =>
     builder
       .field("gpuSplitConfig", "gpuSplitConfig", {}, defaultGPUSplitConfig)
-      .field("gpuStrictVramCap", "boolean", {}, false)
-      .field("offloadKVCacheToGpu", "boolean", {}, true),
+      .field("gpuStrictVramCap", "boolean", {}, false),
   )
   .scope("embedding.load", builder =>
     builder
