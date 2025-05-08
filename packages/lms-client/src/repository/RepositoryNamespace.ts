@@ -8,6 +8,7 @@ import {
 } from "@lmstudio/lms-common";
 import { type RepositoryPort } from "@lmstudio/lms-external-backend-interfaces";
 import {
+  jsonSerializableSchema,
   modelSearchOptsSchema,
   type ArtifactDownloadPlan,
   type DownloadProgressUpdate,
@@ -52,10 +53,20 @@ const downloadArtifactOptsSchema = z.object({
  */
 export interface PushArtifactOpts {
   path: string;
+  /**
+   * Change the description of the artifact.
+   */
+  description?: string;
+  /**
+   * Internal overrides for updating artifact metadata.
+   */
+  overrides?: any;
   onMessage?: (message: string) => void;
 }
 export const pushArtifactOptsSchema = z.object({
   path: z.string(),
+  description: z.string().optional(),
+  overrides: jsonSerializableSchema.optional(),
   onMessage: z.function().optional(),
 }) as ZodSchema<PushArtifactOpts>;
 
@@ -190,7 +201,7 @@ export class RepositoryNamespace {
    */
   public async pushArtifact(opts: PushArtifactOpts): Promise<void> {
     const stack = getCurrentStack(1);
-    this.validator.validateMethodParamOrThrow(
+    const { path, description, overrides, onMessage } = this.validator.validateMethodParamOrThrow(
       "repository",
       "pushArtifact",
       "opts",
@@ -200,12 +211,12 @@ export class RepositoryNamespace {
     );
     const channel = this.repositoryPort.createChannel(
       "pushArtifact",
-      { path: opts.path },
+      { path, description, overrides },
       message => {
         const type = message.type;
         switch (type) {
           case "message": {
-            safeCallCallback(this.logger, "onMessage", opts.onMessage, [message.message]);
+            safeCallCallback(this.logger, "onMessage", onMessage, [message.message]);
             break;
           }
           default: {
