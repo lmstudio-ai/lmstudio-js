@@ -3,6 +3,7 @@ import { type InferClientPort } from "@lmstudio/lms-communication-client";
 import {
   artifactDownloadPlanSchema,
   downloadProgressUpdateSchema,
+  jsonSerializableSchema,
   kebabCaseSchema,
   kebabCaseWithDotsSchema,
   localArtifactFileListSchema,
@@ -104,6 +105,8 @@ export function createRepositoryBackendInterface() {
       .addChannelEndpoint("pushArtifact", {
         creationParameter: z.object({
           path: z.string(),
+          description: z.string().max(1000).optional(),
+          overrides: jsonSerializableSchema.optional(),
         }),
         toServerPacket: z.void(),
         toClientPacket: z.discriminatedUnion("type", [
