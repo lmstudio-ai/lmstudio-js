@@ -129,6 +129,16 @@ export function createRepositoryBackendInterface() {
           }),
         ]),
       })
+      .addRpcEndpoint("loginWithPreAuthenticatedKeys", {
+        parameter: z.object({
+          keyId: z.string(),
+          publicKey: z.string(),
+          privateKey: z.string(),
+        }),
+        returns: z.object({
+          userName: z.string(),
+        }),
+      })
       /**
        * Given the owner and name of an artifact, creates a download plan for the artifact. Throws
        * an error is the artifact is not found.

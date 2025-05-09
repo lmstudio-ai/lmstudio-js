@@ -82,6 +82,30 @@ export const ensureAuthenticatedOptsSchema = z.object({
   onAuthenticationUrl: z.function(),
 }) as ZodSchema<EnsureAuthenticatedOpts>;
 
+/**
+ * @deprecated WIP
+ */
+export interface LoginWithPreAuthenticatedKeysOpts {
+  keyId: string;
+  publicKey: string;
+  privateKey: string;
+}
+export const loginWithPreAuthenticatedKeysOptsSchema = z.object({
+  keyId: z.string(),
+  publicKey: z.string(),
+  privateKey: z.string(),
+}) as ZodSchema<LoginWithPreAuthenticatedKeysOpts>;
+
+/**
+ * @deprecated WIP
+ */
+export interface LoginWithPreAuthenticatedKeysResult {
+  userName: string;
+}
+export const loginWithPreAuthenticatedKeysResultSchema = z.object({
+  userName: z.string(),
+}) as ZodSchema<LoginWithPreAuthenticatedKeysResult>;
+
 export interface CreateArtifactDownloadPlannerOpts {
   owner: string;
   name: string;
@@ -289,6 +313,27 @@ export class RepositoryNamespace {
     });
     channel.onError.subscribeOnce(reject);
     await promise;
+  }
+
+  public async loginWithPreAuthenticatedKeys(
+    opts: LoginWithPreAuthenticatedKeysOpts,
+  ): Promise<LoginWithPreAuthenticatedKeysResult> {
+    const stack = getCurrentStack(1);
+    this.validator.validateMethodParamOrThrow(
+      "repository",
+      "loginWithPreAuthenticatedKeys",
+      "opts",
+      loginWithPreAuthenticatedKeysOptsSchema,
+      opts,
+      stack,
+    );
+    const { keyId, publicKey, privateKey } = opts;
+    const { userName } = await this.repositoryPort.callRpc(
+      "loginWithPreAuthenticatedKeys",
+      { keyId, publicKey, privateKey },
+      { stack },
+    );
+    return { userName };
   }
 
   private readonly downloadPlanFinalizationRegistry = new FinalizationRegistry<{
