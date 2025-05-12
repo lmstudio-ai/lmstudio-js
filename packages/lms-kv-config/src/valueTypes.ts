@@ -82,6 +82,7 @@ export const kvValueTypesLibrary = new KVFieldValueTypesLibraryBuilder({
    */
   machineDependent: z.boolean().optional(),
   warning: z.string().optional(),
+  subtitle: z.string().optional(),
   isExperimental: z.boolean().optional(),
   dependencies: z.array(kvConfigFieldDependencySchema).optional(),
 })
