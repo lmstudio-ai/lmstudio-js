@@ -412,6 +412,8 @@ export {
   serializedKVConfigSchematicsSchema,
 } from "./SerializedKVConfigSchematics.js";
 export {
+  BooleanOrMixed,
+  booleanOrMixedSchema,
   VirtualModelBooleanCustomFieldDefinition,
   virtualModelBooleanCustomFieldDefinitionSchema,
   VirtualModelCondition,
@@ -438,7 +440,5 @@ export {
   virtualModelStringCustomFieldDefinitionSchema,
   VirtualModelSuggestion,
   virtualModelSuggestionSchema,
-  VirtualModelTrainedForToolUse,
-  VirtualModelVisionSupport,
 } from "./VirtualModelDefinition.js";
 export { zodSchemaSchema } from "./Zod.js";
