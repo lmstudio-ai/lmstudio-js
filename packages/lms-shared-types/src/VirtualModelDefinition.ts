@@ -13,26 +13,10 @@ import {
 import { modelDomainTypeSchema, type ModelDomainType } from "./ModelDomainType.js";
 import { modelDownloadSourceSchema, type ModelDownloadSource } from "./ModelDownloadSource.js";
 
-/**
- * The indicator whether the virtual model is trained for tool use. There could be cases where not
- * all concrete models are trained for tool use. In that case, we can use the "mixed" value to
- * indicate that.
- */
-export type VirtualModelTrainedForToolUse = true | false | "mixed";
-
-const virtualModelTrainedForToolUseSchema: ZodSchema<VirtualModelTrainedForToolUse> = z.union([
-  z.boolean(),
-  z.literal("mixed"),
-]);
-
-/**
- * The indicator whether the virtual model supports vision. There could be cases where not all
- * concrete models support vision. In that case, we can use the "mixed" value to indicate that.
- */
-export type VirtualModelVisionSupport = true | false | "mixed";
-
-const virtualModelVisionSupportSchema: ZodSchema<VirtualModelVisionSupport> = z.union([
-  z.boolean(),
+export type BooleanOrMixed = true | false | "mixed";
+export const booleanOrMixedSchema: ZodSchema<BooleanOrMixed> = z.union([
+  z.literal(true),
+  z.literal(false),
   z.literal("mixed"),
 ]);
 
@@ -69,12 +53,22 @@ export interface VirtualModelDefinitionMetadataOverrides {
    * generally are more capable of using tools effectively. Could be a mixture of tool use and
    * non-tool use concrete models.
    */
-  trainedForToolUse?: VirtualModelTrainedForToolUse;
+  trainedForToolUse?: BooleanOrMixed;
   /**
    * (LLM only) Whether the model can take image inputs. Could be a mixture of image input and
    * non-image input concrete models.
    */
-  vision?: VirtualModelVisionSupport;
+  vision?: BooleanOrMixed;
+  /**
+   * (LLM only) Whether the model is trained for reasoning. Could be a mixture of reasoning and
+   * non-reasoning concrete models.
+   */
+  reasoning?: BooleanOrMixed;
+  /**
+   * (LLM only) Whether the model is trained for fill-in-the-middle tasks. Could be a mixture of
+   * fill-in-the-middle and non-fill-in-the-middle concrete models.
+   */
+  fim?: BooleanOrMixed;
 }
 export const virtualModelDefinitionMetadataOverridesSchema: ZodSchema<VirtualModelDefinitionMetadataOverrides> =
   z.object({
@@ -84,8 +78,10 @@ export const virtualModelDefinitionMetadataOverridesSchema: ZodSchema<VirtualMod
     paramsStrings: z.array(z.string()).optional(),
     minMemoryUsageBytes: z.number().optional(),
     contextLengths: z.array(z.number()).optional(),
-    trainedForToolUse: virtualModelTrainedForToolUseSchema.optional(),
-    vision: virtualModelVisionSupportSchema.optional(),
+    trainedForToolUse: booleanOrMixedSchema.optional(),
+    vision: booleanOrMixedSchema.optional(),
+    reasoning: booleanOrMixedSchema.optional(),
+    fim: booleanOrMixedSchema.optional(),
   });
 
 export interface VirtualModelDefinitionConcreteModelBase {
