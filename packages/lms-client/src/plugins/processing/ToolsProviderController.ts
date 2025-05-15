@@ -14,6 +14,7 @@ export class ToolsProviderController {
   public constructor(
     public readonly client: LMStudioClient,
     private readonly pluginConfig: KVConfig,
+    public readonly signal: AbortSignal,
   ) {}
 
   public getPluginConfig<TVirtualConfigSchematics extends VirtualConfigSchematics>(
