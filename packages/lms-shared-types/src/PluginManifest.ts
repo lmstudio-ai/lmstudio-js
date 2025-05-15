@@ -4,8 +4,8 @@ import { artifactManifestBaseSchema, type ArtifactManifestBase } from "./Artifac
 /**
  * @public
  */
-export type PluginRunnerType = "ecmascript";
-export const pluginRunnerTypeSchema = z.enum(["ecmascript"]);
+export type PluginRunnerType = "ecmascript" | "mcpBridge";
+export const pluginRunnerTypeSchema = z.enum(["ecmascript", "mcpBridge"]);
 
 /**
  * @public

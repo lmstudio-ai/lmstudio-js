@@ -439,6 +439,10 @@ export class PluginsNamespace {
        * Starts with false. Set to true when the session is discarded.
        */
       discarded: boolean;
+      /**
+       * Abort controller for the session. Used to abort session initialization.
+       */
+      abortController: AbortController;
     }
 
     /**
@@ -451,13 +455,19 @@ export class PluginsNamespace {
       switch (messageType) {
         case "initSession": {
           const sessionId = message.sessionId;
+          const sessionAbortController = new AbortController();
           const openSession: OpenSessions = {
             tools: null,
             ongoingToolCalls: new Map(),
             discarded: false,
+            abortController: sessionAbortController,
           };
           openSessions.set(sessionId, openSession);
-          const controller = new ToolsProviderController(this.client, message.pluginConfig);
+          const controller = new ToolsProviderController(
+            this.client,
+            message.pluginConfig,
+            sessionAbortController.signal,
+          );
           toolsProvider(controller).then(
             tools => {
               const llmTools = tools.map(toolToLLMTool);
@@ -497,6 +507,7 @@ export class PluginsNamespace {
             return;
           }
           openSession.discarded = true;
+          openSession.abortController.abort();
           openSessions.delete(sessionId);
           break;
         }
