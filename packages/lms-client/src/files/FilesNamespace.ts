@@ -343,4 +343,17 @@ export class FilesNamespace {
       channel.onError.subscribeOnce(reject);
     });
   }
+
+  /**
+   * Parse a document
+   *
+   * @deprecated Document parsing API is still in active development. Stay tuned for updates.
+   */
+  public async parseDocument(fileHandle: FileHandle, stack?: string) {
+    return await this.filesPort.callRpc(
+      "parseDocument",
+      { fileIdentifier: fileHandle.identifier },
+      { stack },
+    );
+  }
 }

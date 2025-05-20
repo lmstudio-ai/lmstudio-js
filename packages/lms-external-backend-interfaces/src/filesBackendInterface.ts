@@ -80,6 +80,14 @@ export function createFilesBackendInterface() {
           result: internalRetrievalResultSchema,
         }),
       ]),
+    })
+    .addRpcEndpoint("parseDocument", {
+      parameter: z.object({
+        fileIdentifier: z.string(),
+      }),
+      returns: z.object({
+        content: z.string(),
+      }),
     });
 }
 
