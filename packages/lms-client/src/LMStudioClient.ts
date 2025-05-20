@@ -142,7 +142,6 @@ export class LMStudioClient {
   public readonly diagnostics: DiagnosticsNamespace;
   public readonly files: FilesNamespace;
   public readonly repository: RepositoryNamespace;
-
   /**
    * @deprecated Plugin support is still in development. Stay tuned for updates.
    */
