@@ -17,6 +17,7 @@ import {
 import { getHostedEnv, type ClientPort } from "@lmstudio/lms-communication-client";
 import {
   createDiagnosticsBackendInterface,
+  createDocumentParsingBackendInterface,
   createEmbeddingBackendInterface,
   createFilesBackendInterface,
   createLlmBackendInterface,
@@ -24,6 +25,7 @@ import {
   createRepositoryBackendInterface,
   createSystemBackendInterface,
   type DiagnosticsPort,
+  type DocumentParsingPort,
   type EmbeddingPort,
   type FilesPort,
   type LLMPort,
@@ -109,6 +111,7 @@ const constructorOptsSchema = z
     filesPort: z.any().optional(),
     repositoryPort: z.any().optional(),
     pluginsPort: z.any().optional(),
+    documentParsingPort: z.any().optional(),
   })
   .strict();
 
@@ -135,6 +138,8 @@ export class LMStudioClient {
   private readonly repositoryPort: RepositoryPort;
   /** @internal */
   private readonly pluginsPort: PluginsPort;
+  /** @internal */
+  private readonly documentParsingPort: DocumentParsingPort;
 
   public readonly llm: LLMNamespace;
   public readonly embedding: EmbeddingNamespace;
@@ -142,6 +147,7 @@ export class LMStudioClient {
   public readonly diagnostics: DiagnosticsNamespace;
   public readonly files: FilesNamespace;
   public readonly repository: RepositoryNamespace;
+
   /**
    * @deprecated Plugin support is still in development. Stay tuned for updates.
    */
@@ -310,6 +316,7 @@ export class LMStudioClient {
       filesPort,
       repositoryPort,
       pluginsPort,
+      documentParsingPort,
     } = new Validator().validateConstructorParamOrThrow(
       "LMStudioClient",
       "opts",
@@ -374,6 +381,13 @@ export class LMStudioClient {
       this.createPort("repository", "Repository", createRepositoryBackendInterface());
     this.pluginsPort =
       pluginsPort ?? this.createPort("plugins", "Plugins", createPluginsBackendInterface());
+    this.documentParsingPort =
+      documentParsingPort ??
+      this.createPort(
+        "documentParsing",
+        "DocumentParsing",
+        createDocumentParsingBackendInterface(),
+      );
 
     const validator = new Validator();
 
@@ -391,7 +405,12 @@ export class LMStudioClient {
     );
     this.system = new SystemNamespace(this.systemPort, validator, this.logger);
     this.diagnostics = new DiagnosticsNamespace(this.diagnosticsPort, validator, this.logger);
-    this.files = new FilesNamespace(this.filesPort, validator, this.logger);
+    this.files = new FilesNamespace(
+      this.filesPort,
+      this.documentParsingPort,
+      validator,
+      this.logger,
+    );
     this.repository = new RepositoryNamespace(this.repositoryPort, validator, this.logger);
     this.plugins = new PluginsNamespace(this.pluginsPort, this, validator, this.logger, logger);
   }

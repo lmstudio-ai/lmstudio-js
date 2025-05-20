@@ -9,6 +9,11 @@ export {
   DiagnosticsPort,
 } from "./diagnosticsBackendInterface.js";
 export {
+  createDocumentParsingBackendInterface,
+  DocumentParsingBackendInterface,
+  DocumentParsingPort,
+} from "./documentParsingBackendInterface.js";
+export {
   createEmbeddingBackendInterface,
   EmbeddingBackendInterface,
   EmbeddingPort,

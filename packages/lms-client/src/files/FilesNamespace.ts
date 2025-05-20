@@ -6,7 +6,10 @@ import {
   text,
   type Validator,
 } from "@lmstudio/lms-common";
-import { type FilesPort } from "@lmstudio/lms-external-backend-interfaces";
+import {
+  type DocumentParsingPort,
+  type FilesPort,
+} from "@lmstudio/lms-external-backend-interfaces";
 import { readFileAsBase64 } from "@lmstudio/lms-isomorphic";
 import { retrievalSchematics } from "@lmstudio/lms-kv-config";
 import {
@@ -46,6 +49,7 @@ export class FilesNamespace {
   public constructor(
     /** @internal */
     private readonly filesPort: FilesPort,
+    private readonly documentParsingPort: DocumentParsingPort,
     private readonly validator: Validator,
     parentLogger: LoggerInterface,
   ) {
@@ -342,5 +346,18 @@ export class FilesNamespace {
       });
       channel.onError.subscribeOnce(reject);
     });
+  }
+
+  /**
+   * Parse a document
+   *
+   * @deprecated Document parsing API is still in active development. Stay tuned for updates.
+   */
+  public async parseDocument(fileHandle: FileHandle, stack?: string) {
+    return await this.documentParsingPort.callRpc(
+      "parseDocument",
+      { fileIdentifier: fileHandle.identifier },
+      { stack },
+    );
   }
 }
