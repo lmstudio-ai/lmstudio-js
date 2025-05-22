@@ -1067,6 +1067,7 @@ export class LLMDynamicHandle extends DynamicHandle<
       // Round start callback
       safeCallCallback(this.logger, "onRoundStart", extraOpts.onRoundStart, [predictionsPerformed]);
 
+      let isGeneratingToolCall = false;
       const channel = this.port.createChannel(
         "predict",
         {
@@ -1108,6 +1109,7 @@ export class LLMDynamicHandle extends DynamicHandle<
             }
             case "toolCallGenerationStart": {
               currentCallId++;
+              isGeneratingToolCall = true;
               safeCallCallback(
                 this.logger,
                 "onToolCallRequestStart",
@@ -1117,6 +1119,7 @@ export class LLMDynamicHandle extends DynamicHandle<
               break;
             }
             case "toolCallGenerationEnd": {
+              isGeneratingToolCall = false;
               const toolCallIndex = nextToolCallIndex;
               nextToolCallIndex++;
               // We have now received a tool call request. Now let's see if we can call the tool and
@@ -1205,6 +1208,7 @@ export class LLMDynamicHandle extends DynamicHandle<
               break;
             }
             case "toolCallGenerationFailed": {
+              isGeneratingToolCall = false;
               toolCallPromises.push(
                 internalHandleInvalidToolCallRequest(
                   new Error(`Failed to parse tool call request.`),
@@ -1256,6 +1260,16 @@ export class LLMDynamicHandle extends DynamicHandle<
       };
       abortController.signal.addEventListener("abort", abortListener);
       channel.onError.subscribeOnce(error => {
+        if (isGeneratingToolCall) {
+          // Notify tool call generation failure.
+          isGeneratingToolCall = false;
+          safeCallCallback(
+            this.logger,
+            "onToolCallRequestFailure",
+            extraOpts.onToolCallRequestFailure,
+            [predictionsPerformed, currentCallId],
+          );
+        }
         finished = true;
         predictionReject(error);
       });
