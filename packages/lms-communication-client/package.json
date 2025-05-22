@@ -5,9 +5,6 @@
   "main": "./dist/cjs/index.js",
   "module": "./dist/esm/index.js",
   "types": "./dist/types/index.d.ts",
-  "devDependencies": {
-    "electron": "^24.6.3"
-  },
   "scripts": {
     "build": "tsc"
   },
