@@ -29,4 +29,7 @@ export class CancelEvent extends Subscribable<void> {
       listener();
     }
   }
+  public isCanceled() {
+    return this.canceled;
+  }
 }

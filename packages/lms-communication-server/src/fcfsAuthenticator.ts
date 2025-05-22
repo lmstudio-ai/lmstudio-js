@@ -1,4 +1,11 @@
-import { Event, SimpleLogger, text, type LoggerInterface } from "@lmstudio/lms-common";
+import {
+  BufferedEvent,
+  CancelEvent,
+  Event,
+  SimpleLogger,
+  text,
+  type LoggerInterface,
+} from "@lmstudio/lms-common";
 import { type AuthPacket } from "@lmstudio/lms-communication";
 import { type ClientHolder } from "./AuthenticatedWsServer.js";
 import { Authenticator, type ContextCreator } from "./Authenticator.js";
@@ -53,6 +60,7 @@ export class FcfsClient {
     `;
   });
   public readonly logger: SimpleLogger;
+  public readonly releaseEvent = new CancelEvent();
 
   /**
    * Creates a new client. Returns the client and a holder for the client. The holder must be
@@ -84,8 +92,11 @@ export class FcfsClient {
     this.logger = new SimpleLogger(`Client=${clientIdentifier}`, parentLogger);
     this.logger.debug("Client created.");
   }
+  private released = false;
   protected onRelease() {
+    this.released = true;
     this.onReleaseCallback(this);
+    this.releaseEvent.cancel();
   }
   public async assertValid(authPacket: AuthPacket) {
     if (authPacket.clientIdentifier !== this.clientIdentifier) {
@@ -99,6 +110,15 @@ export class FcfsClient {
       `);
     }
   }
+
+  /**
+   * Force terminates the client. Cut all connections associated with the client and release the
+   * client.
+   */
+  public forceTerminate() {
+    this.onRelease();
+  }
+
   /**
    * Creates a new holder for the client, which bumps the reference count of the client.
    */
@@ -129,6 +149,11 @@ export class FcfsClient {
    */
   public [clientHolderDropped](holder: FcfsClientHolder) {
     this.clientHoldersFinalizationRegistry.unregister(holder);
+    if (this.released) {
+      // The client is already released. This can happen if the client is force terminated. In this
+      // case, we don't need to decrease the reference count.
+      return;
+    }
     this.decreaseReferences();
   }
   /**
@@ -184,6 +209,16 @@ export abstract class FcfsAuthenticatorBase<
   protected isClientAllowedForNewAuthenticatedClient(_authPacket: AuthPacket): boolean {
     return true;
   }
+  public forceTerminate(clientIdentifier: string) {
+    const client = this.clients.get(clientIdentifier);
+    if (client === undefined) {
+      throw new Error(`Client ${clientIdentifier} not found.`);
+    }
+    if (client instanceof Promise) {
+      throw new Error("Client is not yet created.");
+    }
+    client.forceTerminate();
+  }
   /**
    * Authenticates a request. Returns a client holder and a context.
    *
@@ -192,9 +227,11 @@ export abstract class FcfsAuthenticatorBase<
    * @param authPacket - The authentication packet
    * @returns The client holder and the context
    */
-  public override async authenticate(
-    authPacket: AuthPacket,
-  ): Promise<{ holder: ClientHolder; contextCreator: ContextCreator<TContext> }> {
+  public override async authenticate(authPacket: AuthPacket): Promise<{
+    holder: ClientHolder;
+    contextCreator: ContextCreator<TContext>;
+    authenticationRevokedEvent: BufferedEvent<void>;
+  }> {
     let client = this.clients.get(authPacket.clientIdentifier);
     let holder: ClientHolder;
     if (client === undefined) {
@@ -216,7 +253,12 @@ export abstract class FcfsAuthenticatorBase<
     try {
       await client.assertValid(authPacket);
       const contextCreator = await this.createContextCreator(client);
-      return { holder, contextCreator };
+      const [authenticationRevokedEvent, emitAuthenticationRevokedEvent] =
+        BufferedEvent.create<void>();
+      client.releaseEvent.subscribe(() => {
+        emitAuthenticationRevokedEvent();
+      });
+      return { holder, contextCreator, authenticationRevokedEvent };
     } catch (error) {
       holder.drop();
       throw error;
