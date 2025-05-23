@@ -1,4 +1,4 @@
-import { makePromise, type SimpleLogger } from "@lmstudio/lms-common";
+import { type BufferedEvent, makePromise, type SimpleLogger } from "@lmstudio/lms-common";
 import {
   authPacketSchema,
   type BackendInterface,
@@ -51,12 +51,15 @@ export class AuthenticatedWsServer<TContext extends Context> extends WsServer<TC
     this.authenticator = authenticator;
     this.timeoutMs = timeoutMs ?? 10_000;
   }
-  private authenticateConnection(
-    ws: WebSocket,
-  ): Promise<{ holder: ClientHolder; contextCreator: ContextCreator<TContext> }> {
+  private authenticateConnection(ws: WebSocket): Promise<{
+    holder: ClientHolder;
+    contextCreator: ContextCreator<TContext>;
+    authenticationRevokedEvent: BufferedEvent<void>;
+  }> {
     const { promise, resolve, reject } = makePromise<{
       holder: ClientHolder;
       contextCreator: ContextCreator<TContext>;
+      authenticationRevokedEvent: BufferedEvent<void>;
     }>();
     const onMessage = (event: WsMessageEvent) => {
       let message;
@@ -121,7 +124,7 @@ export class AuthenticatedWsServer<TContext extends Context> extends WsServer<TC
   }
   protected onConnection(ws: WebSocket) {
     this.authenticateConnection(ws)
-      .then(({ holder, contextCreator }) => {
+      .then(({ holder, contextCreator, authenticationRevokedEvent }) => {
         ws.send(JSON.stringify({ success: true } satisfies WsAuthenticationResult));
         const serverPort = new ServerPort(
           this.backendInterface,
@@ -130,6 +133,14 @@ export class AuthenticatedWsServer<TContext extends Context> extends WsServer<TC
         );
         serverPort.closeEvent.subscribe(() => {
           holder.drop();
+        });
+        authenticationRevokedEvent.subscribeOnce(() => {
+          this.logger.warn("Terminating connection because authentication was revoked");
+          try {
+            ws.close();
+          } catch (error) {
+            // Ignore
+          }
         });
       })
       .catch(error => {
