@@ -5,7 +5,7 @@ import type {
   ServerTransportFactory,
 } from "@lmstudio/lms-communication";
 import { ServerTransport } from "@lmstudio/lms-communication";
-import { type MessagePortMain } from "electron";
+import { type MessagePortMain } from "./electronTypes";
 
 export class IpcServerTransport extends ServerTransport {
   protected readonly logger: SimpleLogger;

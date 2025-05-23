@@ -1,9 +1,9 @@
 import { SimpleLogger } from "@lmstudio/lms-common";
 import type { BackendInterface } from "@lmstudio/lms-communication";
-import type { IpcMainEvent, MessagePortMain } from "electron";
 import { type Context, type ContextCreator } from "./Authenticator.js";
 import { IpcServerTransport } from "./IpcServerTransport.js";
 import { ServerPort } from "./ServerPort.js";
+import { type IpcMainEvent, type MessagePortMain } from "./electronTypes.js";
 
 export type RegisterIpcListener = (
   channel: string,

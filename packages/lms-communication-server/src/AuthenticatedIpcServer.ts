@@ -1,11 +1,11 @@
 import { type SimpleLogger } from "@lmstudio/lms-common";
 import { authPacketSchema, type BackendInterface } from "@lmstudio/lms-communication";
-import type { IpcMainEvent } from "electron";
 import { type ClientHolder } from "./AuthenticatedWsServer.js";
 import { type Authenticator, type Context, type ContextCreator } from "./Authenticator.js";
 import { IpcServer, type RegisterIpcListener } from "./IpcServer.js";
 import { IpcServerTransport } from "./IpcServerTransport.js";
 import { ServerPort } from "./ServerPort.js";
+import { type IpcMainEvent } from "./electronTypes.js";
 
 interface Opts<TContext extends Context> {
   backendInterface: BackendInterface<TContext>;
