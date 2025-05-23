@@ -1,10 +1,10 @@
 import {
   BufferedEvent,
   CancelEvent,
-  Event,
   SimpleLogger,
+  SyncEvent,
   text,
-  type LoggerInterface,
+  type LoggerInterface
 } from "@lmstudio/lms-common";
 import { type AuthPacket } from "@lmstudio/lms-communication";
 import { type ClientHolder } from "./AuthenticatedWsServer.js";
@@ -183,16 +183,16 @@ export abstract class FcfsAuthenticatorBase<
   /**
    * A event that is emitted when a client is released.
    */
-  public readonly clientReleasedEvent: Event<TClient>;
+  public readonly clientReleasedEvent: SyncEvent<TClient>;
   protected readonly emitClientReleasedEvent: (client: TClient) => void;
 
-  public readonly clientCreatedEvent: Event<TClient>;
+  public readonly clientCreatedEvent: SyncEvent<TClient>;
   protected readonly emitClientCreatedEvent: (client: TClient) => void;
 
   public constructor() {
     super();
-    [this.clientReleasedEvent, this.emitClientReleasedEvent] = Event.create();
-    [this.clientCreatedEvent, this.emitClientCreatedEvent] = Event.create();
+    [this.clientReleasedEvent, this.emitClientReleasedEvent] = SyncEvent.create();
+    [this.clientCreatedEvent, this.emitClientCreatedEvent] = SyncEvent.create();
   }
   protected readonly clients = new Map<
     string,
@@ -212,7 +212,9 @@ export abstract class FcfsAuthenticatorBase<
   public forceTerminate(clientIdentifier: string) {
     const client = this.clients.get(clientIdentifier);
     if (client === undefined) {
-      throw new Error(`Client ${clientIdentifier} not found.`);
+      throw new Error(text`
+        Client ${clientIdentifier} not found. Available: ${[...this.clients.keys()]}
+      `);
     }
     if (client instanceof Promise) {
       throw new Error("Client is not yet created.");

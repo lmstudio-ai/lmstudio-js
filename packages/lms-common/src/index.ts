@@ -16,6 +16,7 @@ export { deepFreeze } from "./deepFreeze.js";
 export { DeepReplaceType, DeepReplaceType2 } from "./DeepReplaceType.js";
 export { changeErrorStackInPlace, getCurrentStack } from "./errorStack.js";
 export { Event } from "./Event.js";
+export { SyncEvent } from "./SyncEvent.js"
 export { doesFileNameIndicateModel, modelExtensions } from "./fileName.js";
 export { flattenSignalOfSignal, flattenSignalOfWritableSignal } from "./flattenSignal.js";
 export { HandledEvent } from "./HandledEvent.js";
