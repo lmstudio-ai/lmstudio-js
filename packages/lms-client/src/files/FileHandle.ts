@@ -9,7 +9,7 @@ import { type FilesNamespace } from "./FilesNamespace.js";
  */
 export class FileHandle {
   /**
-   * @internal
+   * @deprecated Direct construction is not recommended. Please use the `prepareFile` API instead
    */
   public constructor(
     public readonly filesNamespace: FilesNamespace,
