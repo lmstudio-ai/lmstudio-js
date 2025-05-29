@@ -91,12 +91,13 @@ export function createFilesBackendInterface() {
         content: z.string(),
       }),
     })
-    .addRpcEndpoint("documentParserId", {
+    .addRpcEndpoint("getDocumentParsingLibrary", {
       parameter: z.object({
         fileIdentifier: z.string(),
       }),
       returns: z.object({
-        method: z.string(),
+        library: z.string(),
+        version: z.string(),
       }),
     });
 }

@@ -350,12 +350,11 @@ export class FilesNamespace {
    *
    * @deprecated Document parsing API is still in active development. Stay tuned for updates.
    */
-  public async parseDocument(fileHandle: FileHandle, parseOpts?: DocumentParsingOpts) {
+  public async parseDocument(fileHandle: FileHandle, parseOpts: DocumentParsingOpts = {}) {
     const stack = getCurrentStack(1);
-    const parseOptsObj: DocumentParsingOpts = parseOpts || {};
     return await this.filesPort.callRpc(
       "parseDocument",
-      { fileIdentifier: fileHandle.identifier, parseOpts: parseOptsObj },
+      { fileIdentifier: fileHandle.identifier, parseOpts },
       { stack },
     );
   }
@@ -365,10 +364,10 @@ export class FilesNamespace {
    *
    * @deprecated Document parsing API is still in active development. Stay tuned for updates.
    */
-  public async documentParserId(fileHandle: FileHandle) {
+  public async getDocumentParsingLibrary(fileHandle: FileHandle) {
     const stack = getCurrentStack(1);
     return await this.filesPort.callRpc(
-      "documentParserId",
+      "getDocumentParsingLibrary",
       { fileIdentifier: fileHandle.identifier },
       { stack },
     );

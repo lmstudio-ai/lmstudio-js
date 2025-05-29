@@ -2,7 +2,6 @@ import { z } from "zod";
 
 /**
  * @deprecated
- * N.B.: onProgress returns progress as a float taking values from 0 to 1, 1 being completed
  */
 export type DocumentParsingOpts = {
   /**
