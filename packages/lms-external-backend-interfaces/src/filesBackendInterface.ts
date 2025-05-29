@@ -1,6 +1,7 @@
 import { BackendInterface } from "@lmstudio/lms-communication";
 import { type InferClientPort } from "@lmstudio/lms-communication-client";
 import {
+  documentParsingOptsSchema,
   fileTypeSchema,
   internalRetrievalResultSchema,
   kvConfigSchema,
@@ -84,9 +85,19 @@ export function createFilesBackendInterface() {
     .addRpcEndpoint("parseDocument", {
       parameter: z.object({
         fileIdentifier: z.string(),
+        parseOpts: documentParsingOptsSchema,
       }),
       returns: z.object({
         content: z.string(),
+      }),
+    })
+    .addRpcEndpoint("getDocumentParsingLibrary", {
+      parameter: z.object({
+        fileIdentifier: z.string(),
+      }),
+      returns: z.object({
+        library: z.string(),
+        version: z.string(),
       }),
     });
 }

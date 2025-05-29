@@ -15,7 +15,7 @@ export type { DiagnosticsNamespace } from "./diagnostics/DiagnosticsNamespace.js
 export type { EmbeddingDynamicHandle } from "./embedding/EmbeddingDynamicHandle.js";
 export type { EmbeddingModel } from "./embedding/EmbeddingModel.js";
 export type { EmbeddingNamespace } from "./embedding/EmbeddingNamespace.js";
-export type { FileHandle } from "./files/FileHandle.js";
+export { FileHandle } from "./files/FileHandle.js";
 export type { FilesNamespace } from "./files/FilesNamespace.js";
 export type { RetrievalCallbacks, RetrievalOpts } from "./files/RetrievalOpts.js";
 export type { RetrievalResult, RetrievalResultEntry } from "./files/RetrievalResult.js";
