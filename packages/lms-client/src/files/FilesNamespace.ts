@@ -11,6 +11,7 @@ import { readFileAsBase64 } from "@lmstudio/lms-isomorphic";
 import { retrievalSchematics } from "@lmstudio/lms-kv-config";
 import {
   type ChatMessagePartFileData,
+  type DocumentParsingLibraryIdentifier,
   type DocumentParsingOpts,
   type KVConfig,
   type RetrievalFileProcessingStep,
@@ -364,7 +365,9 @@ export class FilesNamespace {
    *
    * @deprecated Document parsing API is still in active development. Stay tuned for updates.
    */
-  public async getDocumentParsingLibrary(fileHandle: FileHandle) {
+  public async getDocumentParsingLibrary(
+    fileHandle: FileHandle,
+  ): Promise<DocumentParsingLibraryIdentifier> {
     const stack = getCurrentStack(1);
     return await this.filesPort.callRpc(
       "getDocumentParsingLibrary",
