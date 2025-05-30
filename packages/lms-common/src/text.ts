@@ -17,6 +17,8 @@ export type TextAllowedTypes = string | number | object;
  * - Single newlines are replaced with a space + extra whitespace is removed
  *
  * Note: Only spaces are considered.
+ *
+ * @experimental The behavior of this function may change in the future.
  */
 export function text(strings: TemplateStringsArray, ...values: ReadonlyArray<TextAllowedTypes>) {
   if (values.length + 1 !== strings.length) {
