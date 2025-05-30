@@ -86,7 +86,12 @@ export {
   serializedLMSExtendedErrorSchema,
   serializeError,
 } from "./Error.js";
-export { DocumentParsingOpts, documentParsingOptsSchema } from "./files/DocumentParsingOpts.js";
+export {
+  DocumentParsingLibraryIdentifier,
+  documentParsingLibraryIdentifierSchema,
+  DocumentParsingOpts,
+  documentParsingOptsSchema,
+} from "./files/DocumentParsingOpts.js";
 export {
   FileNamespace,
   fileNamespaceSchema,
