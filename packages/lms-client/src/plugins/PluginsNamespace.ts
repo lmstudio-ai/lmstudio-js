@@ -110,7 +110,12 @@ export class PluginsNamespace {
       { stack },
     );
 
+    let unregisterCalled = false;
     const unregister = async () => {
+      if (unregisterCalled) {
+        return;
+      }
+      unregisterCalled = true;
       channel.send({ type: "end" });
       const { promise, resolve } = makePromise<void>();
       channel.onClose.subscribeOnce(resolve);
