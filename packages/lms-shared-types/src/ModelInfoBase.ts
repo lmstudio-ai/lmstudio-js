@@ -2,7 +2,7 @@ import { z } from "zod";
 import {
   modelCompatibilityTypeSchema,
   type ModelCompatibilityType,
-} from "./ModelCompatibilityType";
+} from "./ModelCompatibilityType.js";
 
 /**
  * Represents info of a model that is downloaded and sits on the disk. This is the base type shared

@@ -58,6 +58,16 @@ export interface PushArtifactOpts {
    */
   description?: string;
   /**
+   * Request to make the artifact private. Only effective if the artifact did not exist before. Will
+   * not change the visibility of an existing artifact.
+   */
+  makePrivate?: boolean;
+  /**
+   * If true, will write the revision number of the artifact after the push back to the artifact
+   * manifest.json.
+   */
+  writeRevision?: boolean;
+  /**
    * Internal overrides for updating artifact metadata.
    */
   overrides?: any;
@@ -66,6 +76,8 @@ export interface PushArtifactOpts {
 export const pushArtifactOptsSchema = z.object({
   path: z.string(),
   description: z.string().optional(),
+  makePrivate: z.boolean().optional(),
+  writeRevision: z.boolean().optional(),
   overrides: jsonSerializableSchema.optional(),
   onMessage: z.function().optional(),
 }) as ZodSchema<PushArtifactOpts>;
@@ -225,17 +237,18 @@ export class RepositoryNamespace {
    */
   public async pushArtifact(opts: PushArtifactOpts): Promise<void> {
     const stack = getCurrentStack(1);
-    const { path, description, overrides, onMessage } = this.validator.validateMethodParamOrThrow(
-      "repository",
-      "pushArtifact",
-      "opts",
-      pushArtifactOptsSchema,
-      opts,
-      stack,
-    );
+    const { path, description, makePrivate, writeRevision, overrides, onMessage } =
+      this.validator.validateMethodParamOrThrow(
+        "repository",
+        "pushArtifact",
+        "opts",
+        pushArtifactOptsSchema,
+        opts,
+        stack,
+      );
     const channel = this.repositoryPort.createChannel(
       "pushArtifact",
-      { path, description, overrides },
+      { path, description, makePrivate, writeRevision, overrides },
       message => {
         const type = message.type;
         switch (type) {

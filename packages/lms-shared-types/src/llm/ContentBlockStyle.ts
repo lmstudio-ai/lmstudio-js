@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { colorPaletteSchema, type ColorPalette } from "../ColorPalette";
+import { colorPaletteSchema, type ColorPalette } from "../ColorPalette.js";
 
 /**
  * The style of a content block.
