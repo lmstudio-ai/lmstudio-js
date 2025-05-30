@@ -4,15 +4,21 @@ import { spawn, type SpawnOptionsWithoutStdio } from "child_process";
 import { access } from "fs/promises";
 import { join } from "path";
 
+export interface UtilBinaryOpts {
+  /**
+   * If provided, uses the util binary from this folder instead.
+   */
+  utilsFolderPathOverride?: string;
+}
+
 export class UtilBinary {
   private readonly path: string;
-  public constructor(private readonly name: string) {
-    this.path = join(
-      findLMStudioHome(),
-      ".internal",
-      "utils",
-      process.platform === "win32" ? `${name}.exe` : name,
-    );
+  public constructor(
+    private readonly name: string,
+    { utilsFolderPathOverride }: UtilBinaryOpts = {},
+  ) {
+    const utilsFolder = utilsFolderPathOverride ?? join(findLMStudioHome(), ".internal", "utils");
+    this.path = join(utilsFolder, process.platform === "win32" ? `${name}.exe` : name);
   }
   public async check() {
     try {

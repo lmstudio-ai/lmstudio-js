@@ -106,6 +106,16 @@ export function createRepositoryBackendInterface() {
         creationParameter: z.object({
           path: z.string(),
           description: z.string().max(1000).optional(),
+          /**
+           * Request to make the artifact private. Only effective if the artifact did not exist
+           * before. Will not change the visibility of an existing artifact.
+           */
+          makePrivate: z.boolean().optional(),
+          /**
+           * If true, will write the revision number of the artifact after the push back to the
+           * artifact manifest.json.
+           */
+          writeRevision: z.boolean().optional(),
           overrides: jsonSerializableSchema.optional(),
         }),
         toServerPacket: z.void(),
