@@ -13,5 +13,6 @@ export type ParseDocumentOpts = DocumentParsingOpts & {
 };
 
 export const parseDocumentOptsSchema = documentParsingOptsSchema.extend({
-  onProgress: z.function(),
+  onProgress: z.function().optional(),
+  signal: z.instanceof(AbortSignal).optional(),
 });

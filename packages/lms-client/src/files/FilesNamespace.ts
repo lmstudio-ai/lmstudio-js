@@ -367,6 +367,8 @@ export class FilesNamespace {
     const { onProgress, signal, ...config } = opts;
     const { promise, resolve, reject } = makePromise<ParseDocumentResult>();
 
+    opts.signal?.throwIfAborted();
+
     let finished = false;
     const channel = this.filesPort.createChannel(
       "parseDocument",
