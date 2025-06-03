@@ -1,6 +1,7 @@
 import {
   getCurrentStack,
   type LoggerInterface,
+  makePromise,
   safeCallCallback,
   SimpleLogger,
   text,
@@ -12,12 +13,13 @@ import { retrievalSchematics } from "@lmstudio/lms-kv-config";
 import {
   type ChatMessagePartFileData,
   type DocumentParsingLibraryIdentifier,
-  type DocumentParsingOpts,
   type KVConfig,
   type RetrievalFileProcessingStep,
 } from "@lmstudio/lms-shared-types";
 import { z } from "zod";
 import { FileHandle } from "./FileHandle.js";
+import { type ParseDocumentOpts, parseDocumentOptsSchema } from "./ParseDocumentOpts.js";
+import { type ParseDocumentResult } from "./ParseDocumentResult.js";
 import { type RetrievalOpts, retrievalOptsSchema } from "./RetrievalOpts.js";
 import { type RetrievalResult, type RetrievalResultEntry } from "./RetrievalResult.js";
 
@@ -351,13 +353,60 @@ export class FilesNamespace {
    *
    * @deprecated Document parsing API is still in active development. Stay tuned for updates.
    */
-  public async parseDocument(fileHandle: FileHandle, parseOpts: DocumentParsingOpts = {}) {
+  public async parseDocument(fileHandle: FileHandle, opts: ParseDocumentOpts = {}) {
     const stack = getCurrentStack(1);
-    return await this.filesPort.callRpc(
+    this.validator.validateMethodParamsOrThrow(
+      "client.files",
       "parseDocument",
-      { fileIdentifier: fileHandle.identifier, parseOpts },
+      ["fileHandle", "opts"],
+      [z.instanceof(FileHandle), parseDocumentOptsSchema],
+      [fileHandle, opts],
+      stack,
+    );
+
+    const { onProgress, signal, ...config } = opts;
+    const { promise, resolve, reject } = makePromise<ParseDocumentResult>();
+
+    let finished = false;
+    const channel = this.filesPort.createChannel(
+      "parseDocument",
+      { fileIdentifier: fileHandle.identifier, parseOpts: config },
+      message => {
+        const messageType = message.type;
+        switch (messageType) {
+          case "progress": {
+            safeCallCallback(this.logger, "onProgress", onProgress, [message.progress]);
+            break;
+          }
+          case "result": {
+            resolve({
+              content: message.content,
+              library: message.library,
+              version: message.version,
+            });
+            finished = true;
+            break;
+          }
+        }
+      },
       { stack },
     );
+
+    signal?.addEventListener("abort", () => {
+      if (finished) {
+        return;
+      }
+      reject(signal.reason);
+      channel.send({ type: "cancel" });
+    });
+
+    channel.onError.subscribeOnce(reject);
+    channel.onClose.subscribeOnce(() => {
+      if (!finished) {
+        reject(new Error("Channel closed before receiving a result."));
+      }
+    });
+    return await promise;
   }
 
   /**

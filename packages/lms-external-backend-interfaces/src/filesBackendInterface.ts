@@ -82,14 +82,28 @@ export function createFilesBackendInterface() {
         }),
       ]),
     })
-    .addRpcEndpoint("parseDocument", {
-      parameter: z.object({
+    .addChannelEndpoint("parseDocument", {
+      creationParameter: z.object({
         fileIdentifier: z.string(),
         parseOpts: documentParsingOptsSchema,
       }),
-      returns: z.object({
-        content: z.string(),
-      }),
+      toClientPacket: z.discriminatedUnion("type", [
+        z.object({
+          type: z.literal("progress"),
+          progress: z.number(),
+        }),
+        z.object({
+          type: z.literal("result"),
+          content: z.string(),
+          library: z.string(),
+          version: z.string(),
+        }),
+      ]),
+      toServerPacket: z.discriminatedUnion("type", [
+        z.object({
+          type: z.literal("cancel"),
+        }),
+      ]),
     })
     .addRpcEndpoint("getDocumentParsingLibrary", {
       parameter: z.object({
