@@ -1,5 +1,6 @@
+import { type DocumentParsingLibraryIdentifier } from "@lmstudio/lms-shared-types";
+
 export interface ParseDocumentResult {
   content: string;
-  library: string;
-  version: string;
+  parser: DocumentParsingLibraryIdentifier;
 }

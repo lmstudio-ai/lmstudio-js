@@ -383,8 +383,7 @@ export class FilesNamespace {
           case "result": {
             resolve({
               content: message.content,
-              library: message.library,
-              version: message.version,
+              parser: message.parser,
             });
             finished = true;
             break;

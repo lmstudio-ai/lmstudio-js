@@ -1,6 +1,7 @@
 import { BackendInterface } from "@lmstudio/lms-communication";
 import { type InferClientPort } from "@lmstudio/lms-communication-client";
 import {
+  documentParsingLibraryIdentifierSchema,
   documentParsingOptsSchema,
   fileTypeSchema,
   internalRetrievalResultSchema,
@@ -95,8 +96,7 @@ export function createFilesBackendInterface() {
         z.object({
           type: z.literal("result"),
           content: z.string(),
-          library: z.string(),
-          version: z.string(),
+          parser: documentParsingLibraryIdentifierSchema,
         }),
       ]),
       toServerPacket: z.discriminatedUnion("type", [
