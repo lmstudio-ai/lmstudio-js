@@ -1,6 +1,6 @@
 {
   "name": "@lmstudio/lms-external-backend-interfaces",
-  "version": "0.3.5",
+  "version": "0.3.6",
   "description": "",
   "main": "./dist/cjs/index.js",
   "module": "./dist/esm/index.js",
@@ -34,5 +34,5 @@
   ],
   "license": "Apache-2.0",
   "sideEffects": false,
-  "gitHead": "9a71db006654e012e2749a17ac10859c5d5a36b2"
+  "gitHead": "abe566030fdea1ad86c21c3d5f32ded4782e8c0b"
 }
