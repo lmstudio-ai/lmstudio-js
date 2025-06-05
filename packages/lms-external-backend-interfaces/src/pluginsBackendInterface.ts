@@ -56,6 +56,7 @@ export function createPluginsBackendInterface() {
             input: chatMessageDataSchema,
             config: kvConfigSchema,
             pluginConfig: kvConfigSchema,
+            workingDirectoryPath: z.string().nullable(),
             /** Processing Context Identifier */
             pci: z.string(),
             token: z.string(),
@@ -90,6 +91,7 @@ export function createPluginsBackendInterface() {
             taskId: z.string(),
             config: kvConfigSchema,
             pluginConfig: kvConfigSchema,
+            workingDirectoryPath: z.string().nullable(),
             /** Processing Context Identifier */
             pci: z.string(),
             token: z.string(),
@@ -128,6 +130,7 @@ export function createPluginsBackendInterface() {
           z.object({
             type: z.literal("initSession"),
             pluginConfig: kvConfigSchema,
+            workingDirectoryPath: z.string().nullable(),
             sessionId: z.string(),
           }),
           z.object({

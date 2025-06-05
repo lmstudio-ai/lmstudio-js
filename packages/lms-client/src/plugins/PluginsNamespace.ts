@@ -201,6 +201,7 @@ export class PluginsNamespace {
               message.config,
               message.pluginConfig,
               /* shouldIncludeInputInHistory */ false,
+              message.workingDirectoryPath,
             );
             tasks.set(message.taskId, {
               cancel: () => {
@@ -331,6 +332,7 @@ export class PluginsNamespace {
               message.config,
               message.pluginConfig,
               /* shouldIncludeInputInHistory */ true,
+              message.workingDirectoryPath,
             );
             tasks.set(message.taskId, {
               cancel: () => {
@@ -472,6 +474,7 @@ export class PluginsNamespace {
             this.client,
             message.pluginConfig,
             sessionAbortController.signal,
+            message.workingDirectoryPath,
           );
           toolsProvider(controller).then(
             tools => {

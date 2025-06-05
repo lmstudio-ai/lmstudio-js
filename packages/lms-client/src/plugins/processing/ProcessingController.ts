@@ -215,6 +215,10 @@ export class ProcessingController {
      * @internal
      */
     private readonly shouldIncludeCurrentInHistory: boolean,
+    /**
+     * The working directory this prediction process is attached to.
+     */
+    private readonly workingDirectoryPath: string | null,
   ) {
     this.abortSignal = connector.abortSignal;
     this.processingControllerHandle = {
@@ -237,6 +241,13 @@ export class ProcessingController {
 
   private sendUpdate(update: ProcessingUpdate) {
     this.processingControllerHandle.sendUpdate(update);
+  }
+
+  public getWorkingDirectory() {
+    if (this.workingDirectoryPath === null) {
+      throw new Error("This prediction process is not attached to a working directory.");
+    }
+    return this.workingDirectoryPath;
   }
 
   public getPluginConfig<TVirtualConfigSchematics extends VirtualConfigSchematics>(
