@@ -44,7 +44,7 @@ export type {
   RegisterDevelopmentPluginOpts,
   RegisterDevelopmentPluginResult,
 } from "./plugins/PluginsNamespace.js";
-export type { Generator } from "./plugins/processing/Generator.js";
+export type { PredictionLoopHandler } from "./plugins/processing/PredictionLoopHandler.js";
 export type { Preprocessor } from "./plugins/processing/Preprocessor.js";
 export type {
   ContentBlockAppendTextOpts,
@@ -53,7 +53,7 @@ export type {
   ContentBlockReplaceToolRequestOpts,
   CreateCitationBlockOpts,
   CreateContentBlockOpts,
-  GeneratorController,
+  PredictionLoopHandlerController,
   PredictionProcessCitationBlockController,
   PredictionProcessContentBlockController,
   PredictionProcessDebugInfoBlockController,

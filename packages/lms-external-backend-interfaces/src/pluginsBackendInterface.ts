@@ -83,11 +83,11 @@ export function createPluginsBackendInterface() {
           }),
         ]),
       })
-      .addChannelEndpoint("setGenerator", {
+      .addChannelEndpoint("setPredictionLoopHandler", {
         creationParameter: z.void(),
         toClientPacket: z.discriminatedUnion("type", [
           z.object({
-            type: z.literal("generate"),
+            type: z.literal("handlePredictionLoop"),
             taskId: z.string(),
             config: kvConfigSchema,
             pluginConfig: kvConfigSchema,

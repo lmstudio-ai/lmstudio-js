@@ -14,26 +14,22 @@ const client = new LMStudioClient({
 
 (globalThis as any).__LMS_PLUGIN_CONTEXT = true;
 
-let generatorSet = false;
+let predictionLoopHandlerSet = false;
 let preprocessorSet = false;
 let configSchematicsSet = false;
 let toolsProviderSet = false;
-let simpleGeneratorSet = false;
 
 const pluginContext: PluginContext = {
-  withGenerator: (generate) => {
-    if (generatorSet) {
-      throw new Error("Generator already registered");
+  withPredictionLoopHandler: (generate) => {
+    if (predictionLoopHandlerSet) {
+      throw new Error("PredictionLoopHandler already registered");
     }
     if (toolsProviderSet) {
-      throw new Error("Generator cannot be used with a tools provider");
-    }
-    if (simpleGeneratorSet) {
-      throw new Error("Generator cannot be used with a simple generator");
+      throw new Error("PredictionLoopHandler cannot be used with a tools provider");
     }
 
-    generatorSet = true;
-    client.plugins.setGenerator(generate);
+    predictionLoopHandlerSet = true;
+    client.plugins.setPredictionLoopHandler(generate);
     return pluginContext;
   },
   withPreprocessor: (preprocess) => {
@@ -56,24 +52,12 @@ const pluginContext: PluginContext = {
     if (toolsProviderSet) {
       throw new Error("Tools provider already registered");
     }
-    if (generatorSet) {
-      throw new Error("Tools provider cannot be used with a generator");
+    if (predictionLoopHandlerSet) {
+      throw new Error("Tools provider cannot be used with a predictionLoopHandler");
     }
 
     toolsProviderSet = true;
     client.plugins.setToolsProvider(toolsProvider);
-    return pluginContext;
-  },
-  withSimpleGenerator: (simpleGenerator) => {
-    if (simpleGeneratorSet) {
-      throw new Error("Simple generator already registered");
-    }
-    if (generatorSet) {
-      throw new Error("Simple generator cannot be used with a full generator");
-    }
-
-    simpleGeneratorSet = true;
-    client.plugins.setSimpleGenerator(simpleGenerator);
     return pluginContext;
   },
 };

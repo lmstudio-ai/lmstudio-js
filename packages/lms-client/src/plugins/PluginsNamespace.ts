@@ -18,10 +18,10 @@ import { ChatMessage } from "../Chat.js";
 import { type ConfigSchematics } from "../customConfig.js";
 import { type Tool, type ToolCallContext, toolToLLMTool } from "../llm/tool.js";
 import { type LMStudioClient } from "../LMStudioClient.js";
-import { type Generator } from "./processing/Generator.js";
+import { type PredictionLoopHandler } from "./processing/PredictionLoopHandler.js";
 import { type Preprocessor } from "./processing/Preprocessor.js";
 import {
-  type GeneratorController,
+  type PredictionLoopHandlerController,
   type PreprocessorController,
   ProcessingConnector,
   ProcessingController,
@@ -280,19 +280,19 @@ export class PluginsNamespace {
    *
    * @deprecated Plugin support is still in development. Stay tuned for updates.
    */
-  public setGenerator(generator: Generator) {
+  public setPredictionLoopHandler(predictionLoopHandler: PredictionLoopHandler) {
     const stack = getCurrentStack(1);
 
     this.validator.validateMethodParamOrThrow(
       "plugins",
-      "setGenerator",
-      "generator",
+      "setPredictionLoopHandler",
+      "predictionLoopHandler",
       z.function(),
-      generator,
+      predictionLoopHandler,
       stack,
     );
 
-    const logger = new SimpleLogger(`   Generator`, this.rootLogger);
+    const logger = new SimpleLogger(`   PredictionLoopHandler`, this.rootLogger);
     logger.info("Register with LM Studio");
 
     interface OngoingGenerateTask {
@@ -308,11 +308,11 @@ export class PluginsNamespace {
 
     const tasks = new Map<string, OngoingGenerateTask>();
     const channel = this.port.createChannel(
-      "setGenerator",
+      "setPredictionLoopHandler",
       undefined,
       message => {
         switch (message.type) {
-          case "generate": {
+          case "handlePredictionLoop": {
             const taskLogger = new SimpleLogger(
               `Request (${message.taskId.substring(0, 6)})`,
               logger,
@@ -326,7 +326,7 @@ export class PluginsNamespace {
               message.token,
               taskLogger,
             );
-            const controller: GeneratorController = new ProcessingController(
+            const controller: PredictionLoopHandlerController = new ProcessingController(
               this.client,
               connector,
               message.config,
@@ -342,7 +342,7 @@ export class PluginsNamespace {
             });
             // We know the input from the channel is immutable, so we can safely pass false as the
             // second argument.
-            generator(controller)
+            predictionLoopHandler(controller)
               .then(() => {
                 channel.send({
                   type: "complete",

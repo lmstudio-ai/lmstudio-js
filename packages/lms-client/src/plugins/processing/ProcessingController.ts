@@ -267,8 +267,8 @@ export class ProcessingController {
    *
    * - If you are a preprocessor, this will not include the user message you are currently
    *   preprocessing.
-   * - If you are a generator, this will include the user message, and can be fed into the
-   *   {@link LLMDynamicHandle#respond} directly.
+   * - If you are a prediction loop handler, this will include the user message, and can be fed into
+   *   the {@link LLMDynamicHandle#respond} method directly.
    */
   public async pullHistory() {
     return await this.connector.pullHistory(this.shouldIncludeCurrentInHistory);
@@ -508,7 +508,7 @@ export type PreprocessorController = Omit<
 /**
  * @public
  */
-export type GeneratorController = Omit<ProcessingController, never>;
+export type PredictionLoopHandlerController = Omit<ProcessingController, never>;
 
 /**
  * Controller for a status block in the prediction process.

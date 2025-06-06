@@ -34,7 +34,7 @@ import {
   type ProcessingUpdateToolStatusUpdate,
 } from "./ProcessingUpdate.js";
 
-export type GeneratorUpdate =
+export type PredictionLoopHandlerUpdate =
   | ProcessingUpdateStatusCreate
   | ProcessingUpdateStatusUpdate
   | ProcessingUpdateStatusRemove
@@ -51,7 +51,7 @@ export type GeneratorUpdate =
   | ProcessingUpdateToolStatusCreate
   | ProcessingUpdateToolStatusUpdate
   | ProcessingUpdateSetSenderName;
-export const generatorUpdateSchema = z.discriminatedUnion("type", [
+export const predictionLoopHandlerUpdateSchema = z.discriminatedUnion("type", [
   processingUpdateStatusCreateSchema,
   processingUpdateStatusUpdateSchema,
   processingUpdateStatusRemoveSchema,
@@ -68,4 +68,4 @@ export const generatorUpdateSchema = z.discriminatedUnion("type", [
   processingUpdateToolStatusCreateSchema,
   processingUpdateToolStatusUpdateSchema,
   processingUpdateSetSenderNameSchema,
-]) as z.Schema<GeneratorUpdate>;
+]) as z.Schema<PredictionLoopHandlerUpdate>;

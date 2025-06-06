@@ -237,7 +237,10 @@ export {
   LLMToolUseSetting,
   llmToolUseSettingSchema,
 } from "./llm/LLMToolUseSetting.js";
-export { GeneratorUpdate, generatorUpdateSchema } from "./llm/processing/GeneratorUpdate.js";
+export {
+  PredictionLoopHandlerUpdate,
+  predictionLoopHandlerUpdateSchema,
+} from "./llm/processing/PredictionLoopHandlerUpdate.js";
 export {
   PreprocessorUpdate,
   preprocessorUpdateSchema,

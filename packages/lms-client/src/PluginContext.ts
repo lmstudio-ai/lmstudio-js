@@ -1,5 +1,5 @@
 import { type ConfigSchematics, type VirtualConfigSchematics } from "./customConfig.js";
-import { type Generator } from "./plugins/processing/Generator.js";
+import { type PredictionLoopHandler } from "./plugins/processing/PredictionLoopHandler.js";
 import { type Preprocessor } from "./plugins/processing/Preprocessor.js";
 import { type SimpleGenerator } from "./plugins/processing/SimpleGenerator.js";
 import { type ToolsProvider } from "./plugins/processing/ToolsProvider.js";
@@ -16,10 +16,10 @@ export interface PluginContext {
     configSchematics: ConfigSchematics<VirtualConfigSchematics>,
   ) => PluginContext;
   /**
-   * Sets the generator associated with this plugin context. Returns the same PluginContext for
-   * chaining.
+   * Sets the prediction loop handler associated with this plugin context. Returns the same
+   * PluginContext for chaining.
    */
-  withGenerator(generate: Generator): PluginContext;
+  withPredictionLoopHandler(predictionLoopHandler: PredictionLoopHandler): PluginContext;
   /**
    * Sets the preprocessor associated with this plugin context. Returns the same PluginContext for
    * chaining.
