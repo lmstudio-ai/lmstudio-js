@@ -5,6 +5,7 @@ import {
   chatMessageDataSchema,
   jsonSerializableSchema,
   kvConfigSchema,
+  llmPredictionFragmentInputOptsSchema,
   llmToolSchema,
   pluginManifestSchema,
   processingRequestResponseSchema,
@@ -12,6 +13,7 @@ import {
   processingUpdateSchema,
   serializedKVConfigSchematicsSchema,
   serializedLMSExtendedErrorSchema,
+  toolCallRequestSchema,
 } from "@lmstudio/lms-shared-types";
 
 import { z } from "zod";
@@ -198,6 +200,66 @@ export function createPluginsBackendInterface() {
             sessionId: z.string(),
             callId: z.string(),
             warnText: z.string(),
+          }),
+        ]),
+      })
+      .addChannelEndpoint("setGenerator", {
+        creationParameter: z.void(),
+        toClientPacket: z.discriminatedUnion("type", [
+          z.object({
+            type: z.literal("generate"),
+            taskId: z.string(),
+            input: chatHistoryDataSchema,
+            pluginConfig: kvConfigSchema,
+          }),
+          z.object({
+            type: z.literal("abort"),
+            taskId: z.string(),
+          }),
+        ]),
+        toServerPacket: z.discriminatedUnion("type", [
+          z.object({
+            type: z.literal("complete"),
+            taskId: z.string(),
+          }),
+          z.object({
+            type: z.literal("aborted"),
+            taskId: z.string(),
+          }),
+          z.object({
+            type: z.literal("error"),
+            taskId: z.string(),
+            error: serializedLMSExtendedErrorSchema,
+          }),
+          z.object({
+            type: z.literal("fragmentGenerated"),
+            taskId: z.string(),
+            content: z.string(),
+            opts: llmPredictionFragmentInputOptsSchema,
+          }),
+          z.object({
+            type: z.literal("toolCallGenerationStarted"),
+            taskId: z.string(),
+          }),
+          z.object({
+            type: z.literal("toolCallGenerationNameReceived"),
+            taskId: z.string(),
+            toolName: z.string(),
+          }),
+          z.object({
+            type: z.literal("toolCallGenerationArgumentFragmentGenerated"),
+            taskId: z.string(),
+            content: z.string(),
+          }),
+          z.object({
+            type: z.literal("toolCallGenerationEnded"),
+            taskId: z.string(),
+            toolCallRequest: toolCallRequestSchema,
+          }),
+          z.object({
+            type: z.literal("toolCallGenerationFailed"),
+            taskId: z.string(),
+            error: serializedLMSExtendedErrorSchema,
           }),
         ]),
       })

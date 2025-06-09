@@ -190,6 +190,8 @@ export {
 } from "./llm/LLMPredictionConfig.js";
 export {
   LLMPredictionFragment,
+  LLMPredictionFragmentInputOpts,
+  llmPredictionFragmentInputOptsSchema,
   LLMPredictionFragmentReasoningType,
   llmPredictionFragmentReasoningTypeSchema,
   llmPredictionFragmentSchema,

@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z, type ZodSchema } from "zod";
 
 /**
  * Represents the type of this fragment in terms of reasoning.
@@ -56,3 +56,27 @@ export const llmPredictionFragmentSchema = z.object({
   containsDrafted: z.boolean(),
   reasoningType: llmPredictionFragmentReasoningTypeSchema,
 });
+
+/**
+ * Options for creating a prediction fragment.
+ */
+export interface LLMPredictionFragmentInputOpts {
+  /**
+   * How many tokens this fragment contains. Defaults to 1.
+   */
+  tokenCount?: number;
+  /**
+   * Whether this fragment contains tokens from the draft model (when using speculative decoding).
+   * Defaults to `false`.
+   */
+  containsDrafted?: boolean;
+  /**
+   * Type of reasoning for this fragment. Defaults to "none".
+   */
+  reasoningType?: LLMPredictionFragmentReasoningType;
+}
+export const llmPredictionFragmentInputOptsSchema = z.object({
+  tokenCount: z.number().int().optional(),
+  containsDrafted: z.boolean().optional(),
+  reasoningType: llmPredictionFragmentReasoningTypeSchema.optional(),
+}) as ZodSchema<LLMPredictionFragmentInputOpts>;

@@ -44,6 +44,8 @@ export type {
   RegisterDevelopmentPluginOpts,
   RegisterDevelopmentPluginResult,
 } from "./plugins/PluginsNamespace.js";
+export type { Generator } from "./plugins/processing/Generator.js";
+export type { GeneratorController } from "./plugins/processing/GeneratorController.js";
 export type { PredictionLoopHandler } from "./plugins/processing/PredictionLoopHandler.js";
 export type { Preprocessor } from "./plugins/processing/Preprocessor.js";
 export type {
