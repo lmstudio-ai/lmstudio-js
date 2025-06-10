@@ -303,9 +303,9 @@ export async function internalAct<TPredictionResult, TEndPacket>(
   for (const tool of tools) {
     if (toolsMap.has(tool.name)) {
       logger.warnText`
-          Duplicate tool (${tool.name}) found in the tools array. The last tool with the same name
-          will be used.
-        `;
+        Duplicate tool (${tool.name}) found in the tools array. The last tool with the same name
+        will be used.
+      `;
     }
     toolsMap.set(tool.name, tool);
   }
@@ -404,11 +404,11 @@ export async function internalAct<TPredictionResult, TEndPacket>(
       if (request === undefined) {
         // We cannot provide a result to a tool call that has failed to parse.
         logger.warnText`
-            The "handleInvalidToolRequest" callback has returned a result, but the tool request has
-            completely failed to parse, thus LM Studio cannot provide the result to the tool call.
-            Please avoid returning a result when the second parameter of the callback is undefined.
-            See the documentation for "handleInvalidToolRequest" for more information.
-          `;
+          The "handleInvalidToolRequest" callback has returned a result, but the tool request has
+          completely failed to parse, thus LM Studio cannot provide the result to the tool call.
+          Please avoid returning a result when the second parameter of the callback is undefined.
+          See the documentation for "handleInvalidToolRequest" for more information.
+        `;
       } else {
         toolCallResults.push({
           index: toolCallIndex,
@@ -501,8 +501,8 @@ export async function internalAct<TPredictionResult, TEndPacket>(
           toolCallPromises.push(
             internalHandleInvalidToolCallRequest(
               new Error(text`
-                      Failed to parse arguments for tool ${request.name}: ${error.message}
-                    `),
+                Failed to parse arguments for tool ${request.name}: ${error.message}
+              `),
               request,
               toolCallIndex,
             ).catch(finalReject),

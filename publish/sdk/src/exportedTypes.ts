@@ -29,6 +29,7 @@ export type {
   LLM,
   LLMActionOpts,
   LLMDynamicHandle,
+  LLMGeneratorHandle,
   LLMNamespace,
   LLMPredictionFragmentWithRoundIndex,
   LLMPredictionOpts,

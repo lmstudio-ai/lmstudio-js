@@ -216,7 +216,7 @@ type LLMActExtraOpts<TStructuredOutputType = unknown> = Omit<
   keyof LLMPredictionConfigInput<TStructuredOutputType>
 >;
 
-function splitOperationOpts<TStructuredOutputType>(
+function splitActOpts<TStructuredOutputType>(
   opts: LLMActionOpts<TStructuredOutputType>,
 ): [LLMPredictionConfigInput<TStructuredOutputType>, LLMActExtraOpts<TStructuredOutputType>] {
   const {
@@ -286,8 +286,8 @@ export class LLMDynamicHandle extends DynamicHandle<
   LLMInstanceInfo
 > {
   /**
-   * Don't construct this on your own. Use {@link LLMNamespace#get} or {@link LLMNamespace#load}
-   * instead.
+   * Don't construct this on your own. Use {@link LLMNamespace#model} or
+   * {@link LLMNamespace#createDynamicHandle} instead.
    *
    * @internal
    */
@@ -686,7 +686,7 @@ export class LLMDynamicHandle extends DynamicHandle<
       stack,
     );
 
-    const [config, { preset, ...baseOpts }] = splitOperationOpts(opts);
+    const [config, { preset, ...baseOpts }] = splitActOpts(opts);
 
     if (
       config.structured !== undefined &&
@@ -807,6 +807,7 @@ export class LLMDynamicHandle extends DynamicHandle<
                   loadModelConfig: message.loadModelConfig,
                   predictionConfig: message.predictionConfig,
                 });
+                break;
               }
             }
           },

@@ -757,6 +757,12 @@ export class PluginsNamespace {
             this.validator,
             abortController.signal,
           );
+          tasks.set(message.taskId, {
+            cancel: () => {
+              abortController.abort();
+            },
+            taskLogger,
+          });
           const history = Chat.createRaw(message.input, false);
 
           generator(controller, history)
@@ -798,6 +804,12 @@ export class PluginsNamespace {
           break;
         }
         case "abort": {
+          const task = tasks.get(message.taskId);
+          if (task !== undefined) {
+            task.taskLogger.info(`Received abort request.`);
+            task.cancel();
+            tasks.delete(message.taskId);
+          }
           break;
         }
         default: {

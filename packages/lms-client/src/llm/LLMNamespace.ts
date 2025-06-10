@@ -15,6 +15,7 @@ import { ModelNamespace } from "../modelShared/ModelNamespace.js";
 import { numberToCheckboxNumeric } from "../numberToCheckboxNumeric.js";
 import { LLM } from "./LLM.js";
 import { LLMDynamicHandle } from "./LLMDynamicHandle.js";
+import { LLMGeneratorHandle } from "./LLMGeneratorHandle.js";
 
 /** @public */
 export class LLMNamespace extends ModelNamespace<
@@ -74,5 +75,11 @@ export class LLMNamespace extends ModelNamespace<
     logger: SimpleLogger,
   ): LLMDynamicHandle {
     return new LLMDynamicHandle(port, specifier, validator, logger);
+  }
+  /**
+   * @deprecated Plugin support is still in development. Stay tuned for updates.
+   */
+  public createGeneratorHandle(pluginIdentifier: string): LLMGeneratorHandle {
+    return new LLMGeneratorHandle(this.port, pluginIdentifier, this.validator, this.logger);
   }
 }
