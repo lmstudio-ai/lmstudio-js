@@ -24,6 +24,8 @@ export type {
   EnsureAuthenticatedOpts,
   FilesNamespace,
   FunctionTool,
+  Generator,
+  GeneratorController,
   LLM,
   LLMActionOpts,
   LLMDynamicHandle,

@@ -11,11 +11,14 @@ import {
 import { type LMStudioClient } from "../../LMStudioClient";
 
 export class ToolsProviderController {
+  /**
+   * @internal Do not construct this class yourself.
+   */
   public constructor(
     public readonly client: LMStudioClient,
     private readonly pluginConfig: KVConfig,
-    public readonly signal: AbortSignal,
     private readonly workingDirectoryPath: string | null,
+    public readonly signal: AbortSignal,
   ) {}
 
   public getWorkingDirectory(): string {

@@ -18,6 +18,7 @@ let predictionLoopHandlerSet = false;
 let preprocessorSet = false;
 let configSchematicsSet = false;
 let toolsProviderSet = false;
+let generatorSet = false;
 
 const pluginContext: PluginContext = {
   withPredictionLoopHandler: (generate) => {
@@ -58,6 +59,15 @@ const pluginContext: PluginContext = {
 
     toolsProviderSet = true;
     client.plugins.setToolsProvider(toolsProvider);
+    return pluginContext;
+  },
+  withGenerator: (generator) => {
+    if (generatorSet) {
+      throw new Error("Generator already registered");
+    }
+
+    generatorSet = true;
+    client.plugins.setGenerator(generator);
     return pluginContext;
   },
 };

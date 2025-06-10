@@ -211,6 +211,8 @@ export function createPluginsBackendInterface() {
             taskId: z.string(),
             input: chatHistoryDataSchema,
             pluginConfig: kvConfigSchema,
+            toolDefinitions: z.array(llmToolSchema),
+            workingDirectoryPath: z.string().nullable(),
           }),
           z.object({
             type: z.literal("abort"),

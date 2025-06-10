@@ -536,8 +536,8 @@ export class PluginsNamespace {
           const controller = new ToolsProviderController(
             this.client,
             message.pluginConfig,
-            sessionAbortController.signal,
             message.workingDirectoryPath,
+            sessionAbortController.signal,
           );
           toolsProvider(controller).then(
             tools => {
@@ -750,6 +750,9 @@ export class PluginsNamespace {
           const connector = new GeneratorConnectorImpl(channel, message.taskId);
           const controller = new GeneratorController(
             this.client,
+            message.pluginConfig,
+            message.toolDefinitions,
+            message.workingDirectoryPath,
             connector,
             this.validator,
             abortController.signal,
@@ -761,10 +764,10 @@ export class PluginsNamespace {
               result => {
                 if (result !== undefined) {
                   taskLogger.warnText`
-                  The generator has returned a value. This it not expected. You should report
-                  generated content using method on the controller. The returned value will be
-                  ignored.
-                `;
+                    The generator has returned a value. This it not expected. You should report
+                    generated content using method on the controller. The returned value will be
+                    ignored.
+                  `;
                 }
                 channel.send({
                   type: "complete",

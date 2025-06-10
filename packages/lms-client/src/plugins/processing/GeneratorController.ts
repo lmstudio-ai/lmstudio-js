@@ -1,12 +1,23 @@
 import { getCurrentStack, type Validator } from "@lmstudio/lms-common";
 import {
-  llmPredictionFragmentInputOptsSchema,
-  toolCallRequestSchema,
+  type GlobalKVFieldValueTypeLibraryMap,
+  type KVConfigSchematics,
+} from "@lmstudio/lms-kv-config";
+import {
+  type KVConfig,
   type LLMPredictionFragmentInputOpts,
+  llmPredictionFragmentInputOptsSchema,
+  type LLMTool,
   type ToolCallRequest,
+  toolCallRequestSchema,
 } from "@lmstudio/lms-shared-types";
 import { z } from "zod";
 import { type LMStudioClient } from "../../LMStudioClient.js";
+import {
+  type ConfigSchematics,
+  type ParsedConfig,
+  type VirtualConfigSchematics,
+} from "../../customConfig.js";
 
 export interface GeneratorConnector {
   fragmentGenerated: (content: string, opts: LLMPredictionFragmentInputOpts) => void;
@@ -18,12 +29,43 @@ export interface GeneratorConnector {
 }
 
 export class GeneratorController {
+  /**
+   * @internal Do not construct this class yourself.
+   */
   public constructor(
     public readonly client: LMStudioClient,
+    private readonly pluginConfig: KVConfig,
+    private readonly toolDefinitions: Array<LLMTool>,
+    private readonly workingDirectoryPath: string | null,
     private readonly connector: GeneratorConnector,
     private readonly validator: Validator,
     public readonly abortSignal: AbortSignal,
   ) {}
+
+  public getWorkingDirectory(): string {
+    if (this.workingDirectoryPath === null) {
+      throw new Error("This prediction process is not attached to a working directory.");
+    }
+    return this.workingDirectoryPath;
+  }
+
+  public getPluginConfig<TVirtualConfigSchematics extends VirtualConfigSchematics>(
+    configSchematics: ConfigSchematics<TVirtualConfigSchematics>,
+  ): ParsedConfig<TVirtualConfigSchematics> {
+    return (
+      configSchematics as KVConfigSchematics<
+        GlobalKVFieldValueTypeLibraryMap,
+        TVirtualConfigSchematics
+      >
+    ).parse(this.pluginConfig);
+  }
+
+  /**
+   * Get the definitions of the tools available for this generation.
+   */
+  public getToolDefinitions(): Array<LLMTool> {
+    return this.toolDefinitions;
+  }
 
   /**
    * Use this function to report a text fragment has been generated.
