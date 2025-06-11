@@ -631,12 +631,15 @@ export class LLMDynamicHandle extends DynamicHandle<
         finished(stats, modelInfo, loadModelConfig, predictionConfig),
       error => failed(error),
     );
-    ongoingPrediction.then(result => {
-      // Call the onMessage callback with the result.
-      safeCallCallback(this.logger, "onMessage", respondOpts.onMessage, [
-        ChatMessage.create("assistant", result.content),
-      ]);
-    });
+    ongoingPrediction.then(
+      result => {
+        // Call the onMessage callback with the result.
+        safeCallCallback(this.logger, "onMessage", respondOpts.onMessage, [
+          ChatMessage.create("assistant", result.content),
+        ]);
+      },
+      () => {}, // Eat the error, as we don't want to throw it here.
+    );
     return ongoingPrediction;
   }
 

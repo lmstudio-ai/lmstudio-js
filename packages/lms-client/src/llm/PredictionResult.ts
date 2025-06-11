@@ -5,7 +5,32 @@ import {
 } from "@lmstudio/lms-shared-types";
 
 /**
- * Represents the result of a prediction.
+ * Base interface for all prediction result types, including those that are produced by an LLM and
+ * those that are produced by a generator plugin.
+ */
+export interface BasePredictionResult {
+  /**
+   * The generated content of the prediction result.
+   */
+  content: string;
+  /**
+   * Part of the generated text that is "reasoning" content. For example, text inside <think>
+   * tags.
+   *
+   * @experimental The name of this field may change in the future.
+   */
+  reasoningContent: string;
+  /**
+   * Part of the generated text that is not "reasoning" content. For example, text outside <think>
+   * tags.
+   *
+   * @experimental The name of this field may change in the future.
+   */
+  nonReasoningContent: string;
+}
+
+/**
+ * Represents the result of an LLM prediction.
  *
  * The most notably property is {@link PredictionResult#content}, which contains the generated text.
  * Additionally, the {@link PredictionResult#stats} property contains statistics about the
@@ -13,7 +38,7 @@ import {
  *
  * @public
  */
-export class PredictionResult {
+export class PredictionResult implements BasePredictionResult {
   public constructor(
     /**
      * The newly generated text as predicted by the LLM.
