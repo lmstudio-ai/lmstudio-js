@@ -28,6 +28,7 @@ export type {
   LLMPredictionOpts,
   LLMRespondOpts,
 } from "./llm/LLMDynamicHandle.js";
+export type { LLMGeneratorHandle } from "./llm/LLMGeneratorHandle.js";
 export type { LLMNamespace } from "./llm/LLMNamespace.js";
 export type { OngoingPrediction } from "./llm/OngoingPrediction.js";
 export type { PredictionResult, StructuredPredictionResult } from "./llm/PredictionResult.js";
@@ -45,6 +46,8 @@ export type {
   RegisterDevelopmentPluginResult,
 } from "./plugins/PluginsNamespace.js";
 export type { Generator } from "./plugins/processing/Generator.js";
+export type { GeneratorController } from "./plugins/processing/GeneratorController.js";
+export type { PredictionLoopHandler } from "./plugins/processing/PredictionLoopHandler.js";
 export type { Preprocessor } from "./plugins/processing/Preprocessor.js";
 export type {
   ContentBlockAppendTextOpts,
@@ -53,7 +56,7 @@ export type {
   ContentBlockReplaceToolRequestOpts,
   CreateCitationBlockOpts,
   CreateContentBlockOpts,
-  GeneratorController,
+  PredictionLoopHandlerController,
   PredictionProcessCitationBlockController,
   PredictionProcessContentBlockController,
   PredictionProcessDebugInfoBlockController,

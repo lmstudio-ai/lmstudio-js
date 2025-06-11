@@ -5,23 +5,31 @@ import {
   SimpleLogger,
   Validator,
 } from "@lmstudio/lms-common";
-import { type PluginsPort } from "@lmstudio/lms-external-backend-interfaces";
+import { type InferClientChannelType } from "@lmstudio/lms-communication";
+import {
+  type PluginsBackendInterface,
+  type PluginsPort,
+} from "@lmstudio/lms-external-backend-interfaces";
 import { type GlobalKVFieldValueTypeLibraryMap, KVConfigSchematics } from "@lmstudio/lms-kv-config";
 import {
   type ChatMessageData,
+  type LLMPredictionFragmentInputOpts,
   type PluginManifest,
   pluginManifestSchema,
   serializeError,
+  type ToolCallRequest,
 } from "@lmstudio/lms-shared-types";
 import { z } from "zod";
-import { ChatMessage } from "../Chat.js";
+import { Chat, ChatMessage } from "../Chat.js";
 import { type ConfigSchematics } from "../customConfig.js";
 import { type Tool, type ToolCallContext, toolToLLMTool } from "../llm/tool.js";
 import { type LMStudioClient } from "../LMStudioClient.js";
-import { type Generator } from "./processing/Generator.js";
+import { type Generator, generatorSchema } from "./processing/Generator.js";
+import { type GeneratorConnector, GeneratorController } from "./processing/GeneratorController.js";
+import { type PredictionLoopHandler } from "./processing/PredictionLoopHandler.js";
 import { type Preprocessor } from "./processing/Preprocessor.js";
 import {
-  type GeneratorController,
+  type PredictionLoopHandlerController,
   type PreprocessorController,
   ProcessingConnector,
   ProcessingController,
@@ -55,6 +63,61 @@ export interface RegisterDevelopmentPluginResult {
   clientIdentifier: string;
   clientPasskey: string;
   unregister: () => Promise<void>;
+}
+
+class GeneratorConnectorImpl implements GeneratorConnector {
+  public constructor(
+    private readonly channel: InferClientChannelType<PluginsBackendInterface, "setGenerator">,
+    private readonly taskId: string,
+  ) {}
+
+  public fragmentGenerated(content: string, opts: LLMPredictionFragmentInputOpts): void {
+    this.channel.send({
+      type: "fragmentGenerated",
+      taskId: this.taskId,
+      content,
+      opts: opts,
+    });
+  }
+
+  public toolCallGenerationStarted(): void {
+    this.channel.send({
+      type: "toolCallGenerationStarted",
+      taskId: this.taskId,
+    });
+  }
+
+  public toolCallGenerationNameReceived(toolName: string): void {
+    this.channel.send({
+      type: "toolCallGenerationNameReceived",
+      taskId: this.taskId,
+      toolName,
+    });
+  }
+
+  public toolCallGenerationArgumentFragmentGenerated(content: string): void {
+    this.channel.send({
+      type: "toolCallGenerationArgumentFragmentGenerated",
+      taskId: this.taskId,
+      content,
+    });
+  }
+
+  public toolCallGenerationEnded(toolCallRequest: ToolCallRequest): void {
+    this.channel.send({
+      type: "toolCallGenerationEnded",
+      taskId: this.taskId,
+      toolCallRequest,
+    });
+  }
+
+  public toolCallGenerationFailed(error: Error): void {
+    this.channel.send({
+      type: "toolCallGenerationFailed",
+      taskId: this.taskId,
+      error: serializeError(error),
+    });
+  }
 }
 
 /**
@@ -280,22 +343,22 @@ export class PluginsNamespace {
    *
    * @deprecated Plugin support is still in development. Stay tuned for updates.
    */
-  public setGenerator(generator: Generator) {
+  public setPredictionLoopHandler(predictionLoopHandler: PredictionLoopHandler) {
     const stack = getCurrentStack(1);
 
     this.validator.validateMethodParamOrThrow(
       "plugins",
-      "setGenerator",
-      "generator",
+      "setPredictionLoopHandler",
+      "predictionLoopHandler",
       z.function(),
-      generator,
+      predictionLoopHandler,
       stack,
     );
 
-    const logger = new SimpleLogger(`   Generator`, this.rootLogger);
+    const logger = new SimpleLogger(`   PredictionLoopHandler`, this.rootLogger);
     logger.info("Register with LM Studio");
 
-    interface OngoingGenerateTask {
+    interface OngoingPredictionLoopHandlingTask {
       /**
        * Function to cancel the generate task
        */
@@ -306,18 +369,18 @@ export class PluginsNamespace {
       taskLogger: SimpleLogger;
     }
 
-    const tasks = new Map<string, OngoingGenerateTask>();
+    const tasks = new Map<string, OngoingPredictionLoopHandlingTask>();
     const channel = this.port.createChannel(
-      "setGenerator",
+      "setPredictionLoopHandler",
       undefined,
       message => {
         switch (message.type) {
-          case "generate": {
+          case "handlePredictionLoop": {
             const taskLogger = new SimpleLogger(
               `Request (${message.taskId.substring(0, 6)})`,
               logger,
             );
-            taskLogger.info(`New generate request received.`);
+            taskLogger.info(`New prediction loop handling request received.`);
             const abortController = new AbortController();
             const connector = new ProcessingConnector(
               this.port,
@@ -326,7 +389,7 @@ export class PluginsNamespace {
               message.token,
               taskLogger,
             );
-            const controller: GeneratorController = new ProcessingController(
+            const controller: PredictionLoopHandlerController = new ProcessingController(
               this.client,
               connector,
               message.config,
@@ -342,7 +405,7 @@ export class PluginsNamespace {
             });
             // We know the input from the channel is immutable, so we can safely pass false as the
             // second argument.
-            generator(controller)
+            predictionLoopHandler(controller)
               .then(() => {
                 channel.send({
                   type: "complete",
@@ -413,7 +476,7 @@ export class PluginsNamespace {
   /**
    * @deprecated Plugin support is still in development. Stay tuned for updates.
    */
-  public async setToolsProvider(toolsProvider: ToolsProvider) {
+  public setToolsProvider(toolsProvider: ToolsProvider) {
     const stack = getCurrentStack(1);
 
     this.validator.validateMethodParamOrThrow(
@@ -473,8 +536,8 @@ export class PluginsNamespace {
           const controller = new ToolsProviderController(
             this.client,
             message.pluginConfig,
-            sessionAbortController.signal,
             message.workingDirectoryPath,
+            sessionAbortController.signal,
           );
           toolsProvider(controller).then(
             tools => {
@@ -632,6 +695,121 @@ export class PluginsNamespace {
           ongoingToolCall.settled = true;
           ongoingToolCall.abortController.abort();
           openSession.ongoingToolCalls.delete(callId);
+          break;
+        }
+        default: {
+          const exhaustiveCheck: never = messageType;
+          throw new Error(`Unexpected message type: ${exhaustiveCheck}`);
+        }
+      }
+    });
+  }
+
+  /**
+   * Sets the generator to be used by the plugin represented by this client.
+   *
+   * @deprecated Plugin support is still in development. Stay tuned for updates.
+   */
+  public setGenerator(generator: Generator) {
+    const stack = getCurrentStack(1);
+
+    this.validator.validateMethodParamOrThrow(
+      "plugins",
+      "setGenerator",
+      "generator",
+      generatorSchema,
+      generator,
+      stack,
+    );
+
+    const logger = new SimpleLogger(`Generator`, this.rootLogger);
+    logger.info("Register with LM Studio");
+
+    interface OngoingGenerationTask {
+      /**
+       * Function to cancel the generation task
+       */
+      cancel: () => void;
+      /**
+       * Logger associated with this task.
+       */
+      taskLogger: SimpleLogger;
+    }
+
+    const tasks = new Map<string, OngoingGenerationTask>();
+    const channel = this.port.createChannel("setGenerator", undefined, message => {
+      const messageType = message.type;
+      switch (messageType) {
+        case "generate": {
+          const taskLogger = new SimpleLogger(
+            `Request (${message.taskId.substring(0, 6)})`,
+            logger,
+          );
+          taskLogger.info(`New generate request received.`);
+          const abortController = new AbortController();
+          const connector = new GeneratorConnectorImpl(channel, message.taskId);
+          const controller = new GeneratorController(
+            this.client,
+            message.pluginConfig,
+            message.toolDefinitions,
+            message.workingDirectoryPath,
+            connector,
+            this.validator,
+            abortController.signal,
+          );
+          tasks.set(message.taskId, {
+            cancel: () => {
+              abortController.abort();
+            },
+            taskLogger,
+          });
+          const history = Chat.createRaw(message.input, false);
+
+          generator(controller, history)
+            .then(
+              result => {
+                if (result !== undefined) {
+                  taskLogger.warnText`
+                    The generator has returned a value. This it not expected. You should report
+                    generated content using method on the controller. The returned value will be
+                    ignored.
+                  `;
+                }
+                channel.send({
+                  type: "complete",
+                  taskId: message.taskId,
+                });
+              },
+              error => {
+                if (error.name === "AbortError") {
+                  taskLogger.info(`Request successfully aborted.`);
+                  channel.send({
+                    type: "aborted",
+                    taskId: message.taskId,
+                  });
+                } else {
+                  channel.send({
+                    type: "error",
+                    taskId: message.taskId,
+                    error: serializeError(error),
+                  });
+                  taskLogger.warn(`Generation failed.`, error);
+                }
+              },
+            )
+            .finally(() => {
+              tasks.delete(message.taskId);
+            });
+
+          break;
+        }
+        case "abort": {
+          const task = tasks.get(message.taskId);
+          if (task !== undefined) {
+            task.taskLogger.info(`Received abort request.`);
+            task.cancel();
+            tasks.delete(message.taskId);
+          }
           break;
         }
         default: {

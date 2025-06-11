@@ -12,6 +12,7 @@ import {
   chatMessageDataSchema,
   type ChatMessagePartFileData,
   type ChatMessagePartTextData,
+  type ChatMessagePartToolCallRequestData,
   type ChatMessagePartToolCallResultData,
   type ChatMessageRoleData,
 } from "@lmstudio/lms-shared-types";
@@ -291,6 +292,37 @@ export class Chat extends MaybeMutable<ChatHistoryData> {
   }
 
   /**
+   * Get all the messages in the history as an array of ChatMessage objects.
+   */
+  public getMessagesArray(): Array<ChatMessage> {
+    return this.data.messages.map(message => ChatMessage.createRaw(message, this.mutable));
+  }
+
+  /**
+   * Maps over the messages in the history and returns an array of the results.
+   */
+  public map<TOutput>(
+    mapper: (message: ChatMessage, index: number, array: Array<ChatMessage>) => TOutput,
+  ): Array<TOutput> {
+    return this.getMessagesArray().map(mapper);
+  }
+
+  /**
+   * Maps over the messages in the history and returns a flattened array of the results.
+   *
+   * This is similar to `Array.prototype.flatMap`, but it works with ChatMessage objects.
+   */
+  public flatMap<TOutput>(
+    mapper: (
+      message: ChatMessage,
+      index: number,
+      array: Array<ChatMessage>,
+    ) => ReadonlyArray<TOutput> | TOutput,
+  ): Array<TOutput> {
+    return this.getMessagesArray().flatMap(mapper);
+  }
+
+  /**
    * Allows iterating over the messages in the history.
    */
   public *[Symbol.iterator](): Generator<ChatMessage> {
@@ -533,6 +565,15 @@ export class ChatMessage extends MaybeMutable<ChatMessageData> {
    */
   public getToolCallResults(): Array<ChatMessagePartToolCallResultData> {
     return this.data.content.filter(part => part.type === "toolCallResult");
+  }
+
+  /**
+   * Gets all file parts contained in this message.
+   *
+   * @experimental This API is not stable and may change in the future.
+   */
+  public getToolCallRequests(): Array<ChatMessagePartToolCallRequestData> {
+    return this.data.content.filter(part => part.type === "toolCallRequest");
   }
 
   /**
