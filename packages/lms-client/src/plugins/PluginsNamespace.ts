@@ -263,6 +263,7 @@ export class PluginsNamespace {
               connector,
               message.config,
               message.pluginConfig,
+              message.globalPluginConfig,
               /* shouldIncludeInputInHistory */ false,
               message.workingDirectoryPath,
             );
@@ -394,6 +395,7 @@ export class PluginsNamespace {
               connector,
               message.config,
               message.pluginConfig,
+              message.globalPluginConfig,
               /* shouldIncludeInputInHistory */ true,
               message.workingDirectoryPath,
             );
@@ -447,6 +449,7 @@ export class PluginsNamespace {
       { stack },
     );
   }
+
   /**
    * @deprecated Plugin support is still in development. Stay tuned for updates.
    */
@@ -467,6 +470,32 @@ export class PluginsNamespace {
       {
         schematics: (
           configSchematics as KVConfigSchematics<GlobalKVFieldValueTypeLibraryMap, any>
+        ).serialize(),
+      },
+      { stack },
+    );
+  }
+
+  /**
+   * @deprecated Plugin support is still in development. Stay tuned for updates.
+   */
+  public async setGlobalConfigSchematics(globalConfigSchematics: ConfigSchematics<any>) {
+    const stack = getCurrentStack(1);
+
+    this.validator.validateMethodParamOrThrow(
+      "plugins",
+      "setGlobalConfigSchematics",
+      "globalConfigSchematics",
+      z.instanceof(KVConfigSchematics),
+      globalConfigSchematics,
+      stack,
+    );
+
+    await this.port.callRpc(
+      "setGlobalConfigSchematics",
+      {
+        schematics: (
+          globalConfigSchematics as KVConfigSchematics<GlobalKVFieldValueTypeLibraryMap, any>
         ).serialize(),
       },
       { stack },
@@ -536,6 +565,7 @@ export class PluginsNamespace {
           const controller = new ToolsProviderController(
             this.client,
             message.pluginConfig,
+            message.globalPluginConfig,
             message.workingDirectoryPath,
             sessionAbortController.signal,
           );
@@ -751,6 +781,7 @@ export class PluginsNamespace {
           const controller = new GeneratorController(
             this.client,
             message.pluginConfig,
+            message.globalPluginConfig,
             message.toolDefinitions,
             message.workingDirectoryPath,
             connector,

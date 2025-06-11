@@ -58,6 +58,7 @@ export function createPluginsBackendInterface() {
             input: chatMessageDataSchema,
             config: kvConfigSchema,
             pluginConfig: kvConfigSchema,
+            globalPluginConfig: kvConfigSchema,
             workingDirectoryPath: z.string().nullable(),
             /** Processing Context Identifier */
             pci: z.string(),
@@ -93,6 +94,7 @@ export function createPluginsBackendInterface() {
             taskId: z.string(),
             config: kvConfigSchema,
             pluginConfig: kvConfigSchema,
+            globalPluginConfig: kvConfigSchema,
             workingDirectoryPath: z.string().nullable(),
             /** Processing Context Identifier */
             pci: z.string(),
@@ -132,6 +134,7 @@ export function createPluginsBackendInterface() {
           z.object({
             type: z.literal("initSession"),
             pluginConfig: kvConfigSchema,
+            globalPluginConfig: kvConfigSchema,
             workingDirectoryPath: z.string().nullable(),
             sessionId: z.string(),
           }),
@@ -211,6 +214,7 @@ export function createPluginsBackendInterface() {
             taskId: z.string(),
             input: chatHistoryDataSchema,
             pluginConfig: kvConfigSchema,
+            globalPluginConfig: kvConfigSchema,
             toolDefinitions: z.array(llmToolSchema),
             workingDirectoryPath: z.string().nullable(),
           }),
@@ -339,6 +343,12 @@ export function createPluginsBackendInterface() {
         returns: z.void(),
       })
       .addRpcEndpoint("setConfigSchematics", {
+        parameter: z.object({
+          schematics: serializedKVConfigSchematicsSchema,
+        }),
+        returns: z.void(),
+      })
+      .addRpcEndpoint("setGlobalConfigSchematics", {
         parameter: z.object({
           schematics: serializedKVConfigSchematicsSchema,
         }),

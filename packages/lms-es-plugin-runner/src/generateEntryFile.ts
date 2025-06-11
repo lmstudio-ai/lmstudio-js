@@ -17,6 +17,7 @@ const client = new LMStudioClient({
 let predictionLoopHandlerSet = false;
 let preprocessorSet = false;
 let configSchematicsSet = false;
+let globalConfigSchematicsSet = false;
 let toolsProviderSet = false;
 let generatorSet = false;
 
@@ -47,6 +48,14 @@ const pluginContext: PluginContext = {
     }
     configSchematicsSet = true;
     client.plugins.setConfigSchematics(configSchematics);
+    return pluginContext;
+  },
+  withGlobalConfigSchematics: (globalConfigSchematics) => {
+    if (globalConfigSchematicsSet) {
+      throw new Error("Global config schematics already registered");
+    }
+    globalConfigSchematicsSet = true;
+    client.plugins.setGlobalConfigSchematics(globalConfigSchematics);
     return pluginContext;
   },
   withToolsProvider: (toolsProvider) => {

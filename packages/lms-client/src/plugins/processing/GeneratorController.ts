@@ -35,6 +35,7 @@ export class GeneratorController {
   public constructor(
     public readonly client: LMStudioClient,
     private readonly pluginConfig: KVConfig,
+    private readonly globalPluginConfig: KVConfig,
     private readonly toolDefinitions: Array<LLMTool>,
     private readonly workingDirectoryPath: string | null,
     private readonly connector: GeneratorConnector,
@@ -58,6 +59,17 @@ export class GeneratorController {
         TVirtualConfigSchematics
       >
     ).parse(this.pluginConfig);
+  }
+
+  public getGlobalPluginConfig<TVirtualConfigSchematics extends VirtualConfigSchematics>(
+    configSchematics: ConfigSchematics<TVirtualConfigSchematics>,
+  ): ParsedConfig<TVirtualConfigSchematics> {
+    return (
+      configSchematics as KVConfigSchematics<
+        GlobalKVFieldValueTypeLibraryMap,
+        TVirtualConfigSchematics
+      >
+    ).parse(this.globalPluginConfig);
   }
 
   /**
