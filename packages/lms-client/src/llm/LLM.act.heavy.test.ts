@@ -33,7 +33,7 @@ describe("LLM.act", () => {
     });
   }, 60_000);
   it("should call the tool with the correct parameters", async () => {
-    const onMessage = jest.fn(a => console.info(a.toString()));
+    const onMessage = jest.fn();
     const onFirstToken = jest.fn();
     const onPredictionCompleted = jest.fn();
     const onPredictionFragment = jest.fn();
