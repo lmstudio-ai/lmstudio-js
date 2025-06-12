@@ -126,6 +126,7 @@ describe("LLM.act", () => {
       resolve();
     });
     const onToolCallRequestEnd = jest.fn();
+    const onToolCallRequestDequeued = jest.fn();
 
     const additionToolWithQueueControl = tool({
       name: "add",
@@ -152,6 +153,7 @@ describe("LLM.act", () => {
         temperature: 0,
         onPredictionCompleted,
         onToolCallRequestEnd,
+        onToolCallRequestDequeued,
       },
     );
 
@@ -174,6 +176,7 @@ describe("LLM.act", () => {
       expect.any(Number), // callId
       { isQueued: true }, // Second call is queued
     ]);
+    expect(onToolCallRequestDequeued).toHaveBeenCalledTimes(1);
   });
   it("should not queue up tool calls when allowParallelToolExecution is true", async () => {
     // In this test, we will make the model call the tool twice in parallel. We will then make the
@@ -194,6 +197,7 @@ describe("LLM.act", () => {
       resolve();
     });
     const onToolCallRequestEnd = jest.fn();
+    const onToolCallRequestDequeued = jest.fn();
 
     const additionToolWithQueueControl = tool({
       name: "add",
@@ -220,6 +224,7 @@ describe("LLM.act", () => {
         temperature: 0,
         onPredictionCompleted,
         onToolCallRequestEnd,
+        onToolCallRequestDequeued,
         allowParallelToolExecution: true,
       },
     );
@@ -240,5 +245,6 @@ describe("LLM.act", () => {
       expect.any(Number), // callId
       { isQueued: false }, // Second call is also not queued
     ]);
+    expect(onToolCallRequestDequeued).toHaveBeenCalledTimes(0);
   });
 });

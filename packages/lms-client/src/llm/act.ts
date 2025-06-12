@@ -323,6 +323,8 @@ export interface LLMActBaseOpts<TPredictionResult> {
    *
    * If the tool call themselves are very fast, this callback may never be called, because the
    * the first tool call might finish before the second tool call request is generated.
+   *
+   * @experimental This option is experimental and may change in the future.
    */
   onToolCallRequestDequeued?: (roundIndex: number, callId: number) => void;
   /**
@@ -737,11 +739,12 @@ export async function internalAct<TPredictionResult, TEndPacket>(
           abortController.signal,
           currentCallId,
         );
+        const isQueued = queue.needsQueueing();
         safeCallCallback(logger, "onToolCallRequestEnd", baseOpts.onToolCallRequestEnd, [
           predictionsPerformed,
           currentCallId,
           {
-            isQueued: queue.needsQueueing(),
+            isQueued,
             toolCallRequest: request,
           },
         ]);
@@ -749,6 +752,14 @@ export async function internalAct<TPredictionResult, TEndPacket>(
         toolCallPromises.push(
           queue
             .runInQueue(async () => {
+              if (isQueued) {
+                safeCallCallback(
+                  logger,
+                  "onToolCallRequestDequeued",
+                  baseOpts.onToolCallRequestDequeued,
+                  [predictionsPerformed, currentCallId],
+                );
+              }
               const result = await tool.implementation(parameters, toolCallContext);
               let resultString: string;
               if (result === undefined) {
