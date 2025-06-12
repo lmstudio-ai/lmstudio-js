@@ -9,11 +9,20 @@ import { type ToolsProvider } from "./plugins/processing/ToolsProvider.js";
  */
 export interface PluginContext {
   /**
-   * Sets the config schematics associated with this plugin context. Returns the same PluginContext
-   * for chaining.
+   * Sets the local config schematics associated with this plugin context. Local configs are per
+   * chat, useful for configurations that would affect context. Returns the same PluginContext for
+   * chaining.
    */
   withConfigSchematics: (
     configSchematics: ConfigSchematics<VirtualConfigSchematics>,
+  ) => PluginContext;
+  /**
+   * Sets the global config schematics associated with this plugin context. Global configs are
+   * global across the entire application, useful for things like API keys or database
+   * configurations. Returns the same PluginContext for chaining.
+   */
+  withGlobalConfigSchematics: (
+    globalConfigSchematics: ConfigSchematics<VirtualConfigSchematics>,
   ) => PluginContext;
   /**
    * Sets the prediction loop handler associated with this plugin context. Returns the same

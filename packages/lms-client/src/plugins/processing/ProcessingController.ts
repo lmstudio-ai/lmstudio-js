@@ -209,6 +209,8 @@ export class ProcessingController {
     private readonly config: KVConfig,
     /** @internal */
     private readonly pluginConfig: KVConfig,
+    /** @internal */
+    private readonly globalPluginConfig: KVConfig,
     /**
      * When getting history, should the latest user input be included in the history?
      *
@@ -259,6 +261,17 @@ export class ProcessingController {
         TVirtualConfigSchematics
       >
     ).parse(this.pluginConfig);
+  }
+
+  public getGlobalPluginConfig<TVirtualConfigSchematics extends VirtualConfigSchematics>(
+    configSchematics: ConfigSchematics<TVirtualConfigSchematics>,
+  ): ParsedConfig<TVirtualConfigSchematics> {
+    return (
+      configSchematics as KVConfigSchematics<
+        GlobalKVFieldValueTypeLibraryMap,
+        TVirtualConfigSchematics
+      >
+    ).parse(this.globalPluginConfig);
   }
 
   /**

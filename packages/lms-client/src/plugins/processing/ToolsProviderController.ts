@@ -17,6 +17,7 @@ export class ToolsProviderController {
   public constructor(
     public readonly client: LMStudioClient,
     private readonly pluginConfig: KVConfig,
+    private readonly globalPluginConfig: KVConfig,
     private readonly workingDirectoryPath: string | null,
     public readonly signal: AbortSignal,
   ) {}
@@ -37,5 +38,16 @@ export class ToolsProviderController {
         TVirtualConfigSchematics
       >
     ).parse(this.pluginConfig);
+  }
+
+  public getGlobalPluginConfig<TVirtualConfigSchematics extends VirtualConfigSchematics>(
+    configSchematics: ConfigSchematics<TVirtualConfigSchematics>,
+  ): ParsedConfig<TVirtualConfigSchematics> {
+    return (
+      configSchematics as KVConfigSchematics<
+        GlobalKVFieldValueTypeLibraryMap,
+        TVirtualConfigSchematics
+      >
+    ).parse(this.globalPluginConfig);
   }
 }
