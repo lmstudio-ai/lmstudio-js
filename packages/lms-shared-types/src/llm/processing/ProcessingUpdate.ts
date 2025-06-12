@@ -316,6 +316,9 @@ export type ToolStatusStepStateStatus =
       error: string;
     }
   | {
+      type: "toolCallQueued";
+    }
+  | {
       type: "confirmingToolCall";
     }
   | {
@@ -340,6 +343,9 @@ export const toolStatusStepStateStatusSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("toolCallGenerationFailed"),
     error: z.string(),
+  }),
+  z.object({
+    type: z.literal("toolCallQueued"),
   }),
   z.object({
     type: z.literal("confirmingToolCall"),

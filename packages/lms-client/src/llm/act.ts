@@ -17,10 +17,180 @@ import {
 import { z } from "zod";
 import { Chat, type ChatLike, ChatMessage } from "../Chat.js";
 import { ActResult } from "./ActResult.js";
+import { type LLMPredictionFragmentWithRoundIndex } from "./LLMDynamicHandle.js";
 import { PredictionResult } from "./PredictionResult.js";
 import { SimpleToolCallContext, type Tool } from "./tool.js";
 
-import { type LLMPredictionFragmentWithRoundIndex } from "./LLMDynamicHandle.js";
+interface QueueInterface {
+  /**
+   * Whether the queue is non-empty. If true, it is guaranteed that
+   * any new function will be queued instead of executing immediately.
+   */
+  needsQueueing(): boolean;
+  /**
+   * Run a function in the queue. If the queue is empty and no previous function has failed,
+   * the function will be executed immediately.
+   */
+  runInQueue<TReturns>(fn: () => Promise<TReturns>, signal?: AbortSignal): Promise<TReturns>;
+}
+
+class NoQueueQueue implements QueueInterface {
+  public needsQueueing(): boolean {
+    return false;
+  }
+
+  public async runInQueue<TReturns>(
+    fn: () => Promise<TReturns>,
+    signal?: AbortSignal,
+  ): Promise<TReturns> {
+    if (signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
+
+    return fn();
+  }
+}
+
+class FIFOQueue implements QueueInterface {
+  private queue: Array<{
+    fn: () => Promise<any>;
+    resolve: (value: any) => void;
+    reject: (reason: any) => void;
+    signal?: AbortSignal;
+  }> = [];
+  private executing = false;
+  private poisoned = false;
+  private poisonError: unknown = null;
+
+  public needsQueueing(): boolean {
+    return this.executing || this.queue.length > 0;
+  }
+
+  public async runInQueue<TReturns>(
+    fn: () => Promise<TReturns>,
+    signal?: AbortSignal,
+  ): Promise<TReturns> {
+    // Check if the operation is already aborted
+    if (signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
+
+    // If the queue is poisoned, fail immediately with the saved error
+    if (this.poisoned) {
+      throw this.poisonError ?? new Error("Queue has been poisoned by a previous error");
+    }
+
+    if (!this.needsQueueing()) {
+      // If nothing is in the queue, execute immediately
+      this.executing = true;
+      try {
+        // Check for abort before execution
+        if (signal?.aborted) {
+          throw new Error("Operation aborted");
+        }
+
+        return await fn();
+      } catch (error) {
+        // Poison the queue
+        this.poisoned = true;
+        this.poisonError = error;
+        // Clear the queue since nothing will run after this
+        this.clearQueue(error);
+        throw error;
+      } finally {
+        this.executing = false;
+        this.processQueue();
+      }
+    }
+
+    // Otherwise, add to queue and wait for execution
+    return new Promise<TReturns>((resolve, reject) => {
+      // Add abort listener if a signal was provided
+      if (signal) {
+        if (signal.aborted) {
+          return reject(new Error("Operation aborted"));
+        }
+
+        signal.addEventListener(
+          "abort",
+          () => {
+            // Remove from queue if it hasn't started yet
+            const index = this.queue.findIndex(
+              item => item.resolve === resolve && item.reject === reject,
+            );
+            if (index !== -1) {
+              this.queue.splice(index, 1);
+              reject(new Error("Operation aborted"));
+            }
+          },
+          { once: true },
+        );
+      }
+
+      this.queue.push({
+        fn: async () => {
+          try {
+            // Check for abort before execution
+            if (signal?.aborted) {
+              throw new Error("Operation aborted");
+            }
+
+            const result = await fn();
+            resolve(result);
+            return result;
+          } catch (error) {
+            reject(error);
+            throw error;
+          }
+        },
+        resolve,
+        reject,
+        signal,
+      });
+    });
+  }
+
+  private async processQueue(): Promise<void> {
+    if (this.executing || this.queue.length === 0 || this.poisoned) {
+      return;
+    }
+
+    const nextItem = this.queue.shift();
+    if (!nextItem) return;
+
+    // Skip if this task has been aborted
+    if (nextItem.signal?.aborted) {
+      nextItem.reject(new Error("Operation aborted"));
+      this.processQueue();
+      return;
+    }
+
+    this.executing = true;
+    try {
+      await nextItem.fn();
+    } catch (error) {
+      // Poison the queue
+      this.poisoned = true;
+      this.poisonError = error;
+      // Clear the queue since nothing will run after this
+      this.clearQueue(error);
+    } finally {
+      this.executing = false;
+      // Only continue processing if not poisoned
+      if (!this.poisoned) {
+        this.processQueue();
+      }
+    }
+  }
+
+  private clearQueue(error: unknown): void {
+    // Reject all pending promises in the queue
+    for (const item of this.queue) {
+      item.reject(error);
+    }
+    this.queue = [];
+  }
+}
 
 export interface LLMActBaseOpts<TPredictionResult> {
   /**
@@ -110,13 +280,27 @@ export interface LLMActBaseOpts<TPredictionResult> {
    * Instead, you can use this callback to update the UI or maintain the context. If you are unsure
    * what to do with this callback, you can ignore it.
    *
-   * @experimental This option is experimental and may change in the future. Especially the third
-   * parameter (toolCallRequest) which is very likely to be changed to a nicer type.
+   * @experimental This option is experimental and may change in the future.
    */
   onToolCallRequestEnd?: (
     roundIndex: number,
     callId: number,
-    toolCallRequest: FunctionToolCallRequest,
+    info: {
+      /**
+       * Whether this tool call is queued. This is true iff the tool will not be immediately
+       * executed due to a prior tool is currently executing and `allowParallelToolExecution` is set
+       * to `false` (the default).
+       *
+       * If `isQueued` is true for a specific call request, the `onToolCallRequestDequeued` callback
+       * will be called for the call before it is executed.
+       */
+      isQueued: boolean;
+      /**
+       * The tool call request that was generated by the model. This field is especially unstable
+       * as we will likely replace it with a nicer type.
+       */
+      toolCallRequest: FunctionToolCallRequest;
+    },
   ) => void;
   /**
    * A callback that is called when a tool call has failed to generate.
@@ -127,6 +311,20 @@ export interface LLMActBaseOpts<TPredictionResult> {
    * @experimental This option is experimental and may change in the future.
    */
   onToolCallRequestFailure?: (roundIndex: number, callId: number) => void;
+  /**
+   * A callback that is called when a queued tool call request is dequeued and is about to be
+   * executed.
+   *
+   * This callback will only be called for tool call requests that are queued, i.e. when `isQueued`
+   * is `true` in the `onToolCallRequestEnd` callback.
+   *
+   * If `allowParallelToolExecution` is set to `true`, this callback will never be called as
+   * all tool call requests will be handled immediately as they are being generated.
+   *
+   * If the tool call themselves are very fast, this callback may never be called, because the
+   * the first tool call might finish before the second tool call request is generated.
+   */
+  onToolCallRequestDequeued?: (roundIndex: number, callId: number) => void;
   /**
    * A handler that is called when a tool request is made by the model but is invalid.
    *
@@ -188,6 +386,21 @@ export interface LLMActBaseOpts<TPredictionResult> {
    * An abort signal that can be used to cancel the prediction.
    */
   signal?: AbortSignal;
+  /**
+   * Whether to allow parallel tool calls to be executed in parallel. Defaults to `false`.
+   *
+   * @remarks
+   *
+   * Note, disabling this does NOT prevent the model from making parallel tool requests - models can
+   * still output multiple tool requests in the same prediction round. However, if this is set to
+   * `false`, the SDK will only execute one tool call at a time, and will wait for the previous tool
+   * call to finish before executing the next one.
+   *
+   * Enabling this option can speed up the act process if the tools are expected to take some time
+   * to execute, such as when they make network requests. However, it can lead to problems when
+   * tools are stateful and have strict ordering requirements.
+   */
+  allowParallelToolExecution?: boolean;
 }
 export const llmActBaseOptsSchema = z.object({
   onFirstToken: z.function().optional(),
@@ -200,9 +413,11 @@ export const llmActBaseOptsSchema = z.object({
   onToolCallRequestStart: z.function().optional(),
   onToolCallRequestEnd: z.function().optional(),
   onToolCallRequestFailure: z.function().optional(),
+  onToolCallRequestDequeued: z.function().optional(),
   handleInvalidToolRequest: z.function().optional(),
   maxPredictionRounds: z.number().int().min(1).optional(),
   signal: z.instanceof(AbortSignal).optional(),
+  allowParallelToolExecution: z.boolean().optional(),
 });
 
 const defaultHandleInvalidToolRequest = (error: Error, request: ToolCallRequest | undefined) => {
@@ -434,6 +649,10 @@ export async function internalAct<TPredictionResult, TEndPacket>(
      */
     const roundAbortController = new AbortController();
 
+    const queue: QueueInterface = baseOpts.allowParallelToolExecution
+      ? new NoQueueQueue()
+      : new FIFOQueue();
+
     predictImpl({
       allowTools,
       history: accessMaybeMutableInternals(mutableChat)._internalGetData(),
@@ -521,34 +740,39 @@ export async function internalAct<TPredictionResult, TEndPacket>(
         safeCallCallback(logger, "onToolCallRequestEnd", baseOpts.onToolCallRequestEnd, [
           predictionsPerformed,
           currentCallId,
-          request,
+          {
+            isQueued: queue.needsQueueing(),
+            toolCallRequest: request,
+          },
         ]);
         // We have successfully parsed the parameters. Let's call the tool.
         toolCallPromises.push(
-          (async () => {
-            const result = await tool.implementation(parameters, toolCallContext);
-            let resultString: string;
-            if (result === undefined) {
-              resultString = "undefined";
-            } else {
-              try {
-                resultString = JSON.stringify(result);
-              } catch (error) {
-                throw makePrettyError(
-                  `Return value of tool ${tool.name} cannot be converted to JSON.`,
-                  stack,
-                );
+          queue
+            .runInQueue(async () => {
+              const result = await tool.implementation(parameters, toolCallContext);
+              let resultString: string;
+              if (result === undefined) {
+                resultString = "undefined";
+              } else {
+                try {
+                  resultString = JSON.stringify(result);
+                } catch (error) {
+                  throw makePrettyError(
+                    `Return value of tool ${tool.name} cannot be converted to JSON.`,
+                    stack,
+                  );
+                }
               }
-            }
-            toolCallResults.push({
-              index: toolCallIndex,
-              data: {
-                type: "toolCallResult",
-                toolCallId: request.id,
-                content: resultString,
-              },
-            });
-          })().catch(finalReject),
+              toolCallResults.push({
+                index: toolCallIndex,
+                data: {
+                  type: "toolCallResult",
+                  toolCallId: request.id,
+                  content: resultString,
+                },
+              });
+            }, abortController.signal)
+            .catch(finalReject),
         );
       },
       handleToolCallGenerationFailed: () => {

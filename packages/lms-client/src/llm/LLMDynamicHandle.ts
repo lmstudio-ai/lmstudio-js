@@ -230,10 +230,12 @@ function splitActOpts<TStructuredOutputType>(
     onToolCallRequestStart,
     onToolCallRequestEnd,
     onToolCallRequestFailure,
+    onToolCallRequestDequeued,
     handleInvalidToolRequest,
     maxPredictionRounds,
     signal,
     preset,
+    allowParallelToolExecution,
     ...config
   } = opts;
   return [
@@ -249,10 +251,12 @@ function splitActOpts<TStructuredOutputType>(
       onToolCallRequestStart,
       onToolCallRequestEnd,
       onToolCallRequestFailure,
+      onToolCallRequestDequeued,
       handleInvalidToolRequest,
       maxPredictionRounds,
       signal,
       preset,
+      allowParallelToolExecution,
     },
   ];
 }
