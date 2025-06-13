@@ -309,10 +309,23 @@ export abstract class ModelNamespace<
     );
 
     channel.onError.subscribeOnce(reject);
-    signal?.addEventListener("abort", () => {
-      channel.send({ type: "cancel" });
-      reject(signal.reason);
-    });
+
+    if (signal !== undefined) {
+      if (signal.aborted) {
+        // If the signal is already aborted, we should reject immediately.
+        channel.send({ type: "cancel" });
+        reject(signal.reason);
+      } else {
+        signal.addEventListener(
+          "abort",
+          () => {
+            channel.send({ type: "cancel" });
+            reject(signal.reason);
+          },
+          { once: true },
+        );
+      }
+    }
 
     return await promise;
   }

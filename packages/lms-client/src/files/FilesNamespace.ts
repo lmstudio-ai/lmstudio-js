@@ -340,10 +340,17 @@ export class FilesNamespace {
           }
         },
       );
-      opts.signal?.addEventListener("abort", () => {
-        reject(opts.signal!.reason);
-        channel.send({ type: "stop" });
-      });
+      if (opts.signal !== undefined) {
+        if (opts.signal.aborted) {
+          reject(opts.signal.reason);
+          channel.send({ type: "stop" });
+        } else {
+          opts.signal?.addEventListener("abort", () => {
+            reject(opts.signal!.reason);
+            channel.send({ type: "stop" });
+          });
+        }
+      }
       channel.onError.subscribeOnce(reject);
     });
   }
