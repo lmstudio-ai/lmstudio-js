@@ -504,13 +504,18 @@ export async function internalAct<TPredictionResult, TEndPacket>(
   let currentCallId = 0;
 
   if (baseOpts.signal !== undefined) {
-    baseOpts.signal.addEventListener(
-      "abort",
-      () => {
-        abortController.abort(baseOpts.signal?.reason);
-      },
-      { once: true },
-    );
+    if (baseOpts.signal.aborted) {
+      // If the signal is already aborted, we should not continue.
+      abortController.abort(baseOpts.signal.reason);
+    } else {
+      baseOpts.signal.addEventListener(
+        "abort",
+        () => {
+          abortController.abort(baseOpts.signal?.reason);
+        },
+        { once: true },
+      );
+    }
   }
 
   let shouldContinue = false;

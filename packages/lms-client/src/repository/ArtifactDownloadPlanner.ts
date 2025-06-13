@@ -158,9 +158,13 @@ export class ArtifactDownloadPlanner {
       },
     };
     this.channel.send({ type: "commit" });
-    signal.addEventListener("abort", () => {
+    if (signal.aborted) {
       this.channel.send({ type: "cancel" });
-    });
+    } else {
+      signal.addEventListener("abort", () => {
+        this.channel.send({ type: "cancel" });
+      });
+    }
     return await promise.catch(error => {
       if (signal.aborted) {
         // If the signal was aborted, we need to reject with the reason of the abort.

@@ -473,13 +473,18 @@ export class LLMDynamicHandle extends DynamicHandle<
     const [cancelEvent, emitCancelEvent] = BufferedEvent.create<void>();
 
     if (extraOpts.signal !== undefined) {
-      extraOpts.signal.addEventListener(
-        "abort",
-        () => {
-          emitCancelEvent();
-        },
-        { once: true },
-      );
+      if (extraOpts.signal.aborted) {
+        // If the signal is already aborted, we need to cancel the prediction immediately.
+        emitCancelEvent();
+      } else {
+        extraOpts.signal.addEventListener(
+          "abort",
+          () => {
+            emitCancelEvent();
+          },
+          { once: true },
+        );
+      }
     }
 
     const zodSchemaParseResult = zodSchemaSchema.safeParse(config.structured);
@@ -606,13 +611,18 @@ export class LLMDynamicHandle extends DynamicHandle<
     const [config, predictionOpts, respondOpts] = splitRespondOpts(opts);
 
     if (predictionOpts.signal !== undefined) {
-      predictionOpts.signal.addEventListener(
-        "abort",
-        () => {
-          emitCancelEvent();
-        },
-        { once: true },
-      );
+      if (predictionOpts.signal.aborted) {
+        // If the signal is already aborted, we need to cancel the prediction immediately.
+        emitCancelEvent();
+      } else {
+        predictionOpts.signal.addEventListener(
+          "abort",
+          () => {
+            emitCancelEvent();
+          },
+          { once: true },
+        );
+      }
     }
 
     const zodSchemaParseResult = zodSchemaSchema.safeParse(config.structured);
@@ -820,13 +830,18 @@ export class LLMDynamicHandle extends DynamicHandle<
           },
           { stack },
         );
-        signal.addEventListener(
-          "abort",
-          () => {
-            channel.send({ type: "cancel" });
-          },
-          { once: true },
-        );
+        if (signal.aborted) {
+          // If the signal is already aborted, we need to cancel the prediction immediately.
+          channel.send({ type: "cancel" });
+        } else {
+          signal.addEventListener(
+            "abort",
+            () => {
+              channel.send({ type: "cancel" });
+            },
+            { once: true },
+          );
+        }
         channel.onError.subscribeOnce(handleError);
       },
       ({ endPacket, content, nonReasoningContent, reasoningContent, predictionsPerformed }) => {

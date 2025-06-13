@@ -137,7 +137,7 @@ export class LLMGeneratorHandle {
       onFirstToken,
       onPredictionFragment,
       onMessage,
-      signal = new AbortSignal(),
+      signal,
       pluginConfig = emptyKVConfig,
       workingDirectory,
     } = opts;
@@ -146,7 +146,15 @@ export class LLMGeneratorHandle {
     let firstTokenTriggered = false;
 
     const cancelEvent = new CancelEvent();
-    signal.addEventListener("abort", () => cancelEvent.cancel(), { once: true });
+
+    if (signal !== undefined) {
+      if (signal.aborted) {
+        // If the signal is already aborted, we can immediately cancel the event.
+        cancelEvent.cancel();
+      } else {
+        signal.addEventListener("abort", () => cancelEvent.cancel(), { once: true });
+      }
+    }
 
     const { ongoingPrediction, finished, failed, push } = OngoingGeneratorPrediction.create(
       this.pluginIdentifier,
@@ -295,13 +303,18 @@ export class LLMGeneratorHandle {
           },
           { stack },
         );
-        signal.addEventListener(
-          "abort",
-          () => {
-            channel.send({ type: "cancel" });
-          },
-          { once: true },
-        );
+        if (signal.aborted) {
+          // If the signal is already aborted, we can immediately cancel the channel.
+          channel.send({ type: "cancel" });
+        } else {
+          signal.addEventListener(
+            "abort",
+            () => {
+              channel.send({ type: "cancel" });
+            },
+            { once: true },
+          );
+        }
         channel.onError.subscribeOnce(handleError);
       },
       ({ content, nonReasoningContent, reasoningContent }) =>
