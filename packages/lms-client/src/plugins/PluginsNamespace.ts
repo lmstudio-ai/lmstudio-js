@@ -677,6 +677,7 @@ export class PluginsNamespace {
                 return;
               }
               if (result === undefined) {
+                result = "undefined"; // Default to "undefined" if no result is provided.
                 channel.send({
                   type: "toolCallWarn",
                   sessionId,
@@ -685,10 +686,28 @@ export class PluginsNamespace {
                     Tool call returned undefined. This is not expected as the model always expects
                     a result. If you don't want to return anything, you can just return a string
                     reporting that the tool call was successful. For example: "operation
-                    successful." In this case, we will give the model string "undefined".
+                    successful." In this case, we will give the model string "${result}".
                   `,
                 });
-                result = "undefined"; // Default to "undefined" if no result is provided.
+              }
+              // Try to see if the result is JSON serializable. If it is not, we will print a
+              // warning.
+              try {
+                JSON.stringify(result);
+              } catch (error) {
+                result = text`
+                  Error: Tool call completed but returned a value that cannot be serialized to JSON
+                `;
+                channel.send({
+                  type: "toolCallWarn",
+                  sessionId,
+                  callId,
+                  warnText: text`
+                    Tool call succeeded, but returned a value that is not JSON serializable. In
+                    order to provide the result to the model, return values of tools must be JSON
+                    serializable. In this case, we will give the model string "${result}".
+                  `,
+                });
               }
               channel.send({
                 type: "toolCallComplete",
