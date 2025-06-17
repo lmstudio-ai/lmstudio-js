@@ -1,6 +1,6 @@
 {
   "name": "@lmstudio/lms-lmstudio",
-  "version": "0.0.28",
+  "version": "0.0.29",
   "description": "",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -10,8 +10,8 @@
   "author": "",
   "license": "Apache-2.0",
   "dependencies": {
-    "@lmstudio/lms-common": "^0.8.5",
-    "@lmstudio/lms-common-server": "^0.2.14",
+    "@lmstudio/lms-common": "^0.8.6",
+    "@lmstudio/lms-common-server": "^0.2.15",
     "boxen": "^5.1.2",
     "chalk": "^4.1.2",
     "inquirer": "^8.2.6"
@@ -40,5 +40,5 @@
     "./dist/esm/**/*.js",
     "./dist/types/**/*.d.ts"
   ],
-  "gitHead": "9a71db006654e012e2749a17ac10859c5d5a36b2"
+  "gitHead": "efb1520f48bc96f3bc02f022190721846dd36a91"
 }

@@ -1,6 +1,6 @@
 {
   "name": "@lmstudio/cli",
-  "version": "0.0.43",
+  "version": "0.0.44",
   "description": "LM Studio CLI",
   "main": "dist/index.js",
   "scripts": {
@@ -20,11 +20,11 @@
   "author": "",
   "license": "Apache-2.0",
   "dependencies": {
-    "@lmstudio/lms-cli": "^0.3.39"
+    "@lmstudio/lms-cli": "^0.3.40"
   },
   "devDependencies": {
     "postject": "^1.0.0-alpha.6",
     "run-script-os": "^1.1.6"
   },
-  "gitHead": "abe566030fdea1ad86c21c3d5f32ded4782e8c0b"
+  "gitHead": "efb1520f48bc96f3bc02f022190721846dd36a91"
 }

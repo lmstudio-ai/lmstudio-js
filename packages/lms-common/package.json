@@ -1,6 +1,6 @@
 {
   "name": "@lmstudio/lms-common",
-  "version": "0.8.5",
+  "version": "0.8.6",
   "description": "",
   "main": "./dist/cjs/index.js",
   "module": "./dist/esm/index.js",
@@ -13,7 +13,7 @@
   "dependencies": {
     "@lmstudio/immer-with-plugins": "^10.1.1",
     "@lmstudio/lms-isomorphic": "^0.4.5",
-    "@lmstudio/lms-shared-types": "^0.6.10",
+    "@lmstudio/lms-shared-types": "^0.6.11",
     "boxen": "^5.1.2",
     "chalk": "^4.1.2",
     "process": "^0.11.10",
@@ -34,5 +34,5 @@
     "./dist/types/**/*.d.ts"
   ],
   "sideEffects": false,
-  "gitHead": "9a71db006654e012e2749a17ac10859c5d5a36b2"
+  "gitHead": "efb1520f48bc96f3bc02f022190721846dd36a91"
 }
