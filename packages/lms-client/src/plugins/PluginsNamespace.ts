@@ -3,6 +3,7 @@ import {
   type LoggerInterface,
   makePromise,
   SimpleLogger,
+  text,
   Validator,
 } from "@lmstudio/lms-common";
 import { type InferClientChannelType } from "@lmstudio/lms-communication";
@@ -674,6 +675,20 @@ export class PluginsNamespace {
               if (ongoingToolCall.abortController.signal.aborted) {
                 // Tool call was aborted. Ignore.
                 return;
+              }
+              if (result === undefined) {
+                channel.send({
+                  type: "toolCallWarn",
+                  sessionId,
+                  callId,
+                  warnText: text`
+                    Tool call returned undefined. This is not expected as the model always expects
+                    a result. If you don't want to return anything, you can just return a string
+                    reporting that the tool call was successful. For example: "operation
+                    successful." In this case, we will give the model string "undefined".
+                  `,
+                });
+                result = "undefined"; // Default to "undefined" if no result is provided.
               }
               channel.send({
                 type: "toolCallComplete",
