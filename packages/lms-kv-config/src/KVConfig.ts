@@ -307,6 +307,9 @@ export class KVConfigSchematicsBuilder<
       );
     }
     defaultValue = defaultValueParseResult.data;
+    if (this.fields.has(key)) {
+      throw new Error(`Cannot add field with key ${key}. Key already exists in the schematics.`);
+    }
     this.fields.set(key, {
       valueTypeKey,
       valueTypeParams,
@@ -369,6 +372,11 @@ export class KVConfigSchematicsBuilder<
       { valueTypeKey, valueTypeParams, schema, defaultValue },
     ] of innerBuilder.fields.entries()) {
       const fullKey = `${scopeKey}.${key}`;
+      if (this.fields.has(fullKey)) {
+        throw new Error(
+          `Cannot add field with key ${fullKey}. Key already exists in the schematics.`,
+        );
+      }
       this.fields.set(fullKey, {
         valueTypeKey,
         valueTypeParams,
