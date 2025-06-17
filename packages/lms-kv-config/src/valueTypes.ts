@@ -242,7 +242,25 @@ export const kvValueTypesLibrary = new KVFieldValueTypesLibraryBuilder({
   })
   .valueType("select", {
     paramType: {
-      options: z.array(z.object({ value: z.string(), displayName: z.string() }).or(z.string())),
+      options: z
+        .array(z.object({ value: z.string().nonempty(), displayName: z.string() }).or(z.string()))
+        .refine(
+          options => {
+            // See if there are any duplicate values.
+            const values = new Set<string>();
+            for (const option of options) {
+              const value = typeof option === "string" ? option : option.value;
+              if (values.has(value)) {
+                return false;
+              }
+              values.add(value);
+            }
+            return true;
+          },
+          {
+            message: "Duplicate values in options.",
+          },
+        ),
     },
     schemaMaker: ({ options }) => {
       const allowedValues = new Set(
