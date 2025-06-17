@@ -415,11 +415,7 @@ export const kvValueTypesLibrary = new KVFieldValueTypesLibraryBuilder({
       }
       switch (a.type) {
         case "jinja":
-          return (
-            a.jinjaPromptTemplate?.bosToken === b.jinjaPromptTemplate?.bosToken &&
-            a.jinjaPromptTemplate?.eosToken === b.jinjaPromptTemplate?.eosToken &&
-            a.jinjaPromptTemplate?.template === b.jinjaPromptTemplate?.template
-          );
+          return a.jinjaPromptTemplate?.template === b.jinjaPromptTemplate?.template;
         case "manual":
           return (
             a.manualPromptTemplate?.beforeSystem === b.manualPromptTemplate?.beforeSystem &&
@@ -441,10 +437,6 @@ export const kvValueTypesLibrary = new KVFieldValueTypesLibraryBuilder({
           const lead =
             `${t("config:customInputs.llmPromptTemplate.type", "Type")}: ` +
             `${t("config:customInputs.llmPromptTemplate.types.jinja/label", "Jinja")}\n` +
-            `${t("config:customInputs.llmPromptTemplate.jinja.bosToken/label", "BOS Token")}: ` +
-            `${value.jinjaPromptTemplate?.bosToken}\n` +
-            `${t("config:customInputs.llmPromptTemplate.jinja.eosToken/label", "EOS Token")}: ` +
-            `${value.jinjaPromptTemplate?.eosToken}\n` +
             `${t("config:customInputs.llmPromptTemplate.jinja.template/label", "Template")}: `;
           if (desiredLength === undefined) {
             return lead + value.jinjaPromptTemplate?.template;

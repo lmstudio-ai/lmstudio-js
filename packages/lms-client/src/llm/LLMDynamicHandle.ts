@@ -22,7 +22,6 @@ import {
   type LLMApplyPromptTemplateOpts,
   llmApplyPromptTemplateOptsSchema,
   type LLMInstanceInfo,
-  type LLMJinjaInputConfig,
   type LLMPredictionConfigInput,
   llmPredictionConfigInputSchema,
   type LLMPredictionFragment,
@@ -264,14 +263,6 @@ function splitActOpts<TStructuredOutputType>(
 const noFormattingTemplate = text`
   {% for message in messages %}{{ message['content'] }}{% endfor %}
 `;
-const noFormattingInputConfig: LLMJinjaInputConfig = {
-  messagesConfig: {
-    contentConfig: {
-      type: "string",
-    },
-  },
-  useTools: false,
-};
 
 /**
  * This represents a set of requirements for a model. It is not tied to a specific model, but rather
@@ -513,10 +504,7 @@ export class LLMDynamicHandle extends DynamicHandle<
               promptTemplate: {
                 type: "jinja",
                 jinjaPromptTemplate: {
-                  bosToken: "",
-                  eosToken: "",
                   template: noFormattingTemplate,
-                  inputConfig: noFormattingInputConfig,
                 },
                 stopStrings: [],
               },
