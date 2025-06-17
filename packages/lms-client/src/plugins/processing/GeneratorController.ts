@@ -43,6 +43,10 @@ export class GeneratorController {
     public readonly abortSignal: AbortSignal,
   ) {}
 
+  /**
+   * Gets the working directory for the current prediction. If your plugin produces files, you
+   * should aim to put them in this directory.
+   */
   public getWorkingDirectory(): string {
     if (this.workingDirectoryPath === null) {
       throw new Error("This prediction process is not attached to a working directory.");
@@ -50,6 +54,31 @@ export class GeneratorController {
     return this.workingDirectoryPath;
   }
 
+  /**
+   * Get the per-chat config for the plugin. Takes in the configSchematics. You can get the
+   * values of fields like so:
+   *
+   * ```ts
+   * const config = ctl.getPluginConfig(configSchematics);
+   * const value = config.get("fieldKey");
+   * ```
+   *
+   * @remarks
+   *
+   * If you need to name the type of the returned value, use:
+   *
+   * `InferParsedConfig<typeof configSchematics>`.
+   *
+   * Example:
+   *
+   * ```ts
+   * function myFunction(config: InferParsedConfig<typeof configSchematics>) {
+   *   // ...
+   * }
+   *
+   * myFunction(ctl.getPluginConfig(configSchematics));
+   * ```
+   */
   public getPluginConfig<TVirtualConfigSchematics extends VirtualConfigSchematics>(
     configSchematics: ConfigSchematics<TVirtualConfigSchematics>,
   ): ParsedConfig<TVirtualConfigSchematics> {
@@ -61,11 +90,36 @@ export class GeneratorController {
     ).parse(this.pluginConfig);
   }
 
+  /**
+   * Get the application-wide config for the plugin. Takes in the globalConfigSchematics. You can
+   * get the values of fields like so:
+   *
+   * ```ts
+   * const config = ctl.getGlobalPluginConfig(globalConfigSchematics);
+   * const value = config.get("fieldKey");
+   * ```
+   *
+   * @remarks
+   *
+   * If you need to name the type of the returned value, use:
+   *
+   * `InferParsedConfig<typeof globalConfigSchematics>`.
+   *
+   * Example:
+   *
+   * ```ts
+   * function myFunction(config: InferParsedConfig<typeof globalConfigSchematics>) {
+   *   // ...
+   * }
+   *
+   * myFunction(ctl.getGlobalPluginConfig(globalConfigSchematics));
+   * ```
+   */
   public getGlobalPluginConfig<TVirtualConfigSchematics extends VirtualConfigSchematics>(
-    configSchematics: ConfigSchematics<TVirtualConfigSchematics>,
+    globalConfigSchematics: ConfigSchematics<TVirtualConfigSchematics>,
   ): ParsedConfig<TVirtualConfigSchematics> {
     return (
-      configSchematics as KVConfigSchematics<
+      globalConfigSchematics as KVConfigSchematics<
         GlobalKVFieldValueTypeLibraryMap,
         TVirtualConfigSchematics
       >

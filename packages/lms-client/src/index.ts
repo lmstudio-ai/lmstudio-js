@@ -10,6 +10,7 @@ export {
   ParsedConfig,
   parsedConfigBrand,
   VirtualConfigSchematics,
+  type InferParsedConfig,
 } from "./customConfig.js";
 export type { DiagnosticsNamespace } from "./diagnostics/DiagnosticsNamespace.js";
 export type { EmbeddingDynamicHandle } from "./embedding/EmbeddingDynamicHandle.js";

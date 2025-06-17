@@ -83,3 +83,20 @@ export interface ConfigSchematicsBuilder<TVirtualConfigSchematics extends Virtua
 export function createConfigSchematics(): ConfigSchematicsBuilder<{}> {
   return new KVConfigSchematicsBuilder(kvValueTypesLibrary) as ConfigSchematicsBuilder<{}>;
 }
+
+/**
+ * Given the type of a configSchematics, returns the type of the parsed config. Example usage:
+ *
+ * ```ts
+ * const config: InferParsedConfig<typeof configSchematics> = ctl.getPluginConfig(configSchematics);
+ * ```
+ *
+ * @remarks
+ *
+ * You don't need this type in the above case because TypeScript has type inferencing. It is mainly
+ * useful when you want to pass the parsed config around and you need to type the parameter.
+ */
+export type InferParsedConfig<TConfigSchematics extends ConfigSchematics<any>> =
+  TConfigSchematics extends ConfigSchematics<infer RVirtualConfigSchematics>
+    ? ParsedConfig<RVirtualConfigSchematics>
+    : never;

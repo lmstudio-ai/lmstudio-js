@@ -26,6 +26,7 @@ export type {
   FunctionTool,
   Generator,
   GeneratorController,
+  InferParsedConfig,
   LLM,
   LLMActionOpts,
   LLMDynamicHandle,
