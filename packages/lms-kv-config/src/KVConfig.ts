@@ -197,7 +197,11 @@ export class KVFieldValueTypeLibrary<
     key: TKey,
     param: TKVFieldValueTypeLibraryMap[TKey]["param"],
   ): ZodSchema<TKVFieldValueTypeLibraryMap[TKey]["value"]> {
-    return this.valueTypes.get(key)!.schemaMaker(param);
+    const valueType = this.valueTypes.get(key);
+    if (valueType === undefined) {
+      throw new Error(`Cannot find value type ${key}`);
+    }
+    return valueType.schemaMaker(valueType.paramType.parse(param));
   }
 
   public parseParamTypes<TKey extends keyof TKVFieldValueTypeLibraryMap & string>(
