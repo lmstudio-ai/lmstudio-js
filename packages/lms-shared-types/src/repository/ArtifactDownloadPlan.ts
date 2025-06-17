@@ -6,6 +6,12 @@ import {
   type ModelCompatibilityType,
 } from "../ModelCompatibilityType.js";
 
+/**
+ * Represents information about a model in an artifact download plan.
+ *
+ * @experimental This type is experimental and may change at any time.
+ * @public
+ */
 export type ArtifactDownloadPlanModelInfo = {
   displayName: string;
   sizeBytes: number;
@@ -20,11 +26,23 @@ export const artifactDownloadPlanModelInfoSchema: ZodSchema<ArtifactDownloadPlan
     compatibilityType: modelCompatibilityTypeSchema,
   });
 
+/**
+ * Represents the state of a node in an artifact download plan.
+ *
+ * @experimental This type is experimental and may change at any time.
+ * @public
+ */
 export type ArtifactDownloadPlanNodeState = "pending" | "fetching" | "satisfied" | "completed";
 export const artifactDownloadPlanNodeStateSchema: ZodSchema<ArtifactDownloadPlanNodeState> = z.enum(
   ["pending", "fetching", "satisfied", "completed"],
 );
 
+/**
+ * Represents the state of a node in an artifact download plan.
+ *
+ * @experimental This type is experimental and may change at any time.
+ * @public
+ */
 export type ArtifactDownloadPlanNode =
   | {
       type: "artifact";
@@ -63,6 +81,12 @@ export const artifactDownloadPlanNodeSchema = z.discriminatedUnion("type", [
   }),
 ]);
 
+/**
+ * Represents a plan for downloading artifacts.
+ *
+ * @experimental This type is experimental and may change at any time.
+ * @public
+ */
 export interface ArtifactDownloadPlan {
   nodes: Array<ArtifactDownloadPlanNode>;
   downloadSizeBytes: number;

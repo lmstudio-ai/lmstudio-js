@@ -95,6 +95,8 @@ export function createConfigSchematics(): ConfigSchematicsBuilder<{}> {
  *
  * You don't need this type in the above case because TypeScript has type inferencing. It is mainly
  * useful when you want to pass the parsed config around and you need to type the parameter.
+ *
+ * @public
  */
 export type InferParsedConfig<TConfigSchematics extends ConfigSchematics<any>> =
   TConfigSchematics extends ConfigSchematics<infer RVirtualConfigSchematics>

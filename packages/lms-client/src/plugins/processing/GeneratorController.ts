@@ -20,6 +20,12 @@ export interface GeneratorConnector {
   toolCallGenerationFailed: (error: Error) => void;
 }
 
+/**
+ * Controller for a generator.
+ *
+ * @public
+ * @deprecated Plugin support is still in development. Stay tuned for updates.
+ */
 export class GeneratorController extends BaseController {
   /**
    * @internal Do not construct this class yourself.

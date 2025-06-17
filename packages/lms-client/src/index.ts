@@ -19,8 +19,10 @@ export type { EmbeddingNamespace } from "./embedding/EmbeddingNamespace.js";
 export { FileHandle } from "./files/FileHandle.js";
 export type { FilesNamespace } from "./files/FilesNamespace.js";
 export type { ParseDocumentOpts } from "./files/ParseDocumentOpts.js";
+export type { ParseDocumentResult } from "./files/ParseDocumentResult.js";
 export type { RetrievalCallbacks, RetrievalOpts } from "./files/RetrievalOpts.js";
 export type { RetrievalResult, RetrievalResultEntry } from "./files/RetrievalResult.js";
+export type { LLMActBaseOpts } from "./llm/act.js";
 export type { ActResult } from "./llm/ActResult.js";
 export type { GeneratorPredictionResult } from "./llm/GeneratorPredictionResult.js";
 export type { LLM } from "./llm/LLM.js";
@@ -31,8 +33,13 @@ export type {
   LLMPredictionOpts,
   LLMRespondOpts,
 } from "./llm/LLMDynamicHandle.js";
-export type { LLMGeneratorHandle } from "./llm/LLMGeneratorHandle.js";
+export type {
+  LLMGeneratorActOpts,
+  LLMGeneratorHandle,
+  LLMGeneratorPredictionOpts,
+} from "./llm/LLMGeneratorHandle.js";
 export type { LLMNamespace } from "./llm/LLMNamespace.js";
+export type { OngoingGeneratorPrediction } from "./llm/OngoingGeneratorPrediction.js";
 export type { OngoingPrediction } from "./llm/OngoingPrediction.js";
 export type {
   BasePredictionResult,
@@ -40,7 +47,7 @@ export type {
   StructuredPredictionResult,
 } from "./llm/PredictionResult.js";
 export { rawFunctionTool, tool } from "./llm/tool.js";
-export type { FunctionTool, Tool, ToolBase } from "./llm/tool.js";
+export type { FunctionTool, RawFunctionTool, Tool, ToolBase, ToolCallContext } from "./llm/tool.js";
 export { LMStudioClient } from "./LMStudioClient.js";
 export type { LMStudioClientConstructorOpts } from "./LMStudioClient.js";
 export type { DynamicHandle } from "./modelShared/DynamicHandle.js";
@@ -78,13 +85,20 @@ export type {
 export type { ToolsProvider } from "./plugins/processing/ToolsProvider.js";
 export type { ToolsProviderController } from "./plugins/processing/ToolsProviderController.js";
 export type {
+  ArtifactDownloadPlanner,
+  ArtifactDownloadPlannerDownloadOpts,
+} from "./repository/ArtifactDownloadPlanner.js";
+export type {
   DownloadOpts,
   ModelSearchResultDownloadOption,
 } from "./repository/ModelSearchResultDownloadOption.js";
 export type { ModelSearchResultEntry } from "./repository/ModelSearchResultEntry.js";
 export type {
+  CreateArtifactDownloadPlannerOpts,
   DownloadArtifactOpts,
   EnsureAuthenticatedOpts,
+  LoginWithPreAuthenticatedKeysOpts,
+  LoginWithPreAuthenticatedKeysResult,
   PushArtifactOpts,
   RepositoryNamespace,
 } from "./repository/RepositoryNamespace.js";

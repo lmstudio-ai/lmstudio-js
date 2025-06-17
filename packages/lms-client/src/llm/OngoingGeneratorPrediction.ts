@@ -31,6 +31,9 @@ import { GeneratorPredictionResult } from "./GeneratorPredictionResult";
  *   process.stdout.write(content);
  * }
  * ```
+ *
+ * @public
+ * @deprecated Plugin support is still in development. Stay tuned for updates.
  */
 export class OngoingGeneratorPrediction extends StreamablePromise<
   LLMPredictionFragment,

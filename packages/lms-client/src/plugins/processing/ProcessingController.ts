@@ -160,6 +160,7 @@ export interface CreateCitationBlockOpts {
 /**
  * Options to use with {@link ProcessingController#requestConfirmToolCall}.
  *
+ * @public
  * @experimental WIP
  */
 export interface RequestConfirmToolCallOpts {
@@ -172,6 +173,7 @@ export interface RequestConfirmToolCallOpts {
 /**
  * Return type of {@link ProcessingController#requestConfirmToolCall}.
  *
+ * @public
  * @experimental WIP
  */
 export type RequestConfirmToolCallResult =
@@ -588,6 +590,11 @@ export interface ContentBlockAppendTextOpts {
   fromDraftModel?: boolean;
 }
 
+/**
+ * Options to use with {@link PredictionProcessContentBlockController#appendToolRequest}.
+ *
+ * @public
+ */
 export interface ContentBlockAppendToolRequestOpts {
   callId: number;
   toolCallRequestId?: string;
@@ -596,6 +603,11 @@ export interface ContentBlockAppendToolRequestOpts {
   pluginIdentifier?: string;
 }
 
+/**
+ * Options to use with {@link PredictionProcessContentBlockController#replaceToolRequest}.
+ *
+ * @public
+ */
 export interface ContentBlockReplaceToolRequestOpts {
   callId: number;
   toolCallRequestId?: string;
@@ -604,6 +616,11 @@ export interface ContentBlockReplaceToolRequestOpts {
   pluginIdentifier?: string;
 }
 
+/**
+ * Options to use with {@link PredictionProcessContentBlockController#appendToolResult}.
+ *
+ * @public
+ */
 export interface ContentBlockAppendToolResultOpts {
   callId: number;
   toolCallRequestId?: string;
@@ -763,6 +780,11 @@ export class PredictionProcessContentBlockController {
   }
 }
 
+/**
+ * Controller for a tool status block in the prediction process.
+ *
+ * @public
+ */
 export class PredictionProcessToolStatusController {
   private status: ToolStatusStepStateStatus;
   /** @internal */

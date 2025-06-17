@@ -6,6 +6,7 @@ import { type BasePredictionResult } from "./PredictionResult.js";
  * The most notably property is {@link GeneratorPredictionResult#content}, which contains the
  * generated text.
  *
+ * @public
  * @deprecated Plugin support is still in development. Stay tuned for updates.
  */
 export class GeneratorPredictionResult implements BasePredictionResult {

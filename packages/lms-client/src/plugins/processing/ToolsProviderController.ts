@@ -2,6 +2,12 @@ import { type KVConfig } from "@lmstudio/lms-shared-types";
 import { type LMStudioClient } from "../../LMStudioClient.js";
 import { BaseController } from "./BaseController.js";
 
+/**
+ * Controller for tools provider.
+ *
+ * @public
+ * @deprecated Plugin support is still in development. Stay tuned for updates.
+ */
 export class ToolsProviderController extends BaseController {
   /**
    * @internal Do not construct this class yourself.

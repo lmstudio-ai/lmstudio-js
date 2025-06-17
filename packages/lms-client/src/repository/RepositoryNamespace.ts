@@ -95,7 +95,9 @@ export const ensureAuthenticatedOptsSchema = z.object({
 }) as ZodSchema<EnsureAuthenticatedOpts>;
 
 /**
- * @deprecated WIP
+ * Options to use with {@link RepositoryNamespace#loginWithPreAuthenticatedKeys}.
+ *
+ * @public
  */
 export interface LoginWithPreAuthenticatedKeysOpts {
   keyId: string;
@@ -109,7 +111,9 @@ export const loginWithPreAuthenticatedKeysOptsSchema = z.object({
 }) as ZodSchema<LoginWithPreAuthenticatedKeysOpts>;
 
 /**
- * @deprecated WIP
+ * Result of {@link RepositoryNamespace#loginWithPreAuthenticatedKeys}.
+ *
+ * @public
  */
 export interface LoginWithPreAuthenticatedKeysResult {
   userName: string;
@@ -118,6 +122,11 @@ export const loginWithPreAuthenticatedKeysResultSchema = z.object({
   userName: z.string(),
 }) as ZodSchema<LoginWithPreAuthenticatedKeysResult>;
 
+/**
+ * Options to use with {@link RepositoryNamespace#createArtifactDownloadPlanner}.
+ *
+ * @public
+ */
 export interface CreateArtifactDownloadPlannerOpts {
   owner: string;
   name: string;
@@ -380,9 +389,16 @@ export class RepositoryNamespace {
       undefined, // Don't listen to the messages yet.
       { stack },
     );
-    const planner = new ArtifactDownloadPlanner(owner, name, onPlanUpdated, channel, () => {
-      this.downloadPlanFinalizationRegistry.unregister(planner);
-    });
+    const planner = new ArtifactDownloadPlanner(
+      owner,
+      name,
+      onPlanUpdated,
+      channel,
+      this.validator,
+      () => {
+        this.downloadPlanFinalizationRegistry.unregister(planner);
+      },
+    );
     this.downloadPlanFinalizationRegistry.register(planner, { owner, name }, planner);
     return planner;
   }

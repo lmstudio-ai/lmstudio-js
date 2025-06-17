@@ -2,6 +2,11 @@ import { z, type ZodSchema } from "zod";
 import { kebabCaseSchema, kebabCaseWithDotsSchema } from "./kebab.js";
 import { type ModelDownloadSource, modelDownloadSourceSchema } from "./ModelDownloadSource.js";
 
+/**
+ * Represents the purpose of an artifact dependency.
+ *
+ * @public
+ */
 export type ArtifactDependencyPurpose = "baseModel" | "draftModel" | "custom";
 export const artifactDependencyPurposeSchema = z.enum([
   "baseModel",
@@ -9,6 +14,11 @@ export const artifactDependencyPurposeSchema = z.enum([
   "custom",
 ]) as ZodSchema<ArtifactDependencyPurpose>;
 
+/**
+ * Represents the base type for an artifact dependency.
+ *
+ * @public
+ */
 export interface ArtifactDependencyBase {
   purpose: ArtifactDependencyPurpose;
 }
@@ -16,6 +26,11 @@ export const artifactDependencyBaseSchema = z.object({
   purpose: artifactDependencyPurposeSchema,
 });
 
+/**
+ * Represents a dependency on a concrete model.
+ *
+ * @public
+ */
 export interface ArtifactModelDependency extends ArtifactDependencyBase {
   type: "model";
   /**
@@ -37,7 +52,9 @@ export const artifactModelDependencySchema = z.object({
 });
 
 /**
- * Depends on other artifacts.
+ * Represents a dependency on other artifacts.
+ *
+ * @public
  */
 export interface ArtifactArtifactDependency extends ArtifactDependencyBase {
   type: "artifact";
@@ -51,6 +68,11 @@ export const artifactArtifactDependencySchema = z.object({
   name: kebabCaseWithDotsSchema,
 });
 
+/**
+ * Represents a dependency of an artifact.
+ *
+ * @public
+ */
 export type ArtifactDependency = ArtifactModelDependency | ArtifactArtifactDependency;
 export const artifactDependencySchema = z.discriminatedUnion("type", [
   artifactModelDependencySchema,

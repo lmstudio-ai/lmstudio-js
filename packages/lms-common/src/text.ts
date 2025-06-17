@@ -6,6 +6,12 @@
  */
 const compiledTemplatesCache = new WeakMap<TemplateStringsArray, Array<string>>();
 
+/**
+ * The allowed types for the values in the `text` tag function.
+ *
+ * @public
+ * @experimental This type may change in the future.
+ */
 export type TextAllowedTypes = string | number | object;
 
 /**
@@ -18,6 +24,7 @@ export type TextAllowedTypes = string | number | object;
  *
  * Note: Only spaces are considered.
  *
+ * @public
  * @experimental The behavior of this function may change in the future.
  */
 export function text(strings: TemplateStringsArray, ...values: ReadonlyArray<TextAllowedTypes>) {

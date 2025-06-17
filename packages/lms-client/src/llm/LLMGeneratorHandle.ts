@@ -24,6 +24,7 @@ import { toolToLLMTool, type Tool } from "./tool.js";
 /**
  * Options for {@link LLMGeneratorHandle#respond}.
  *
+ * @public
  * @deprecated Plugin support is still in development. Stay tuned for updates.
  */
 export interface LLMGeneratorPredictionOpts {
@@ -80,6 +81,7 @@ const llmGeneratorPredictionOptsSchema = z.object({
 /**
  * Options for the LLM generator's act method.
  *
+ * @public
  * @deprecated Plugin support is still in development. Stay tuned for updates.
  */
 export type LLMGeneratorActOpts = LLMActBaseOpts<GeneratorPredictionResult> & {
@@ -100,6 +102,7 @@ export const llmGeneratorActOptsSchema = llmActBaseOptsSchema.extend({
 /**
  * Represents a handle for a generator that can act as a LLM.
  *
+ * @public
  * @deprecated Plugin support is still in development. Stay tuned for updates.
  */
 export class LLMGeneratorHandle {

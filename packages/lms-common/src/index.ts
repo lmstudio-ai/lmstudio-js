@@ -16,7 +16,6 @@ export { deepFreeze } from "./deepFreeze.js";
 export { DeepReplaceType, DeepReplaceType2 } from "./DeepReplaceType.js";
 export { changeErrorStackInPlace, getCurrentStack } from "./errorStack.js";
 export { Event } from "./Event.js";
-export { SyncEvent } from "./SyncEvent.js"
 export { doesFileNameIndicateModel, modelExtensions } from "./fileName.js";
 export { flattenSignalOfSignal, flattenSignalOfWritableSignal } from "./flattenSignal.js";
 export { HandledEvent } from "./HandledEvent.js";
@@ -52,7 +51,8 @@ export {
 } from "./SlicedSignal.js";
 export { StreamablePromise } from "./StreamablePromise.js";
 export { Subscribable } from "./Subscribable.js";
-export { text } from "./text.js";
+export { SyncEvent } from "./SyncEvent.js";
+export { text, type TextAllowedTypes } from "./text.js";
 export { TimeoutTracker } from "./TimeoutTracker.js";
 export { toJSONSafeNumber } from "./toJSONSafeNumber.js";
 export { sharedValidator, Validator } from "./Validator.js";

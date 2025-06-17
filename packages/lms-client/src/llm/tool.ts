@@ -21,15 +21,27 @@ export const toolBaseSchema = z.object({
 /**
  * Use this context object to report status and/or getting information about whether the tool call
  * should be aborted.
+ *
+ * This is passed to the tool implementation as the second argument.
+ *
+ * @public
  */
 export interface ToolCallContext {
   /**
-   * Report the current status of the tool call.
+   * Report the current status of the tool call. The LLM will not be able to see this.
    */
   status: (text: string) => void;
   /**
    * Report a recoverable error, i.e. something unexpected happened, but you have already handled
-   * it.
+   * it. The LLM will not be able to see this.
+   *
+   * Error handling best practices:
+   *
+   * - If the error is recoverable (really just a warning), use `warn` to report it.
+   * - If the error is not recoverable, but you think the LLM can try again, you should return the
+   *   error as a string. For example, `return "Error: file already exists."`.
+   * - If the error is disastrous and something truly unexpected happened, you should just throw
+   *   the error. This is useful for cases like failing to connect to the database.
    */
   warn: (text: string) => void;
   /**
@@ -88,6 +100,7 @@ export const functionToolSchema = toolBaseSchema.extend({
 /**
  * A tool that is a raw function.
  *
+ * @public
  * @experimental Not stable, will likely change in the future.
  */
 export interface RawFunctionTool extends ToolBase {
@@ -197,6 +210,7 @@ function jsonSchemaValidationErrorToAIReadableText(
  * A function that can be used to create a raw function `Tool` given a function definition and its
  * implementation.
  *
+ * @public
  * @experimental Not stable, will likely change in the future.
  */
 export function rawFunctionTool({
