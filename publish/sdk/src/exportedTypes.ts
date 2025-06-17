@@ -41,6 +41,7 @@ export type {
   ModelSearchResultEntry,
   OngoingPrediction,
   ParsedConfig,
+  ParseDocumentOpts,
   PluginContext,
   PluginsNamespace,
   PredictionLoopHandler,
