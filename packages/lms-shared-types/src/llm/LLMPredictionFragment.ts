@@ -59,6 +59,8 @@ export const llmPredictionFragmentSchema = z.object({
 
 /**
  * Options for creating a prediction fragment.
+ *
+ * @public
  */
 export interface LLMPredictionFragmentInputOpts {
   /**

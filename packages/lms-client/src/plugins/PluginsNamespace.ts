@@ -3,6 +3,7 @@ import {
   type LoggerInterface,
   makePromise,
   SimpleLogger,
+  text,
   Validator,
 } from "@lmstudio/lms-common";
 import { type InferClientChannelType } from "@lmstudio/lms-communication";
@@ -260,12 +261,12 @@ export class PluginsNamespace {
             const input = ChatMessage.createRaw(message.input, /* mutable */ false);
             const controller: PreprocessorController = new ProcessingController(
               this.client,
-              connector,
-              message.config,
               message.pluginConfig,
               message.globalPluginConfig,
-              /* shouldIncludeInputInHistory */ false,
               message.workingDirectoryPath,
+              connector,
+              message.config,
+              /* shouldIncludeInputInHistory */ false,
             );
             tasks.set(message.taskId, {
               cancel: () => {
@@ -392,12 +393,12 @@ export class PluginsNamespace {
             );
             const controller: PredictionLoopHandlerController = new ProcessingController(
               this.client,
-              connector,
-              message.config,
               message.pluginConfig,
               message.globalPluginConfig,
-              /* shouldIncludeInputInHistory */ true,
               message.workingDirectoryPath,
+              connector,
+              message.config,
+              /* shouldIncludeInputInHistory */ true,
             );
             tasks.set(message.taskId, {
               cancel: () => {
@@ -564,10 +565,10 @@ export class PluginsNamespace {
           openSessions.set(sessionId, openSession);
           const controller = new ToolsProviderController(
             this.client,
+            sessionAbortController.signal,
             message.pluginConfig,
             message.globalPluginConfig,
             message.workingDirectoryPath,
-            sessionAbortController.signal,
           );
           toolsProvider(controller).then(
             tools => {
@@ -674,6 +675,39 @@ export class PluginsNamespace {
               if (ongoingToolCall.abortController.signal.aborted) {
                 // Tool call was aborted. Ignore.
                 return;
+              }
+              if (result === undefined) {
+                result = "undefined"; // Default to "undefined" if no result is provided.
+                channel.send({
+                  type: "toolCallWarn",
+                  sessionId,
+                  callId,
+                  warnText: text`
+                    Tool call returned undefined. This is not expected as the model always expects
+                    a result. If you don't want to return anything, you can just return a string
+                    reporting that the tool call was successful. For example: "operation
+                    successful." In this case, we will give the model string "${result}".
+                  `,
+                });
+              }
+              // Try to see if the result is JSON serializable. If it is not, we will print a
+              // warning.
+              try {
+                JSON.stringify(result);
+              } catch (error) {
+                result = text`
+                  Error: Tool call completed but returned a value that cannot be serialized to JSON
+                `;
+                channel.send({
+                  type: "toolCallWarn",
+                  sessionId,
+                  callId,
+                  warnText: text`
+                    Tool call succeeded, but returned a value that is not JSON serializable. In
+                    order to provide the result to the model, return values of tools must be JSON
+                    serializable. In this case, we will give the model string "${result}".
+                  `,
+                });
               }
               channel.send({
                 type: "toolCallComplete",
@@ -782,11 +816,11 @@ export class PluginsNamespace {
             this.client,
             message.pluginConfig,
             message.globalPluginConfig,
-            message.toolDefinitions,
             message.workingDirectoryPath,
+            abortController.signal,
+            message.toolDefinitions,
             connector,
             this.validator,
-            abortController.signal,
           );
           tasks.set(message.taskId, {
             cancel: () => {

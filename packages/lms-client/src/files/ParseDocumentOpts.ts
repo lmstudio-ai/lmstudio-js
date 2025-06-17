@@ -5,6 +5,12 @@ import {
 } from "@lmstudio/lms-shared-types";
 import { z } from "zod";
 
+/**
+ * Options for parsing a document.
+ *
+ * @public
+ * @deprecated Document parsing is still in development. Stay tuned for updates.
+ */
 export type ParseDocumentOpts = DocumentParsingOpts & {
   /**
    * A callback function that is called when the parser is identified and loaded.

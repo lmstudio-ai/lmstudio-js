@@ -1,7 +1,14 @@
-import { makePromise, safeCallCallback, SimpleLogger } from "@lmstudio/lms-common";
+import {
+  getCurrentStack,
+  makePromise,
+  safeCallCallback,
+  SimpleLogger,
+  type Validator,
+} from "@lmstudio/lms-common";
 import { type InferClientChannelType } from "@lmstudio/lms-communication";
 import { type RepositoryBackendInterface } from "@lmstudio/lms-external-backend-interfaces";
 import { type ArtifactDownloadPlan, type DownloadProgressUpdate } from "@lmstudio/lms-shared-types";
+import { z } from "zod";
 
 interface ArtifactDownloadPlannerCurrentDownload {
   downloadFinished: () => void;
@@ -10,17 +17,29 @@ interface ArtifactDownloadPlannerCurrentDownload {
   downloadFailed: (error: any) => void;
 }
 
-interface ArtifactDownloadPlannerDownloadOpts {
+/**
+ * Options for the {@link ArtifactDownloadPlanner#download} method.
+ *
+ * @experimental This type is experimental and may change at any time.
+ * @public
+ */
+export interface ArtifactDownloadPlannerDownloadOpts {
   onStartFinalizing?: () => void;
   onProgress?: (update: DownloadProgressUpdate) => void;
   signal?: AbortSignal;
 }
+const artifactDownloadPlannerDownloadOptsSchema = z.object({
+  onStartFinalizing: z.function().optional(),
+  onProgress: z.function().optional(),
+  signal: z.instanceof(AbortSignal).optional(),
+});
 
 /**
  * Represents a planner to download an artifact. The plan is not guaranteed to be ready until you
  * await on the method "untilReady".
  *
  * @experimental The entirety of this class is experimental and may change at any time.
+ * @public
  */
 export class ArtifactDownloadPlanner {
   private readyDeferredPromise = makePromise<void>();
@@ -39,14 +58,19 @@ export class ArtifactDownloadPlanner {
    */
   private errorReceivedBeforeDownloadStart: Error | null = null;
 
+  /**
+   * @internal Do not construct this class yourself.
+   */
   public constructor(
     public readonly owner: string,
     public readonly name: string,
     private readonly onPlanUpdated: ((plan: ArtifactDownloadPlan) => void) | undefined,
+    /** @internal */
     private readonly channel: InferClientChannelType<
       RepositoryBackendInterface,
       "createArtifactDownloadPlan"
     >,
+    private readonly validator: Validator,
     private readonly onDisposed: () => void,
   ) {
     this.logger = new SimpleLogger(`ArtifactDownloadPlanner(${owner}/${name})`);
@@ -128,11 +152,18 @@ export class ArtifactDownloadPlanner {
   /**
    * Download this artifact. `download` can only be called once.
    */
-  public async download({
-    onProgress,
-    onStartFinalizing,
-    signal = new AbortController().signal,
-  }: ArtifactDownloadPlannerDownloadOpts) {
+  public async download(opts: ArtifactDownloadPlannerDownloadOpts) {
+    const stack = getCurrentStack(1);
+    opts = this.validator.validateMethodParamOrThrow(
+      "ArtifactDownloadPlanner",
+      "download",
+      "opts",
+      artifactDownloadPlannerDownloadOptsSchema,
+      opts,
+      stack,
+    );
+
+    const { onProgress, onStartFinalizing, signal = new AbortController().signal } = opts;
     if (this.currentDownload !== null) {
       throw new Error("You can only call `download` once for each planner.");
     }

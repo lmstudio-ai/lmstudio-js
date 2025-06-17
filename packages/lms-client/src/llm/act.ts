@@ -192,6 +192,11 @@ class FIFOQueue implements QueueInterface {
   }
 }
 
+/**
+ * The base options for the `.act` method.
+ *
+ * @public
+ */
 export interface LLMActBaseOpts<TPredictionResult> {
   /**
    * A callback that is called when the model has output the first token of a prediction. This

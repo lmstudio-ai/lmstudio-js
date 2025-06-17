@@ -7,6 +7,8 @@ import {
 /**
  * Base interface for all prediction result types, including those that are produced by an LLM and
  * those that are produced by a generator plugin.
+ *
+ * @public
  */
 export interface BasePredictionResult {
   /**

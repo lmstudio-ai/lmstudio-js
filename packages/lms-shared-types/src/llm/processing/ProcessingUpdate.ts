@@ -305,7 +305,9 @@ export const processingUpdateContentBlockSetStyleSchema = z.object({
 });
 
 /**
- * @experimental WIP
+ * Represents the state of a tool call.
+ *
+ * @public
  */
 export type ToolStatusStepStateStatus =
   | {

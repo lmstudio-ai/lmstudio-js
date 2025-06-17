@@ -1,10 +1,6 @@
 import { Cleaner, raceWithAbortSignal, type SimpleLogger } from "@lmstudio/lms-common";
 import { type PluginsPort } from "@lmstudio/lms-external-backend-interfaces";
-import {
-  type GlobalKVFieldValueTypeLibraryMap,
-  type KVConfigSchematics,
-  kvConfigToLLMPredictionConfig,
-} from "@lmstudio/lms-kv-config";
+import { kvConfigToLLMPredictionConfig } from "@lmstudio/lms-kv-config";
 import {
   type ChatMessageRoleData,
   type ContentBlockStyle,
@@ -19,16 +15,12 @@ import {
   type ToolStatusStepStateStatus,
 } from "@lmstudio/lms-shared-types";
 import { Chat } from "../../Chat.js";
-import {
-  type ConfigSchematics,
-  type ParsedConfig,
-  type VirtualConfigSchematics,
-} from "../../customConfig.js";
 import { type RetrievalResult, type RetrievalResultEntry } from "../../files/RetrievalResult.js";
 import { LLMDynamicHandle } from "../../llm/LLMDynamicHandle.js";
 import { type OngoingPrediction } from "../../llm/OngoingPrediction.js";
 import { type PredictionResult } from "../../llm/PredictionResult.js";
 import { type LMStudioClient } from "../../LMStudioClient.js";
+import { BaseController } from "./BaseController.js";
 
 function stringifyAny(message: any) {
   switch (typeof message) {
@@ -168,6 +160,7 @@ export interface CreateCitationBlockOpts {
 /**
  * Options to use with {@link ProcessingController#requestConfirmToolCall}.
  *
+ * @public
  * @experimental WIP
  */
 export interface RequestConfirmToolCallOpts {
@@ -180,6 +173,7 @@ export interface RequestConfirmToolCallOpts {
 /**
  * Return type of {@link ProcessingController#requestConfirmToolCall}.
  *
+ * @public
  * @experimental WIP
  */
 export type RequestConfirmToolCallResult =
@@ -195,34 +189,28 @@ export type RequestConfirmToolCallResult =
 /**
  * @public
  */
-export class ProcessingController {
+export class ProcessingController extends BaseController {
   /** @internal */
   private readonly processingControllerHandle: ProcessingControllerHandle;
-  public readonly abortSignal: AbortSignal;
 
   /** @internal */
   public constructor(
-    public readonly client: LMStudioClient,
+    client: LMStudioClient,
+    pluginConfig: KVConfig,
+    globalPluginConfig: KVConfig,
+    workingDirectoryPath: string | null,
     /** @internal */
     private readonly connector: ProcessingConnector,
     /** @internal */
     private readonly config: KVConfig,
-    /** @internal */
-    private readonly pluginConfig: KVConfig,
-    /** @internal */
-    private readonly globalPluginConfig: KVConfig,
     /**
      * When getting history, should the latest user input be included in the history?
      *
      * @internal
      */
     private readonly shouldIncludeCurrentInHistory: boolean,
-    /**
-     * The working directory this prediction process is attached to.
-     */
-    private readonly workingDirectoryPath: string | null,
   ) {
-    this.abortSignal = connector.abortSignal;
+    super(client, connector.abortSignal, pluginConfig, globalPluginConfig, workingDirectoryPath);
     this.processingControllerHandle = {
       abortSignal: connector.abortSignal,
       sendUpdate: update => {
@@ -243,35 +231,6 @@ export class ProcessingController {
 
   private sendUpdate(update: ProcessingUpdate) {
     this.processingControllerHandle.sendUpdate(update);
-  }
-
-  public getWorkingDirectory() {
-    if (this.workingDirectoryPath === null) {
-      throw new Error("This prediction process is not attached to a working directory.");
-    }
-    return this.workingDirectoryPath;
-  }
-
-  public getPluginConfig<TVirtualConfigSchematics extends VirtualConfigSchematics>(
-    configSchematics: ConfigSchematics<TVirtualConfigSchematics>,
-  ): ParsedConfig<TVirtualConfigSchematics> {
-    return (
-      configSchematics as KVConfigSchematics<
-        GlobalKVFieldValueTypeLibraryMap,
-        TVirtualConfigSchematics
-      >
-    ).parse(this.pluginConfig);
-  }
-
-  public getGlobalPluginConfig<TVirtualConfigSchematics extends VirtualConfigSchematics>(
-    configSchematics: ConfigSchematics<TVirtualConfigSchematics>,
-  ): ParsedConfig<TVirtualConfigSchematics> {
-    return (
-      configSchematics as KVConfigSchematics<
-        GlobalKVFieldValueTypeLibraryMap,
-        TVirtualConfigSchematics
-      >
-    ).parse(this.globalPluginConfig);
   }
 
   /**
@@ -631,6 +590,11 @@ export interface ContentBlockAppendTextOpts {
   fromDraftModel?: boolean;
 }
 
+/**
+ * Options to use with {@link PredictionProcessContentBlockController#appendToolRequest}.
+ *
+ * @public
+ */
 export interface ContentBlockAppendToolRequestOpts {
   callId: number;
   toolCallRequestId?: string;
@@ -639,6 +603,11 @@ export interface ContentBlockAppendToolRequestOpts {
   pluginIdentifier?: string;
 }
 
+/**
+ * Options to use with {@link PredictionProcessContentBlockController#replaceToolRequest}.
+ *
+ * @public
+ */
 export interface ContentBlockReplaceToolRequestOpts {
   callId: number;
   toolCallRequestId?: string;
@@ -647,6 +616,11 @@ export interface ContentBlockReplaceToolRequestOpts {
   pluginIdentifier?: string;
 }
 
+/**
+ * Options to use with {@link PredictionProcessContentBlockController#appendToolResult}.
+ *
+ * @public
+ */
 export interface ContentBlockAppendToolResultOpts {
   callId: number;
   toolCallRequestId?: string;
@@ -806,6 +780,11 @@ export class PredictionProcessContentBlockController {
   }
 }
 
+/**
+ * Controller for a tool status block in the prediction process.
+ *
+ * @public
+ */
 export class PredictionProcessToolStatusController {
   private status: ToolStatusStepStateStatus;
   /** @internal */

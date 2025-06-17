@@ -1,9 +1,5 @@
 import { getCurrentStack, type Validator } from "@lmstudio/lms-common";
 import {
-  type GlobalKVFieldValueTypeLibraryMap,
-  type KVConfigSchematics,
-} from "@lmstudio/lms-kv-config";
-import {
   type KVConfig,
   type LLMPredictionFragmentInputOpts,
   llmPredictionFragmentInputOptsSchema,
@@ -13,11 +9,7 @@ import {
 } from "@lmstudio/lms-shared-types";
 import { z } from "zod";
 import { type LMStudioClient } from "../../LMStudioClient.js";
-import {
-  type ConfigSchematics,
-  type ParsedConfig,
-  type VirtualConfigSchematics,
-} from "../../customConfig.js";
+import { BaseController } from "./BaseController.js";
 
 export interface GeneratorConnector {
   fragmentGenerated: (content: string, opts: LLMPredictionFragmentInputOpts) => void;
@@ -28,48 +20,27 @@ export interface GeneratorConnector {
   toolCallGenerationFailed: (error: Error) => void;
 }
 
-export class GeneratorController {
+/**
+ * Controller for a generator.
+ *
+ * @public
+ * @deprecated Plugin support is still in development. Stay tuned for updates.
+ */
+export class GeneratorController extends BaseController {
   /**
    * @internal Do not construct this class yourself.
    */
   public constructor(
-    public readonly client: LMStudioClient,
-    private readonly pluginConfig: KVConfig,
-    private readonly globalPluginConfig: KVConfig,
+    client: LMStudioClient,
+    pluginConfig: KVConfig,
+    globalPluginConfig: KVConfig,
+    workingDirectoryPath: string | null,
+    abortSignal: AbortSignal,
     private readonly toolDefinitions: Array<LLMTool>,
-    private readonly workingDirectoryPath: string | null,
     private readonly connector: GeneratorConnector,
     private readonly validator: Validator,
-    public readonly abortSignal: AbortSignal,
-  ) {}
-
-  public getWorkingDirectory(): string {
-    if (this.workingDirectoryPath === null) {
-      throw new Error("This prediction process is not attached to a working directory.");
-    }
-    return this.workingDirectoryPath;
-  }
-
-  public getPluginConfig<TVirtualConfigSchematics extends VirtualConfigSchematics>(
-    configSchematics: ConfigSchematics<TVirtualConfigSchematics>,
-  ): ParsedConfig<TVirtualConfigSchematics> {
-    return (
-      configSchematics as KVConfigSchematics<
-        GlobalKVFieldValueTypeLibraryMap,
-        TVirtualConfigSchematics
-      >
-    ).parse(this.pluginConfig);
-  }
-
-  public getGlobalPluginConfig<TVirtualConfigSchematics extends VirtualConfigSchematics>(
-    configSchematics: ConfigSchematics<TVirtualConfigSchematics>,
-  ): ParsedConfig<TVirtualConfigSchematics> {
-    return (
-      configSchematics as KVConfigSchematics<
-        GlobalKVFieldValueTypeLibraryMap,
-        TVirtualConfigSchematics
-      >
-    ).parse(this.globalPluginConfig);
+  ) {
+    super(client, abortSignal, pluginConfig, globalPluginConfig, workingDirectoryPath);
   }
 
   /**

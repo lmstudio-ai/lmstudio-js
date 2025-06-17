@@ -9,9 +9,9 @@ import { type ToolsProvider } from "./plugins/processing/ToolsProvider.js";
  */
 export interface PluginContext {
   /**
-   * Sets the local config schematics associated with this plugin context. Local configs are per
-   * chat, useful for configurations that would affect context. Returns the same PluginContext for
-   * chaining.
+   * Sets the per-chat config schematics associated with this plugin context. Per-chat configs are
+   * stored per chat, useful for configurations that would affect context. Returns the same
+   * PluginContext for chaining.
    */
   withConfigSchematics: (
     configSchematics: ConfigSchematics<VirtualConfigSchematics>,

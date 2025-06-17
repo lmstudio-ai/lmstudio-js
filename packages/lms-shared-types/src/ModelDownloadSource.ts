@@ -1,6 +1,11 @@
 import { z, type ZodSchema } from "zod";
 import { fileNameSchema } from "./path.js";
 
+/**
+ * Represents a download source for a Hugging Face model.
+ *
+ * @public
+ */
 export type HuggingFaceModelDownloadSource = {
   type: "huggingface";
   user: string;
@@ -12,6 +17,11 @@ export const huggingFaceModelDownloadSourceSchema = z.object({
   repo: fileNameSchema,
 });
 
+/**
+ * Represents a download source for a concrete model.
+ *
+ * @public
+ */
 export type ModelDownloadSource = HuggingFaceModelDownloadSource;
 export const modelDownloadSourceSchema: ZodSchema<ModelDownloadSource> = z.discriminatedUnion(
   "type",
