@@ -90,6 +90,10 @@ export function createFilesBackendInterface() {
       }),
       toClientPacket: z.discriminatedUnion("type", [
         z.object({
+          type: z.literal("parserLoaded"),
+          parser: documentParsingLibraryIdentifierSchema,
+        }),
+        z.object({
           type: z.literal("progress"),
           progress: z.number(),
         }),

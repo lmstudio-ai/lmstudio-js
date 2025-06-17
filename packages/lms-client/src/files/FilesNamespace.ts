@@ -371,7 +371,7 @@ export class FilesNamespace {
       stack,
     );
 
-    const { onProgress, signal, ...config } = opts;
+    const { onParserLoaded, onProgress, signal, ...config } = opts;
     const { promise, resolve, reject } = makePromise<ParseDocumentResult>();
 
     opts.signal?.throwIfAborted();
@@ -385,6 +385,10 @@ export class FilesNamespace {
         switch (messageType) {
           case "progress": {
             safeCallCallback(this.logger, "onProgress", onProgress, [message.progress]);
+            break;
+          }
+          case "parserLoaded": {
+            safeCallCallback(this.logger, "onParserLoaded", onParserLoaded, [message.parser]);
             break;
           }
           case "result": {
