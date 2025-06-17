@@ -1,10 +1,6 @@
 import { Cleaner, raceWithAbortSignal, type SimpleLogger } from "@lmstudio/lms-common";
 import { type PluginsPort } from "@lmstudio/lms-external-backend-interfaces";
-import {
-  type GlobalKVFieldValueTypeLibraryMap,
-  type KVConfigSchematics,
-  kvConfigToLLMPredictionConfig,
-} from "@lmstudio/lms-kv-config";
+import { kvConfigToLLMPredictionConfig } from "@lmstudio/lms-kv-config";
 import {
   type ChatMessageRoleData,
   type ContentBlockStyle,
@@ -19,16 +15,12 @@ import {
   type ToolStatusStepStateStatus,
 } from "@lmstudio/lms-shared-types";
 import { Chat } from "../../Chat.js";
-import {
-  type ConfigSchematics,
-  type ParsedConfig,
-  type VirtualConfigSchematics,
-} from "../../customConfig.js";
 import { type RetrievalResult, type RetrievalResultEntry } from "../../files/RetrievalResult.js";
 import { LLMDynamicHandle } from "../../llm/LLMDynamicHandle.js";
 import { type OngoingPrediction } from "../../llm/OngoingPrediction.js";
 import { type PredictionResult } from "../../llm/PredictionResult.js";
 import { type LMStudioClient } from "../../LMStudioClient.js";
+import { BaseController } from "./BaseController.js";
 
 function stringifyAny(message: any) {
   switch (typeof message) {
@@ -195,34 +187,28 @@ export type RequestConfirmToolCallResult =
 /**
  * @public
  */
-export class ProcessingController {
+export class ProcessingController extends BaseController {
   /** @internal */
   private readonly processingControllerHandle: ProcessingControllerHandle;
-  public readonly abortSignal: AbortSignal;
 
   /** @internal */
   public constructor(
-    public readonly client: LMStudioClient,
+    client: LMStudioClient,
+    pluginConfig: KVConfig,
+    globalPluginConfig: KVConfig,
+    workingDirectoryPath: string | null,
     /** @internal */
     private readonly connector: ProcessingConnector,
     /** @internal */
     private readonly config: KVConfig,
-    /** @internal */
-    private readonly pluginConfig: KVConfig,
-    /** @internal */
-    private readonly globalPluginConfig: KVConfig,
     /**
      * When getting history, should the latest user input be included in the history?
      *
      * @internal
      */
     private readonly shouldIncludeCurrentInHistory: boolean,
-    /**
-     * The working directory this prediction process is attached to.
-     */
-    private readonly workingDirectoryPath: string | null,
   ) {
-    this.abortSignal = connector.abortSignal;
+    super(client, connector.abortSignal, pluginConfig, globalPluginConfig, workingDirectoryPath);
     this.processingControllerHandle = {
       abortSignal: connector.abortSignal,
       sendUpdate: update => {
@@ -243,89 +229,6 @@ export class ProcessingController {
 
   private sendUpdate(update: ProcessingUpdate) {
     this.processingControllerHandle.sendUpdate(update);
-  }
-
-  /**
-   * Gets the working directory for the current prediction. If your plugin produces files, you
-   * should aim to put them in this directory.
-   */
-  public getWorkingDirectory() {
-    if (this.workingDirectoryPath === null) {
-      throw new Error("This prediction process is not attached to a working directory.");
-    }
-    return this.workingDirectoryPath;
-  }
-
-  /**
-   * Get the per-chat config for the plugin. Takes in the configSchematics. You can get the
-   * values of fields like so:
-   *
-   * ```ts
-   * const config = ctl.getPluginConfig(configSchematics);
-   * const value = config.get("fieldKey");
-   * ```
-   *
-   * @remarks
-   *
-   * If you need to name the type of the returned value, use:
-   *
-   * `InferParsedConfig<typeof configSchematics>`.
-   *
-   * Example:
-   *
-   * ```ts
-   * function myFunction(config: InferParsedConfig<typeof configSchematics>) {
-   *   // ...
-   * }
-   *
-   * myFunction(ctl.getPluginConfig(configSchematics));
-   * ```
-   */
-  public getPluginConfig<TVirtualConfigSchematics extends VirtualConfigSchematics>(
-    configSchematics: ConfigSchematics<TVirtualConfigSchematics>,
-  ): ParsedConfig<TVirtualConfigSchematics> {
-    return (
-      configSchematics as KVConfigSchematics<
-        GlobalKVFieldValueTypeLibraryMap,
-        TVirtualConfigSchematics
-      >
-    ).parse(this.pluginConfig);
-  }
-
-  /**
-   * Get the application-wide config for the plugin. Takes in the globalConfigSchematics. You can
-   * get the values of fields like so:
-   *
-   * ```ts
-   * const config = ctl.getGlobalPluginConfig(globalConfigSchematics);
-   * const value = config.get("fieldKey");
-   * ```
-   *
-   * @remarks
-   *
-   * If you need to name the type of the returned value, use:
-   *
-   * `InferParsedConfig<typeof globalConfigSchematics>`.
-   *
-   * Example:
-   *
-   * ```ts
-   * function myFunction(config: InferParsedConfig<typeof globalConfigSchematics>) {
-   *   // ...
-   * }
-   *
-   * myFunction(ctl.getGlobalPluginConfig(globalConfigSchematics));
-   * ```
-   */
-  public getGlobalPluginConfig<TVirtualConfigSchematics extends VirtualConfigSchematics>(
-    globalConfigSchematics: ConfigSchematics<TVirtualConfigSchematics>,
-  ): ParsedConfig<TVirtualConfigSchematics> {
-    return (
-      globalConfigSchematics as KVConfigSchematics<
-        GlobalKVFieldValueTypeLibraryMap,
-        TVirtualConfigSchematics
-      >
-    ).parse(this.globalPluginConfig);
   }
 
   /**

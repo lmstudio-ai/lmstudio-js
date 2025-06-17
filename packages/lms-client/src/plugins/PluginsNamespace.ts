@@ -260,12 +260,12 @@ export class PluginsNamespace {
             const input = ChatMessage.createRaw(message.input, /* mutable */ false);
             const controller: PreprocessorController = new ProcessingController(
               this.client,
-              connector,
-              message.config,
               message.pluginConfig,
               message.globalPluginConfig,
-              /* shouldIncludeInputInHistory */ false,
               message.workingDirectoryPath,
+              connector,
+              message.config,
+              /* shouldIncludeInputInHistory */ false,
             );
             tasks.set(message.taskId, {
               cancel: () => {
@@ -392,12 +392,12 @@ export class PluginsNamespace {
             );
             const controller: PredictionLoopHandlerController = new ProcessingController(
               this.client,
-              connector,
-              message.config,
               message.pluginConfig,
               message.globalPluginConfig,
-              /* shouldIncludeInputInHistory */ true,
               message.workingDirectoryPath,
+              connector,
+              message.config,
+              /* shouldIncludeInputInHistory */ true,
             );
             tasks.set(message.taskId, {
               cancel: () => {
@@ -564,10 +564,10 @@ export class PluginsNamespace {
           openSessions.set(sessionId, openSession);
           const controller = new ToolsProviderController(
             this.client,
+            sessionAbortController.signal,
             message.pluginConfig,
             message.globalPluginConfig,
             message.workingDirectoryPath,
-            sessionAbortController.signal,
           );
           toolsProvider(controller).then(
             tools => {
@@ -782,11 +782,11 @@ export class PluginsNamespace {
             this.client,
             message.pluginConfig,
             message.globalPluginConfig,
-            message.toolDefinitions,
             message.workingDirectoryPath,
+            abortController.signal,
+            message.toolDefinitions,
             connector,
             this.validator,
-            abortController.signal,
           );
           tasks.set(message.taskId, {
             cancel: () => {

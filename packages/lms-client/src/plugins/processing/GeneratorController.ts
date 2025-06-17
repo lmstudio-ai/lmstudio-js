@@ -1,9 +1,5 @@
 import { getCurrentStack, type Validator } from "@lmstudio/lms-common";
 import {
-  type GlobalKVFieldValueTypeLibraryMap,
-  type KVConfigSchematics,
-} from "@lmstudio/lms-kv-config";
-import {
   type KVConfig,
   type LLMPredictionFragmentInputOpts,
   llmPredictionFragmentInputOptsSchema,
@@ -13,11 +9,7 @@ import {
 } from "@lmstudio/lms-shared-types";
 import { z } from "zod";
 import { type LMStudioClient } from "../../LMStudioClient.js";
-import {
-  type ConfigSchematics,
-  type ParsedConfig,
-  type VirtualConfigSchematics,
-} from "../../customConfig.js";
+import { BaseController } from "./BaseController.js";
 
 export interface GeneratorConnector {
   fragmentGenerated: (content: string, opts: LLMPredictionFragmentInputOpts) => void;
@@ -28,102 +20,21 @@ export interface GeneratorConnector {
   toolCallGenerationFailed: (error: Error) => void;
 }
 
-export class GeneratorController {
+export class GeneratorController extends BaseController {
   /**
    * @internal Do not construct this class yourself.
    */
   public constructor(
-    public readonly client: LMStudioClient,
-    private readonly pluginConfig: KVConfig,
-    private readonly globalPluginConfig: KVConfig,
+    client: LMStudioClient,
+    pluginConfig: KVConfig,
+    globalPluginConfig: KVConfig,
+    workingDirectoryPath: string | null,
+    abortSignal: AbortSignal,
     private readonly toolDefinitions: Array<LLMTool>,
-    private readonly workingDirectoryPath: string | null,
     private readonly connector: GeneratorConnector,
     private readonly validator: Validator,
-    public readonly abortSignal: AbortSignal,
-  ) {}
-
-  /**
-   * Gets the working directory for the current prediction. If your plugin produces files, you
-   * should aim to put them in this directory.
-   */
-  public getWorkingDirectory(): string {
-    if (this.workingDirectoryPath === null) {
-      throw new Error("This prediction process is not attached to a working directory.");
-    }
-    return this.workingDirectoryPath;
-  }
-
-  /**
-   * Get the per-chat config for the plugin. Takes in the configSchematics. You can get the
-   * values of fields like so:
-   *
-   * ```ts
-   * const config = ctl.getPluginConfig(configSchematics);
-   * const value = config.get("fieldKey");
-   * ```
-   *
-   * @remarks
-   *
-   * If you need to name the type of the returned value, use:
-   *
-   * `InferParsedConfig<typeof configSchematics>`.
-   *
-   * Example:
-   *
-   * ```ts
-   * function myFunction(config: InferParsedConfig<typeof configSchematics>) {
-   *   // ...
-   * }
-   *
-   * myFunction(ctl.getPluginConfig(configSchematics));
-   * ```
-   */
-  public getPluginConfig<TVirtualConfigSchematics extends VirtualConfigSchematics>(
-    configSchematics: ConfigSchematics<TVirtualConfigSchematics>,
-  ): ParsedConfig<TVirtualConfigSchematics> {
-    return (
-      configSchematics as KVConfigSchematics<
-        GlobalKVFieldValueTypeLibraryMap,
-        TVirtualConfigSchematics
-      >
-    ).parse(this.pluginConfig);
-  }
-
-  /**
-   * Get the application-wide config for the plugin. Takes in the globalConfigSchematics. You can
-   * get the values of fields like so:
-   *
-   * ```ts
-   * const config = ctl.getGlobalPluginConfig(globalConfigSchematics);
-   * const value = config.get("fieldKey");
-   * ```
-   *
-   * @remarks
-   *
-   * If you need to name the type of the returned value, use:
-   *
-   * `InferParsedConfig<typeof globalConfigSchematics>`.
-   *
-   * Example:
-   *
-   * ```ts
-   * function myFunction(config: InferParsedConfig<typeof globalConfigSchematics>) {
-   *   // ...
-   * }
-   *
-   * myFunction(ctl.getGlobalPluginConfig(globalConfigSchematics));
-   * ```
-   */
-  public getGlobalPluginConfig<TVirtualConfigSchematics extends VirtualConfigSchematics>(
-    globalConfigSchematics: ConfigSchematics<TVirtualConfigSchematics>,
-  ): ParsedConfig<TVirtualConfigSchematics> {
-    return (
-      globalConfigSchematics as KVConfigSchematics<
-        GlobalKVFieldValueTypeLibraryMap,
-        TVirtualConfigSchematics
-      >
-    ).parse(this.globalPluginConfig);
+  ) {
+    super(client, abortSignal, pluginConfig, globalPluginConfig, workingDirectoryPath);
   }
 
   /**
