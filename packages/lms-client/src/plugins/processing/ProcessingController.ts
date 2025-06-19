@@ -821,4 +821,11 @@ export class PredictionProcessToolStatusController {
     this.status = status;
     this.updateState();
   }
+  public appendArgumentFragment(content: string) {
+    this.handle.sendUpdate({
+      type: "toolStatus.argumentFragment",
+      id: this.id,
+      content,
+    });
+  }
 }

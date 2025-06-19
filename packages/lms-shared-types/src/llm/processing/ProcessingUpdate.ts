@@ -312,10 +312,23 @@ export const processingUpdateContentBlockSetStyleSchema = z.object({
 export type ToolStatusStepStateStatus =
   | {
       type: "generatingToolCall";
+      /**
+       * The name of the tool to be called (if known).
+       */
+      name?: string;
+      /**
+       * The identifier of the plugin that provided the tool, if known + applicable.
+       */
+      pluginIdentifier?: string;
+      /**
+       * The string representation of the arguments (as being streamed).
+       */
+      argumentsString?: string;
     }
   | {
       type: "toolCallGenerationFailed";
       error: string;
+      rawContent?: string;
     }
   | {
       type: "toolCallQueued";
@@ -341,10 +354,14 @@ export type ToolStatusStepStateStatus =
 export const toolStatusStepStateStatusSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("generatingToolCall"),
+    name: z.string().optional(),
+    pluginIdentifier: z.string().optional(),
+    argumentsString: z.string().optional(),
   }),
   z.object({
     type: z.literal("toolCallGenerationFailed"),
     error: z.string(),
+    rawContent: z.string().optional(),
   }),
   z.object({
     type: z.literal("toolCallQueued"),
@@ -404,6 +421,17 @@ export const processingUpdateToolStatusUpdateSchema = z.object({
   state: toolStatusStepStateSchema,
 });
 
+export type ProcessingUpdateToolStatusArgumentFragment = {
+  type: "toolStatus.argumentFragment";
+  id: string;
+  content: string;
+};
+export const processingUpdateToolStatusArgumentFragmentSchema = z.object({
+  type: z.literal("toolStatus.argumentFragment"),
+  id: z.string(),
+  content: z.string(),
+});
+
 export type ProcessingUpdateSetSenderName = {
   type: "setSenderName";
   name: string;
@@ -433,6 +461,7 @@ export type ProcessingUpdate =
   | ProcessingUpdateContentBlockSetStyle
   | ProcessingUpdateToolStatusCreate
   | ProcessingUpdateToolStatusUpdate
+  | ProcessingUpdateToolStatusArgumentFragment
   | ProcessingUpdateSetSenderName;
 export const processingUpdateSchema = z.discriminatedUnion("type", [
   processingUpdateStatusCreateSchema,
@@ -452,6 +481,7 @@ export const processingUpdateSchema = z.discriminatedUnion("type", [
   processingUpdateContentBlockSetStyleSchema,
   processingUpdateToolStatusCreateSchema,
   processingUpdateToolStatusUpdateSchema,
+  processingUpdateToolStatusArgumentFragmentSchema,
   processingUpdateSetSenderNameSchema,
 ]) as ZodSchema<ProcessingUpdate>;
 

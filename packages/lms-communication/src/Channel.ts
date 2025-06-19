@@ -158,3 +158,13 @@ export type InferClientChannelType<
   ExtractBackendInterfaceChannelEndpoints<TBackendInterface>[TChannelName]["toClientPacket"],
   ExtractBackendInterfaceChannelEndpoints<TBackendInterface>[TChannelName]["toServerPacket"]
 >;
+
+export type InferChannelServerToClientPacketType<
+  TBackendInterface extends AnyBackendInterface,
+  TChannelName extends keyof ExtractBackendInterfaceChannelEndpoints<TBackendInterface>,
+> = ExtractBackendInterfaceChannelEndpoints<TBackendInterface>[TChannelName]["toClientPacket"];
+
+export type InferChannelClientToServerPacketType<
+  TBackendInterface extends AnyBackendInterface,
+  TChannelName extends keyof ExtractBackendInterfaceChannelEndpoints<TBackendInterface>,
+> = ExtractBackendInterfaceChannelEndpoints<TBackendInterface>[TChannelName]["toServerPacket"];

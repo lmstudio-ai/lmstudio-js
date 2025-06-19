@@ -17,6 +17,7 @@ import {
 } from "@lmstudio/lms-kv-config";
 import {
   type ChatHistoryData,
+  fromSerializedError,
   type KVConfig,
   type KVConfigStack,
   type LLMApplyPromptTemplateOpts,
@@ -228,6 +229,8 @@ function splitActOpts<TStructuredOutputType>(
     onPredictionCompleted,
     onPromptProcessingProgress,
     onToolCallRequestStart,
+    onToolCallRequestNameReceived,
+    onToolCallRequestArgumentFragmentGenerated,
     onToolCallRequestEnd,
     onToolCallRequestFailure,
     onToolCallRequestDequeued,
@@ -249,6 +252,8 @@ function splitActOpts<TStructuredOutputType>(
       onPredictionCompleted,
       onPromptProcessingProgress,
       onToolCallRequestStart,
+      onToolCallRequestNameReceived,
+      onToolCallRequestArgumentFragmentGenerated,
       onToolCallRequestEnd,
       onToolCallRequestFailure,
       onToolCallRequestDequeued,
@@ -777,6 +782,8 @@ export class LLMDynamicHandle extends DynamicHandle<
         handleFragment,
         handlePromptProcessingProgress,
         handleToolCallGenerationStart,
+        handleToolCallGenerationNameReceived,
+        handleToolCallGenerationArgumentFragmentGenerated,
         handleToolCallGenerationEnd,
         handleToolCallGenerationFailed,
         handlePredictionEnd,
@@ -807,12 +814,23 @@ export class LLMDynamicHandle extends DynamicHandle<
                 handleToolCallGenerationStart();
                 break;
               }
+              case "toolCallGenerationNameReceived": {
+                handleToolCallGenerationNameReceived(message.name);
+                break;
+              }
+              case "toolCallGenerationArgumentFragmentGenerated": {
+                handleToolCallGenerationArgumentFragmentGenerated(message.content);
+                break;
+              }
               case "toolCallGenerationEnd": {
-                handleToolCallGenerationEnd(message.toolCallRequest);
+                handleToolCallGenerationEnd(message.toolCallRequest, message.rawContent);
                 break;
               }
               case "toolCallGenerationFailed": {
-                handleToolCallGenerationFailed();
+                handleToolCallGenerationFailed(
+                  fromSerializedError(message.error),
+                  message.rawContent,
+                );
                 break;
               }
               case "success": {

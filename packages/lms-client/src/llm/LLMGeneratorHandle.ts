@@ -259,6 +259,8 @@ export class LLMGeneratorHandle {
         handleFragment,
         handlePromptProcessingProgress,
         handleToolCallGenerationStart,
+        handleToolCallGenerationNameReceived,
+        handleToolCallGenerationArgumentFragmentGenerated,
         handleToolCallGenerationEnd,
         handleToolCallGenerationFailed,
         handlePredictionEnd,
@@ -289,12 +291,26 @@ export class LLMGeneratorHandle {
                 handleToolCallGenerationStart();
                 break;
               }
+              case "toolCallGenerationNameReceived": {
+                handleToolCallGenerationNameReceived(message.name);
+                break;
+              }
+              case "toolCallGenerationArgumentFragmentGenerated": {
+                handleToolCallGenerationArgumentFragmentGenerated(message.content);
+                break;
+              }
               case "toolCallGenerationEnd": {
-                handleToolCallGenerationEnd(message.toolCallRequest);
+                handleToolCallGenerationEnd(
+                  message.toolCallRequest,
+                  undefined, // No raw content for generators for now
+                );
                 break;
               }
               case "toolCallGenerationFailed": {
-                handleToolCallGenerationFailed();
+                handleToolCallGenerationFailed(
+                  new Error("Tool call generation failed"), // Placeholder error for now
+                  undefined, // No raw content for generators for now
+                );
                 break;
               }
               case "success": {

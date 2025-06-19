@@ -302,6 +302,8 @@ export {
   processingUpdateStatusRemoveSchema,
   ProcessingUpdateStatusUpdate,
   processingUpdateStatusUpdateSchema,
+  ProcessingUpdateToolStatusArgumentFragment,
+  processingUpdateToolStatusArgumentFragmentSchema,
   ProcessingUpdateToolStatusCreate,
   processingUpdateToolStatusCreateSchema,
   ProcessingUpdateToolStatusUpdate,
