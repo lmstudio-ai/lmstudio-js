@@ -814,10 +814,7 @@ export async function internalAct<TPredictionResult, TEndPacket>(
           tool.checkParameters(parameters); // Defaults to empty object
         } catch (error: any) {
           // Failed to parse the parameters
-          const toolCallRequestError = new ToolCallRequestError(
-            `Failed to parse arguments for tool ${request.name}: ${error.message}`,
-            rawContent,
-          );
+          const toolCallRequestError = new ToolCallRequestError(error.message, rawContent);
           toolCallPromises.push(
             internalHandleInvalidToolCallRequest(
               toolCallRequestError,
