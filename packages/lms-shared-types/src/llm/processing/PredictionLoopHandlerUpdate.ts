@@ -14,6 +14,7 @@ import {
   processingUpdateStatusCreateSchema,
   processingUpdateStatusRemoveSchema,
   processingUpdateStatusUpdateSchema,
+  processingUpdateToolStatusArgumentFragmentSchema,
   processingUpdateToolStatusCreateSchema,
   processingUpdateToolStatusUpdateSchema,
   type ProcessingUpdateCitationBlockCreate,
@@ -30,6 +31,7 @@ import {
   type ProcessingUpdateStatusCreate,
   type ProcessingUpdateStatusRemove,
   type ProcessingUpdateStatusUpdate,
+  type ProcessingUpdateToolStatusArgumentFragment,
   type ProcessingUpdateToolStatusCreate,
   type ProcessingUpdateToolStatusUpdate,
 } from "./ProcessingUpdate.js";
@@ -50,6 +52,7 @@ export type PredictionLoopHandlerUpdate =
   | ProcessingUpdateContentBlockSetStyle
   | ProcessingUpdateToolStatusCreate
   | ProcessingUpdateToolStatusUpdate
+  | ProcessingUpdateToolStatusArgumentFragment
   | ProcessingUpdateSetSenderName;
 export const predictionLoopHandlerUpdateSchema = z.discriminatedUnion("type", [
   processingUpdateStatusCreateSchema,
@@ -67,5 +70,6 @@ export const predictionLoopHandlerUpdateSchema = z.discriminatedUnion("type", [
   processingUpdateContentBlockSetStyleSchema,
   processingUpdateToolStatusCreateSchema,
   processingUpdateToolStatusUpdateSchema,
+  processingUpdateToolStatusArgumentFragmentSchema,
   processingUpdateSetSenderNameSchema,
 ]) as z.Schema<PredictionLoopHandlerUpdate>;

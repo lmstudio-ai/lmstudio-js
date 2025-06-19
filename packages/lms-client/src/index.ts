@@ -22,7 +22,7 @@ export type { ParseDocumentOpts } from "./files/ParseDocumentOpts.js";
 export type { ParseDocumentResult } from "./files/ParseDocumentResult.js";
 export type { RetrievalCallbacks, RetrievalOpts } from "./files/RetrievalOpts.js";
 export type { RetrievalResult, RetrievalResultEntry } from "./files/RetrievalResult.js";
-export type { LLMActBaseOpts } from "./llm/act.js";
+export type { LLMActBaseOpts, ToolCallRequestError } from "./llm/act.js";
 export type { ActResult } from "./llm/ActResult.js";
 export type { GeneratorPredictionResult } from "./llm/GeneratorPredictionResult.js";
 export type { LLM } from "./llm/LLM.js";

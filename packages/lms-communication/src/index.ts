@@ -15,7 +15,13 @@ export {
   WritableSignalEndpoint,
   WritableSignalEndpointsSpecBase,
 } from "./BackendInterface.js";
-export { Channel, InferClientChannelType, InferServerChannelType } from "./Channel.js";
+export {
+  Channel,
+  InferChannelClientToServerPacketType,
+  InferChannelServerToClientPacketType,
+  InferClientChannelType,
+  InferServerChannelType,
+} from "./Channel.js";
 export {
   deserialize,
   SerializationType,
