@@ -4,14 +4,13 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**"]
+      "outputs": ["dist/**", "ts-out/**"]
     },
     "watch": {
       "dependsOn": ["^build"],
       "persistent": true
     },
-    "dev": {
-      "dependsOn": ["^build"],
+    "make": {
       "persistent": true
     },
     "postinstall": {},

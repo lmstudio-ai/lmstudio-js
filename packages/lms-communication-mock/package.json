@@ -6,7 +6,8 @@
   "module": "./dist/esm/index.js",
   "types": "./dist/types/index.d.ts",
   "scripts": {
-    "build": "tsc"
+    "build": "tsc",
+    "clean": "shx rm -rf ./dist"
   },
   "dependencies": {
     "@lmstudio/lms-communication": "^0.6.15",

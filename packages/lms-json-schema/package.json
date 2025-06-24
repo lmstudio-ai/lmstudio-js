@@ -6,6 +6,7 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
+    "clean": "shx rm -rf ./dist",
     "make-schemas": "node ./dist/index.js"
   },
   "dependencies": {

@@ -13,7 +13,7 @@
     "watch-rollup": "rollup -wc",
     "watch-ae": "nodemon --exec \"npm run build-ae\" --watch dist/index.cjs",
     "watch": "concurrently \"npm run watch-rollup\" \"npm run watch-ae\"",
-    "clean": "shx rm -rf ./dist"
+    "clean": "shx rm -rf ./dist ./ts-out"
   },
   "files": [
     "dist/index.cjs",
