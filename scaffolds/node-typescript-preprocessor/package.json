@@ -4,10 +4,6 @@
   "description": "",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "scripts": {
-    "start": "ts-node src/index.ts",
-    "build": "tsc"
-  },
   "author": "Your Name",
   "license": "UNLICENSED",
   "dependencies": {

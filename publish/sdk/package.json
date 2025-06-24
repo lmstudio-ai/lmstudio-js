@@ -6,11 +6,14 @@
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
   "scripts": {
+    "build-tsc": "tsc",
     "build-rollup": "rollup -c",
     "build-ae": "api-extractor run --local",
-    "build": "npm run build-rollup && npm run build-ae",
+    "build": "npm run build-tsc && npm run build-rollup && npm run build-ae",
     "watch-rollup": "rollup -wc",
-    "watch-ae": "nodemon --exec \"npm run build-ae\" --watch dist/index.cjs"
+    "watch-ae": "nodemon --exec \"npm run build-ae\" --watch dist/index.cjs",
+    "watch": "concurrently \"npm run watch-rollup\" \"npm run watch-ae\"",
+    "clean": "shx rm -rf ./dist"
   },
   "files": [
     "dist/index.cjs",
