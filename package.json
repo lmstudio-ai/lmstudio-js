@@ -7,6 +7,7 @@
   "scripts": {
     "start": "npm run gen && turbo run watch",
     "gen": "cd scripts && node ./generateEsmPackageJson.mjs",
+    "build-tsc": "tsc --build tsconfig.build.json",
     "watch-tsc": "tsc --build tsconfig.build.json --watch",
     "watch": "concurrently --prefix=none \"npm run watch-tsc\" \"turbo run watch\"",
     "clean": "turbo run clean",
@@ -14,7 +15,7 @@
     "build-sdk": "turbo run build --filter=@lmstudio/sdk",
     "build-cli": "turbo run clean --filter=@lmstudio/lms-cli && turbo run build --filter=@lmstudio/lms-cli --filter=@lmstudio/cli",
     "build-lmstudio": "turbo run build --filter=lmstudio",
-    "build": "npm run clean && npm run gen && turbo run build && npm run build-scaffolds-json",
+    "build": "npm run clean && npm run gen && npm run build-tsc && turbo run build && npm run build-scaffolds-json",
     "make-cli": "cd packages/lms-cli && npm run clean && npm run build && cd ../../publish/cli && npm run make",
     "make": "npm run clean && npm run gen && tsc --build tsconfig.build.json && npm run build-sdk && npm run make-cli && npm run build-lmstudio && npm run build-scaffolds-json",
     "publish": "npm run build && lerna publish --no-git-tag-version --no-git-reset",
