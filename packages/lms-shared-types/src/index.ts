@@ -52,6 +52,8 @@ export {
   functionToolCallRequestSchema,
   ToolCallRequest,
   toolCallRequestSchema,
+  ToolCallResult,
+  toolCallResultSchema,
 } from "./ChatHistoryData.js";
 export { CitationSource, citationSourceSchema } from "./CitationSource.js";
 export { ColorPalette, colorPalette, colorPaletteSchema } from "./ColorPalette.js";

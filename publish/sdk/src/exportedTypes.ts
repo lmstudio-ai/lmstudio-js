@@ -192,5 +192,6 @@ export type {
   StatusStepState,
   StatusStepStatus,
   ToolCallRequest,
+  ToolCallResult,
   ToolStatusStepStateStatus,
 } from "@lmstudio/lms-shared-types";
