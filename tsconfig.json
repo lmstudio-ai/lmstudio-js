@@ -4,12 +4,10 @@
     "target": "ES2022",
     "useDefineForClassFields": false,
     "moduleResolution": "node",
-    "incremental": true,
     "noImplicitOverride": true,
     "sourceMap": true,
     "skipLibCheck": true,
     "stripInternal": true,
-    "composite": true,
     "esModuleInterop": true
   }
 }
