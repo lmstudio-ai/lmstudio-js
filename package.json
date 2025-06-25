@@ -7,7 +7,8 @@
   "scripts": {
     "start": "npm run gen && turbo run watch",
     "gen": "cd scripts && node ./generateEsmPackageJson.mjs",
-    "watch": "turbo run watch",
+    "watch-tsc": "tsc --build tsconfig.build.json --watch",
+    "watch": "concurrently --prefix=none \"npm run watch-tsc\" \"turbo run watch\"",
     "clean": "turbo run clean",
     "build-scaffolds-json": "cd scaffolds && node ./buildScaffoldsJSON.js",
     "build-sdk": "cd publish/sdk && npm run build",
