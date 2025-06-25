@@ -7,7 +7,7 @@
   "types": "./dist/types/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "clean": "shx rm -rf ./dist"
+    "clean": "shx rm -rf ./dist ./tsconfig.tsbuildinfo"
   },
   "dependencies": {
     "@lmstudio/lms-communication": "^0.6.15",

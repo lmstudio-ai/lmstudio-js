@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "rollup -c",
-    "clean": "shx rm -rf ./dist",
+    "clean": "shx rm -rf ./dist ./tsconfig.tsbuildinfo",
     "watch": "rollup -wc"
   },
   "files": [
