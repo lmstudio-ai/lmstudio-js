@@ -6,6 +6,7 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
+    "watch": "tsc -w",
     "clean": "shx rm -rf ./dist ./tsconfig.tsbuildinfo",
     "make-schemas": "node ./dist/index.js"
   },
