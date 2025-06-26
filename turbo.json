@@ -1,0 +1,22 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "globalDependencies": ["**/.env.*local"],
+  "concurrency": "25",
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", "ts-out/**"]
+    },
+    "watch": {
+      "dependsOn": ["^build"],
+      "persistent": true
+    },
+    "make": {
+      "persistent": true
+    },
+    "postinstall": {},
+    "clean": {
+      "cache": false
+    }
+  }
+}

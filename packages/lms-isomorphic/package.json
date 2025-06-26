@@ -6,7 +6,8 @@
   "browser": "dist/cjs/browser.js",
   "types": "dist/types/index.d.ts",
   "scripts": {
-    "build": "tsc"
+    "build": "tsc --build",
+    "clean": "shx rm -rf ./dist ./tsconfig.tsbuildinfo"
   },
   "author": "",
   "license": "Apache-2.0",

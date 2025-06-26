@@ -5,7 +5,8 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc"
+    "build": "tsc --build",
+    "clean": "shx rm -rf ./dist ./tsconfig.tsbuildinfo"
   },
   "author": "",
   "license": "Apache-2.0",

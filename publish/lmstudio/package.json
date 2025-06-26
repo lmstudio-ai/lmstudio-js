@@ -4,8 +4,8 @@
   "description": "LM Studio Setup Tool",
   "main": "dist/index.js",
   "scripts": {
-    "build-rollup": "rollup -c",
-    "build": "npm run build-rollup",
+    "build": "rollup -c",
+    "clean": "shx rm -rf ./dist ./tsconfig.tsbuildinfo",
     "watch": "rollup -wc"
   },
   "files": [

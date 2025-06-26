@@ -12,7 +12,8 @@
     "make-bin:darwin": "bash make-bin-darwin.sh",
     "make-bin": "run-script-os",
     "make": "npm run build && npm run make-bin",
-    "watch": "rollup -wc"
+    "watch": "rollup -wc",
+    "clean": "shx rm -rf ./dist ./tsconfig.tsbuildinfo"
   },
   "files": [
     "dist/index.js"
