@@ -71,6 +71,7 @@ export {
 export {
   BasicKVFieldValueTypeLibraryMap,
   BasicKVValueTypesLibrary,
+  basicKVValueTypesLibrary,
   GlobalKVFieldValueTypeLibraryMap,
   GlobalKVValueTypesLibrary,
   kvValueTypesLibrary,

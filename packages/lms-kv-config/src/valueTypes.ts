@@ -287,9 +287,17 @@ const baseKVValueTypesLibraryBuilder = new KVFieldValueTypesLibraryBuilder({
 
 /**
  * Basic key-value field value types library. These are the types that are exposed to plugins.
+ *
+ * @public
  */
-const basicKVValueTypesLibrary = baseKVValueTypesLibraryBuilder.build();
+export const basicKVValueTypesLibrary = baseKVValueTypesLibraryBuilder.build();
 
+/**
+ * The global key-value field value types library. This includes all the basic types and additional
+ * types that are used in the LM Studio application.
+ *
+ * @public
+ */
 export const kvValueTypesLibrary = baseKVValueTypesLibraryBuilder
   .valueType("checkboxNumeric", {
     paramType: {
