@@ -84,18 +84,24 @@ export const chatMessagePartToolCallRequestDataSchema = z.object({
 });
 
 /**
+ * Represents the result of a tool call.
+ *
  * @public
  */
-export interface ChatMessagePartToolCallResultData {
-  type: "toolCallResult";
-  /**
-   * Result of a tool call
-   */
+export interface ToolCallResult {
   content: string;
-  /**
-   * The tool call ID that this result is for
-   */
   toolCallId?: string;
+}
+export const toolCallResultSchema = z.object({
+  content: z.string(),
+  toolCallId: z.string().optional(),
+}) as ZodSchema<ToolCallResult>;
+
+/**
+ * @public
+ */
+export interface ChatMessagePartToolCallResultData extends ToolCallResult {
+  type: "toolCallResult";
 }
 export const chatMessagePartToolCallResultDataSchema = z.object({
   type: z.literal("toolCallResult"),

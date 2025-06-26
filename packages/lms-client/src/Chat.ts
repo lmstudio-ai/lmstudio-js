@@ -12,9 +12,9 @@ import {
   chatMessageDataSchema,
   type ChatMessagePartFileData,
   type ChatMessagePartTextData,
-  type ChatMessagePartToolCallRequestData,
-  type ChatMessagePartToolCallResultData,
   type ChatMessageRoleData,
+  type ToolCallRequest,
+  type ToolCallResult,
 } from "@lmstudio/lms-shared-types";
 import { z, type ZodSchema } from "zod";
 import {
@@ -560,20 +560,23 @@ export class ChatMessage extends MaybeMutable<ChatMessageData> {
 
   /**
    * Get all tool call results within this message.
-   *
-   * @experimental This API is not stable and may change in the future.
    */
-  public getToolCallResults(): Array<ChatMessagePartToolCallResultData> {
-    return this.data.content.filter(part => part.type === "toolCallResult");
+  public getToolCallResults(): Array<ToolCallResult> {
+    return this.data.content
+      .filter(part => part.type === "toolCallResult")
+      .map(part => ({
+        content: part.content,
+        toolCallId: part.toolCallId,
+      }));
   }
 
   /**
    * Gets all file parts contained in this message.
-   *
-   * @experimental This API is not stable and may change in the future.
    */
-  public getToolCallRequests(): Array<ChatMessagePartToolCallRequestData> {
-    return this.data.content.filter(part => part.type === "toolCallRequest");
+  public getToolCallRequests(): Array<ToolCallRequest> {
+    return this.data.content
+      .filter(part => part.type === "toolCallRequest")
+      .map(part => part.toolCallRequest);
   }
 
   /**
