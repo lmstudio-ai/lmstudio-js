@@ -142,7 +142,8 @@ export class PluginsNamespace {
   }
 
   /**
-   * @deprecated Plugin support is still in development. Stay tuned for updates.
+   * @experimental [EXP-PLUGIN-CORE] Plugin support is still in development. This may change in the
+   * future without warning.
    */
   public async registerDevelopmentPlugin(
     opts: RegisterDevelopmentPluginOpts,
@@ -200,7 +201,8 @@ export class PluginsNamespace {
    * CAVEAT: Currently, we do not wait for the reindex to complete before returning. In the future,
    * we will change this behavior and only return after the reindex is completed.
    *
-   * @deprecated Plugin support is still in development. Stay tuned for updates.
+   * @experimental [EXP-PLUGIN-CORE] Plugin support is still in development. This may change in the
+   * future without warning.
    */
   public async reindexPlugins() {
     const stack = getCurrentStack(1);
@@ -210,7 +212,8 @@ export class PluginsNamespace {
   /**
    * Sets the preprocessor to be used by the plugin represented by this client.
    *
-   * @deprecated Plugin support is still in development. Stay tuned for updates.
+   * @experimental [EXP-PLUGIN-CORE] Plugin support is still in development. This may change in the
+   * future without warning.
    */
   public setPreprocessor(preprocessor: Preprocessor) {
     const stack = getCurrentStack(1);
@@ -343,7 +346,8 @@ export class PluginsNamespace {
   /**
    * Sets the preprocessor to be used by the plugin represented by this client.
    *
-   * @deprecated Plugin support is still in development. Stay tuned for updates.
+   * @deprecated [DEP-PLUGIN-PREDICTION-LOOP-HANDLER] Prediction loop handler support is still in
+   * development. Stay tuned for updates.
    */
   public setPredictionLoopHandler(predictionLoopHandler: PredictionLoopHandler) {
     const stack = getCurrentStack(1);
@@ -452,7 +456,8 @@ export class PluginsNamespace {
   }
 
   /**
-   * @deprecated Plugin support is still in development. Stay tuned for updates.
+   * @experimental [EXP-PLUGIN-CORE] Plugin support is still in development. This may change in the
+   * future without warning.
    */
   public async setConfigSchematics(configSchematics: ConfigSchematics<any>) {
     const stack = getCurrentStack(1);
@@ -478,7 +483,8 @@ export class PluginsNamespace {
   }
 
   /**
-   * @deprecated Plugin support is still in development. Stay tuned for updates.
+   * @experimental [EXP-PLUGIN-CORE] Plugin support is still in development. This may change in the
+   * future without warning.
    */
   public async setGlobalConfigSchematics(globalConfigSchematics: ConfigSchematics<any>) {
     const stack = getCurrentStack(1);
@@ -504,7 +510,8 @@ export class PluginsNamespace {
   }
 
   /**
-   * @deprecated Plugin support is still in development. Stay tuned for updates.
+   * @experimental [EXP-PLUGIN-CORE] Plugin support is still in development. This may change in the
+   * future without warning.
    */
   public setToolsProvider(toolsProvider: ToolsProvider) {
     const stack = getCurrentStack(1);
@@ -772,7 +779,8 @@ export class PluginsNamespace {
   /**
    * Sets the generator to be used by the plugin represented by this client.
    *
-   * @deprecated Plugin support is still in development. Stay tuned for updates.
+   * @experimental [EXP-PLUGIN-CORE] Plugin support is still in development. This may change in the
+   * future without warning.
    */
   public setGenerator(generator: Generator) {
     const stack = getCurrentStack(1);
@@ -886,7 +894,8 @@ export class PluginsNamespace {
   }
 
   /**
-   * @deprecated Plugin support is still in development. Stay tuned for updates.
+   * @experimental [EXP-PLUGIN-CORE] Plugin support is still in development. This may change in the
+   * future without warning.
    */
   public async initCompleted() {
     const stack = getCurrentStack(1);

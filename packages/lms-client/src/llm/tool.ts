@@ -57,8 +57,8 @@ export interface ToolCallContext {
    * @remarks This field is not the same as the `toolCallId` inside the tool call request, as the
    * existence and format of that ID is model dependent.
    *
-   * @experimental This field is not stable and will likely change in the future as we design better
-   * ways to match up tool calls.
+   * @experimental [EXP-GRANULAR-ACT] More granular .act status reporting is experimental and may
+   * change in the future
    */
   callId: number;
 }
@@ -98,10 +98,10 @@ export const functionToolSchema = toolBaseSchema.extend({
 });
 
 /**
- * A tool that is a raw function.
+ * A tool that has a its parameters defined by a JSON schema.
  *
  * @public
- * @experimental Not stable, will likely change in the future.
+ * @experimental [EXP-RAW-FUNCTION] This is an experimental feature and may change in the future.
  */
 export interface RawFunctionTool extends ToolBase {
   type: "rawFunction";

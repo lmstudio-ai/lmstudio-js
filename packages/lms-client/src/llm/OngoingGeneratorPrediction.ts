@@ -33,7 +33,8 @@ import { GeneratorPredictionResult } from "./GeneratorPredictionResult";
  * ```
  *
  * @public
- * @deprecated Plugin support is still in development. Stay tuned for updates.
+ * @experimental [EXP-GEN-PREDICT] Using generator plugins programmatically is still in development.
+ * This may change in the future without warning.
  */
 export class OngoingGeneratorPrediction extends StreamablePromise<
   LLMPredictionFragment,

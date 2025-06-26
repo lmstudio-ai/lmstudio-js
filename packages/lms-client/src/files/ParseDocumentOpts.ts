@@ -9,7 +9,8 @@ import { z } from "zod";
  * Options for parsing a document.
  *
  * @public
- * @deprecated Document parsing is still in development. Stay tuned for updates.
+ * @deprecated [DEP-DOC-PARSE] Document parsing API is still in active development. Stay tuned for
+ * updates.
  */
 export type ParseDocumentOpts = DocumentParsingOpts & {
   /**

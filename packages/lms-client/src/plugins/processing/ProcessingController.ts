@@ -161,7 +161,8 @@ export interface CreateCitationBlockOpts {
  * Options to use with {@link ProcessingController#requestConfirmToolCall}.
  *
  * @public
- * @experimental WIP
+ * @deprecated [DEP-PLUGIN-PREDICTION-LOOP-HANDLER] Prediction loop handler support is still in
+ * development. Stay tuned for updates.
  */
 export interface RequestConfirmToolCallOpts {
   callId: number;
@@ -174,7 +175,8 @@ export interface RequestConfirmToolCallOpts {
  * Return type of {@link ProcessingController#requestConfirmToolCall}.
  *
  * @public
- * @experimental WIP
+ * @deprecated [DEP-PLUGIN-PREDICTION-LOOP-HANDLER] Prediction loop handler support is still in
+ * development. Stay tuned for updates.
  */
 export type RequestConfirmToolCallResult =
   | {

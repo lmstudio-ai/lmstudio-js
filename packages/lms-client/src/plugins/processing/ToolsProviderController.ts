@@ -6,7 +6,8 @@ import { BaseController } from "./BaseController.js";
  * Controller for tools provider.
  *
  * @public
- * @deprecated Plugin support is still in development. Stay tuned for updates.
+ * @experimental [EXP-PLUGIN-CORE] Plugin support is still in development. This may change in the
+ * future without warning.
  */
 export class ToolsProviderController extends BaseController {
   /**

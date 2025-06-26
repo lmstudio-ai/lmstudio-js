@@ -25,7 +25,8 @@ import { toolToLLMTool, type Tool } from "./tool.js";
  * Options for {@link LLMGeneratorHandle#respond}.
  *
  * @public
- * @deprecated Plugin support is still in development. Stay tuned for updates.
+ * @experimental [EXP-GEN-PREDICT] Using generator plugins programmatically is still in development.
+ * This may change in the future without warning.
  */
 export interface LLMGeneratorPredictionOpts {
   /**
@@ -82,7 +83,8 @@ const llmGeneratorPredictionOptsSchema = z.object({
  * Options for the LLM generator's act method.
  *
  * @public
- * @deprecated Plugin support is still in development. Stay tuned for updates.
+ * @experimental [EXP-GEN-PREDICT] Using generator plugins programmatically is still in development.
+ * This may change in the future without warning.
  */
 export type LLMGeneratorActOpts = LLMActBaseOpts<GeneratorPredictionResult> & {
   /**
@@ -103,7 +105,8 @@ export const llmGeneratorActOptsSchema = llmActBaseOptsSchema.extend({
  * Represents a handle for a generator that can act as a LLM.
  *
  * @public
- * @deprecated Plugin support is still in development. Stay tuned for updates.
+ * @experimental [EXP-GEN-PREDICT] Using generator plugins programmatically is still in development.
+ * This may change in the future without warning.
  */
 export class LLMGeneratorHandle {
   /**

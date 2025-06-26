@@ -77,7 +77,8 @@ export class LLMNamespace extends ModelNamespace<
     return new LLMDynamicHandle(port, specifier, validator, logger);
   }
   /**
-   * @deprecated Plugin support is still in development. Stay tuned for updates.
+   * @experimental [EXP-GEN-PREDICT] Using generator plugins programmatically is still in development.
+   * This may change in the future without warning.
    */
   public createGeneratorHandle(pluginIdentifier: string): LLMGeneratorHandle {
     return new LLMGeneratorHandle(this.port, pluginIdentifier, this.validator, this.logger);

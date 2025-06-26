@@ -28,7 +28,8 @@ export const processingRequestConfirmToolCallSchema = z.object({
 });
 
 /**
- * @experimental WIP
+ * @deprecated [DEP-PLUGIN-PREDICTION-LOOP-HANDLER] Prediction loop handler support is still in
+ * development. Stay tuned for updates.
  */
 export type ProcessingRequestTextInput = {
   type: "textInput";
@@ -72,7 +73,8 @@ export const processingRequestResponseConfirmToolCallSchema = z.object({
 });
 
 /**
- * @experimental WIP
+ * @deprecated [DEP-PLUGIN-PREDICTION-LOOP-HANDLER] Prediction loop handler support is still in
+ * development. Stay tuned for updates.
  */
 export type ProcessingRequestResponseTextInput = {
   type: "textInput";

@@ -4,7 +4,8 @@ import { z } from "zod";
  * Represents the library and version of a document parsing library.
  *
  * @public
- * @experimental Document parsing is still in development. Stay tuned for updates.
+ * @deprecated [DEP-DOC-PARSE] Document parsing API is still in active development. Stay tuned for
+ * updates.
  */
 export type DocumentParsingLibraryIdentifier = {
   /**
@@ -26,7 +27,8 @@ export const documentParsingLibraryIdentifierSchema = z.object({
  * Options for parsing a document.
  *
  * @public
- * @deprecated Document parsing is still in development. Stay tuned for updates.
+ * @deprecated [DEP-DOC-PARSE] Document parsing API is still in active development. Stay tuned for
+ * updates.
  */
 export type DocumentParsingOpts = {
   /**
