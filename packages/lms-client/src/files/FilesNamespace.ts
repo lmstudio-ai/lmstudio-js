@@ -114,7 +114,8 @@ export class FilesNamespace {
    *
    * This method can only be used in environments that have file system access (such as Node.js).
    *
-   * @deprecated Retrieval API is still in active development. Stay tuned for updates.
+   * @deprecated [DEP-RETRIEVAL] Retrieval API is still in active development. Stay tuned for
+   * updates.
    */
   public async prepareFile(path: string): Promise<FileHandle> {
     // Currently, exactly the same as prepareImage.
@@ -137,8 +138,8 @@ export class FilesNamespace {
    * Adds a temporary file to LM Studio. The content of the file is specified using base64. If you
    * are using Node.js and have a file laying around, consider using `prepareFile` instead.
    *
-   * @deprecated Retrieval API is still in active development. Stay tuned for updates.
-   */
+   * @deprecated [DEP-RETRIEVAL] Retrieval API is still in active development. Stay tuned for
+   * updates.   */
   public async prepareFileBase64(fileName: string, contentBase64: string): Promise<FileHandle> {
     // Currently, exactly the same as prepareImageBase64.
     const { identifier, fileType, sizeBytes } = await this.filesPort.callRpc("uploadFileBase64", {
@@ -149,8 +150,8 @@ export class FilesNamespace {
   }
 
   /**
-   * @deprecated Retrieval API is still in active development. Stay tuned for updates.
-   */
+   * @deprecated [DEP-RETRIEVAL] Retrieval API is still in active development. Stay tuned for
+   * updates.   */
   public async retrieve(
     query: string,
     files: Array<FileHandle>,
@@ -358,7 +359,8 @@ export class FilesNamespace {
   /**
    * Parse a document
    *
-   * @deprecated Document parsing API is still in active development. Stay tuned for updates.
+   * @deprecated [DEP-DOC-PARSE] Document parsing API is still in active development. Stay tuned for
+   * updates.
    */
   public async parseDocument(fileHandle: FileHandle, opts: ParseDocumentOpts = {}) {
     const stack = getCurrentStack(1);
@@ -424,7 +426,8 @@ export class FilesNamespace {
   /**
    * Get the parsing method for a document.
    *
-   * @deprecated Document parsing API is still in active development. Stay tuned for updates.
+   * @deprecated [DEP-DOC-PARSE] Document parsing API is still in active development. Stay tuned for
+   * updates.
    */
   public async getDocumentParsingLibrary(
     fileHandle: FileHandle,

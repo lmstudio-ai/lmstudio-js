@@ -143,7 +143,8 @@ export class LMStudioClient {
   public readonly files: FilesNamespace;
   public readonly repository: RepositoryNamespace;
   /**
-   * @deprecated Plugin support is still in development. Stay tuned for updates.
+   * @experimental [EXP-PLUGIN-CORE] Plugin support is still in development. This may change in the
+   * future without warning.
    */
   public readonly plugins: PluginsNamespace;
 

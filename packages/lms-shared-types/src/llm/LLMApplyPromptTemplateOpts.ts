@@ -20,8 +20,6 @@ export interface LLMApplyPromptTemplateOpts {
   omitEosToken?: boolean;
   /**
    * Optional tool definitions to include in the prompt.
-   *
-   * @experimental This feature is experimental and may change in the future.
    */
   toolDefinitions?: Array<LLMTool>;
 }

@@ -14,7 +14,8 @@ import {
  * The base class for all controllers.
  *
  * @public
- * @deprecated Plugin support is still in development. Stay tuned for updates.
+ * @experimental [EXP-PLUGIN-CORE] Plugin support is still in development. This may change in the
+ * future without warning.
  */
 export abstract class BaseController {
   public constructor(

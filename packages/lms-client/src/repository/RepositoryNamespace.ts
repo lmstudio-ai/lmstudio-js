@@ -168,7 +168,8 @@ export class RepositoryNamespace {
   }
 
   /**
-   * @deprecated Plugin support is still in development. Stay tuned for updates.
+   * @deprecated [DEP-HUB-API-ACCESS] LM Studio Hub API access is still in active development. Stay
+   * tuned for updates.
    */
   public async installPluginDependencies(pluginFolder: string) {
     const stack = getCurrentStack(1);
@@ -184,7 +185,8 @@ export class RepositoryNamespace {
   }
 
   /**
-   * @deprecated Plugin support is still in development. Stay tuned for updates.
+   * @deprecated [DEP-HUB-API-ACCESS] LM Studio Hub API access is still in active development. Stay
+   * tuned for updates.
    */
   public async downloadArtifact(opts: DownloadArtifactOpts) {
     const stack = getCurrentStack(1);
@@ -242,7 +244,8 @@ export class RepositoryNamespace {
   }
 
   /**
-   * @deprecated Plugin support is still in development. Stay tuned for updates.
+   * @deprecated [DEP-HUB-API-ACCESS] LM Studio Hub API access is still in active development. Stay
+   * tuned for updates.
    */
   public async pushArtifact(opts: PushArtifactOpts): Promise<void> {
     const stack = getCurrentStack(1);
@@ -280,7 +283,8 @@ export class RepositoryNamespace {
   }
 
   /**
-   * @deprecated Plugin support is still in development. Stay tuned for updates.
+   * @deprecated [DEP-HUB-API-ACCESS] LM Studio Hub API access is still in active development. Stay
+   * tuned for updates.
    */
   public async getLocalArtifactFileList(path: string): Promise<LocalArtifactFileList> {
     const stack = getCurrentStack(1);
@@ -301,7 +305,8 @@ export class RepositoryNamespace {
   }
 
   /**
-   * @deprecated Plugin support is still in development. Stay tuned for updates.
+   * @deprecated [DEP-HUB-API-ACCESS] LM Studio Hub API access is still in active development. Stay
+   * tuned for updates.
    */
   public async ensureAuthenticated(opts: EnsureAuthenticatedOpts) {
     const stack = getCurrentStack(1);
@@ -370,7 +375,8 @@ export class RepositoryNamespace {
     `);
   });
   /**
-   * @deprecated Plugin support is still in development. Stay tuned for updates.
+   * @deprecated [DEP-HUB-API-ACCESS] LM Studio Hub API access is still in active development. Stay
+   * tuned for updates.
    */
   public createArtifactDownloadPlanner(
     opts: CreateArtifactDownloadPlannerOpts,

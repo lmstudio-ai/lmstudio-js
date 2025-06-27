@@ -24,7 +24,8 @@ export interface GeneratorConnector {
  * Controller for a generator.
  *
  * @public
- * @deprecated Plugin support is still in development. Stay tuned for updates.
+ * @experimental [EXP-PLUGIN-CORE] Plugin support is still in development. This may change in the
+ * future without warning.
  */
 export class GeneratorController extends BaseController {
   /**

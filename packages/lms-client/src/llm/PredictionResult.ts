@@ -18,15 +18,11 @@ export interface BasePredictionResult {
   /**
    * Part of the generated text that is "reasoning" content. For example, text inside <think>
    * tags.
-   *
-   * @experimental The name of this field may change in the future.
    */
   reasoningContent: string;
   /**
    * Part of the generated text that is not "reasoning" content. For example, text outside <think>
    * tags.
-   *
-   * @experimental The name of this field may change in the future.
    */
   nonReasoningContent: string;
 }
@@ -50,16 +46,12 @@ export class PredictionResult implements BasePredictionResult {
      * Part of the generated text that is "reasoning" content. For example, text inside <think>
      * tags. You can adjust what is considered reasoning content by changing the `reasoningParsing`
      * field when performing the prediction.
-     *
-     * @experimental The name of this field may change in the future.
      */
     public readonly reasoningContent: string,
     /**
      * Part of the generated that is not "reasoning" content. For example, text outside <think>
      * tags. You can adjust what is considered reasoning content by changing the `reasoningParsing`
      * field when performing the prediction.
-     *
-     * @experimental The name of this field may change in the future.
      */
     public readonly nonReasoningContent: string,
     /**
@@ -78,13 +70,15 @@ export class PredictionResult implements BasePredictionResult {
     /**
      * The configuration used to load the model. Not stable, subject to change.
      *
-     * @deprecated Not stable - subject to change
+     * @deprecated [DEP-RAW-CONFIG] Raw config access API is still in active development. Stay
+     * turned for updates.
      */
     public readonly loadConfig: KVConfig,
     /**
      * The configuration used for the prediction. Not stable, subject to change.
      *
-     * @deprecated Not stable - subject to change
+     * @deprecated [DEP-RAW-CONFIG] Raw config access API is still in active development. Stay
+     * turned for updates.
      */
     public readonly predictionConfig: KVConfig,
   ) {}

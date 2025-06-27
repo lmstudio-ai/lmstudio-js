@@ -9,7 +9,8 @@ import {
 /**
  * Represents information about a model in an artifact download plan.
  *
- * @experimental This type is experimental and may change at any time.
+ * @deprecated [DEP-HUB-API-ACCESS] LM Studio Hub API access is still in active development. Stay
+ * tuned for updates.
  * @public
  */
 export type ArtifactDownloadPlanModelInfo = {
@@ -29,7 +30,8 @@ export const artifactDownloadPlanModelInfoSchema: ZodSchema<ArtifactDownloadPlan
 /**
  * Represents the state of a node in an artifact download plan.
  *
- * @experimental This type is experimental and may change at any time.
+ * @deprecated [DEP-HUB-API-ACCESS] LM Studio Hub API access is still in active development. Stay
+ * tuned for updates.
  * @public
  */
 export type ArtifactDownloadPlanNodeState = "pending" | "fetching" | "satisfied" | "completed";
@@ -40,7 +42,8 @@ export const artifactDownloadPlanNodeStateSchema: ZodSchema<ArtifactDownloadPlan
 /**
  * Represents the state of a node in an artifact download plan.
  *
- * @experimental This type is experimental and may change at any time.
+ * @deprecated [DEP-HUB-API-ACCESS] LM Studio Hub API access is still in active development. Stay
+ * tuned for updates.
  * @public
  */
 export type ArtifactDownloadPlanNode =
@@ -84,7 +87,8 @@ export const artifactDownloadPlanNodeSchema = z.discriminatedUnion("type", [
 /**
  * Represents a plan for downloading artifacts.
  *
- * @experimental This type is experimental and may change at any time.
+ * @deprecated [DEP-HUB-API-ACCESS] LM Studio Hub API access is still in active development. Stay
+ * tuned for updates.
  * @public
  */
 export interface ArtifactDownloadPlan {

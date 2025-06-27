@@ -193,8 +193,9 @@ class FIFOQueue implements QueueInterface {
 /**
  * Represents an error that is caused by invalid tool call request.
  *
- * @experimental This class is experimental and may change in the future.
  * @public
+ * @experimental [EXP-GRANULAR-ACT] More granular .act status reporting is experimental and may
+ * change in the future
  */
 export class ToolCallRequestError extends Error {
   public constructor(
@@ -206,7 +207,8 @@ export class ToolCallRequestError extends Error {
      *
      * This field is not always available, and may be `undefined`.
      *
-     * @experimental This field is experimental and may change in the future.
+     * @experimental [EXP-GRANULAR-ACT] More granular .act status reporting is experimental and may
+     * change in the future
      */
     public readonly rawContent: string | undefined,
   ) {
@@ -295,7 +297,8 @@ export interface LLMActBaseOpts<TPredictionResult> {
    * called. It is guaranteed that each `invocation` of `onToolCallRequestStart` is paired
    * with exactly one `onToolCallRequestEnd` or `onToolCallRequestFailure`.
    *
-   * @experimental This option is experimental and may change in the future.
+   * @experimental [EXP-GRANULAR-ACT] More granular .act status reporting is experimental and may
+   * change in the future
    */
   onToolCallRequestStart?: (roundIndex: number, callId: number) => void;
   /**
@@ -304,7 +307,8 @@ export interface LLMActBaseOpts<TPredictionResult> {
    * This hook is intended for updating the UI to show the name of the tool that is being called.
    * There is no guarantee that this callback will be called.
    *
-   * @experimental This option is experimental and may change in the future.
+   * @experimental [EXP-GRANULAR-ACT] More granular .act status reporting is experimental and may
+   * change in the future
    */
   onToolCallRequestNameReceived?: (roundIndex: number, callId: number, name: string) => void;
   /**
@@ -316,7 +320,8 @@ export interface LLMActBaseOpts<TPredictionResult> {
    * Note, when piecing together all the argument fragments, there is no guarantee that the result
    * will be valid JSON, as some models may not use JSON to represent tool calls.
    *
-   * @experimental This option is experimental and may change in the future.
+   * @experimental [EXP-GRANULAR-ACT] More granular .act status reporting is experimental and may
+   * change in the future
    */
   onToolCallRequestArgumentFragmentGenerated?: (
     roundIndex: number,
@@ -332,7 +337,8 @@ export interface LLMActBaseOpts<TPredictionResult> {
    * Instead, you can use this callback to update the UI or maintain the context. If you are unsure
    * what to do with this callback, you can ignore it.
    *
-   * @experimental This option is experimental and may change in the future.
+   * @experimental [EXP-GRANULAR-ACT] More granular .act status reporting is experimental and may
+   * change in the future
    */
   onToolCallRequestEnd?: (
     roundIndex: number,
@@ -368,7 +374,8 @@ export interface LLMActBaseOpts<TPredictionResult> {
    * This hook is intended for updating the UI, such as showing "a tool call has failed to
    * generate.".
    *
-   * @experimental This option is experimental and may change in the future.
+   * @experimental [EXP-GRANULAR-ACT] More granular .act status reporting is experimental and may
+   * change in the future
    */
   onToolCallRequestFailure?: (
     roundIndex: number,
@@ -388,7 +395,8 @@ export interface LLMActBaseOpts<TPredictionResult> {
    * If the tool call themselves are very fast, this callback may never be called, because the
    * the first tool call might finish before the second tool call request is generated.
    *
-   * @experimental This option is experimental and may change in the future.
+   * @experimental [EXP-GRANULAR-ACT] More granular .act status reporting is experimental and may
+   * change in the future
    */
   onToolCallRequestDequeued?: (roundIndex: number, callId: number) => void;
   /**

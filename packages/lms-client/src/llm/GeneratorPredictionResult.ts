@@ -7,7 +7,8 @@ import { type BasePredictionResult } from "./PredictionResult.js";
  * generated text.
  *
  * @public
- * @deprecated Plugin support is still in development. Stay tuned for updates.
+ * @experimental [EXP-GEN-PREDICT] Using generator plugins programmatically is still in development.
+ * This may change in the future without warning.
  */
 export class GeneratorPredictionResult implements BasePredictionResult {
   public constructor(

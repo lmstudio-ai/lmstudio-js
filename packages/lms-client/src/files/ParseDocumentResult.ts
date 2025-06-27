@@ -4,7 +4,8 @@ import { type DocumentParsingLibraryIdentifier } from "@lmstudio/lms-shared-type
  * The result of parsing a document.
  *
  * @public
- * @experimental Document parsing is still in development. Stay tuned for updates.
+ * @deprecated [DEP-DOC-PARSE] Document parsing API is still in active development. Stay tuned for
+ * updates.
  */
 export interface ParseDocumentResult {
   /**

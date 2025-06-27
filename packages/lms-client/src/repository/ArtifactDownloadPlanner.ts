@@ -20,7 +20,8 @@ interface ArtifactDownloadPlannerCurrentDownload {
 /**
  * Options for the {@link ArtifactDownloadPlanner#download} method.
  *
- * @experimental This type is experimental and may change at any time.
+ * @deprecated [DEP-HUB-API-ACCESS] LM Studio Hub API access is still in active development. Stay
+ * tuned for updates.
  * @public
  */
 export interface ArtifactDownloadPlannerDownloadOpts {
@@ -38,7 +39,8 @@ const artifactDownloadPlannerDownloadOptsSchema = z.object({
  * Represents a planner to download an artifact. The plan is not guaranteed to be ready until you
  * await on the method "untilReady".
  *
- * @experimental The entirety of this class is experimental and may change at any time.
+ * @deprecated [DEP-HUB-API-ACCESS] LM Studio Hub API access is still in active development. Stay
+ * tuned for updates.
  * @public
  */
 export class ArtifactDownloadPlanner {
