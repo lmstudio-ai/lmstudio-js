@@ -177,7 +177,7 @@ export class KVFieldValueTypesLibraryBuilder<
     return this;
   }
   public build(): KVFieldValueTypeLibrary<TKVFieldValueTypeLibraryMap> {
-    return new KVFieldValueTypeLibrary(this.valueTypes);
+    return new KVFieldValueTypeLibrary(new Map(this.valueTypes));
   }
 }
 

@@ -42,9 +42,11 @@ function quoteStringWithManualEscape(str: string | undefined, empty?: string) {
 }
 
 /**
+ * Builder for all the basic KV types.
+ *
  * @public
  */
-export const kvValueTypesLibrary = new KVFieldValueTypesLibraryBuilder({
+const baseKVValueTypesLibraryBuilder = new KVFieldValueTypesLibraryBuilder({
   /**
    * Display name of the field.
    */
@@ -59,6 +61,8 @@ export const kvValueTypesLibrary = new KVFieldValueTypesLibraryBuilder({
    *
    * An example would be prompt template. There is no point to configure prompt template when there
    * isn't a specific model.
+   *
+   * @experimental This field is experimental and may change in the future.
    */
   modelCentric: z.boolean().optional(),
   /**
@@ -66,11 +70,15 @@ export const kvValueTypesLibrary = new KVFieldValueTypesLibraryBuilder({
    * As a result, it will not be shown in the UI.
    *
    * An example would be context length for MLX, as you cannot change it.
+   *
+   * @experimental This field is experimental and may change in the future.
    */
   nonConfigurable: z.boolean().optional(),
   /**
    * A field can be marked as engineDoesNotSupport when when the engine running the model does not
    * support the field.
+   *
+   * @experimental This field is experimental and may change in the future.
    */
   engineDoesNotSupport: z.boolean().optional(),
   /**
@@ -79,6 +87,8 @@ export const kvValueTypesLibrary = new KVFieldValueTypesLibraryBuilder({
    * fields by default.
    *
    * An example would be GPU offload settings.
+   *
+   * @experimental This field is experimental and may change in the future.
    */
   machineDependent: z.boolean().optional(),
   warning: z.string().optional(),
@@ -126,60 +136,6 @@ export const kvValueTypesLibrary = new KVFieldValueTypesLibraryBuilder({
         return String(Math.round(value));
       }
       return value.toFixed(precision ?? 2);
-    },
-  })
-  .valueType("checkboxNumeric", {
-    paramType: {
-      min: z.number().optional(),
-      max: z.number().optional(),
-      step: z.number().optional(),
-      int: z.boolean().optional(),
-      uncheckedHint: z.string().optional(),
-      precision: z.number().int().nonnegative().optional(),
-      slider: z
-        .object({
-          min: z.number(),
-          max: z.number(),
-          step: z.number(),
-        })
-        .optional(),
-    },
-    schemaMaker: ({ min, max, int, precision }) => {
-      let numberSchema = z.number();
-      if (min !== undefined) {
-        numberSchema = numberSchema.min(min);
-      }
-      if (max !== undefined) {
-        numberSchema = numberSchema.max(max);
-      }
-      if (int) {
-        if (precision !== undefined) {
-          throw new Error("Cannot specify both int and precision.");
-        }
-        numberSchema = numberSchema.int();
-      }
-      return z.object({
-        checked: z.boolean(),
-        value: numberSchema,
-      });
-    },
-    effectiveEquals: (a, b) => {
-      if (a.checked !== b.checked) {
-        return false;
-      }
-      if (!a.checked) {
-        return true;
-      }
-      return a.value === b.value;
-    },
-    stringify: (value, { int, precision }, { t }) => {
-      if (!value.checked) {
-        return t("config:customInputs.checkboxNumeric.off", "OFF");
-      }
-      if (int) {
-        return String(Math.round(value.value));
-      }
-      return value.value.toFixed(precision ?? 2);
     },
   })
   .valueType("string", {
@@ -326,6 +282,75 @@ export const kvValueTypesLibrary = new KVFieldValueTypesLibraryBuilder({
         }
       }
       return quoted.join(", ");
+    },
+  });
+
+/**
+ * Basic key-value field value types library. These are the types that are exposed to plugins.
+ *
+ * @public
+ */
+export const basicKVValueTypesLibrary = baseKVValueTypesLibraryBuilder.build();
+
+/**
+ * The global key-value field value types library. This includes all the basic types and additional
+ * types that are used in the LM Studio application.
+ *
+ * @public
+ */
+export const kvValueTypesLibrary = baseKVValueTypesLibraryBuilder
+  .valueType("checkboxNumeric", {
+    paramType: {
+      min: z.number().optional(),
+      max: z.number().optional(),
+      step: z.number().optional(),
+      int: z.boolean().optional(),
+      uncheckedHint: z.string().optional(),
+      precision: z.number().int().nonnegative().optional(),
+      slider: z
+        .object({
+          min: z.number(),
+          max: z.number(),
+          step: z.number(),
+        })
+        .optional(),
+    },
+    schemaMaker: ({ min, max, int, precision }) => {
+      let numberSchema = z.number();
+      if (min !== undefined) {
+        numberSchema = numberSchema.min(min);
+      }
+      if (max !== undefined) {
+        numberSchema = numberSchema.max(max);
+      }
+      if (int) {
+        if (precision !== undefined) {
+          throw new Error("Cannot specify both int and precision.");
+        }
+        numberSchema = numberSchema.int();
+      }
+      return z.object({
+        checked: z.boolean(),
+        value: numberSchema,
+      });
+    },
+    effectiveEquals: (a, b) => {
+      if (a.checked !== b.checked) {
+        return false;
+      }
+      if (!a.checked) {
+        return true;
+      }
+      return a.value === b.value;
+    },
+    stringify: (value, { int, precision }, { t }) => {
+      if (!value.checked) {
+        return t("config:customInputs.checkboxNumeric.off", "OFF");
+      }
+      if (int) {
+        return String(Math.round(value.value));
+      }
+      return value.value.toFixed(precision ?? 2);
     },
   })
   .valueType("numericArray", {
@@ -695,10 +720,18 @@ export type KVValueTypeDef = InferKVValueTypeDef<typeof kvValueTypesLibrary>;
  * @public
  */
 export type GlobalKVValueTypesLibrary = typeof kvValueTypesLibrary;
+export type BasicKVValueTypesLibrary = typeof basicKVValueTypesLibrary;
 /**
  * @public
  */
 export type GlobalKVFieldValueTypeLibraryMap =
   GlobalKVValueTypesLibrary extends KVFieldValueTypeLibrary<infer TKVFieldValueTypeLibraryMap>
+    ? TKVFieldValueTypeLibraryMap
+    : never;
+/**
+ * @public
+ */
+export type BasicKVFieldValueTypeLibraryMap =
+  BasicKVValueTypesLibrary extends KVFieldValueTypeLibrary<infer TKVFieldValueTypeLibraryMap>
     ? TKVFieldValueTypeLibraryMap
     : never;

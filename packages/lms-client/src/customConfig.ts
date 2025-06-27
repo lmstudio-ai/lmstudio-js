@@ -1,5 +1,5 @@
 import {
-  type GlobalKVFieldValueTypeLibraryMap,
+  type BasicKVFieldValueTypeLibraryMap,
   KVConfigSchematicsBuilder,
   kvValueTypesLibrary,
 } from "@lmstudio/lms-kv-config";
@@ -46,16 +46,16 @@ export interface ConfigSchematicsBuilder<TVirtualConfigSchematics extends Virtua
   /**
    * Adds a field to the config schematics.
    */
-  field<TKey extends string, TValueTypeKey extends keyof GlobalKVFieldValueTypeLibraryMap & string>(
+  field<TKey extends string, TValueTypeKey extends keyof BasicKVFieldValueTypeLibraryMap & string>(
     key: TKey,
     valueTypeKey: TValueTypeKey,
-    valueTypeParams: GlobalKVFieldValueTypeLibraryMap[TValueTypeKey]["param"],
-    defaultValue: GlobalKVFieldValueTypeLibraryMap[TValueTypeKey]["value"],
+    valueTypeParams: BasicKVFieldValueTypeLibraryMap[TValueTypeKey]["param"],
+    defaultValue: BasicKVFieldValueTypeLibraryMap[TValueTypeKey]["value"],
   ): ConfigSchematicsBuilder<
     TVirtualConfigSchematics & {
       [key in TKey]: {
         key: TKey;
-        type: GlobalKVFieldValueTypeLibraryMap[TValueTypeKey]["value"];
+        type: BasicKVFieldValueTypeLibraryMap[TValueTypeKey]["value"];
         valueTypeKey: TValueTypeKey;
       };
     }
