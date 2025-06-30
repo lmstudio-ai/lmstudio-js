@@ -25,6 +25,10 @@
     "test-full": "jest --testMatch \"**/?(*.)+(test).ts\" --runInBand",
     "test-watch": "jest --watch --testMatch \"**/?(*.)+(test).ts\" --testMatch \"!**/?(*.)+(heavy).(test).ts\""
   },
+  "engines": {
+    "node": "^20.12.2",
+    "npm": ">=8"
+  },
   "author": "",
   "license": "Apache-2.0",
   "devDependencies": {
