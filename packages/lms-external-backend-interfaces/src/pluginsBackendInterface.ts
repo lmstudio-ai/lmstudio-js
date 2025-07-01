@@ -49,7 +49,7 @@ export function createPluginsBackendInterface() {
       /**
        * The following method is called by the plugin client. (plugin:*)
        */
-      .addChannelEndpoint("setPreprocessor", {
+      .addChannelEndpoint("setPromptPreprocessor", {
         creationParameter: z.void(),
         toClientPacket: z.discriminatedUnion("type", [
           z.object({

@@ -15,7 +15,7 @@ const client = new LMStudioClient({
 (globalThis as any).__LMS_PLUGIN_CONTEXT = true;
 
 let predictionLoopHandlerSet = false;
-let preprocessorSet = false;
+let promptPreprocessorSet = false;
 let configSchematicsSet = false;
 let globalConfigSchematicsSet = false;
 let toolsProviderSet = false;
@@ -34,12 +34,12 @@ const pluginContext: PluginContext = {
     client.plugins.setPredictionLoopHandler(generate);
     return pluginContext;
   },
-  withPreprocessor: (preprocess) => {
-    if (preprocessorSet) {
-      throw new Error("Preprocessor already registered");
+  withPromptPreprocessor: (preprocess) => {
+    if (promptPreprocessorSet) {
+      throw new Error("PromptPreprocessor already registered");
     }
-    preprocessorSet = true;
-    client.plugins.setPreprocessor(preprocess);
+    promptPreprocessorSet = true;
+    client.plugins.setPromptPreprocessor(preprocess);
     return pluginContext;
   },
   withConfigSchematics: (configSchematics) => {

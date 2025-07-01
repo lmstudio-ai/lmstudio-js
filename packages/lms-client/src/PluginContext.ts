@@ -1,7 +1,7 @@
 import { type ConfigSchematics, type VirtualConfigSchematics } from "./customConfig.js";
 import { type Generator } from "./plugins/processing/Generator.js";
 import { type PredictionLoopHandler } from "./plugins/processing/PredictionLoopHandler.js";
-import { type Preprocessor } from "./plugins/processing/Preprocessor.js";
+import { type PromptPreprocessor } from "./plugins/processing/PromptPreprocessor.js";
 import { type ToolsProvider } from "./plugins/processing/ToolsProvider.js";
 
 /**
@@ -30,10 +30,10 @@ export interface PluginContext {
    */
   withPredictionLoopHandler(predictionLoopHandler: PredictionLoopHandler): PluginContext;
   /**
-   * Sets the preprocessor associated with this plugin context. Returns the same PluginContext for
+   * Sets the promptPreprocessor associated with this plugin context. Returns the same PluginContext for
    * chaining.
    */
-  withPreprocessor(preprocess: Preprocessor): PluginContext;
+  withPromptPreprocessor(preprocess: PromptPreprocessor): PluginContext;
   /**
    * Sets the tools provider associated with this plugin context. Returns the same PluginContext for
    * chaining.

@@ -239,7 +239,7 @@ export class ProcessingController extends BaseController {
    * Gets a mutable copy of the current history. The returned history is a copy, so mutating it will
    * not affect the actual history. It is mutable for convenience reasons.
    *
-   * - If you are a preprocessor, this will not include the user message you are currently
+   * - If you are a promptPreprocessor, this will not include the user message you are currently
    *   preprocessing.
    * - If you are a prediction loop handler, this will include the user message, and can be fed into
    *   the {@link LLMDynamicHandle#respond} method directly.
@@ -475,7 +475,7 @@ export class ProcessingController extends BaseController {
 /**
  * @public
  */
-export type PreprocessorController = Omit<
+export type PromptPreprocessorController = Omit<
   ProcessingController,
   "createContentBlock" | "setSenderName"
 >;

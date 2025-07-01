@@ -236,10 +236,6 @@ export {
   predictionLoopHandlerUpdateSchema,
 } from "./llm/processing/PredictionLoopHandlerUpdate.js";
 export {
-  PreprocessorUpdate,
-  preprocessorUpdateSchema,
-} from "./llm/processing/PreprocessorUpdate.js";
-export {
   ProcessingRequest,
   ProcessingRequestConfirmToolCall,
   processingRequestConfirmToolCallSchema,
@@ -311,6 +307,10 @@ export {
   toolStatusStepStateStatusSchema,
 } from "./llm/processing/ProcessingUpdate.js";
 export { GetModelOpts, getModelOptsSchema } from "./llm/processing/Processor.js";
+export {
+  PromptPreprocessorUpdate,
+  promptPreprocessorUpdateSchema,
+} from "./llm/processing/PromptPreprocessorUpdate.js";
 export { ModelCompatibilityType, modelCompatibilityTypeSchema } from "./ModelCompatibilityType.js";
 export { ModelDomainType, modelDomainTypeSchema } from "./ModelDomainType.js";
 export {

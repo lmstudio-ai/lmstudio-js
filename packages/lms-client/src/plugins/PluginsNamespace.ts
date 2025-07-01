@@ -28,13 +28,13 @@ import { type LMStudioClient } from "../LMStudioClient.js";
 import { type Generator, generatorSchema } from "./processing/Generator.js";
 import { type GeneratorConnector, GeneratorController } from "./processing/GeneratorController.js";
 import { type PredictionLoopHandler } from "./processing/PredictionLoopHandler.js";
-import { type Preprocessor } from "./processing/Preprocessor.js";
 import {
   type PredictionLoopHandlerController,
-  type PreprocessorController,
   ProcessingConnector,
   ProcessingController,
+  type PromptPreprocessorController,
 } from "./processing/ProcessingController.js";
+import { type PromptPreprocessor } from "./processing/PromptPreprocessor.js";
 import { type ToolsProvider } from "./processing/ToolsProvider.js";
 import { ToolsProviderController } from "./processing/ToolsProviderController.js";
 
@@ -210,24 +210,24 @@ export class PluginsNamespace {
   }
 
   /**
-   * Sets the preprocessor to be used by the plugin represented by this client.
+   * Sets the promptPreprocessor to be used by the plugin represented by this client.
    *
    * @experimental [EXP-PLUGIN-CORE] Plugin support is still in development. This may change in the
    * future without warning.
    */
-  public setPreprocessor(preprocessor: Preprocessor) {
+  public setPromptPreprocessor(promptPreprocessor: PromptPreprocessor) {
     const stack = getCurrentStack(1);
 
     this.validator.validateMethodParamOrThrow(
       "plugins",
-      "registerPreprocessor",
-      "preprocessor",
+      "registerPromptPreprocessor",
+      "promptPreprocessor",
       z.function(),
-      preprocessor,
+      promptPreprocessor,
       stack,
     );
 
-    const logger = new SimpleLogger(`Preprocessor`, this.rootLogger);
+    const logger = new SimpleLogger(`PromptPreprocessor`, this.rootLogger);
     logger.info("Register with LM Studio");
 
     interface OngoingPreprocessTask {
@@ -243,7 +243,7 @@ export class PluginsNamespace {
 
     const tasks = new Map<string, OngoingPreprocessTask>();
     const channel = this.port.createChannel(
-      "setPreprocessor",
+      "setPromptPreprocessor",
       undefined,
       message => {
         switch (message.type) {
@@ -262,7 +262,7 @@ export class PluginsNamespace {
               taskLogger,
             );
             const input = ChatMessage.createRaw(message.input, /* mutable */ false);
-            const controller: PreprocessorController = new ProcessingController(
+            const controller: PromptPreprocessorController = new ProcessingController(
               this.client,
               message.pluginConfig,
               message.globalPluginConfig,
@@ -279,7 +279,7 @@ export class PluginsNamespace {
             });
             // We know the input from the channel is immutable, so we can safely pass false as the
             // second argument.
-            preprocessor(controller, input.asMutableCopy())
+            promptPreprocessor(controller, input.asMutableCopy())
               .then(result => {
                 taskLogger.info(`Preprocess request completed.`);
                 const parsedReturned = z
@@ -287,7 +287,7 @@ export class PluginsNamespace {
                   .safeParse(result);
                 if (!parsedReturned.success) {
                   throw new Error(
-                    "Preprocessor returned an invalid value:" +
+                    "PromptPreprocessor returned an invalid value:" +
                       Validator.prettyPrintZod("result", parsedReturned.error),
                   );
                 }
@@ -344,7 +344,7 @@ export class PluginsNamespace {
   }
 
   /**
-   * Sets the preprocessor to be used by the plugin represented by this client.
+   * Sets the promptPreprocessor to be used by the plugin represented by this client.
    *
    * @deprecated [DEP-PLUGIN-PREDICTION-LOOP-HANDLER] Prediction loop handler support is still in
    * development. Stay tuned for updates.
