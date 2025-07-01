@@ -338,7 +338,7 @@ export class Chat extends MaybeMutable<ChatHistoryData> {
    *   returned array.
    * - If the predicate returns false, the file is kept in the history.
    *
-   * This method is useful if you are implementing a preprocessor that needs to convert certain
+   * This method is useful if you are implementing a promptPreprocessor that needs to convert certain
    * types of files.
    *
    * If the predicate needs to be async, use the {@link Chat#consumeFilesAsync} method.
@@ -363,7 +363,7 @@ export class Chat extends MaybeMutable<ChatHistoryData> {
    *  returned array.
    * - If the predicate returns false, the file is kept in the history.
    *
-   * This method is useful if you are implementing a preprocessor that needs to convert certain
+   * This method is useful if you are implementing a promptPreprocessor that needs to convert certain
    * types of files.
    *
    * If you need a synchronous version, use the {@link Chat#consumeFiles} method.
@@ -607,7 +607,7 @@ export class ChatMessage extends MaybeMutable<ChatMessageData> {
    *   returned array.
    * - If the predicate returns false, the file is kept in the message.
    *
-   * This method is useful if you are implementing a preprocessor that needs to convert certain
+   * This method is useful if you are implementing a promptPreprocessor that needs to convert certain
    * types of files.
    *
    * If the predicate needs to be async, use the {@link ChatMessage#consumeFilesAsync} method.
@@ -649,7 +649,7 @@ export class ChatMessage extends MaybeMutable<ChatMessageData> {
    *  returned array.
    * - If the predicate returns false, the file is kept in the message.
    *
-   * This method is useful if you are implementing a preprocessor that needs to convert certain
+   * This method is useful if you are implementing a promptPreprocessor that needs to convert certain
    * types of files.
    *
    * If you need a synchronous version, use the {@link ChatMessage#consumeFiles} method.

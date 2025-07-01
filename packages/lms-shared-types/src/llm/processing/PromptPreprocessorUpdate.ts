@@ -12,17 +12,17 @@ import {
   type ProcessingUpdateStatusUpdate,
 } from "./ProcessingUpdate.js";
 
-export type PreprocessorUpdate =
+export type PromptPreprocessorUpdate =
   | ProcessingUpdateStatusCreate
   | ProcessingUpdateStatusUpdate
   | ProcessingUpdateStatusRemove
   | ProcessingUpdateCitationBlockCreate
   | ProcessingUpdateDebugInfoBlockCreate;
 
-export const preprocessorUpdateSchema = z.discriminatedUnion("type", [
+export const promptPreprocessorUpdateSchema = z.discriminatedUnion("type", [
   processingUpdateStatusCreateSchema,
   processingUpdateStatusUpdateSchema,
   processingUpdateStatusRemoveSchema,
   processingUpdateCitationBlockCreateSchema,
   processingUpdateDebugInfoBlockCreateSchema,
-]) as z.Schema<PreprocessorUpdate>;
+]) as z.Schema<PromptPreprocessorUpdate>;
