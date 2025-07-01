@@ -1,4 +1,4 @@
-import { SimpleLogger, type LoggerInterface } from "@lmstudio/lms-common";
+import { makePromise, SimpleLogger, text, type LoggerInterface } from "@lmstudio/lms-common";
 import type {
   ClientToServerMessage,
   ClientTransportFactory,
@@ -24,6 +24,7 @@ export class WsClientTransport extends ClientTransport {
    * Whether the underlying socket should hold the process open.
    */
   private shouldRef = false;
+  private resolveDisposed: (() => void) | null = null;
   protected constructor(
     private readonly url: string | Promise<string>,
     private readonly receivedMessage: (message: ServerToClientMessage) => void,
@@ -44,6 +45,11 @@ export class WsClientTransport extends ClientTransport {
       this.logger.warn("connect() called while not disconnected");
       return;
     }
+    if (this.disposed) {
+      throw new Error(text`
+        Cannot establish WebSocket connection because the transport has been disposed.
+      `);
+    }
     this.status = WsClientTransportStatus.Connecting;
     Promise.resolve(this.url).then(url => {
       this.resolvedUrl = url;
@@ -52,16 +58,6 @@ export class WsClientTransport extends ClientTransport {
       this.ws.addEventListener("error", event => this.onWsError(event.error));
     });
   }
-  // private timeOut
-  // private setupWebsocketKeepAlive(ws: WebSocket, onTimeout: () => void) {
-  //   const socket = (ws as any)._socket as Socket | null | undefined;
-  //   if (socket) {
-  //     // Exists, use node.js methods
-  //     socket.setKeepAlive(true, KEEP_ALIVE_INTERVAL);
-  //     socket.setTimeout(KEEP_ALIVE_TIMEOUT, onTimeout);
-  //   } else {
-  //   }
-  // }
   protected onWsOpen() {
     this.ws!.addEventListener("message", this.onWsMessage.bind(this));
     this.status = WsClientTransportStatus.Connected;
@@ -135,6 +131,12 @@ export class WsClientTransport extends ClientTransport {
   }
   public override onHavingNoOpenCommunication() {
     this.updateShouldRef(false);
+    if (this.disposed && this.resolveDisposed !== null) {
+      // If the transport is disposed, we can resolve the disposed promise to allow the
+      // async dispose to complete.
+      this.resolveDisposed();
+      this.resolveDisposed = null;
+    }
   }
   public override onHavingOneOrMoreOpenCommunication() {
     this.updateShouldRef(true);
@@ -162,5 +164,25 @@ export class WsClientTransport extends ClientTransport {
         this.connect();
       }
     }
+  }
+  public override async [Symbol.asyncDispose]() {
+    await super[Symbol.asyncDispose]();
+    if (this.shouldRef) {
+      // If the connection needs to held up, wait until all communications are terminates
+      const { promise: disposedPromise, resolve: resolveDisposed } = makePromise<void>();
+      this.resolveDisposed = resolveDisposed;
+      await disposedPromise;
+    }
+
+    if (this.ws !== null) {
+      try {
+        this.ws.close();
+      } catch (error) {
+        // Ignore
+      }
+      this.ws = null;
+    }
+    this.errored(new Error("WebSocket client transport disposed"));
+    this.status = WsClientTransportStatus.Disconnected;
   }
 }
