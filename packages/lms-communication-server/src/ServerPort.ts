@@ -659,4 +659,8 @@ export class ServerPort<
     }
     this.emitCloseEvent();
   };
+
+  public async [Symbol.asyncDispose]() {
+    await this.transport[Symbol.asyncDispose]();
+  }
 }

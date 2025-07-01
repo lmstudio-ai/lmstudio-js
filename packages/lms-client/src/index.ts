@@ -22,7 +22,7 @@ export type { ParseDocumentOpts } from "./files/ParseDocumentOpts.js";
 export type { ParseDocumentResult } from "./files/ParseDocumentResult.js";
 export type { RetrievalCallbacks, RetrievalOpts } from "./files/RetrievalOpts.js";
 export type { RetrievalResult, RetrievalResultEntry } from "./files/RetrievalResult.js";
-export type { LLMActBaseOpts, ToolCallRequestError } from "./llm/act.js";
+export type { LLMActBaseOpts } from "./llm/act.js";
 export type { ActResult } from "./llm/ActResult.js";
 export type { GeneratorPredictionResult } from "./llm/GeneratorPredictionResult.js";
 export type { LLM } from "./llm/LLM.js";
@@ -48,6 +48,7 @@ export type {
 } from "./llm/PredictionResult.js";
 export { rawFunctionTool, tool } from "./llm/tool.js";
 export type { FunctionTool, RawFunctionTool, Tool, ToolBase, ToolCallContext } from "./llm/tool.js";
+export { ToolCallRequestError } from "./llm/ToolCallRequestError.js";
 export { LMStudioClient } from "./LMStudioClient.js";
 export type { LMStudioClientConstructorOpts } from "./LMStudioClient.js";
 export type { DynamicHandle } from "./modelShared/DynamicHandle.js";

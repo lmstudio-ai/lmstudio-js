@@ -160,6 +160,18 @@ export abstract class Transport<TIncoming, TOutgoing> {
    * Implemented by ClientTransport / ServerTransport. Call by outside to send a message.
    */
   public abstract send(message: TOutgoing): void;
+  /**
+   * Whether this transport has been disposed.
+   */
+  protected disposed = false;
+  public async [Symbol.asyncDispose]() {
+    if (this.disposed) {
+      throw new Error("Cannot dispose twice");
+    }
+    // Only sets disposed to true, transport implementations should override this method to
+    // perform actual cleanup.
+    this.disposed = true;
+  }
 }
 
 export abstract class ClientTransport extends Transport<

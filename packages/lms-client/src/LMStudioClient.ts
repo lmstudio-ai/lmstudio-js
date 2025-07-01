@@ -318,18 +318,18 @@ export class LMStudioClient {
       opts,
     ) satisfies LMStudioClientConstructorOpts;
 
-    if ((globalThis as any).__LMS_PLUGIN_CONTEXT) {
+    if ((globalThis as any).__LMS_PLUGIN_CONTEXT && opts.baseUrl === undefined) {
       throw new Error(
         text`
-          You cannot create LMStudioClient in a plugin context. To use LM Studio APIs, use the
-          "client" property attached to the GeneratorController/PreprocessorController.
+          You cannot create a local LMStudioClient in a plugin context. To use LM Studio APIs, use
+          the "client" property attached to the Controllers.
 
           For example, instead of:
 
           ${
             "const client = new LMStudioClient(); // <-- Error\n" +
             "export async function generate(ctl: GeneratorController) {\n" +
-            "  const model = client.llm.load(...);\n" +
+            "  const model = await client.llm.model(...);\n" +
             "}"
           }
 
@@ -337,9 +337,14 @@ export class LMStudioClient {
             
           ${
             "export async function generate(ctl: GeneratorController) {\n" +
-            "  const model = ctl.client.llm.load(...);\n" +
+            "  const model = await ctl.client.llm.model(...);\n" +
             "}"
           }
+
+          If you need to connect to a remote LM Studio, you should pass in the \`baseUrl\` option to
+          the LMStudioClient constructor:
+
+          ${"const client = new LMStudioClient({ baseUrl: 'ws://<host_name>:<port>' });"}
         `,
       );
     }
@@ -395,5 +400,17 @@ export class LMStudioClient {
     this.files = new FilesNamespace(this.filesPort, validator, this.logger);
     this.repository = new RepositoryNamespace(this.repositoryPort, validator, this.logger);
     this.plugins = new PluginsNamespace(this.pluginsPort, this, validator, this.logger, logger);
+  }
+
+  public async [Symbol.asyncDispose]() {
+    await Promise.all([
+      this.llmPort[Symbol.asyncDispose](),
+      this.embeddingPort[Symbol.asyncDispose](),
+      this.systemPort[Symbol.asyncDispose](),
+      this.diagnosticsPort[Symbol.asyncDispose](),
+      this.filesPort[Symbol.asyncDispose](),
+      this.repositoryPort[Symbol.asyncDispose](),
+      this.pluginsPort[Symbol.asyncDispose](),
+    ]);
   }
 }
