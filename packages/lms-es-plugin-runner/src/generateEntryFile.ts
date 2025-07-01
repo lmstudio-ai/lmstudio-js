@@ -21,6 +21,8 @@ let globalConfigSchematicsSet = false;
 let toolsProviderSet = false;
 let generatorSet = false;
 
+const selfRegistrationHost = client.plugins.getSelfRegistrationHost();
+
 const pluginContext: PluginContext = {
   withPredictionLoopHandler: (generate) => {
     if (predictionLoopHandlerSet) {
@@ -31,7 +33,7 @@ const pluginContext: PluginContext = {
     }
 
     predictionLoopHandlerSet = true;
-    client.plugins.setPredictionLoopHandler(generate);
+    selfRegistrationHost.setPredictionLoopHandler(generate);
     return pluginContext;
   },
   withPromptPreprocessor: (preprocess) => {
@@ -39,7 +41,7 @@ const pluginContext: PluginContext = {
       throw new Error("PromptPreprocessor already registered");
     }
     promptPreprocessorSet = true;
-    client.plugins.setPromptPreprocessor(preprocess);
+    selfRegistrationHost.setPromptPreprocessor(preprocess);
     return pluginContext;
   },
   withConfigSchematics: (configSchematics) => {
@@ -47,7 +49,7 @@ const pluginContext: PluginContext = {
       throw new Error("Config schematics already registered");
     }
     configSchematicsSet = true;
-    client.plugins.setConfigSchematics(configSchematics);
+    selfRegistrationHost.setConfigSchematics(configSchematics);
     return pluginContext;
   },
   withGlobalConfigSchematics: (globalConfigSchematics) => {
@@ -55,7 +57,7 @@ const pluginContext: PluginContext = {
       throw new Error("Global config schematics already registered");
     }
     globalConfigSchematicsSet = true;
-    client.plugins.setGlobalConfigSchematics(globalConfigSchematics);
+    selfRegistrationHost.setGlobalConfigSchematics(globalConfigSchematics);
     return pluginContext;
   },
   withToolsProvider: (toolsProvider) => {
@@ -67,7 +69,7 @@ const pluginContext: PluginContext = {
     }
 
     toolsProviderSet = true;
-    client.plugins.setToolsProvider(toolsProvider);
+    selfRegistrationHost.setToolsProvider(toolsProvider);
     return pluginContext;
   },
   withGenerator: (generator) => {
@@ -76,7 +78,7 @@ const pluginContext: PluginContext = {
     }
 
     generatorSet = true;
-    client.plugins.setGenerator(generator);
+    selfRegistrationHost.setGenerator(generator);
     return pluginContext;
   },
 };
@@ -84,7 +86,7 @@ const pluginContext: PluginContext = {
 import("./../src/index.ts").then(async module => {
   return await module.main(pluginContext);
 }).then(() => {
-  client.plugins.initCompleted();
+  selfRegistrationHost.initCompleted();
 }).catch((error) => {
   console.error("Failed to execute the main function of the plugin.");
   console.error(error);
