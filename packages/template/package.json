@@ -1,6 +1,6 @@
 {
   "name": "@lmstudio/template",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -9,5 +9,6 @@
     "clean": "shx rm -rf ./dist ./tsconfig.tsbuildinfo"
   },
   "author": "",
-  "license": "Apache-2.0"
+  "license": "Apache-2.0",
+  "gitHead": "883a08d0cbc27d0ea888355a21f8bca61275f23d"
 }
