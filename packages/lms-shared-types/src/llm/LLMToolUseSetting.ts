@@ -11,6 +11,7 @@ export type LLMToolParameters = {
   properties: Record<string, any>;
   required?: string[];
   additionalProperties?: boolean;
+  $defs?: Record<string, any>;
 };
 
 export const llmToolParametersSchema = z.discriminatedUnion("type", [
@@ -19,6 +20,7 @@ export const llmToolParametersSchema = z.discriminatedUnion("type", [
     properties: z.record(jsonSerializableSchema),
     required: z.array(z.string()).optional(),
     additionalProperties: z.boolean().optional(),
+    $defs: z.record(jsonSerializableSchema).optional(),
   }),
   // add more parameter types here
   // ...
