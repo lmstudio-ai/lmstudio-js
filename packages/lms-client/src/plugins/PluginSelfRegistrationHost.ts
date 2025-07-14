@@ -50,10 +50,11 @@ class GeneratorConnectorImpl implements GeneratorConnector {
     });
   }
 
-  public toolCallGenerationStarted(): void {
+  public toolCallGenerationStarted(toolCallId: string | undefined): void {
     this.channel.send({
       type: "toolCallGenerationStarted",
       taskId: this.taskId,
+      toolCallId,
     });
   }
 

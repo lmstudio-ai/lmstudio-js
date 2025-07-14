@@ -246,6 +246,7 @@ export function createPluginsBackendInterface() {
           z.object({
             type: z.literal("toolCallGenerationStarted"),
             taskId: z.string(),
+            toolCallId: z.string().optional(),
           }),
           z.object({
             type: z.literal("toolCallGenerationNameReceived"),
