@@ -443,7 +443,7 @@ export class LLMDynamicHandle extends DynamicHandle<
   ) {
     let finished = false;
     let firstTokenTriggered = false;
-    let currentCallId = -1;
+    let currentCallId: number | null = null;
     let receivedEagerToolNameReporting = false;
     let receivedToolArgumentsStreaming = false;
     const channel = this.port.createChannel(
@@ -478,7 +478,11 @@ export class LLMDynamicHandle extends DynamicHandle<
             break;
           }
           case "toolCallGenerationStart": {
-            currentCallId++;
+            if (currentCallId === null) {
+              currentCallId = 0;
+            } else {
+              currentCallId++;
+            }
             receivedEagerToolNameReporting = false;
             receivedToolArgumentsStreaming = false;
             safeCallCallback(
@@ -495,7 +499,7 @@ export class LLMDynamicHandle extends DynamicHandle<
               this.logger,
               "onToolCallGenerationNameReceived",
               extraOpts.onToolCallRequestNameReceived,
-              [currentCallId, message.name],
+              [currentCallId ?? -1, message.name],
             );
             break;
           }
@@ -505,7 +509,7 @@ export class LLMDynamicHandle extends DynamicHandle<
               this.logger,
               "onToolCallGenerationArgumentFragmentGenerated",
               extraOpts.onToolCallRequestArgumentFragmentGenerated,
-              [currentCallId, message.content],
+              [currentCallId ?? -1, message.content],
             );
             break;
           }
@@ -516,7 +520,7 @@ export class LLMDynamicHandle extends DynamicHandle<
                 this.logger,
                 "onToolCallGenerationNameReceived",
                 extraOpts.onToolCallRequestNameReceived,
-                [currentCallId, message.toolCallRequest.name],
+                [currentCallId ?? -1, message.toolCallRequest.name],
               );
             }
             if (!receivedToolArgumentsStreaming) {
@@ -526,7 +530,10 @@ export class LLMDynamicHandle extends DynamicHandle<
                 this.logger,
                 "onToolCallGenerationArgumentFragmentGenerated",
                 extraOpts.onToolCallRequestArgumentFragmentGenerated,
-                [currentCallId, JSON.stringify(message.toolCallRequest.arguments ?? {}, null, 2)],
+                [
+                  currentCallId ?? -1,
+                  JSON.stringify(message.toolCallRequest.arguments ?? {}, null, 2),
+                ],
               );
             }
 
@@ -535,7 +542,7 @@ export class LLMDynamicHandle extends DynamicHandle<
               "onToolCallGenerationEnd",
               extraOpts.onToolCallRequestEnd,
               [
-                currentCallId,
+                currentCallId ?? -1,
                 { toolCallRequest: message.toolCallRequest, rawContent: message.rawContent },
               ],
             );
@@ -550,7 +557,7 @@ export class LLMDynamicHandle extends DynamicHandle<
               this.logger,
               "onToolCallGenerationFailed",
               extraOpts.onToolCallRequestFailure,
-              [currentCallId, toolCallRequestError],
+              [currentCallId ?? -1, toolCallRequestError],
             );
             break;
           }
