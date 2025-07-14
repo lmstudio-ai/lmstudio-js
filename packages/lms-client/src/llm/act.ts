@@ -275,12 +275,27 @@ export interface LLMActBaseOpts<TPredictionResult> {
    * @experimental [EXP-GRANULAR-ACT] More granular .act status reporting is experimental and may
    * change in the future
    */
-  onToolCallRequestStart?: (roundIndex: number, callId: number) => void;
+  onToolCallRequestStart?: (
+    roundIndex: number,
+    callId: number,
+    info: {
+      /**
+       * The LLM-specific tool call ID that should go into the context. This will be the same as the
+       * `toolCallRequest.id`. Depending on the LLM, this may or may not exist, and the format of it
+       * may also vary.
+       *
+       * If you need to match up different stages of the tool call, please use the `callId`, which
+       * is provided by lmstudio.js and is guaranteed to behave consistently across all LLMs.
+       */
+      toolCallId?: string;
+    },
+  ) => void;
   /**
    * A callback that is called when the model has received the name of the tool.
    *
-   * This hook is intended for updating the UI to show the name of the tool that is being called.
-   * There is no guarantee that this callback will be called.
+   * This hook is intended for updating the UI to show the name of the tool that is being called. If
+   * the model being used does not support eager function name reporting, this callback will be
+   * called right before the `onToolCallRequestEnd` callback.
    *
    * @experimental [EXP-GRANULAR-ACT] More granular .act status reporting is experimental and may
    * change in the future
@@ -290,7 +305,9 @@ export interface LLMActBaseOpts<TPredictionResult> {
    * A callback that is called when the model has generated a fragment of the arguments of the tool.
    *
    * This hook is intended for updating the UI to stream the arguments of the tool that is being
-   * called. There is no guarantee that this callback will be called.
+   * called. If the model being used does not support function arguments streaming, this callback
+   * will be called right before the `onToolCallRequestEnd` callback, but after the
+   * `onToolCallRequestNameReceived`.
    *
    * Note, when piecing together all the argument fragments, there is no guarantee that the result
    * will be valid JSON, as some models may not use JSON to represent tool calls.
@@ -487,7 +504,7 @@ interface ActPredictionImplementationArgs<TEndPacket> {
   signal: AbortSignal;
   handleFragment: (fragment: LLMPredictionFragment) => void;
   handlePromptProcessingProgress: (progress: number) => void;
-  handleToolCallGenerationStart: () => void;
+  handleToolCallGenerationStart: (toolCallId: string | undefined) => void;
   handleToolCallGenerationNameReceived: (name: string) => void;
   handleToolCallGenerationArgumentFragmentGenerated: (content: string) => void;
   handleToolCallGenerationEnd: (request: ToolCallRequest, rawContent: string | undefined) => void;
@@ -711,6 +728,9 @@ export async function internalAct<TPredictionResult, TEndPacket>(
       ? new NoQueueQueue()
       : new FIFOQueue();
 
+    let receivedEagerToolNameReporting = false;
+    let receivedToolArgumentsStreaming = false;
+
     predictImpl({
       allowTools,
       history: accessMaybeMutableInternals(mutableChat)._internalGetData(),
@@ -738,15 +758,19 @@ export async function internalAct<TPredictionResult, TEndPacket>(
           [predictionsPerformed, progress],
         );
       },
-      handleToolCallGenerationStart: () => {
+      handleToolCallGenerationStart: toolCallId => {
         currentCallId++;
+        receivedEagerToolNameReporting = false;
+        receivedToolArgumentsStreaming = false;
         isGeneratingToolCall = true;
         safeCallCallback(logger, "onToolCallRequestStart", baseOpts.onToolCallRequestStart, [
           predictionsPerformed,
           currentCallId,
+          { toolCallId: toolCallId },
         ]);
       },
       handleToolCallGenerationNameReceived: name => {
+        receivedEagerToolNameReporting = true;
         safeCallCallback(
           logger,
           "onToolCallRequestNameReceived",
@@ -755,6 +779,7 @@ export async function internalAct<TPredictionResult, TEndPacket>(
         );
       },
       handleToolCallGenerationArgumentFragmentGenerated: content => {
+        receivedToolArgumentsStreaming = true;
         safeCallCallback(
           logger,
           "onToolCallRequestArgumentFragmentGenerated",
@@ -766,6 +791,27 @@ export async function internalAct<TPredictionResult, TEndPacket>(
         isGeneratingToolCall = false;
         const toolCallIndex = nextToolCallIndex;
         nextToolCallIndex++;
+
+        if (!receivedEagerToolNameReporting) {
+          // If eager name reporting not received, report it.
+          safeCallCallback(
+            logger,
+            "onToolCallRequestNameReceived",
+            baseOpts.onToolCallRequestNameReceived,
+            [predictionsPerformed, currentCallId, request.name],
+          );
+        }
+        if (!receivedToolArgumentsStreaming) {
+          // If arguments streaming not received, just pretend we have received all the arguments
+          // as a single JSON
+          safeCallCallback(
+            logger,
+            "onToolCallRequestArgumentFragmentGenerated",
+            baseOpts.onToolCallRequestArgumentFragmentGenerated,
+            [predictionsPerformed, currentCallId, JSON.stringify(request.arguments ?? {}, null, 2)],
+          );
+        }
+
         // We have now received a tool call request. Now let's see if we can call the tool and
         // get the result.
         toolCallRequests.push(request);

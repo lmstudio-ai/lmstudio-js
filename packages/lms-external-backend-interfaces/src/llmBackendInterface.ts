@@ -53,6 +53,10 @@ export function createLlmBackendInterface() {
           }),
           z.object({
             type: z.literal("toolCallGenerationStart"),
+            /**
+             * The LLM specific call id of the tool call.
+             */
+            toolCallId: z.string().optional(),
           }),
           z.object({
             type: z.literal("toolCallGenerationNameReceived"),
@@ -119,6 +123,10 @@ export function createLlmBackendInterface() {
           }),
           z.object({
             type: z.literal("toolCallGenerationStart"),
+            /**
+             * The LLM specific call id of the tool call.
+             */
+            toolCallId: z.string().optional(),
           }),
           z.object({
             type: z.literal("toolCallGenerationNameReceived"),

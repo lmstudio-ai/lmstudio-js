@@ -13,7 +13,7 @@ import { BaseController } from "./BaseController.js";
 
 export interface GeneratorConnector {
   fragmentGenerated: (content: string, opts: LLMPredictionFragmentInputOpts) => void;
-  toolCallGenerationStarted: () => void;
+  toolCallGenerationStarted: (toolCallId: string | undefined) => void;
   toolCallGenerationNameReceived: (toolName: string) => void;
   toolCallGenerationArgumentFragmentGenerated: (content: string) => void;
   toolCallGenerationEnded: (toolCallRequest: ToolCallRequest) => void;
@@ -77,8 +77,15 @@ export class GeneratorController extends BaseController {
    * successfully generated tool calls, or a `toolCallGenerationFailed` call for
    * failed tool calls.
    */
-  public toolCallGenerationStarted() {
-    this.connector.toolCallGenerationStarted();
+  public toolCallGenerationStarted({
+    toolCallId,
+  }: {
+    /**
+     * The LLM specific call id of the tool call.
+     */
+    toolCallId?: string;
+  } = {}) {
+    this.connector.toolCallGenerationStarted(toolCallId);
   }
 
   /**

@@ -291,7 +291,7 @@ export class LLMGeneratorHandle {
                 break;
               }
               case "toolCallGenerationStart": {
-                handleToolCallGenerationStart();
+                handleToolCallGenerationStart(message.toolCallId);
                 break;
               }
               case "toolCallGenerationNameReceived": {
