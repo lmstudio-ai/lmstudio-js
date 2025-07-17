@@ -470,6 +470,28 @@ export class ProcessingController extends BaseController {
     );
     return toolStatusController;
   }
+
+  /**
+   * Starts a tool use session with tools available in the prediction process. Note, this method
+   * must be used with "Explicit Resource Management". That is, you should use it like so:
+   *
+   * ```typescript
+   * using toolUseSession = await ctl.startToolUseSession();
+   * // ^ Notice the `using` keyword here.
+   * ```
+   *
+   * If you do not `using`, you must call `toolUseSession[Symbol.dispose]()` after you are done.
+   * Otherwise, there will be a memory leak and the plugins you requested tools from will be loaded
+   * indefinitely.
+   *
+   * @public
+   * @deprecated WIP
+   */
+  public async startToolUseSession() {
+    // const toolUseSession = await this.client.plugins.internalStartToolUseSession({
+    // });
+    // return toolUseSession;
+  }
 }
 
 /**

@@ -128,7 +128,10 @@ export class LLMGeneratorHandle {
   /**
    * Use the generator to produce a response based on the given history.
    */
-  public respond(chat: ChatLike, opts: LLMGeneratorPredictionOpts = {}) {
+  public respond(
+    chat: ChatLike,
+    opts: LLMGeneratorPredictionOpts = {},
+  ): OngoingGeneratorPrediction {
     const stack = getCurrentStack(1);
     [chat, opts] = this.validator.validateMethodParamsOrThrow(
       "LLMGeneratorHandle",

@@ -7,6 +7,7 @@ import {
   kvConfigSchema,
   llmPredictionFragmentInputOptsSchema,
   llmToolSchema,
+  pluginConfigSpecifierSchema,
   pluginManifestSchema,
   processingRequestResponseSchema,
   processingRequestSchema,
@@ -21,6 +22,87 @@ import { z } from "zod";
 export function createPluginsBackendInterface() {
   return (
     new BackendInterface()
+      /**
+       * The following method is called by a client that wants to use plugins that are registered
+       * to LM Studio.
+       */
+      .addChannelEndpoint("startToolUseSession", {
+        creationParameter: z.object({
+          pluginIdentifier: z.string(),
+          pluginConfigSpecifier: pluginConfigSpecifierSchema,
+        }),
+        toClientPacket: z.discriminatedUnion("type", [
+          /**
+           * The session has been started successfully. The client can now use the session. Note,
+           * there are no sessionError message because if a session fails to start, the channel
+           * will error instead.
+           */
+          z.object({
+            type: z.literal("sessionReady"),
+            toolDefinitions: z.array(llmToolSchema),
+          }),
+          /**
+           * A tool call has been completed.
+           */
+          z.object({
+            type: z.literal("toolCallComplete"),
+            callId: z.number(),
+            result: jsonSerializableSchema,
+          }),
+          /**
+           * A tool call has failed.
+           */
+          z.object({
+            type: z.literal("toolCallError"),
+            callId: z.number(),
+            error: serializedLMSExtendedErrorSchema,
+          }),
+          /**
+           * Status update for a tool call.
+           */
+          z.object({
+            type: z.literal("toolCallStatus"),
+            callId: z.number(),
+            statusText: z.string(),
+          }),
+          /**
+           * Warning message for a tool call.
+           */
+          z.object({
+            type: z.literal("toolCallWarn"),
+            callId: z.number(),
+            warnText: z.string(),
+          }),
+        ]),
+        toServerPacket: z.discriminatedUnion("type", [
+          /**
+           * Request to start a tool call. This call can be aborted using the `abortToolCall`
+           * packet. When the tool call is completed, either the `toolCallResult` or `toolCallError`
+           * packet will be sent.
+           */
+          z.object({
+            type: z.literal("callTool"),
+            callId: z.number(),
+            name: z.string(),
+            arguments: jsonSerializableSchema,
+          }),
+          /**
+           * Request to abort a tool call. Upon calling this, no toolCallComplete or toolCallError
+           * packets will be sent for the call. We assume abort is done immediately.
+           */
+          z.object({
+            type: z.literal("abortToolCall"),
+            callId: z.number(),
+          }),
+          /**
+           * Client requests to discard the session. Upon calling this, the channel will be closed.
+           */
+          z.object({
+            type: z.literal("discardSession"),
+          }),
+        ]),
+      })
+
       /**
        * The following method is called by the controlling client. (e.g. lms-cli)
        */

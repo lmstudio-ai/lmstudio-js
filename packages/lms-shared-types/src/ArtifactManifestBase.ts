@@ -98,3 +98,8 @@ export const artifactManifestBaseSchema = z.object({
   dependencies: z.array(artifactDependencySchema).optional(),
   tags: z.array(z.string()).optional(),
 });
+
+export const artifactIdentifierRegex = /^[a-z0-9]+(?:-[a-z0-9]+)*\/[a-z0-9]+(?:[-.][a-z0-9]+)*$/;
+export const artifactIdentifierSchema = z.string().regex(artifactIdentifierRegex, {
+  message: "Invalid artifact identifier format. Expected 'owner/name'.",
+});
