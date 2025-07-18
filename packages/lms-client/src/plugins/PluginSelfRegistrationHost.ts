@@ -161,6 +161,7 @@ export class PluginSelfRegistrationHost {
               message.pluginConfig,
               message.globalPluginConfig,
               message.workingDirectoryPath,
+              message.enabledPluginInfos,
               connector,
               message.config,
               /* shouldIncludeInputInHistory */ false,
@@ -238,7 +239,7 @@ export class PluginSelfRegistrationHost {
   }
 
   /**
-   * Sets the promptPreprocessor to be used by the plugin represented by this client.
+   * Sets the prediction loop handler to be used by the plugin represented by this client.
    *
    * @deprecated [DEP-PLUGIN-PREDICTION-LOOP-HANDLER] Prediction loop handler support is still in
    * development. Stay tuned for updates.
@@ -294,6 +295,7 @@ export class PluginSelfRegistrationHost {
               message.pluginConfig,
               message.globalPluginConfig,
               message.workingDirectoryPath,
+              message.enabledPluginInfos,
               connector,
               message.config,
               /* shouldIncludeInputInHistory */ true,

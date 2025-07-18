@@ -19,6 +19,7 @@ export { Event } from "./Event.js";
 export { doesFileNameIndicateModel, modelExtensions } from "./fileName.js";
 export { flattenSignalOfSignal, flattenSignalOfWritableSignal } from "./flattenSignal.js";
 export { HandledEvent } from "./HandledEvent.js";
+export { IdGiver } from "./IdGiver.js";
 export { makePrettyError, makeTitledPrettyError } from "./makePrettyError.js";
 export { DeferredPromise, makePromise } from "./makePromise.js";
 export { makeSetter, makeSetterWithPatches, Setter, WriteTag } from "./makeSetter.js";

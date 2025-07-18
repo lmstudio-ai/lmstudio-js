@@ -25,6 +25,8 @@ export {
   ArtifactDependencyPurpose,
   artifactDependencyPurposeSchema,
   artifactDependencySchema,
+  artifactIdentifierRegex,
+  artifactIdentifierSchema,
   ArtifactManifestBase,
   artifactManifestBaseSchema,
   ArtifactModelDependency,
@@ -344,6 +346,7 @@ export {
   relativePathNoLeadingDotSlashRegex,
   relativePathNoLeadingDotSlashSchema,
 } from "./path.js";
+export { PluginConfigSpecifier, pluginConfigSpecifierSchema } from "./PluginConfigSpecifier.js";
 export {
   PluginManifest,
   pluginManifestSchema,
@@ -352,6 +355,7 @@ export {
 } from "./PluginManifest.js";
 export { PresetManifest, presetManifestSchema } from "./PresetManifest.js";
 export { reasonableKeyStringSchema } from "./reasonable.js";
+export { RemotePluginInfo, remotePluginInfoSchema } from "./RemotePluginInfo.js";
 export {
   ArtifactDownloadPlan,
   ArtifactDownloadPlanModelInfo,
