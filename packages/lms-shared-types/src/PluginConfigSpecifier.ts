@@ -2,7 +2,7 @@ import { z } from "zod";
 import { kvConfigSchema, type KVConfig } from "./KVConfig";
 
 /**
- * When using a plugin remotely, the config of the plugin is oftentimes requires. There are two ways
+ * When using a plugin remotely, the config of the plugin is oftentimes required. There are two ways
  * of specifying the config:
  *
  * - Either provided directly as a KV Config
