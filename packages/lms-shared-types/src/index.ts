@@ -355,6 +355,7 @@ export {
 } from "./PluginManifest.js";
 export { PresetManifest, presetManifestSchema } from "./PresetManifest.js";
 export { reasonableKeyStringSchema } from "./reasonable.js";
+export { RemotePluginInfo, remotePluginInfoSchema } from "./RemotePluginInfo.js";
 export {
   ArtifactDownloadPlan,
   ArtifactDownloadPlanModelInfo,

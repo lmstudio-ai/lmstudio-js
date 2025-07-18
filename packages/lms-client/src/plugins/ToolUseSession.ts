@@ -30,7 +30,9 @@ interface OngoingToolCall {
 }
 
 /**
- * Represents a tool use session backed by a single tool.
+ * Represents a tool use session backed by a single plugin. Don't construct this class yourself.
+ *
+ * @public
  */
 export class SingleToolUseSession implements ToolUseSession {
   private status: SingleToolUseSessionStatus = "initializing";
@@ -250,5 +252,84 @@ export class SingleToolUseSession implements ToolUseSession {
         return await promise;
       },
     });
+  }
+}
+
+/**
+ * Represents a tool use session backed by multiple plugins. Don't construct this class yourself.
+ *
+ * @public
+ */
+export class MultiToolUseSession implements ToolUseSession {
+  public static async createUsingPredictionProcess(
+    pluginsPort: PluginsPort,
+    pluginIdentifiers: Array<string>,
+    predictionContextIdentifier: string,
+    token: string,
+    logger: SimpleLogger,
+    stack?: string,
+  ) {
+    // Start initializing all the sessions in parallel. This is OK because usually all the plugins
+    // are already loaded for the prediction process anyway.
+    const results = await Promise.allSettled(
+      pluginIdentifiers.map(pluginIdentifier =>
+        SingleToolUseSession.create(
+          pluginsPort,
+          pluginIdentifier,
+          {
+            type: "predictionProcess",
+            pci: predictionContextIdentifier,
+            token,
+          },
+          logger,
+          stack,
+        ),
+      ),
+    );
+
+    const failed = results.filter(result => result.status === "rejected");
+    if (failed.length > 0) {
+      // Some sessions failed to initialize. We need to terminate all the sessions that
+      // successfully initialized.
+      for (const result of results) {
+        if (result.status === "fulfilled") {
+          try {
+            result.value[Symbol.dispose]();
+          } catch (error) {
+            logger.error("Failed to dispose a session after initialization failure.", error);
+          }
+        }
+      }
+
+      throw new AggregateError(
+        failed.map(result => result.reason),
+        "Failed to initialize some tool use sessions.",
+      );
+    }
+
+    return new MultiToolUseSession(
+      results.map(result => (result as PromiseFulfilledResult<SingleToolUseSession>).value),
+      logger,
+    );
+  }
+
+  public tools: Array<Tool> = [];
+
+  private constructor(
+    private readonly sessions: Array<SingleToolUseSession>,
+    private readonly logger: SimpleLogger,
+  ) {
+    this.tools = sessions.flatMap(session => session.tools);
+  }
+
+  public [Symbol.dispose](): void {
+    // Dispose all the sessions.
+    for (const session of this.sessions) {
+      try {
+        session[Symbol.dispose]();
+      } catch (error) {
+        this.logger.error("Failed to dispose a session.", error);
+      }
+    }
   }
 }

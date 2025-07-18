@@ -11,6 +11,7 @@ import {
   type ProcessingRequest,
   type ProcessingRequestResponse,
   type ProcessingUpdate,
+  type RemotePluginInfo,
   type StatusStepState,
   type ToolStatusStepStateStatus,
 } from "@lmstudio/lms-shared-types";
@@ -63,8 +64,8 @@ export class ProcessingConnector {
   public constructor(
     private readonly pluginsPort: PluginsPort,
     public readonly abortSignal: AbortSignal,
-    private readonly processingContextIdentifier: string,
-    private readonly token: string,
+    public readonly processingContextIdentifier: string,
+    public readonly token: string,
     private readonly logger: SimpleLogger,
   ) {}
   public handleUpdate(update: ProcessingUpdate) {
@@ -201,6 +202,7 @@ export class ProcessingController extends BaseController {
     pluginConfig: KVConfig,
     globalPluginConfig: KVConfig,
     workingDirectoryPath: string | null,
+    private readonly enabledPluginInfos: Array<RemotePluginInfo>,
     /** @internal */
     private readonly connector: ProcessingConnector,
     /** @internal */
@@ -473,24 +475,31 @@ export class ProcessingController extends BaseController {
 
   /**
    * Starts a tool use session with tools available in the prediction process. Note, this method
-   * must be used with "Explicit Resource Management". That is, you should use it like so:
+   * should be used with "Explicit Resource Management". That is, you should use it like so:
    *
    * ```typescript
    * using toolUseSession = await ctl.startToolUseSession();
    * // ^ Notice the `using` keyword here.
    * ```
    *
-   * If you do not `using`, you must call `toolUseSession[Symbol.dispose]()` after you are done.
-   * Otherwise, there will be a memory leak and the plugins you requested tools from will be loaded
-   * indefinitely.
+   * If you do not `using`, you should call `toolUseSession[Symbol.dispose]()` after you are done.
+   *
+   * If you don't, lmstudio-js will close the session upon the end of the prediction step
+   * automatically. However, it is not recommended.
    *
    * @public
    * @deprecated WIP
    */
   public async startToolUseSession() {
-    // const toolUseSession = await this.client.plugins.internalStartToolUseSession({
-    // });
-    // return toolUseSession;
+    const identifiersOfPluginsWithTools = this.enabledPluginInfos
+      .filter(({ hasToolsProvider }) => hasToolsProvider)
+      .map(({ identifier }) => identifier);
+    return await this.client.plugins.startToolUseSessionUsingPredictionProcess(
+      // We start a tool use session with all the plugins that have tools available
+      identifiersOfPluginsWithTools,
+      this.connector.processingContextIdentifier,
+      this.connector.token,
+    );
   }
 }
 

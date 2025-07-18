@@ -12,6 +12,7 @@ import {
   processingRequestResponseSchema,
   processingRequestSchema,
   processingUpdateSchema,
+  remotePluginInfoSchema,
   serializedKVConfigSchematicsSchema,
   serializedLMSExtendedErrorSchema,
   toolCallRequestSchema,
@@ -142,6 +143,10 @@ export function createPluginsBackendInterface() {
             pluginConfig: kvConfigSchema,
             globalPluginConfig: kvConfigSchema,
             workingDirectoryPath: z.string().nullable(),
+            /**
+             * An array of all the plugins that are enabled for this prediction.
+             */
+            enabledPluginInfos: z.array(remotePluginInfoSchema),
             /** Processing Context Identifier */
             pci: z.string(),
             token: z.string(),
@@ -178,6 +183,10 @@ export function createPluginsBackendInterface() {
             pluginConfig: kvConfigSchema,
             globalPluginConfig: kvConfigSchema,
             workingDirectoryPath: z.string().nullable(),
+            /**
+             * An array of all the plugins that are enabled for this prediction.
+             */
+            enabledPluginInfos: z.array(remotePluginInfoSchema),
             /** Processing Context Identifier */
             pci: z.string(),
             token: z.string(),

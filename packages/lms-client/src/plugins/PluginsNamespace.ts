@@ -18,12 +18,16 @@ import {
 import { z } from "zod";
 import { type LMStudioClient } from "../LMStudioClient.js";
 import { PluginSelfRegistrationHost } from "./PluginSelfRegistrationHost.js";
-import { SingleToolUseSession, type ToolUseSession } from "./ToolUseSession.js";
+import {
+  MultiToolUseSession,
+  SingleToolUseSession,
+  type ToolUseSession,
+} from "./ToolUseSession.js";
 
 /**
  * Options to use with {@link PluginsNamespace#pluginTools}.
  *
- * @experimental [EXP-USE-USE-PLUGIN-TOOLS] Using tools from other plugins is still in
+ * @experimental [EXP-USE-USE-PLUGIN-TOOLS] Using tools from other applications is still in
  * development. This may change in the future without warning.
  *
  * @public
@@ -171,14 +175,9 @@ export class PluginsNamespace {
   }
 
   /**
-   * Starts a tool use session. This method is marked as internal and will be stripped from type
-   * definitions. It is required to be public because it is needed by the prediction process
-   * controllers to directly pass in `pluginConfigSpecifiers` that refer to the prediction context
-   * they are bound to.
-   *
-   * @internal
+   * Starts a tool use session use any config specifier.
    */
-  public async internalStartToolUseSession(
+  private async internalStartToolUseSession(
     pluginIdentifier: string,
     pluginConfigSpecifier: PluginConfigSpecifier,
     _stack?: string,
@@ -204,7 +203,7 @@ export class PluginsNamespace {
    * Otherwise, there will be a memory leak and the plugins you requested tools from will be loaded
    * indefinitely.
    *
-   * @experimental [EXP-USE-USE-PLUGIN-TOOLS] Using tools from other plugins is still in
+   * @experimental [EXP-USE-USE-PLUGIN-TOOLS] Using tools from other applications is still in
    * development. This may change in the future without warning.
    */
   public async pluginTools(
@@ -226,5 +225,29 @@ export class PluginsNamespace {
       config: opts.pluginConfig ?? emptyKVConfig,
       workingDirectoryPath: opts.workingDirectory,
     });
+  }
+
+  /**
+   * Start a tool use session associated with a prediction process.
+   *
+   * This method is used internally by processing controllers and will be stripped by the internal
+   * tag.
+   *
+   * @internal
+   */
+  public async startToolUseSessionUsingPredictionProcess(
+    pluginIdentifiers: Array<string>,
+    predictionContextIdentifier: string,
+    token: string,
+    stack?: string,
+  ): Promise<ToolUseSession> {
+    return await MultiToolUseSession.createUsingPredictionProcess(
+      this.port,
+      pluginIdentifiers,
+      predictionContextIdentifier,
+      token,
+      this.logger,
+      stack,
+    );
   }
 }
