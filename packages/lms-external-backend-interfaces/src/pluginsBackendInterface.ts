@@ -6,6 +6,7 @@ import {
   jsonSerializableSchema,
   kvConfigSchema,
   llmPredictionFragmentInputOptsSchema,
+  llmPredictionFragmentSchema,
   llmToolSchema,
   pluginConfigSpecifierSchema,
   pluginManifestSchema,
@@ -15,6 +16,7 @@ import {
   remotePluginInfoSchema,
   serializedKVConfigSchematicsSchema,
   serializedLMSExtendedErrorSchema,
+  tokenSourceIdentifierSchema,
   toolCallRequestSchema,
 } from "@lmstudio/lms-shared-types";
 
@@ -100,6 +102,55 @@ export function createPluginsBackendInterface() {
            */
           z.object({
             type: z.literal("discardSession"),
+          }),
+        ]),
+      })
+
+      .addChannelEndpoint("generateWithGenerator", {
+        creationParameter: z.object({
+          pluginIdentifier: z.string(),
+          pluginConfigSpecifier: pluginConfigSpecifierSchema,
+          tools: z.array(llmToolSchema),
+          history: chatHistoryDataSchema,
+        }),
+        toClientPacket: z.discriminatedUnion("type", [
+          z.object({
+            type: z.literal("fragment"),
+            fragment: llmPredictionFragmentSchema,
+          }),
+          z.object({
+            type: z.literal("promptProcessingProgress"),
+            progress: z.number(),
+          }),
+          z.object({
+            type: z.literal("toolCallGenerationStart"),
+            /**
+             * The LLM specific call id of the tool call.
+             */
+            toolCallId: z.string().optional(),
+          }),
+          z.object({
+            type: z.literal("toolCallGenerationNameReceived"),
+            name: z.string(),
+          }),
+          z.object({
+            type: z.literal("toolCallGenerationArgumentFragmentGenerated"),
+            content: z.string(),
+          }),
+          z.object({
+            type: z.literal("toolCallGenerationEnd"),
+            toolCallRequest: toolCallRequestSchema,
+          }),
+          z.object({
+            type: z.literal("toolCallGenerationFailed"),
+          }),
+          z.object({
+            type: z.literal("success"),
+          }),
+        ]),
+        toServerPacket: z.discriminatedUnion("type", [
+          z.object({
+            type: z.literal("cancel"),
           }),
         ]),
       })
@@ -390,14 +441,14 @@ export function createPluginsBackendInterface() {
         }),
         returns: chatHistoryDataSchema,
       })
-      .addRpcEndpoint("processingGetOrLoadModel", {
+      .addRpcEndpoint("processingGetOrLoadTokenSource", {
         parameter: z.object({
           /** Processing Context Identifier */
           pci: z.string(),
           token: z.string(),
         }),
         returns: z.object({
-          identifier: z.string(),
+          tokenSourceIdentifier: tokenSourceIdentifierSchema,
         }),
       })
       .addRpcEndpoint("processingHasStatus", {

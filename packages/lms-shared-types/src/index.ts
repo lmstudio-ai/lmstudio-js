@@ -313,6 +313,7 @@ export {
   PromptPreprocessorUpdate,
   promptPreprocessorUpdateSchema,
 } from "./llm/processing/PromptPreprocessorUpdate.js";
+export { TokenSourceIdentifier, tokenSourceIdentifierSchema } from "./llm/TokenSourceIdentifier.js";
 export { ModelCompatibilityType, modelCompatibilityTypeSchema } from "./ModelCompatibilityType.js";
 export { ModelDomainType, modelDomainTypeSchema } from "./ModelDomainType.js";
 export {

@@ -3,6 +3,8 @@ export {
   ChatMessage,
   createConfigSchematics,
   FileHandle,
+  LLM,
+  LLMGeneratorHandle,
   LMStudioClient,
   rawFunctionTool,
   tool,

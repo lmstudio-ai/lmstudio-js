@@ -13,7 +13,7 @@ export type PluginConfigSpecifier =
   | {
       type: "direct";
       config: KVConfig;
-      workingDirectoryPath: string;
+      workingDirectoryPath?: string;
     }
   | {
       type: "predictionProcess";
@@ -25,7 +25,7 @@ export const pluginConfigSpecifierSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("direct"),
     config: kvConfigSchema,
-    workingDirectoryPath: z.string(),
+    workingDirectoryPath: z.string().optional(),
   }),
   z.object({
     type: z.literal("predictionProcess"),

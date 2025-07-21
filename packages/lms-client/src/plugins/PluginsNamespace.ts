@@ -16,6 +16,7 @@ import {
   pluginManifestSchema,
 } from "@lmstudio/lms-shared-types";
 import { z } from "zod";
+import { LLMGeneratorHandle } from "../llm/LLMGeneratorHandle.js";
 import { type LMStudioClient } from "../LMStudioClient.js";
 import { PluginSelfRegistrationHost } from "./PluginSelfRegistrationHost.js";
 import {
@@ -39,13 +40,14 @@ interface PluginToolsOpts {
    */
   pluginConfig?: KVConfig;
   /**
-   * The working directory to use for the plugin tools.
+   * The working directory to use for the plugin tools. If not provided, the tools provider will not
+   * get a working directory.
    */
-  workingDirectory: string;
+  workingDirectory?: string;
 }
 export const pluginToolsOptsSchema = z.object({
   pluginConfig: kvConfigSchema.optional(),
-  workingDirectory: z.string(),
+  workingDirectory: z.string().optional(),
 });
 
 /**
@@ -199,7 +201,7 @@ export class PluginsNamespace {
    * // ^ Notice the `using` keyword here.
    * ```
    *
-   * If you do not `using`, you must call `pluginTools[Symbol.dispose]()` after you are done.
+   * If you do not use `using`, you must call `pluginTools[Symbol.dispose]()` after you are done.
    * Otherwise, there will be a memory leak and the plugins you requested tools from will be loaded
    * indefinitely.
    *
@@ -208,7 +210,7 @@ export class PluginsNamespace {
    */
   public async pluginTools(
     pluginIdentifier: string,
-    opts: PluginToolsOpts,
+    opts: PluginToolsOpts = {},
   ): Promise<ToolUseSession> {
     const stack = getCurrentStack(1);
     [pluginIdentifier, opts] = this.validator.validateMethodParamsOrThrow(
@@ -248,6 +250,36 @@ export class PluginsNamespace {
       token,
       this.logger,
       stack,
+    );
+  }
+
+  /**
+   * @experimental [EXP-GEN-PREDICT] Using generator plugins programmatically is still in
+   * development. This may change in the future without warning.
+   */
+  public createGeneratorHandle(pluginIdentifier: string): LLMGeneratorHandle {
+    return new LLMGeneratorHandle(this.port, pluginIdentifier, this.validator, null, this.logger);
+  }
+
+  /**
+   * Creates a generator handle that is already associated with a prediction process.
+   *
+   * This method is used internally by the processing controllers to create generator handles. It is
+   * marked as internal and will be stripped.
+   *
+   * @internal
+   */
+  public createGeneratorHandleAssociatedWithPredictionProcess(
+    pluginIdentifier: string,
+    predictionContextIdentifier: string,
+    token: string,
+  ) {
+    return new LLMGeneratorHandle(
+      this.port,
+      pluginIdentifier,
+      this.validator,
+      { pci: predictionContextIdentifier, token },
+      this.logger,
     );
   }
 }
