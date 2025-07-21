@@ -13,11 +13,14 @@ import {
   type ProcessingUpdate,
   type RemotePluginInfo,
   type StatusStepState,
+  type TokenSourceIdentifier,
   type ToolStatusStepStateStatus,
 } from "@lmstudio/lms-shared-types";
 import { Chat } from "../../Chat.js";
 import { type RetrievalResult, type RetrievalResultEntry } from "../../files/RetrievalResult.js";
+import { type LLM } from "../../llm/LLM.js";
 import { LLMDynamicHandle } from "../../llm/LLMDynamicHandle.js";
+import { type LLMGeneratorHandle } from "../../llm/LLMGeneratorHandle.js";
 import { type OngoingPrediction } from "../../llm/OngoingPrediction.js";
 import { type PredictionResult } from "../../llm/PredictionResult.js";
 import { type LMStudioClient } from "../../LMStudioClient.js";
@@ -97,12 +100,12 @@ export class ProcessingConnector {
     // argument.
     return Chat.createRaw(chatHistoryData, /* mutable */ false).asMutableCopy();
   }
-  public async getOrLoadModel(): Promise<string> {
-    const result = await this.pluginsPort.callRpc("processingGetOrLoadModel", {
+  public async getOrLoadTokenSource(): Promise<TokenSourceIdentifier> {
+    const result = await this.pluginsPort.callRpc("processingGetOrLoadTokenSource", {
       pci: this.processingContextIdentifier,
       token: this.token,
     });
-    return result.identifier;
+    return result.tokenSourceIdentifier;
   }
   public async hasStatus(): Promise<boolean> {
     return await this.pluginsPort.callRpc("processingHasStatus", {
@@ -353,24 +356,46 @@ export class ProcessingController extends BaseController {
     return kvConfigToLLMPredictionConfig(this.config);
   }
 
-  public readonly model = Object.freeze({
-    getOrLoad: async () => {
-      const identifier = await this.connector.getOrLoadModel();
-      const model = await this.client.llm.model(identifier);
-      // Don't use the server session config for this model
-      (model as any).internalIgnoreServerSessionConfig = true;
-      // Inject the prediction config
-      (model as any).internalKVConfigStack = {
-        layers: [
-          {
-            layerName: "conversationSpecific",
-            config: this.config,
-          },
-        ],
-      } satisfies KVConfigStack;
-      return model;
-    },
-  });
+  /**
+   * Gets the token source associated with this prediction process (i.e. what the user has selected
+   * on the top navigation bar).
+   *
+   * The token source can either be a model or a generator plugin. In both cases, the returned
+   * object will contain a ".act" and a ".respond" method, which can be used to generate text.
+   *
+   * The token source is already pre-configured to use user's prediction config - you don't need to
+   * pass through any additional configuration.
+   */
+  public async tokenSource(): Promise<LLM | LLMGeneratorHandle> {
+    const tokenSourceIdentifier = await this.connector.getOrLoadTokenSource();
+    const tokenSourceIdentifierType = tokenSourceIdentifier.type;
+
+    switch (tokenSourceIdentifierType) {
+      case "model": {
+        const model = await this.client.llm.model(tokenSourceIdentifier.identifier);
+        // Don't use the server session config for this model
+        (model as any).internalIgnoreServerSessionConfig = true;
+        // Inject the prediction config
+        (model as any).internalKVConfigStack = {
+          layers: [
+            {
+              layerName: "conversationSpecific",
+              config: this.config,
+            },
+          ],
+        } satisfies KVConfigStack;
+        return model;
+      }
+      case "generator": {
+        const generator = this.client.plugins.createGeneratorHandleAssociatedWithPredictionProcess(
+          tokenSourceIdentifier.pluginIdentifier,
+          this.connector.processingContextIdentifier,
+          this.connector.token,
+        );
+        return generator;
+      }
+    }
+  }
 
   /**
    * Sets the sender name for this message. The sender name shown above the message in the chat.

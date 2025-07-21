@@ -2,16 +2,19 @@ import {
   accessMaybeMutableInternals,
   CancelEvent,
   getCurrentStack,
+  makeTitledPrettyError,
   safeCallCallback,
   SimpleLogger,
+  text,
   type Validator,
 } from "@lmstudio/lms-common";
-import { type LLMPort } from "@lmstudio/lms-external-backend-interfaces";
-import { emptyKVConfig, singleLayerKVConfigStackOf } from "@lmstudio/lms-kv-config";
+import { type PluginsPort } from "@lmstudio/lms-external-backend-interfaces";
+import { emptyKVConfig } from "@lmstudio/lms-kv-config";
 import {
   kvConfigSchema,
   type KVConfig,
   type LLMPredictionFragment,
+  type PluginConfigSpecifier,
 } from "@lmstudio/lms-shared-types";
 import { z } from "zod";
 import { Chat, chatHistoryLikeSchema, ChatMessage, type ChatLike } from "../Chat.js";
@@ -101,6 +104,14 @@ export const llmGeneratorActOptsSchema = llmActBaseOptsSchema.extend({
   workingDirectory: z.string().optional(),
 });
 
+interface LLMGeneratorHandleAssociatedPredictionProcess {
+  /**
+   * Prediction process identifier.
+   */
+  pci: string;
+  token: string;
+}
+
 /**
  * Represents a handle for a generator that can act as a LLM.
  *
@@ -116,14 +127,74 @@ export class LLMGeneratorHandle {
    */
   public constructor(
     /** @internal */
-    private readonly port: LLMPort,
+    private readonly port: PluginsPort,
     /** @internal */
     private readonly pluginIdentifier: string,
     /** @internal */
     private readonly validator: Validator,
     /** @internal */
+    private readonly associatedPredictionProcess: LLMGeneratorHandleAssociatedPredictionProcess | null,
+    /** @internal */
     private readonly logger: SimpleLogger = new SimpleLogger(`LLMGeneratorHandle`),
   ) {}
+
+  /**
+   * The identifier of the plugin that this handle is associated with.
+   */
+  public readonly identifier = this.pluginIdentifier;
+
+  private getPluginConfigSpecifier(
+    userSuppliedPluginConfig: KVConfig | undefined,
+    userSuppliedWorkingDirectory: string | undefined,
+    stack?: string,
+  ): PluginConfigSpecifier {
+    if (this.associatedPredictionProcess === null) {
+      // If there is no associated prediction process, we can use the user-supplied config directly.
+      return {
+        type: "direct",
+        config: userSuppliedPluginConfig ?? emptyKVConfig,
+        workingDirectoryPath: userSuppliedWorkingDirectory ?? undefined,
+      };
+    }
+    // If there is an associated prediction process, we first need to make sure that the user has
+    // not supplied a plugin config or working directory, as these are not allowed in this case.
+    // (The plugin config/working directory of the prediction process will be used instead.)
+    if (userSuppliedPluginConfig !== undefined) {
+      throw makeTitledPrettyError(
+        "Cannot use plugin config with prediction process",
+        text`
+          You cannot provide a plugin config to the generator handle when it is associated with a
+          prediction process. The plugin config that was configured for the prediction process will
+          be used instead.
+
+          If you want to use a different plugin config, you will need to create a separate
+          GeneratorHandle instead.
+        `,
+        stack,
+      );
+    }
+    if (userSuppliedWorkingDirectory !== undefined) {
+      throw makeTitledPrettyError(
+        "Cannot use working directory with prediction process",
+        text`
+          You cannot provide a working directory to the generator handle when it is associated with
+          a prediction process. The working directory that was configured for the prediction process
+          will be used instead.
+
+          If you want to use a different working directory, you will need to create a separate
+          GeneratorHandle instead.
+        `,
+        stack,
+      );
+    }
+    // If we reach here, we can safely return the plugin config specifier for the prediction
+    // process.
+    return {
+      type: "predictionProcess",
+      pci: this.associatedPredictionProcess.pci,
+      token: this.associatedPredictionProcess.token,
+    };
+  }
 
   /**
    * Use the generator to produce a response based on the given history.
@@ -147,7 +218,7 @@ export class LLMGeneratorHandle {
       onPredictionFragment,
       onMessage,
       signal,
-      pluginConfig = emptyKVConfig,
+      pluginConfig,
       workingDirectory,
     } = opts;
 
@@ -176,9 +247,8 @@ export class LLMGeneratorHandle {
       "generateWithGenerator",
       {
         pluginIdentifier: this.pluginIdentifier,
-        pluginConfigStack: singleLayerKVConfigStackOf("apiOverride", pluginConfig),
+        pluginConfigSpecifier: this.getPluginConfigSpecifier(pluginConfig, workingDirectory, stack),
         tools: [],
-        workingDirectoryPath: workingDirectory ?? null,
         history: accessMaybeMutableInternals(Chat.from(chat))._internalGetData(),
       },
       message => {
@@ -245,7 +315,7 @@ export class LLMGeneratorHandle {
       stack,
     );
 
-    const { pluginConfig = emptyKVConfig, workingDirectory = null, ...baseOpts } = opts;
+    const { pluginConfig, workingDirectory, ...baseOpts } = opts;
 
     const toolDefinitions = tools.map(toolToLLMTool);
 
@@ -277,9 +347,12 @@ export class LLMGeneratorHandle {
           "generateWithGenerator",
           {
             pluginIdentifier: this.pluginIdentifier,
-            pluginConfigStack: singleLayerKVConfigStackOf("apiOverride", pluginConfig),
+            pluginConfigSpecifier: this.getPluginConfigSpecifier(
+              pluginConfig,
+              workingDirectory,
+              stack,
+            ),
             tools: allowTools ? toolDefinitions : [],
-            workingDirectoryPath: workingDirectory,
             history,
           },
           message => {

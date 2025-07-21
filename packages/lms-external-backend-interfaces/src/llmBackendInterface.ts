@@ -10,7 +10,6 @@ import {
   llmInstanceInfoSchema,
   llmPredictionFragmentSchema,
   llmPredictionStatsSchema,
-  llmToolSchema,
   modelSpecifierSchema,
   serializedLMSExtendedErrorSchema,
   toolCallRequestSchema,
@@ -96,55 +95,6 @@ export function createLlmBackendInterface() {
             modelInfo: llmInstanceInfoSchema,
             loadModelConfig: kvConfigSchema,
             predictionConfig: kvConfigSchema,
-          }),
-        ]),
-        toServerPacket: z.discriminatedUnion("type", [
-          z.object({
-            type: z.literal("cancel"),
-          }),
-        ]),
-      })
-      .addChannelEndpoint("generateWithGenerator", {
-        creationParameter: z.object({
-          pluginIdentifier: z.string(),
-          pluginConfigStack: kvConfigStackSchema,
-          tools: z.array(llmToolSchema),
-          workingDirectoryPath: z.string().nullable(),
-          history: chatHistoryDataSchema,
-        }),
-        toClientPacket: z.discriminatedUnion("type", [
-          z.object({
-            type: z.literal("fragment"),
-            fragment: llmPredictionFragmentSchema,
-          }),
-          z.object({
-            type: z.literal("promptProcessingProgress"),
-            progress: z.number(),
-          }),
-          z.object({
-            type: z.literal("toolCallGenerationStart"),
-            /**
-             * The LLM specific call id of the tool call.
-             */
-            toolCallId: z.string().optional(),
-          }),
-          z.object({
-            type: z.literal("toolCallGenerationNameReceived"),
-            name: z.string(),
-          }),
-          z.object({
-            type: z.literal("toolCallGenerationArgumentFragmentGenerated"),
-            content: z.string(),
-          }),
-          z.object({
-            type: z.literal("toolCallGenerationEnd"),
-            toolCallRequest: toolCallRequestSchema,
-          }),
-          z.object({
-            type: z.literal("toolCallGenerationFailed"),
-          }),
-          z.object({
-            type: z.literal("success"),
           }),
         ]),
         toServerPacket: z.discriminatedUnion("type", [
