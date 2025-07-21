@@ -112,10 +112,34 @@ export interface RawFunctionTool extends ToolBase {
   checkParameters: (params: any) => void;
   implementation: (params: Record<string, unknown>, ctx: ToolCallContext) => any | Promise<any>;
 }
-
 export const rawFunctionToolSchema = toolBaseSchema.extend({
   type: z.literal("rawFunction"),
   parametersSchema: zodSchemaSchema,
+  implementation: z.function(),
+});
+
+/**
+ * Represents a tool that is exposed by LMStudio plugins.
+ *
+ * @public
+ * @experimental [EXP-USE-USE-PLUGIN-TOOLS] Using tools from other plugins is still in development.
+ * This may change in the future without warning.
+ */
+export interface RemoteTool extends ToolBase {
+  type: "remoteTool";
+  /**
+   * Which plugin this tool belongs to.
+   */
+  pluginIdentifier: string;
+  parametersJsonSchema: any;
+  checkParameters: (params: any) => void;
+  implementation: (params: Record<string, unknown>, ctx: ToolCallContext) => any | Promise<any>;
+}
+export const remoteToolSchema = toolBaseSchema.extend({
+  type: z.literal("remoteTool"),
+  pluginIdentifier: z.string(),
+  parametersJsonSchema: zodSchemaSchema,
+  checkParameters: z.function(),
   implementation: z.function(),
 });
 
@@ -124,8 +148,12 @@ export const rawFunctionToolSchema = toolBaseSchema.extend({
  *
  * @public
  */
-export type Tool = FunctionTool | RawFunctionTool;
-export const toolSchema = z.discriminatedUnion("type", [functionToolSchema, rawFunctionToolSchema]);
+export type Tool = FunctionTool | RawFunctionTool | RemoteTool;
+export const toolSchema = z.discriminatedUnion("type", [
+  functionToolSchema,
+  rawFunctionToolSchema,
+  remoteToolSchema,
+]);
 
 /**
  * A function that can be used to create a function `Tool` given a function definition and its
@@ -243,6 +271,43 @@ export function rawFunctionTool({
   };
 }
 
+/**
+ * Creates a tool that represents a remote tool exposed by an LMStudio plugin. This function is not
+ * exposed and is used internally by the plugins namespace.
+ */
+export function internalCreateRemoteTool({
+  name,
+  description,
+  pluginIdentifier,
+  parametersJsonSchema,
+  implementation,
+}: {
+  name: string;
+  description: string;
+  pluginIdentifier: string;
+  parametersJsonSchema: any;
+  implementation: (params: Record<string, unknown>, ctx: ToolCallContext) => any | Promise<any>;
+}): RemoteTool {
+  return {
+    name,
+    description,
+    type: "remoteTool",
+    pluginIdentifier,
+    parametersJsonSchema,
+    checkParameters: params => {
+      const jsonSchemaValidator = new Validator();
+      const validationResult = jsonSchemaValidator.validate(params, parametersJsonSchema);
+      if (validationResult.errors.length > 0) {
+        throw new Error(text`
+          Failed to parse arguments for tool "${name}":
+          ${jsonSchemaValidationErrorToAIReadableText("params", validationResult.errors)}
+        `);
+      }
+    },
+    implementation,
+  };
+}
+
 function functionToolToLLMTool(tool: FunctionTool): LLMTool {
   return {
     type: "function",
@@ -265,6 +330,17 @@ function rawFunctionToolToLLMTool(tool: RawFunctionTool): LLMTool {
   };
 }
 
+function remoteToolToLLMTool(tool: RemoteTool): LLMTool {
+  return {
+    type: "function",
+    function: {
+      name: tool.name,
+      description: tool.description,
+      parameters: tool.parametersJsonSchema,
+    },
+  };
+}
+
 /**
  * Convert a `Tool` to a internal `LLMTool`.
  */
@@ -275,6 +351,8 @@ export function toolToLLMTool(tool: Tool): LLMTool {
       return functionToolToLLMTool(tool);
     case "rawFunction":
       return rawFunctionToolToLLMTool(tool);
+    case "remoteTool":
+      return remoteToolToLLMTool(tool);
     default: {
       const exhaustiveCheck: never = type;
       throw new Error(`Unhandled type: ${exhaustiveCheck}`);

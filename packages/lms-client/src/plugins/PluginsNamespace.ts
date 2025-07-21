@@ -20,9 +20,9 @@ import { LLMGeneratorHandle } from "../llm/LLMGeneratorHandle.js";
 import { type LMStudioClient } from "../LMStudioClient.js";
 import { PluginSelfRegistrationHost } from "./PluginSelfRegistrationHost.js";
 import {
-  MultiToolUseSession,
-  SingleToolUseSession,
-  type ToolUseSession,
+  MultiRemoteToolUseSession,
+  type RemoteToolUseSession,
+  SingleRemoteToolUseSession,
 } from "./ToolUseSession.js";
 
 /**
@@ -183,8 +183,8 @@ export class PluginsNamespace {
     pluginIdentifier: string,
     pluginConfigSpecifier: PluginConfigSpecifier,
     _stack?: string,
-  ): Promise<ToolUseSession> {
-    return await SingleToolUseSession.create(
+  ): Promise<RemoteToolUseSession> {
+    return await SingleRemoteToolUseSession.create(
       this.port,
       pluginIdentifier,
       pluginConfigSpecifier,
@@ -211,7 +211,7 @@ export class PluginsNamespace {
   public async pluginTools(
     pluginIdentifier: string,
     opts: PluginToolsOpts = {},
-  ): Promise<ToolUseSession> {
+  ): Promise<RemoteToolUseSession> {
     const stack = getCurrentStack(1);
     [pluginIdentifier, opts] = this.validator.validateMethodParamsOrThrow(
       "plugins",
@@ -242,8 +242,8 @@ export class PluginsNamespace {
     predictionContextIdentifier: string,
     token: string,
     stack?: string,
-  ): Promise<ToolUseSession> {
-    return await MultiToolUseSession.createUsingPredictionProcess(
+  ): Promise<RemoteToolUseSession> {
+    return await MultiRemoteToolUseSession.createUsingPredictionProcess(
       this.port,
       pluginIdentifiers,
       predictionContextIdentifier,
