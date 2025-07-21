@@ -1,13 +1,11 @@
 import { Cleaner, raceWithAbortSignal, type SimpleLogger } from "@lmstudio/lms-common";
 import { type PluginsPort } from "@lmstudio/lms-external-backend-interfaces";
-import { kvConfigToLLMPredictionConfig } from "@lmstudio/lms-kv-config";
 import {
   type ChatMessageRoleData,
   type ContentBlockStyle,
   type KVConfig,
   type KVConfigStack,
   type LLMGenInfo,
-  type LLMPredictionConfig,
   type ProcessingRequest,
   type ProcessingRequestResponse,
   type ProcessingUpdate,
@@ -350,10 +348,6 @@ export class ProcessingController extends BaseController {
 
   public debug(...messages: Array<any>) {
     this.createDebugInfoBlock(concatenateDebugMessages(...messages));
-  }
-
-  public getPredictionConfig(): LLMPredictionConfig {
-    return kvConfigToLLMPredictionConfig(this.config);
   }
 
   /**

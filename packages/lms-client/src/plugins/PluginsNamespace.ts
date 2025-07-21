@@ -201,7 +201,7 @@ export class PluginsNamespace {
    * // ^ Notice the `using` keyword here.
    * ```
    *
-   * If you do not `using`, you must call `pluginTools[Symbol.dispose]()` after you are done.
+   * If you do not use `using`, you must call `pluginTools[Symbol.dispose]()` after you are done.
    * Otherwise, there will be a memory leak and the plugins you requested tools from will be loaded
    * indefinitely.
    *
@@ -254,8 +254,8 @@ export class PluginsNamespace {
   }
 
   /**
-   * @experimental [EXP-GEN-PREDICT] Using generator plugins programmatically is still in development.
-   * This may change in the future without warning.
+   * @experimental [EXP-GEN-PREDICT] Using generator plugins programmatically is still in
+   * development. This may change in the future without warning.
    */
   public createGeneratorHandle(pluginIdentifier: string): LLMGeneratorHandle {
     return new LLMGeneratorHandle(this.port, pluginIdentifier, this.validator, null, this.logger);
