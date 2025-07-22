@@ -14,9 +14,12 @@ import { internalCreateRemoteTool, type RemoteTool } from "../llm/tool";
 /**
  * Represents a session for using remote tools.
  */
-export interface RemoteToolUseSession extends Disposable {
-  tools: Array<RemoteTool>;
-  [Symbol.dispose](): void;
+export abstract class RemoteToolUseSession implements Disposable {
+  public abstract readonly tools: Array<RemoteTool>;
+  public abstract [Symbol.dispose](): void;
+  public getTool(toolName: string): RemoteTool | undefined {
+    return this.tools.find(tool => tool.name === toolName);
+  }
 }
 
 type SingleToolUseSessionStatus = "initializing" | "ready" | "disposed";
@@ -34,7 +37,7 @@ interface OngoingToolCall {
  *
  * @public
  */
-export class SingleRemoteToolUseSession implements RemoteToolUseSession {
+export class SingleRemoteToolUseSession extends RemoteToolUseSession {
   private status: SingleToolUseSessionStatus = "initializing";
   /**
    * Whether this session is "poisoned". A session is poisoned either when the underlying channel
@@ -44,7 +47,7 @@ export class SingleRemoteToolUseSession implements RemoteToolUseSession {
   /**
    * Tools available in this session.
    */
-  public tools!: Array<RemoteTool>;
+  public override tools!: Array<RemoteTool>;
   /**
    * Map to track all the ongoing tool calls.
    */
@@ -75,7 +78,9 @@ export class SingleRemoteToolUseSession implements RemoteToolUseSession {
     private readonly pluginIdentifier: string,
     private readonly pluginConfigSpecifier: PluginConfigSpecifier,
     private readonly logger: SimpleLogger,
-  ) {}
+  ) {
+    super();
+  }
   private async init(stack?: string): Promise<void> {
     const { promise: initPromise, resolve: resolveInit, reject: rejectInit } = makePromise<void>();
     const channel = this.pluginsPort.createChannel(
@@ -182,7 +187,7 @@ export class SingleRemoteToolUseSession implements RemoteToolUseSession {
     this.channel = channel;
     await initPromise;
   }
-  public [Symbol.dispose](): void {
+  public override [Symbol.dispose](): void {
     // As long as we are not already disposed, we send a discard message to the channel.
     if (this.status !== "disposed") {
       this.channel.send({ type: "discardSession" });
@@ -261,7 +266,7 @@ export class SingleRemoteToolUseSession implements RemoteToolUseSession {
  *
  * @public
  */
-export class MultiRemoteToolUseSession implements RemoteToolUseSession {
+export class MultiRemoteToolUseSession extends RemoteToolUseSession {
   public static async createUsingPredictionProcess(
     pluginsPort: PluginsPort,
     pluginIdentifiers: Array<string>,
@@ -314,16 +319,17 @@ export class MultiRemoteToolUseSession implements RemoteToolUseSession {
     );
   }
 
-  public tools: Array<RemoteTool> = [];
+  public override readonly tools: Array<RemoteTool>;
 
   private constructor(
     private readonly sessions: Array<SingleRemoteToolUseSession>,
     private readonly logger: SimpleLogger,
   ) {
+    super();
     this.tools = sessions.flatMap(session => session.tools);
   }
 
-  public [Symbol.dispose](): void {
+  public override [Symbol.dispose](): void {
     // Dispose all the sessions.
     for (const session of this.sessions) {
       try {
