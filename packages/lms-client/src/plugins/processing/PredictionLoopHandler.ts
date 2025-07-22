@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { type PredictionLoopHandlerController } from "./ProcessingController.js";
+import { type PredictionLoopHandlerController } from "./ProcessingController";
 
 /**
  * TODO: Documentation

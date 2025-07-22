@@ -24,10 +24,10 @@ import { type Tool, type ToolCallContext, toolToLLMTool } from "../llm/tool.js";
 import { type LMStudioClient } from "../LMStudioClient.js";
 import { type Generator, generatorSchema } from "./processing/Generator.js";
 import { type GeneratorConnector, GeneratorController } from "./processing/GeneratorController.js";
+import { ProcessingConnector } from "./processing/LowLevelProcessingController.js";
 import { type PredictionLoopHandler } from "./processing/PredictionLoopHandler.js";
 import {
   type PredictionLoopHandlerController,
-  ProcessingConnector,
   ProcessingController,
   type PromptPreprocessorController,
 } from "./processing/ProcessingController.js";

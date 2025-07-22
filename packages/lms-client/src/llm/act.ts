@@ -15,13 +15,14 @@ import {
   type ChatMessagePartToolCallResultData,
   type LLMPredictionFragment,
   type ToolCallRequest,
+  type ToolCallResult,
 } from "@lmstudio/lms-shared-types";
 import { z, type ZodSchema } from "zod";
 import { Chat, type ChatLike, ChatMessage } from "../Chat.js";
 import { ActResult } from "./ActResult.js";
 import { type LLMPredictionFragmentWithRoundIndex } from "./LLMDynamicHandle.js";
 import { PredictionResult } from "./PredictionResult.js";
-import { SimpleToolCallContext, type Tool } from "./tool.js";
+import { SimpleToolCallContext, type Tool, type ToolCallContext } from "./tool.js";
 import { ToolCallRequestError } from "./ToolCallRequestError.js";
 
 /**
@@ -219,7 +220,7 @@ type GuardToolCallResult =
 /**
  * Controller object used to allow/modify/deny a tool call.
  */
-class GuardToolCallController {
+export class GuardToolCallController {
   /**
    * Don't construct this object yourself.
    */
@@ -446,6 +447,18 @@ export interface LLMActBaseOpts<TPredictionResult> {
     },
   ) => void;
   /**
+   * A callback that is called when a tool call request is queued. This will only be called when a
+   * tool will not be executed immediately due to a prior tool is currently executing and
+   * `allowParallelToolExecution` is set to `false` (the default).
+   *
+   * If this is called, it is guaranteed that the `onToolCallRequestDequeued` callback will be
+   * called for the call before it is executed.
+   *
+   * @experimental [EXP-GRANULAR-ACT] More granular .act status reporting is experimental and may
+   * change in the future
+   */
+  onToolCallRequestQueued?: (roundIndex: number, callId: number) => void;
+  /**
    * A callback that is called right before the tool call is executed. This is called after the
    * `guardToolCall` handler (if provided) and will have the updated parameters if the
    * `guardToolCall` updated them.
@@ -485,6 +498,13 @@ export interface LLMActBaseOpts<TPredictionResult> {
     roundIndex: number,
     callId: number,
     error: ToolCallRequestError,
+    info: {
+      /**
+       * If the tool call parsed successfully, this will contain the parsed tool call request. If
+       * the tool call could not be parsed, this will be `undefined`.
+       */
+      toolCallRequest: ToolCallRequest | undefined;
+    },
   ) => void;
   /**
    * A callback that is called when a queued tool call request is dequeued and is about to be
@@ -503,6 +523,31 @@ export interface LLMActBaseOpts<TPredictionResult> {
    * change in the future
    */
   onToolCallRequestDequeued?: (roundIndex: number, callId: number) => void;
+  /**
+   * A callback that is called when a tool call result is received. This tool call result should be
+   * added to the context if you are managing the context yourself.
+   *
+   * @remarks
+   *
+   * Generally speaking, there are three ways for a tool call result to be produced:
+   *
+   * 1. The tool call executed successfully and returned a result,
+   *    - This includes the case where the tool call technically failed, but it failed gracefully by
+   *      returning a result that indicates the failure.
+   *    - This also includes the case where `executeToolCall` is used, which directly returned a
+   *      result.
+   * 2. The tool call generated successfully, but failed to match to a valid tool call. This request
+   *    is automatically passed to the `handleInvalidToolRequest` handler, which returned a result.
+   * 3. The `guardToolCall` handler denied the tool call, which provided a reason for the denial.
+   *
+   * @remarks
+   *
+   * This callback is not guaranteed to be called in the same order as the tool call requests.
+   *
+   * @experimental [EXP-GRANULAR-ACT] More granular .act status reporting is experimental and may
+   * change in the future
+   */
+  onToolCallResult?: (roundIndex: number, callId: number, toolCallResult: ToolCallResult) => void;
   /**
    * A handler that is called right before a tool call is executed.
    *
@@ -606,6 +651,39 @@ export interface LLMActBaseOpts<TPredictionResult> {
     request: ToolCallRequest | undefined,
   ) => any | Promise<any>;
   /**
+   * A handler function that can be supplied to replace the actual tool call execution. You may use
+   * this to handle errors, log tool calls, or implement custom tool call execution logic.
+   *
+   * By default, the handler function should do the following:
+   *
+   * ```ts
+   * model.act(history, tools, {
+   *   executeToolCall: (roundIndex, callId, tool, parameters, ctx) => {
+   *     return tool.implementation(parameters, ctx);
+   *   },
+   * });
+   * ```
+   *
+   * @remarks
+   *
+   * You may also change the parameters of the tool call before executing in this handler. However,
+   * if you do so, the changes you made will not be reflected in the history, and the model will not
+   * be able to see the changes you made.
+   *
+   * If you wish to change the parameters of the tool call and have the model see the changes, you
+   * should use the `guardToolCall` handler instead.
+   *
+   * @experimental [EXP-GRANULAR-ACT] More granular .act status reporting is experimental and may
+   * change in the future
+   */
+  executeToolCall?: (
+    roundIndex: number,
+    callId: number,
+    tool: Tool,
+    parameters: Record<string, any>,
+    ctx: ToolCallContext,
+  ) => any | Promise<any>;
+  /**
    * Limit the number of prediction rounds that the model can perform. In the last prediction, the
    * model will not be allowed to use more tools.
    *
@@ -645,11 +723,14 @@ export const llmActBaseOptsSchema = z.object({
   onToolCallRequestNameReceived: z.function().optional(),
   onToolCallRequestArgumentFragmentGenerated: z.function().optional(),
   onToolCallRequestEnd: z.function().optional(),
+  onToolCallRequestQueued: z.function().optional(),
   onToolCallRequestFinalized: z.function().optional(),
   onToolCallRequestFailure: z.function().optional(),
   onToolCallRequestDequeued: z.function().optional(),
+  onToolCallResult: z.function().optional(),
   guardToolCall: z.function().optional(),
   handleInvalidToolRequest: z.function().optional(),
+  executeToolCall: z.function().optional(),
   maxPredictionRounds: z.number().int().min(1).optional(),
   signal: z.instanceof(AbortSignal).optional(),
   allowParallelToolExecution: z.boolean().optional(),
@@ -872,6 +953,11 @@ export async function internalAct<TPredictionResult, TEndPacket>(
             content: resultString,
           },
         });
+        safeCallCallback(logger, "onToolCallResult", baseOpts.onToolCallResult, [
+          predictionsPerformed,
+          currentCallId,
+          { toolCallId: request.id, content: resultString },
+        ]);
         nextToolCallIndex++;
       }
     };
@@ -1000,6 +1086,7 @@ export async function internalAct<TPredictionResult, TEndPacket>(
             predictionsPerformed,
             callId,
             toolCallRequestError,
+            { toolCallRequest: request },
           ]);
           return;
         }
@@ -1021,6 +1108,7 @@ export async function internalAct<TPredictionResult, TEndPacket>(
             predictionsPerformed,
             callId,
             toolCallRequestError,
+            { toolCallRequest: request },
           ]);
           return;
         }
@@ -1035,10 +1123,17 @@ export async function internalAct<TPredictionResult, TEndPacket>(
           callId,
           {
             isQueued,
+            // Pass the original request, which will not be changed by the guardToolCall
             toolCallRequest: request,
             rawContent,
           },
         ]);
+        if (isQueued) {
+          safeCallCallback(logger, "onToolCallRequestQueued", baseOpts.onToolCallRequestQueued, [
+            predictionsPerformed,
+            callId,
+          ]);
+        }
         // We have successfully parsed the parameters. Let's call the tool.
         toolCallPromises.push(
           queue
@@ -1097,10 +1192,20 @@ export async function internalAct<TPredictionResult, TEndPacket>(
                         type: "toolCallResult",
                         toolCallId: request.id,
                         content: JSON.stringify({
-                          error: guardResult.reason,
+                          error: guardResult.reason ?? "Error: User declined the tool call.",
                         }),
                       },
                     });
+                    safeCallCallback(logger, "onToolCallResult", baseOpts.onToolCallResult, [
+                      predictionsPerformed,
+                      callId,
+                      {
+                        toolCallId: request.id,
+                        content: JSON.stringify({
+                          error: guardResult.reason,
+                        }),
+                      },
+                    ]);
                     return;
                   }
                 }
@@ -1115,16 +1220,27 @@ export async function internalAct<TPredictionResult, TEndPacket>(
                   predictionsPerformed,
                   callId,
                   {
-                    toolCallRequest: request,
+                    toolCallRequest: pushedRequest,
                     rawContent,
                   },
                 ],
               );
 
-              const result = await tool.implementation(
-                pushedRequest.arguments ?? {},
-                toolCallContext,
-              );
+              let result: any;
+              if (baseOpts.executeToolCall === undefined) {
+                // If there is no custom tool call execution handler, we will just call the tool.
+                result = await tool.implementation(pushedRequest.arguments ?? {}, toolCallContext);
+              } else {
+                // Otherwise, we will call the custom tool call execution handler.
+                result = await baseOpts.executeToolCall(
+                  predictionsPerformed,
+                  callId,
+                  tool,
+                  pushedRequest.arguments ?? {},
+                  toolCallContext,
+                );
+              }
+
               let resultString: string;
               if (result === undefined) {
                 resultString = "undefined";
@@ -1146,6 +1262,11 @@ export async function internalAct<TPredictionResult, TEndPacket>(
                   content: resultString,
                 },
               });
+              safeCallCallback(logger, "onToolCallResult", baseOpts.onToolCallResult, [
+                predictionsPerformed,
+                callId,
+                { toolCallId: request.id, content: resultString },
+              ]);
             }, abortController.signal)
             .catch(finalReject),
         );
@@ -1167,6 +1288,7 @@ export async function internalAct<TPredictionResult, TEndPacket>(
           predictionsPerformed,
           currentCallId,
           toolCallRequestError,
+          { toolCallRequest: undefined },
         ]);
       },
       handlePredictionEnd: endPacket => {
@@ -1194,6 +1316,7 @@ export async function internalAct<TPredictionResult, TEndPacket>(
             predictionsPerformed,
             currentCallId,
             toolCallRequestError,
+            { toolCallRequest: undefined },
           ]);
         }
         finished = true;

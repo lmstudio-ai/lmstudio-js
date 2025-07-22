@@ -1,204 +1,113 @@
-import { Cleaner, raceWithAbortSignal, type SimpleLogger } from "@lmstudio/lms-common";
-import { type PluginsPort } from "@lmstudio/lms-external-backend-interfaces";
+import { text } from "@lmstudio/lms-common";
 import {
-  type ChatMessageRoleData,
-  type ContentBlockStyle,
   type KVConfig,
-  type KVConfigStack,
-  type LLMGenInfo,
-  type ProcessingRequest,
-  type ProcessingRequestResponse,
-  type ProcessingUpdate,
+  type LLMPredictionFragment,
+  type LLMPredictionFragmentInputOpts,
   type RemotePluginInfo,
-  type StatusStepState,
-  type TokenSourceIdentifier,
-  type ToolStatusStepStateStatus,
+  type ToolCallRequest,
+  type ToolCallResult,
 } from "@lmstudio/lms-shared-types";
-import { Chat } from "../../Chat.js";
-import { type RetrievalResult, type RetrievalResultEntry } from "../../files/RetrievalResult.js";
+import { z } from "zod";
+import { type GuardToolCallController } from "../../llm/act.js";
 import { type LLM } from "../../llm/LLM.js";
-import { LLMDynamicHandle } from "../../llm/LLMDynamicHandle.js";
 import { type LLMGeneratorHandle } from "../../llm/LLMGeneratorHandle.js";
-import { type OngoingPrediction } from "../../llm/OngoingPrediction.js";
-import { type PredictionResult } from "../../llm/PredictionResult.js";
 import { type LMStudioClient } from "../../LMStudioClient.js";
 import { type RemoteToolUseSession } from "../ToolUseSession.js";
 import { BaseController } from "./BaseController.js";
+import {
+  LowLevelProcessingController,
+  type PredictionProcessContentBlockController,
+  type PredictionProcessToolStatusController,
+  type ProcessingConnector,
+} from "./LowLevelProcessingController.js";
 
-function stringifyAny(message: any) {
-  switch (typeof message) {
-    case "string":
-      return message;
-    case "number":
-      return message.toString();
-    case "boolean":
-      return message ? "true" : "false";
-    case "undefined":
-      return "undefined";
-    case "object":
-      if (message === null) {
-        return "null";
-      }
-      if (message instanceof Error) {
-        return message.stack;
-      }
-      return JSON.stringify(message, null, 2);
-    case "bigint":
-      return message.toString();
-    case "symbol":
-      return message.toString();
-    case "function":
-      return message.toString();
-    default:
-      return "unknown";
+function formatTimeRelative(timeMs: number) {
+  // Examples:
+  // 3.53 seconds
+  // 5 minutes 21 seconds
+  // 200 minutes 35 seconds
+  const seconds = timeMs / 1000;
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+
+  if (minutes === 0) {
+    return `${remainingSeconds.toFixed(2)} seconds`;
   }
+  return `${minutes} minutes ${Math.floor(remainingSeconds)} seconds`;
 }
 
-function concatenateDebugMessages(...messages: Array<any>) {
-  return messages.map(stringifyAny).join(" ");
-}
-
-function createId() {
-  return `${Date.now()}-${Math.random()}`;
-}
-
-export class ProcessingConnector {
-  public constructor(
-    private readonly pluginsPort: PluginsPort,
-    public readonly abortSignal: AbortSignal,
-    public readonly processingContextIdentifier: string,
-    public readonly token: string,
-    private readonly logger: SimpleLogger,
-  ) {}
-  public handleUpdate(update: ProcessingUpdate) {
-    this.pluginsPort
-      .callRpc("processingHandleUpdate", {
-        pci: this.processingContextIdentifier,
-        token: this.token,
-        update,
-      })
-      .catch(error => {
-        this.logger.error("Failed to send update", error);
-      });
-  }
-  public async handleRequest(request: ProcessingRequest): Promise<ProcessingRequestResponse> {
-    const { response } = await this.pluginsPort.callRpc("processingHandleRequest", {
-      pci: this.processingContextIdentifier,
-      token: this.token,
-      request,
-    });
-    return response;
-  }
-  public async pullHistory(includeCurrent: boolean): Promise<Chat> {
-    const chatHistoryData = await this.pluginsPort.callRpc("processingPullHistory", {
-      pci: this.processingContextIdentifier,
-      token: this.token,
-      includeCurrent,
-    });
-    // We know the result of callRpc is immutable, so we can safely pass false as the second
-    // argument.
-    return Chat.createRaw(chatHistoryData, /* mutable */ false).asMutableCopy();
-  }
-  public async getOrLoadTokenSource(): Promise<TokenSourceIdentifier> {
-    const result = await this.pluginsPort.callRpc("processingGetOrLoadTokenSource", {
-      pci: this.processingContextIdentifier,
-      token: this.token,
-    });
-    return result.tokenSourceIdentifier;
-  }
-  public async hasStatus(): Promise<boolean> {
-    return await this.pluginsPort.callRpc("processingHasStatus", {
-      pci: this.processingContextIdentifier,
-      token: this.token,
-    });
-  }
-  public async needsNaming(): Promise<boolean> {
-    return await this.pluginsPort.callRpc("processingNeedsNaming", {
-      pci: this.processingContextIdentifier,
-      token: this.token,
-    });
-  }
-  public async suggestName(name: string) {
-    await this.pluginsPort.callRpc("processingSuggestName", {
-      pci: this.processingContextIdentifier,
-      token: this.token,
-      name,
-    });
-  }
-}
-
-interface ProcessingControllerHandle {
-  abortSignal: AbortSignal;
-  sendUpdate: (update: ProcessingUpdate) => void;
-  sendRequest<TType extends ProcessingRequest["type"]>(
-    request: ProcessingRequest & { type: TType },
-  ): Promise<ProcessingRequestResponse & { type: TType }>;
-}
-
-/**
- * Options to use with {@link ProcessingController#createContentBlock}.
- *
- * @public
- */
-export interface CreateContentBlockOpts {
-  roleOverride?: "user" | "assistant" | "system" | "tool";
-  includeInContext?: boolean;
-  style?: ContentBlockStyle;
-  prefix?: string;
-  suffix?: string;
-}
-
-/**
- * Options to use with {@link ProcessingController#createCitationBlock}.
- *
- * @public
- */
-export interface CreateCitationBlockOpts {
-  fileName: string;
-  fileIdentifier: string;
-  pageNumber?: number | [start: number, end: number];
-  lineNumber?: number | [start: number, end: number];
-}
-
-/**
- * Options to use with {@link ProcessingController#requestConfirmToolCall}.
- *
- * @public
- * @deprecated [DEP-PLUGIN-PREDICTION-LOOP-HANDLER] Prediction loop handler support is still in
- * development. Stay tuned for updates.
- */
-export interface RequestConfirmToolCallOpts {
-  callId: number;
-  pluginIdentifier?: string;
-  name: string;
-  parameters: Record<string, any>;
-}
-
-/**
- * Return type of {@link ProcessingController#requestConfirmToolCall}.
- *
- * @public
- * @deprecated [DEP-PLUGIN-PREDICTION-LOOP-HANDLER] Prediction loop handler support is still in
- * development. Stay tuned for updates.
- */
-export type RequestConfirmToolCallResult =
+type ProcessingBlockState =
   | {
-      type: "allow";
-      toolArgsOverride?: Record<string, any>;
+      type: "none";
     }
   | {
-      type: "deny";
-      denyReason?: string;
+      type: "regular";
+      contentBlock: PredictionProcessContentBlockController;
+    }
+  | {
+      type: "reasoningStaged";
+      reasoningStartTime: number;
+      stagedPrefix: string;
+      stagedContent: string;
+    }
+  | {
+      type: "reasoning";
+      reasoningStartTime: number;
+      contentBlock: PredictionProcessContentBlockController;
     };
 
 /**
+ * Options to use for {@link ProcessingController#toolCallRequestNameReceived}.
+ *
  * @public
  */
-export class ProcessingController extends BaseController {
-  /** @internal */
-  private readonly processingControllerHandle: ProcessingControllerHandle;
+export interface ProcessingToolCallRequestNameReceivedOpts {
+  /**
+   * The identifier of the plugin that is handling the tool call.
+   */
+  pluginIdentifier?: string;
+}
+export const processingToolCallRequestNameReceivedOptsSchema = z.object({
+  pluginIdentifier: z.string().optional(),
+});
 
-  /** @internal */
+/**
+ * Options to use for {@link ProcessingController#toolCallRequestFailure}.
+ */
+export interface ProcessingToolCallRequestFailureOpts {
+  /**
+   * If the tool call request failed but still produced a tool call request, pass it here, which
+   * will be added to the context.
+   */
+  toolCallRequest?: ToolCallRequest;
+  rawContent?: string;
+}
+export const processingToolCallRequestFailureOptsSchema = z.object({
+  rawContent: z.string().optional(),
+});
+
+export class ProcessingController extends BaseController {
+  private blockState: ProcessingBlockState = { type: "none" };
+  private readonly llctl: LowLevelProcessingController;
+  /**
+   * Map from tool call ID to the status controller for the tool call.
+   */
+  private readonly toolCallStatusBlocks = new Map<number, PredictionProcessToolStatusController>();
+  /**
+   * Map from tool call ID to the content block where the tool call request resides.
+   */
+  private readonly toolCallContentBlocks = new Map<
+    number,
+    PredictionProcessContentBlockController
+  >();
+  /**
+   * Map from tool call ID to the plugin identifier that is handling the tool call.
+   */
+  private readonly toolCallPluginIdentifiers = new Map<number, string>();
+  /**
+   * Map from tool call ID to the model specific tool call request ID.
+   */
+  private readonly toolCallRequestIds = new Map<number, string>();
   public constructor(
     client: LMStudioClient,
     pluginConfig: KVConfig,
@@ -217,309 +126,353 @@ export class ProcessingController extends BaseController {
     private readonly shouldIncludeCurrentInHistory: boolean,
   ) {
     super(client, connector.abortSignal, pluginConfig, globalPluginConfig, workingDirectoryPath);
-    this.processingControllerHandle = {
-      abortSignal: connector.abortSignal,
-      sendUpdate: update => {
-        connector.handleUpdate(update);
-      },
-      sendRequest: async request => {
-        const type = request.type;
-        const response = await connector.handleRequest(request);
-        if (response.type !== type) {
-          throw new Error(
-            `Expected response type ${type}, but got ${response.type}. This is a bug.`,
-          );
+    this.llctl = new LowLevelProcessingController(
+      client,
+      pluginConfig,
+      globalPluginConfig,
+      workingDirectoryPath,
+      enabledPluginInfos,
+      connector,
+      config,
+      shouldIncludeCurrentInHistory,
+    );
+  }
+
+  public async startToolUseSession(): Promise<RemoteToolUseSession> {
+    return await this.llctl.startToolUseSession();
+  }
+
+  public async pullHistory() {
+    return await this.llctl.pullHistory();
+  }
+
+  public async tokenSource(): Promise<LLM | LLMGeneratorHandle> {
+    return await this.llctl.tokenSource();
+  }
+
+  /**
+   * Terminates the current block if exists.
+   */
+  public flushBlock() {
+    const blockStateType = this.blockState.type;
+    switch (blockStateType) {
+      case "none": {
+        // No block to flush.
+        break;
+      }
+      case "regular": {
+        this.blockState = { type: "none" };
+        break;
+      }
+      case "reasoningStaged": {
+        // If we have staged reasoning content, they can safely be dropped.
+        this.blockState = { type: "none" };
+        break;
+      }
+      case "reasoning": {
+        // If we are in reasoning block, we need to set the "Thought for xxx" status.
+        this.blockState.contentBlock.setStyle({
+          type: "thinking",
+          title: text`
+            Thought for ${formatTimeRelative(Date.now() - this.blockState.reasoningStartTime)}
+          `,
+          ended: true,
+        });
+        this.blockState = { type: "none" };
+        break;
+      }
+    }
+  }
+
+  public addFragment(fragment: LLMPredictionFragment) {
+    const reasoningType = fragment.reasoningType;
+    switch (reasoningType) {
+      case "none": {
+        this.addContent(fragment.content, fragment);
+        break;
+      }
+      case "reasoning": {
+        this.addReasoningContent(fragment.content, fragment);
+        break;
+      }
+      case "reasoningStartTag": {
+        this.addReasoningStartTag(fragment.content, fragment);
+        break;
+      }
+      case "reasoningEndTag": {
+        this.addReasoningEndTag(fragment.content, fragment);
+        break;
+      }
+    }
+  }
+
+  public addContent(content: string, opts?: LLMPredictionFragmentInputOpts) {
+    const blockStateType = this.blockState.type;
+    if (blockStateType !== "regular") {
+      // If we are not in a regular block. Flush and create a new one.
+      this.flushBlock();
+      const block = this.llctl.createContentBlock();
+      this.blockState = { type: "regular", contentBlock: block };
+    }
+    this.blockState.contentBlock.appendText(content, {
+      fromDraftModel: opts?.containsDrafted,
+      tokensCount: opts?.tokenCount,
+    });
+  }
+
+  public addReasoningContent(content: string, opts?: LLMPredictionFragmentInputOpts) {
+    const blockStateType = this.blockState.type;
+    if (blockStateType === "none" || blockStateType === "regular") {
+      // If we are not in a reasoning block, flush and create a staged one.
+      this.flushBlock();
+      this.blockState = {
+        type: "reasoningStaged",
+        reasoningStartTime: Date.now(),
+        stagedPrefix: "",
+        stagedContent: "", // Content will be inserted later.
+      };
+    }
+
+    // OK, now if we are not staging, just add the content to the block.
+    if (blockStateType === "reasoning") {
+      this.blockState.contentBlock.appendText(content, {
+        fromDraftModel: opts?.containsDrafted,
+        tokensCount: opts?.tokenCount,
+      });
+    } else {
+      // In the other case, we are staging the content.
+      this.blockState.stagedContent += content;
+      // Now, let's see if we can retire from staging by having non-empty content.
+      if (/\S/.test(this.blockState.stagedContent)) {
+        const stagedPrefix = this.blockState.stagedPrefix;
+        const stagedContent = this.blockState.stagedContent;
+        this.blockState = {
+          type: "reasoning",
+          reasoningStartTime: this.blockState.reasoningStartTime,
+          contentBlock: this.llctl.createContentBlock({
+            style: { type: "thinking", title: "Thinking..." },
+          }),
+        };
+        if (stagedPrefix !== "") {
+          // If we have a staged prefix, we need to set it as the prefix of the content block.
+          this.blockState.contentBlock.setPrefix(stagedPrefix);
         }
-        return response as ProcessingRequestResponse & { type: typeof type };
-      },
+        this.blockState.contentBlock.appendText(stagedContent);
+      }
+    }
+  }
+
+  public addReasoningStartTag(content: string, _opts?: LLMPredictionFragmentInputOpts) {
+    // We are now entering a reasoning block. Regardless of the current state, we always want to
+    // flush the current block.
+    this.flushBlock();
+
+    // Create a staged reasoning block with set prefix.
+    this.blockState = {
+      type: "reasoningStaged",
+      reasoningStartTime: Date.now(),
+      stagedPrefix: content,
+      stagedContent: "",
     };
   }
 
-  private sendUpdate(update: ProcessingUpdate) {
-    this.processingControllerHandle.sendUpdate(update);
-  }
-
-  /**
-   * Gets a mutable copy of the current history. The returned history is a copy, so mutating it will
-   * not affect the actual history. It is mutable for convenience reasons.
-   *
-   * - If you are a promptPreprocessor, this will not include the user message you are currently
-   *   preprocessing.
-   * - If you are a prediction loop handler, this will include the user message, and can be fed into
-   *   the {@link LLMDynamicHandle#respond} method directly.
-   */
-  public async pullHistory() {
-    return await this.connector.pullHistory(this.shouldIncludeCurrentInHistory);
-  }
-
-  public createStatus(initialState: StatusStepState): PredictionProcessStatusController {
-    const id = createId();
-    this.sendUpdate({
-      type: "status.create",
-      id,
-      state: initialState,
-    });
-    const statusController = new PredictionProcessStatusController(
-      this.processingControllerHandle,
-      initialState,
-      id,
-    );
-    return statusController;
-  }
-
-  public addCitations(retrievalResult: RetrievalResult): void;
-  public addCitations(entries: Array<RetrievalResultEntry>): void;
-  public addCitations(arg: RetrievalResult | Array<RetrievalResultEntry>) {
-    if (Array.isArray(arg)) {
-      for (const entry of arg) {
-        this.createCitationBlock(entry.content, {
-          fileName: entry.source.name,
-          fileIdentifier: entry.source.identifier,
-        });
-      }
-    } else {
-      for (const entry of arg.entries) {
-        this.createCitationBlock(entry.content, {
-          fileName: entry.source.name,
-          fileIdentifier: entry.source.identifier,
-        });
-      }
+  public addReasoningEndTag(content: string, _opts?: LLMPredictionFragmentInputOpts) {
+    const blockStateType = this.blockState.type;
+    // The only time reasoning end tag matters is we are already in a non-staged reasoning block.
+    if (blockStateType !== "reasoning") {
+      this.flushBlock();
+      return;
     }
+    this.blockState.contentBlock.setSuffix(content);
+    this.flushBlock();
   }
 
-  public createCitationBlock(
-    citedText: string,
-    source: CreateCitationBlockOpts,
-  ): PredictionProcessCitationBlockController {
-    const id = createId();
-    this.sendUpdate({
-      type: "citationBlock.create",
-      id,
-      citedText,
-      ...source,
-    });
-    const citationBlockController = new PredictionProcessCitationBlockController(
-      this.processingControllerHandle,
-      id,
-    );
-    return citationBlockController;
+  public toolCallRequestStart(callId: number) {
+    const block = this.llctl.createToolStatus(callId, { type: "generatingToolCall" });
+    this.toolCallStatusBlocks.set(callId, block);
   }
 
-  /**
-   * @internal
-   */
-  public createDebugInfoBlock(debugInfo: string): PredictionProcessDebugInfoBlockController {
-    const id = createId();
-    this.sendUpdate({
-      type: "debugInfoBlock.create",
-      id,
-      debugInfo,
-    });
-    const debugInfoBlockController = new PredictionProcessDebugInfoBlockController(
-      this.processingControllerHandle,
-      id,
-    );
-    return debugInfoBlockController;
-  }
-
-  public createContentBlock({
-    roleOverride,
-    includeInContext = true,
-    style,
-    prefix,
-    suffix,
-  }: CreateContentBlockOpts = {}): PredictionProcessContentBlockController {
-    const id = createId();
-    this.sendUpdate({
-      type: "contentBlock.create",
-      id,
-      roleOverride,
-      includeInContext,
-      style,
-      prefix,
-      suffix,
-    });
-    const contentBlockController = new PredictionProcessContentBlockController(
-      this.processingControllerHandle,
-      id,
-      roleOverride ?? "assistant",
-    );
-    return contentBlockController;
-  }
-
-  public debug(...messages: Array<any>) {
-    this.createDebugInfoBlock(concatenateDebugMessages(...messages));
-  }
-
-  /**
-   * Gets the token source associated with this prediction process (i.e. what the user has selected
-   * on the top navigation bar).
-   *
-   * The token source can either be a model or a generator plugin. In both cases, the returned
-   * object will contain a ".act" and a ".respond" method, which can be used to generate text.
-   *
-   * The token source is already pre-configured to use user's prediction config - you don't need to
-   * pass through any additional configuration.
-   */
-  public async tokenSource(): Promise<LLM | LLMGeneratorHandle> {
-    const tokenSourceIdentifier = await this.connector.getOrLoadTokenSource();
-    const tokenSourceIdentifierType = tokenSourceIdentifier.type;
-
-    switch (tokenSourceIdentifierType) {
-      case "model": {
-        const model = await this.client.llm.model(tokenSourceIdentifier.identifier);
-        // Don't use the server session config for this model
-        (model as any).internalIgnoreServerSessionConfig = true;
-        // Inject the prediction config
-        (model as any).internalKVConfigStack = {
-          layers: [
-            {
-              layerName: "conversationSpecific",
-              config: this.config,
-            },
-          ],
-        } satisfies KVConfigStack;
-        return model;
-      }
-      case "generator": {
-        const generator = this.client.plugins.createGeneratorHandleAssociatedWithPredictionProcess(
-          tokenSourceIdentifier.pluginIdentifier,
-          this.connector.processingContextIdentifier,
-          this.connector.token,
-        );
-        return generator;
-      }
+  public toolCallRequestNameReceived(
+    callId: number,
+    name: string,
+    opts: ProcessingToolCallRequestNameReceivedOpts = {},
+  ) {
+    const statusBlock = this.toolCallStatusBlocks.get(callId);
+    if (statusBlock === undefined) {
+      this.llctl.debug(`Tool call ${callId} name received, but no status block found.`);
+      return;
     }
-  }
-
-  /**
-   * Sets the sender name for this message. The sender name shown above the message in the chat.
-   */
-  public async setSenderName(name: string) {
-    this.sendUpdate({
-      type: "setSenderName",
+    statusBlock.setStatus({
+      type: "generatingToolCall",
       name,
+      pluginIdentifier: opts.pluginIdentifier,
+    });
+    if (opts.pluginIdentifier !== undefined) {
+      this.toolCallPluginIdentifiers.set(callId, opts.pluginIdentifier);
+    }
+  }
+
+  public toolCallRequestArgumentFragmentGenerated(callId: number, content: string) {
+    const statusBlock = this.toolCallStatusBlocks.get(callId);
+    if (statusBlock === undefined) {
+      this.llctl.debug(
+        `Tool call ${callId} argument fragment generated, but no status block found.`,
+      );
+      return;
+    }
+    statusBlock.appendArgumentFragment(content);
+  }
+
+  public toolCallRequestFailure(
+    callId: number,
+    error: Error,
+    opts: ProcessingToolCallRequestFailureOpts = {},
+  ) {
+    const statusBlock = this.toolCallStatusBlocks.get(callId);
+    if (statusBlock === undefined) {
+      this.llctl.debug(`Tool call ${callId} failed, but no status block found.`);
+      return;
+    }
+    statusBlock.setStatus({
+      type: "toolCallGenerationFailed",
+      error: error.message,
+      rawContent: opts.rawContent,
+    });
+    if (opts.toolCallRequest !== undefined) {
+      // If tool call request is provided, add it to context by using the toolCallRequestEnd method
+      // directly.
+      this.toolCallRequestEnd(callId, opts.toolCallRequest);
+    }
+  }
+
+  public toolCallRequestEnd(callId: number, toolCallRequest: ToolCallRequest) {
+    if (this.blockState.type !== "regular") {
+      // If we are not in a regular block, flush and create a new one.
+      this.flushBlock();
+      const block = this.llctl.createContentBlock();
+      this.blockState = { type: "regular", contentBlock: block };
+    }
+    const toolCallRequestId = toolCallRequest.id ?? String(Math.floor(Math.random() * 1000000));
+    this.blockState.contentBlock.appendToolRequest({
+      callId,
+      toolCallRequestId,
+      name: toolCallRequest.name,
+      parameters: toolCallRequest.arguments ?? {},
+      pluginIdentifier: this.toolCallPluginIdentifiers.get(callId),
+    });
+    this.toolCallRequestIds.set(callId, toolCallRequestId);
+    this.toolCallContentBlocks.set(callId, this.blockState.contentBlock);
+  }
+
+  public toolCallRequestQueued(callId: number) {
+    const statusBlock = this.toolCallStatusBlocks.get(callId);
+    if (statusBlock === undefined) {
+      this.llctl.debug(`Tool call ${callId} queued, but no status block found.`);
+      return;
+    }
+    statusBlock.setStatus({ type: "toolCallQueued" });
+  }
+
+  public toolCallRequestFinalized(callId: number, toolCallRequest: ToolCallRequest) {
+    const contentBlock = this.toolCallContentBlocks.get(callId);
+    if (contentBlock === undefined) {
+      this.llctl.debug(`Tool call ${callId} finalized, but no content block found.`);
+      return;
+    }
+    const toolCallRequestId = this.toolCallRequestIds.get(callId);
+    contentBlock.replaceToolRequest({
+      callId,
+      toolCallRequestId,
+      name: toolCallRequest.name,
+      parameters: toolCallRequest.arguments ?? {},
+      pluginIdentifier: this.toolCallPluginIdentifiers.get(callId),
+    });
+    const statusBlock = this.toolCallStatusBlocks.get(callId);
+    if (statusBlock === undefined) {
+      this.llctl.debug(`Tool call ${callId} finalized, but no status block found.`);
+      return;
+    }
+    statusBlock.setStatus({ type: "callingTool" });
+  }
+
+  public toolCallResult(callId: number, toolCallResult: ToolCallResult) {
+    this.flushBlock();
+    const block = this.llctl.createContentBlock({
+      roleOverride: "tool",
+    });
+    block.appendToolResult({
+      callId,
+      toolCallRequestId: toolCallResult.toolCallId,
+      content: toolCallResult.content,
     });
   }
 
-  /**
-   * Throws an error if the prediction process has been aborted. Sprinkle this throughout your code
-   * to ensure that the prediction process is aborted as soon as possible.
-   */
-  public guardAbort() {
-    this.abortSignal.throwIfAborted();
-  }
-
-  /**
-   * Whether this prediction process has had any status.
-   */
-  public async hasStatus() {
-    return await this.connector.hasStatus();
-  }
-
-  /**
-   * Returns whether this conversation needs a name.
-   */
-  public async needsNaming() {
-    return await this.connector.needsNaming();
-  }
-
-  /**
-   * Suggests a name for this conversation.
-   */
-  public async suggestName(name: string) {
-    await this.connector.suggestName(name);
-  }
-
-  public async requestConfirmToolCall({
-    callId,
-    pluginIdentifier,
-    name,
-    parameters,
-  }: RequestConfirmToolCallOpts): Promise<RequestConfirmToolCallResult> {
-    const { result } = await raceWithAbortSignal(
-      this.processingControllerHandle.sendRequest({
-        type: "confirmToolCall",
-        callId,
-        pluginIdentifier,
-        name,
-        parameters,
-      }),
-      this.abortSignal,
-    );
-    const resultType = result.type;
-    switch (resultType) {
+  public async confirmToolCallRequest(
+    callId: number,
+    { tool, toolCallRequest, allow, allowAndOverrideParameters, deny }: GuardToolCallController,
+  ) {
+    const statusBlock = this.toolCallStatusBlocks.get(callId);
+    if (statusBlock === undefined) {
+      this.llctl.debug(`Tool call ${callId} confirmation requested, but no status block found.`);
+      return;
+    }
+    statusBlock.setStatus({
+      type: "confirmingToolCall",
+    });
+    const confirmResult = await this.llctl.requestConfirmToolCall({
+      callId,
+      name: tool.name,
+      parameters: toolCallRequest.arguments ?? {},
+      pluginIdentifier: this.toolCallPluginIdentifiers.get(callId),
+    });
+    const confirmResultType = confirmResult.type;
+    switch (confirmResultType) {
       case "allow": {
-        return {
-          type: "allow",
-          toolArgsOverride: result.toolArgsOverride,
-        };
+        if (confirmResult.toolArgsOverride !== undefined) {
+          allowAndOverrideParameters(confirmResult.toolArgsOverride);
+        } else {
+          allow();
+        }
+        break;
       }
       case "deny": {
-        return {
-          type: "deny",
-          denyReason: result.denyReason,
-        };
+        const denyReason = confirmResult.denyReason ?? "Error: Tool call denied by user.";
+        deny(denyReason);
+        statusBlock.setStatus({
+          type: "toolCallDenied",
+          denyReason,
+        });
+        break;
       }
       default: {
-        const exhaustiveCheck: never = resultType;
-        throw new Error(
-          `Unexpected result type ${exhaustiveCheck}. This is a bug. Please report it.`,
-        );
+        const exhaustiveCheck: never = confirmResultType;
+        throw new Error(`Unexpected confirm result type: ${exhaustiveCheck}`);
       }
     }
   }
 
-  public createToolStatus(
-    callId: number,
-    initialStatus: ToolStatusStepStateStatus,
-  ): PredictionProcessToolStatusController {
-    const id = createId();
-    this.sendUpdate({
-      type: "toolStatus.create",
-      id,
-      callId,
-      state: {
-        status: initialStatus,
-        customStatus: "",
-        customWarnings: [],
-      },
+  public toolCallSucceeded(callId: number) {
+    const statusBlock = this.toolCallStatusBlocks.get(callId);
+    if (statusBlock === undefined) {
+      this.llctl.debug(`Tool call ${callId} succeeded, but no status block found.`);
+      return;
+    }
+    statusBlock.setStatus({
+      type: "toolCallSucceeded",
+      timeMs: 1000, // TODO: Fix
     });
-    const toolStatusController = new PredictionProcessToolStatusController(
-      this.processingControllerHandle,
-      id,
-      initialStatus,
-    );
-    return toolStatusController;
   }
 
-  /**
-   * Starts a tool use session with tools available in the prediction process. Note, this method
-   * should be used with "Explicit Resource Management". That is, you should use it like so:
-   *
-   * ```typescript
-   * using toolUseSession = await ctl.startToolUseSession();
-   * // ^ Notice the `using` keyword here.
-   * ```
-   *
-   * If you do not `using`, you should call `toolUseSession[Symbol.dispose]()` after you are done.
-   *
-   * If you don't, lmstudio-js will close the session upon the end of the prediction step
-   * automatically. However, it is not recommended.
-   *
-   * @public
-   * @deprecated WIP
-   */
-  public async startToolUseSession(): Promise<RemoteToolUseSession> {
-    const identifiersOfPluginsWithTools = this.enabledPluginInfos
-      .filter(({ hasToolsProvider }) => hasToolsProvider)
-      .map(({ identifier }) => identifier);
-    return await this.client.plugins.startToolUseSessionUsingPredictionProcess(
-      // We start a tool use session with all the plugins that have tools available
-      identifiersOfPluginsWithTools,
-      this.connector.processingContextIdentifier,
-      this.connector.token,
-    );
+  public toolCallFailed(callId: number, error: Error) {
+    const statusBlock = this.toolCallStatusBlocks.get(callId);
+    if (statusBlock === undefined) {
+      this.llctl.debug(`Tool call ${callId} failed, but no status block found.`);
+      return;
+    }
+    statusBlock.setStatus({
+      type: "toolCallFailed",
+      error: error.message,
+    });
   }
 }
 
@@ -530,355 +483,8 @@ export type PromptPreprocessorController = Omit<
   ProcessingController,
   "createContentBlock" | "setSenderName"
 >;
+
 /**
  * @public
  */
 export type PredictionLoopHandlerController = Omit<ProcessingController, never>;
-
-/**
- * Controller for a status block in the prediction process.
- *
- * @public
- */
-export class PredictionProcessStatusController {
-  /** @internal */
-  public constructor(
-    /** @internal */
-    private readonly handle: ProcessingControllerHandle,
-    initialState: StatusStepState,
-    private readonly id: string,
-    private readonly indentation: number = 0,
-  ) {
-    this.lastState = initialState;
-  }
-  private lastSubStatus: PredictionProcessStatusController = this;
-  private lastState: StatusStepState;
-  public setText(text: string) {
-    this.lastState.text = text;
-    this.handle.sendUpdate({
-      type: "status.update",
-      id: this.id,
-      state: this.lastState,
-    });
-  }
-  public setState(state: StatusStepState) {
-    this.lastState = state;
-    this.handle.sendUpdate({
-      type: "status.update",
-      id: this.id,
-      state,
-    });
-  }
-  public remove() {
-    this.handle.sendUpdate({
-      type: "status.remove",
-      id: this.id,
-    });
-  }
-  private getNestedLastSubStatusBlockId() {
-    let current = this.lastSubStatus;
-    while (current !== current.lastSubStatus) {
-      current = current.lastSubStatus;
-    }
-    return current.id;
-  }
-  public addSubStatus(initialState: StatusStepState): PredictionProcessStatusController {
-    const id = createId();
-    this.handle.sendUpdate({
-      type: "status.create",
-      id,
-      state: initialState,
-      location: {
-        type: "afterId",
-        id: this.getNestedLastSubStatusBlockId(),
-      },
-      indentation: this.indentation + 1,
-    });
-    const controller = new PredictionProcessStatusController(
-      this.handle,
-      initialState,
-      id,
-      this.indentation + 1,
-    );
-    this.lastSubStatus = controller;
-    return controller;
-  }
-}
-
-/**
- * Controller for a citation block in the prediction process. Currently cannot do anything.
- *
- * @public
- */
-export class PredictionProcessCitationBlockController {
-  /** @internal */
-  public constructor(
-    /** @internal */
-    private readonly handle: ProcessingControllerHandle,
-    private readonly id: string,
-  ) {}
-}
-
-/**
- * Controller for a debug info block in the prediction process. Currently cannot do anything.
- *
- * @public
- */
-export class PredictionProcessDebugInfoBlockController {
-  /** @internal */
-  public constructor(
-    /** @internal */
-    private readonly handle: ProcessingControllerHandle,
-    private readonly id: string,
-  ) {}
-}
-
-/**
- * Options to use with {@link PredictionProcessContentBlockController#appendText}.
- *
- * @public
- */
-export interface ContentBlockAppendTextOpts {
-  tokensCount?: number;
-  fromDraftModel?: boolean;
-}
-
-/**
- * Options to use with {@link PredictionProcessContentBlockController#appendToolRequest}.
- *
- * @public
- */
-export interface ContentBlockAppendToolRequestOpts {
-  callId: number;
-  toolCallRequestId?: string;
-  name: string;
-  parameters: Record<string, any>;
-  pluginIdentifier?: string;
-}
-
-/**
- * Options to use with {@link PredictionProcessContentBlockController#replaceToolRequest}.
- *
- * @public
- */
-export interface ContentBlockReplaceToolRequestOpts {
-  callId: number;
-  toolCallRequestId?: string;
-  name: string;
-  parameters: Record<string, any>;
-  pluginIdentifier?: string;
-}
-
-/**
- * Options to use with {@link PredictionProcessContentBlockController#appendToolResult}.
- *
- * @public
- */
-export interface ContentBlockAppendToolResultOpts {
-  callId: number;
-  toolCallRequestId?: string;
-  content: string;
-}
-
-/**
- * @public
- *
- * TODO: Documentation
- */
-export class PredictionProcessContentBlockController {
-  /** @internal */
-  public constructor(
-    /** @internal */
-    private readonly handle: ProcessingControllerHandle,
-    private readonly id: string,
-    private readonly role: ChatMessageRoleData,
-  ) {}
-  public appendText(
-    text: string,
-    { tokensCount, fromDraftModel }: ContentBlockAppendTextOpts = {},
-  ) {
-    if (this.role === "tool") {
-      throw new Error("Text cannot be appended to tool blocks.");
-    }
-    this.handle.sendUpdate({
-      type: "contentBlock.appendText",
-      id: this.id,
-      text,
-      tokensCount,
-      fromDraftModel,
-    });
-  }
-  public appendToolRequest({
-    callId,
-    toolCallRequestId,
-    name,
-    parameters,
-    pluginIdentifier,
-  }: ContentBlockAppendToolRequestOpts) {
-    if (this.role !== "assistant") {
-      throw new Error(
-        `Tool requests can only be appended to assistant blocks. This is a ${this.role} block.`,
-      );
-    }
-    this.handle.sendUpdate({
-      type: "contentBlock.appendToolRequest",
-      id: this.id,
-      callId,
-      toolCallRequestId,
-      name,
-      parameters,
-      pluginIdentifier,
-    });
-  }
-  public replaceToolRequest({
-    callId,
-    toolCallRequestId,
-    name,
-    parameters,
-    pluginIdentifier,
-  }: ContentBlockReplaceToolRequestOpts) {
-    if (this.role !== "assistant") {
-      throw new Error(
-        `Tool requests can only be replaced in assistant blocks. This is a ${this.role} block.`,
-      );
-    }
-    this.handle.sendUpdate({
-      type: "contentBlock.replaceToolRequest",
-      id: this.id,
-      callId,
-      toolCallRequestId,
-      name,
-      parameters,
-      pluginIdentifier,
-    });
-  }
-  public appendToolResult({
-    callId,
-    toolCallRequestId,
-    content,
-  }: ContentBlockAppendToolResultOpts) {
-    if (this.role !== "tool") {
-      throw new Error(
-        `Tool results can only be appended to tool blocks. This is a ${this.role} block.`,
-      );
-    }
-    this.handle.sendUpdate({
-      type: "contentBlock.appendToolResult",
-      id: this.id,
-      callId,
-      toolCallRequestId,
-      content,
-    });
-  }
-  public replaceText(text: string) {
-    if (this.role === "tool") {
-      throw new Error("Text cannot be set in tool blocks.");
-    }
-    this.handle.sendUpdate({
-      type: "contentBlock.replaceText",
-      id: this.id,
-      text,
-    });
-  }
-  public setStyle(style: ContentBlockStyle) {
-    this.handle.sendUpdate({
-      type: "contentBlock.setStyle",
-      id: this.id,
-      style,
-    });
-  }
-  public setPrefix(prefix: string) {
-    this.handle.sendUpdate({
-      type: "contentBlock.setPrefix",
-      id: this.id,
-      prefix,
-    });
-  }
-  public setSuffix(suffix: string) {
-    this.handle.sendUpdate({
-      type: "contentBlock.setSuffix",
-      id: this.id,
-      suffix,
-    });
-  }
-  public attachGenInfo(genInfo: LLMGenInfo) {
-    this.handle.sendUpdate({
-      type: "contentBlock.attachGenInfo",
-      id: this.id,
-      genInfo,
-    });
-  }
-  public async pipeFrom(prediction: OngoingPrediction): Promise<PredictionResult> {
-    using cleaner = new Cleaner();
-    const abortListener = () => {
-      prediction.cancel();
-    };
-    this.handle.abortSignal.addEventListener("abort", abortListener);
-    cleaner.register(() => {
-      this.handle.abortSignal.removeEventListener("abort", abortListener);
-    });
-    for await (const { content } of prediction) {
-      this.appendText(content);
-    }
-    const result = await prediction;
-    this.attachGenInfo({
-      indexedModelIdentifier: result.modelInfo.path,
-      identifier: result.modelInfo.identifier,
-      loadModelConfig: result.loadConfig,
-      predictionConfig: result.predictionConfig,
-      stats: result.stats,
-    });
-    this.handle.abortSignal.throwIfAborted();
-    return result;
-  }
-}
-
-/**
- * Controller for a tool status block in the prediction process.
- *
- * @public
- */
-export class PredictionProcessToolStatusController {
-  private status: ToolStatusStepStateStatus;
-  /** @internal */
-  public constructor(
-    /** @internal */
-    private readonly handle: ProcessingControllerHandle,
-    private readonly id: string,
-    initialStatus: ToolStatusStepStateStatus,
-  ) {
-    this.status = initialStatus;
-  }
-  private customStatus: string = "";
-  private customWarnings: Array<string> = [];
-  private updateState() {
-    this.handle.sendUpdate({
-      type: "toolStatus.update",
-      id: this.id,
-      state: {
-        status: this.status,
-        customStatus: this.customStatus,
-        customWarnings: this.customWarnings,
-      },
-    });
-  }
-  public setCustomStatusText(status: string) {
-    this.customStatus = status;
-    this.updateState();
-  }
-  public addWarning(warning: string) {
-    this.customWarnings.push(warning);
-    this.updateState();
-  }
-  public setStatus(status: ToolStatusStepStateStatus) {
-    this.status = status;
-    this.updateState();
-  }
-  public appendArgumentFragment(content: string) {
-    this.handle.sendUpdate({
-      type: "toolStatus.argumentFragment",
-      id: this.id,
-      content,
-    });
-  }
-}
