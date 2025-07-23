@@ -135,7 +135,7 @@ export class AuthenticatedWsServer<TContext extends Context> extends WsServer<TC
           holder.drop();
         });
         authenticationRevokedEvent.subscribeOnce(() => {
-          this.logger.warn("Terminating connection because authentication was revoked");
+          this.logger.debug("Terminating connection because authentication was revoked");
           try {
             ws.close();
           } catch (error) {
