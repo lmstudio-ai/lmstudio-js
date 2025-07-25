@@ -22,6 +22,7 @@ import { type LLMGeneratorHandle } from "../../llm/LLMGeneratorHandle.js";
 import { type OngoingPrediction } from "../../llm/OngoingPrediction.js";
 import { type PredictionResult } from "../../llm/PredictionResult.js";
 import { type LMStudioClient } from "../../LMStudioClient.js";
+import { type RemoteToolUseSession } from "../ToolUseSession.js";
 import { BaseController } from "./BaseController.js";
 
 function stringifyAny(message: any) {
@@ -509,7 +510,7 @@ export class ProcessingController extends BaseController {
    * @public
    * @deprecated WIP
    */
-  public async startToolUseSession() {
+  public async startToolUseSession(): Promise<RemoteToolUseSession> {
     const identifiersOfPluginsWithTools = this.enabledPluginInfos
       .filter(({ hasToolsProvider }) => hasToolsProvider)
       .map(({ identifier }) => identifier);

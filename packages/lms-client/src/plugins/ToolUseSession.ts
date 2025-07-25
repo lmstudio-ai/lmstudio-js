@@ -9,13 +9,13 @@ import {
   type LLMTool,
   type PluginConfigSpecifier,
 } from "@lmstudio/lms-shared-types";
-import { rawFunctionTool, type Tool } from "../llm/tool";
+import { internalCreateRemoteTool, type RemoteTool } from "../llm/tool";
 
 /**
- * Represents a session for using tools from a plugin.
+ * Represents a session for using remote tools.
  */
-export interface ToolUseSession {
-  tools: Array<Tool>;
+export interface RemoteToolUseSession extends Disposable {
+  tools: Array<RemoteTool>;
   [Symbol.dispose](): void;
 }
 
@@ -34,7 +34,7 @@ interface OngoingToolCall {
  *
  * @public
  */
-export class SingleToolUseSession implements ToolUseSession {
+export class SingleRemoteToolUseSession implements RemoteToolUseSession {
   private status: SingleToolUseSessionStatus = "initializing";
   /**
    * Whether this session is "poisoned". A session is poisoned either when the underlying channel
@@ -44,7 +44,7 @@ export class SingleToolUseSession implements ToolUseSession {
   /**
    * Tools available in this session.
    */
-  public tools!: Array<Tool>;
+  public tools!: Array<RemoteTool>;
   /**
    * Map to track all the ongoing tool calls.
    */
@@ -60,8 +60,8 @@ export class SingleToolUseSession implements ToolUseSession {
     pluginConfigSpecifier: PluginConfigSpecifier,
     logger: SimpleLogger,
     stack?: string,
-  ): Promise<ToolUseSession> {
-    const session = new SingleToolUseSession(
+  ): Promise<RemoteToolUseSession> {
+    const session = new SingleRemoteToolUseSession(
       pluginsPort,
       pluginIdentifier,
       pluginConfigSpecifier,
@@ -195,10 +195,11 @@ export class SingleToolUseSession implements ToolUseSession {
       this.poison = error;
     }
   }
-  private makeTool(toolDefinition: LLMTool): Tool {
-    return rawFunctionTool({
+  private makeTool(toolDefinition: LLMTool): RemoteTool {
+    return internalCreateRemoteTool({
       name: toolDefinition.function.name,
       description: toolDefinition.function.description ?? "",
+      pluginIdentifier: this.pluginIdentifier,
       parametersJsonSchema: toolDefinition.function.parameters ?? {},
       implementation: async (args, ctx) => {
         // We now need to provide an implementation that basically proxies the execution of the tool
@@ -260,7 +261,7 @@ export class SingleToolUseSession implements ToolUseSession {
  *
  * @public
  */
-export class MultiToolUseSession implements ToolUseSession {
+export class MultiRemoteToolUseSession implements RemoteToolUseSession {
   public static async createUsingPredictionProcess(
     pluginsPort: PluginsPort,
     pluginIdentifiers: Array<string>,
@@ -273,7 +274,7 @@ export class MultiToolUseSession implements ToolUseSession {
     // are already loaded for the prediction process anyway.
     const results = await Promise.allSettled(
       pluginIdentifiers.map(pluginIdentifier =>
-        SingleToolUseSession.create(
+        SingleRemoteToolUseSession.create(
           pluginsPort,
           pluginIdentifier,
           {
@@ -307,16 +308,16 @@ export class MultiToolUseSession implements ToolUseSession {
       );
     }
 
-    return new MultiToolUseSession(
-      results.map(result => (result as PromiseFulfilledResult<SingleToolUseSession>).value),
+    return new MultiRemoteToolUseSession(
+      results.map(result => (result as PromiseFulfilledResult<SingleRemoteToolUseSession>).value),
       logger,
     );
   }
 
-  public tools: Array<Tool> = [];
+  public tools: Array<RemoteTool> = [];
 
   private constructor(
-    private readonly sessions: Array<SingleToolUseSession>,
+    private readonly sessions: Array<SingleRemoteToolUseSession>,
     private readonly logger: SimpleLogger,
   ) {
     this.tools = sessions.flatMap(session => session.tools);
