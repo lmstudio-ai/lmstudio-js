@@ -17,11 +17,11 @@ import {
   type ToolCallRequest,
 } from "@lmstudio/lms-shared-types";
 import { z, type ZodSchema } from "zod";
-import { Chat, type ChatLike, ChatMessage } from "../Chat.js";
+import { Chat, ChatMessage, type ChatLike } from "../Chat.js";
 import { ActResult } from "./ActResult.js";
 import { type LLMPredictionFragmentWithRoundIndex } from "./LLMDynamicHandle.js";
 import { PredictionResult } from "./PredictionResult.js";
-import { SimpleToolCallContext, type Tool } from "./tool.js";
+import { SimpleToolCallContext, UnimplementedToolError, type Tool } from "./tool.js";
 import { ToolCallRequestError } from "./ToolCallRequestError.js";
 
 /**
@@ -734,6 +734,11 @@ export async function internalAct<TPredictionResult, TEndPacket>(
   const abortController = new AbortController();
   const mutableChat = Chat.from(chat); // Make a copy
   let currentCallId: number = -1;
+  /**
+   * A flag that will be set if any unimplemented tool is called. In which case, the loop will
+   * terminate after all the parallel tool calls are resolved.
+   */
+  let hasCalledUnimplementedTool = false;
 
   if (baseOpts.signal !== undefined) {
     if (baseOpts.signal.aborted) {
@@ -1121,10 +1126,15 @@ export async function internalAct<TPredictionResult, TEndPacket>(
                 ],
               );
 
-              const result = await tool.implementation(
-                pushedRequest.arguments ?? {},
-                toolCallContext,
-              );
+              let result: any;
+              try {
+                result = await tool.implementation(pushedRequest.arguments ?? {}, toolCallContext);
+              } catch (error: any) {
+                if (!(error instanceof UnimplementedToolError)) {
+                  throw error;
+                }
+                hasCalledUnimplementedTool = true;
+              }
               let resultString: string;
               if (result === undefined) {
                 resultString = "undefined";
@@ -1259,6 +1269,7 @@ export async function internalAct<TPredictionResult, TEndPacket>(
     ) {
       shouldContinue = false;
     }
+    shouldContinue &&= !hasCalledUnimplementedTool; // Stop loop if unimplemented tool was called.
   } while (shouldContinue);
   return new ActResult(predictionsPerformed, (performance.now() - startTime) / 1_000);
 }

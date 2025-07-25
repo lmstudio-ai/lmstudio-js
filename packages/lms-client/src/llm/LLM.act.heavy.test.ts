@@ -8,6 +8,7 @@ import {
   tool,
 } from "../index.js";
 import { ensureHeavyTestsEnvironment, llmTestingQwen05B } from "../shared.heavy.test.js";
+import { unimplementedRawFunctionTool } from "./tool.js";
 
 describe("LLM.act", () => {
   let client: LMStudioClient;
@@ -246,5 +247,30 @@ describe("LLM.act", () => {
       { isQueued: false }, // Second call is also not queued
     ]);
     expect(onToolCallRequestDequeued).toHaveBeenCalledTimes(0);
+  });
+  it("should handle unimplemented tool", async () => {
+    const unimplementedAddTool = unimplementedRawFunctionTool({
+      name: "add",
+      description: "Add two numbers",
+      parametersJsonSchema: {
+        type: "object",
+        properties: {
+          a: { type: "number" },
+          b: { type: "number" },
+        },
+        required: ["a", "b"],
+      },
+    });
+
+    const onToolCallRequestNameReceived = jest.fn();
+    const onToolCallRequestArgumentFragmentGenerated = jest.fn();
+
+    await model.act('First say "Hi". Then calculate 1 + 3 with the tool.', [unimplementedAddTool], {
+      onToolCallRequestNameReceived,
+      onToolCallRequestArgumentFragmentGenerated,
+    });
+
+    expect(onToolCallRequestNameReceived).toHaveBeenCalledTimes(1);
+    expect(onToolCallRequestNameReceived.mock.calls[0][2]).toEqual("add");
   });
 });

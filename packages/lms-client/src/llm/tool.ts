@@ -94,6 +94,7 @@ export interface FunctionTool extends ToolBase {
 export const functionToolSchema = toolBaseSchema.extend({
   type: z.literal("function"),
   parametersSchema: zodSchemaSchema,
+  checkParameters: z.function(),
   implementation: z.function(),
 });
 
@@ -115,6 +116,20 @@ export interface RawFunctionTool extends ToolBase {
 export const rawFunctionToolSchema = toolBaseSchema.extend({
   type: z.literal("rawFunction"),
   parametersSchema: zodSchemaSchema,
+  checkParameters: z.function(),
+  implementation: z.function(),
+});
+
+export interface UnimplementedRawFunctionTool extends ToolBase {
+  type: "unimplementedRawFunction";
+  parametersJsonSchema: any;
+  checkParameters: (params: any) => void;
+  implementation: (params: Record<string, unknown>, ctx: ToolCallContext) => never;
+}
+export const unimplementedRawFunctionToolSchema = toolBaseSchema.extend({
+  type: z.literal("unimplementedRawFunction"),
+  parametersJsonSchema: zodSchemaSchema,
+  checkParameters: z.function(),
   implementation: z.function(),
 });
 
@@ -148,10 +163,11 @@ export const remoteToolSchema = toolBaseSchema.extend({
  *
  * @public
  */
-export type Tool = FunctionTool | RawFunctionTool | RemoteTool;
+export type Tool = FunctionTool | RawFunctionTool | UnimplementedRawFunctionTool | RemoteTool;
 export const toolSchema = z.discriminatedUnion("type", [
   functionToolSchema,
   rawFunctionToolSchema,
+  unimplementedRawFunctionToolSchema,
   remoteToolSchema,
 ]);
 
@@ -271,6 +287,49 @@ export function rawFunctionTool({
   };
 }
 
+export class UnimplementedToolError extends Error {
+  public constructor(toolName: string) {
+    super(`Tool "${toolName}" is not implemented.`);
+  }
+}
+
+/**
+ * A function that can be used to create a raw function `Tool` that is not implemented yet. When
+ * using `.act`, upon encountering an unimplemented tool, the `.act` will stop gracefully.
+ *
+ * @public
+ * @experimental Not stable, will likely change in the future.
+ */
+export function unimplementedRawFunctionTool({
+  name,
+  description,
+  parametersJsonSchema,
+}: {
+  name: string;
+  description: string;
+  parametersJsonSchema: any;
+}): UnimplementedRawFunctionTool {
+  const jsonSchemaValidator = new Validator();
+  return {
+    name,
+    description,
+    type: "unimplementedRawFunction",
+    parametersJsonSchema,
+    checkParameters(params) {
+      const validationResult = jsonSchemaValidator.validate(params, parametersJsonSchema);
+      if (validationResult.errors.length > 0) {
+        throw new Error(text`
+          Failed to parse arguments for tool "${name}":
+          ${jsonSchemaValidationErrorToAIReadableText("params", validationResult.errors)}
+        `);
+      }
+    },
+    implementation: () => {
+      throw new UnimplementedToolError(name);
+    },
+  };
+}
+
 /**
  * Creates a tool that represents a remote tool exposed by an LMStudio plugin. This function is not
  * exposed and is used internally by the plugins namespace.
@@ -319,7 +378,7 @@ function functionToolToLLMTool(tool: FunctionTool): LLMTool {
   };
 }
 
-function rawFunctionToolToLLMTool(tool: RawFunctionTool): LLMTool {
+function rawFunctionToolToLLMTool(tool: RawFunctionTool | UnimplementedRawFunctionTool): LLMTool {
   return {
     type: "function",
     function: {
@@ -350,6 +409,7 @@ export function toolToLLMTool(tool: Tool): LLMTool {
     case "function":
       return functionToolToLLMTool(tool);
     case "rawFunction":
+    case "unimplementedRawFunction":
       return rawFunctionToolToLLMTool(tool);
     case "remoteTool":
       return remoteToolToLLMTool(tool);
