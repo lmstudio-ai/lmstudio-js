@@ -46,6 +46,17 @@ export function createSystemBackendInterface() {
         parameter: z.void(),
         returns: z.array(z.string()),
       })
+      .addRpcEndpoint("startAPIServer", {
+        parameter: z.object({
+          port: z.number().int().min(1).max(65535).optional(),
+          cors: z.boolean().optional(),
+        }),
+        returns: z.void(),
+      })
+      .addRpcEndpoint("stopAPIServer", {
+        parameter: z.void(),
+        returns: z.void(),
+      })
   );
 }
 
