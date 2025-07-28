@@ -105,4 +105,21 @@ export class SystemNamespace {
     const stack = getCurrentStack(1);
     return await this.systemPort.callRpc("getExperimentFlags", undefined, { stack });
   }
+
+  public async startAPIServer(port: number, cors: boolean) {
+    const stack = getCurrentStack(1);
+
+    return await this.systemPort.callRpc(
+      "startAPIServer",
+      { port, cors },
+      {
+        stack,
+      },
+    );
+  }
+
+  public async stopAPIServer() {
+    const stack = getCurrentStack(1);
+    return await this.systemPort.callRpc("stopAPIServer", undefined, { stack });
+  }
 }
