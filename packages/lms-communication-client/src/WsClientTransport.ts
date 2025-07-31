@@ -14,6 +14,11 @@ enum WsClientTransportStatus {
   Connected = "CONNECTED",
 }
 
+interface WsClientTransportConstructorOpts {
+  parentLogger?: LoggerInterface;
+  abortSignal?: AbortSignal;
+}
+
 export class WsClientTransport extends ClientTransport {
   protected readonly logger: SimpleLogger;
   protected ws: WebSocket | null = null;
@@ -25,21 +30,39 @@ export class WsClientTransport extends ClientTransport {
    */
   private shouldRef = false;
   private resolveDisposed: (() => void) | null = null;
+  /**
+   * A way for the outside world to "poison the connection".
+   */
+  private readonly abortSignal?: AbortSignal;
   protected constructor(
     private readonly url: string | Promise<string>,
     private readonly receivedMessage: (message: ServerToClientMessage) => void,
     private readonly errored: (error: any) => void,
-    parentLogger?: LoggerInterface,
+    { abortSignal, parentLogger }: WsClientTransportConstructorOpts = {},
   ) {
     super();
+    this.abortSignal = abortSignal;
     this.logger = new SimpleLogger("WsClientTransport", parentLogger);
   }
   public static createWsClientTransportFactory(
     url: string | Promise<string>,
+    {
+      abortSignal,
+    }: {
+      /**
+       * An abort signal that can be used to force terminate the connection and prevent further
+       * connection attempts.
+       */
+      abortSignal?: AbortSignal;
+    } = {},
   ): ClientTransportFactory {
     return (receivedMessage, errored, parentLogger) =>
-      new WsClientTransport(url, receivedMessage, errored, parentLogger);
+      new WsClientTransport(url, receivedMessage, errored, {
+        abortSignal,
+        parentLogger,
+      });
   }
+
   private connect() {
     if (this.status !== WsClientTransportStatus.Disconnected) {
       this.logger.warn("connect() called while not disconnected");
@@ -50,12 +73,26 @@ export class WsClientTransport extends ClientTransport {
         Cannot establish WebSocket connection because the transport has been disposed.
       `);
     }
+    if (this.abortSignal !== undefined && this.abortSignal.aborted) {
+      throw new Error(this.abortSignal.reason);
+    }
     this.status = WsClientTransportStatus.Connecting;
     Promise.resolve(this.url).then(url => {
       this.resolvedUrl = url;
       this.ws = new WebSocket(url);
       this.ws.addEventListener("open", this.onWsOpen.bind(this));
       this.ws.addEventListener("error", event => this.onWsError(event.error));
+
+      const abortSignal = this.abortSignal;
+      if (abortSignal !== undefined) {
+        const abortListener = () => {
+          this.onWsError(abortSignal.reason);
+        };
+        abortSignal.addEventListener("abort", abortListener, { once: true });
+        this.ws.addEventListener("close", () => {
+          abortSignal.removeEventListener("abort", abortListener);
+        });
+      }
     });
   }
   protected onWsOpen() {
