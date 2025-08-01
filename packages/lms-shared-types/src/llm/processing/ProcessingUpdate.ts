@@ -142,6 +142,7 @@ export type ProcessingUpdateContentBlockAppendText = {
   text: string;
   tokensCount?: number;
   fromDraftModel?: boolean;
+  isStructural?: boolean;
 };
 export const processingUpdateContentBlockAppendTextSchema = z.object({
   type: z.literal("contentBlock.appendText"),
@@ -149,6 +150,7 @@ export const processingUpdateContentBlockAppendTextSchema = z.object({
   text: z.string(),
   tokensCount: z.number().int().optional(),
   fromDraftModel: z.boolean().optional(),
+  isStructural: z.boolean().optional(),
 });
 
 export type ProcessingUpdateContentBlockAppendToolResult = {
