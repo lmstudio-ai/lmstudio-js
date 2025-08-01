@@ -49,12 +49,19 @@ export interface LLMPredictionFragment {
    * info.
    */
   reasoningType: LLMPredictionFragmentReasoningType;
+  /**
+   * TODO: Documentation
+   *
+   * @experimental WIP - do not use yet.
+   */
+  isStructural: boolean;
 }
 export const llmPredictionFragmentSchema = z.object({
   content: z.string(),
   tokensCount: z.number().int(),
   containsDrafted: z.boolean(),
   reasoningType: llmPredictionFragmentReasoningTypeSchema,
+  isStructural: z.boolean(),
 });
 
 /**
@@ -76,9 +83,16 @@ export interface LLMPredictionFragmentInputOpts {
    * Type of reasoning for this fragment. Defaults to "none".
    */
   reasoningType?: LLMPredictionFragmentReasoningType;
+  /**
+   * TODO: Documentation
+   *
+   * @experimental WIP - do not use yet.
+   */
+  isStructural?: boolean;
 }
 export const llmPredictionFragmentInputOptsSchema = z.object({
   tokenCount: z.number().int().optional(),
   containsDrafted: z.boolean().optional(),
   reasoningType: llmPredictionFragmentReasoningTypeSchema.optional(),
+  isStructural: z.boolean().optional(),
 }) as ZodSchema<LLMPredictionFragmentInputOpts>;

@@ -641,6 +641,10 @@ export class PredictionProcessDebugInfoBlockController {
 export interface ContentBlockAppendTextOpts {
   tokensCount?: number;
   fromDraftModel?: boolean;
+  /**
+   * @experimental WIP - do not use yet.
+   */
+  isStructural?: boolean;
 }
 
 /**
@@ -695,7 +699,7 @@ export class PredictionProcessContentBlockController {
   ) {}
   public appendText(
     text: string,
-    { tokensCount, fromDraftModel }: ContentBlockAppendTextOpts = {},
+    { tokensCount, fromDraftModel, isStructural }: ContentBlockAppendTextOpts = {},
   ) {
     if (this.role === "tool") {
       throw new Error("Text cannot be appended to tool blocks.");
@@ -706,6 +710,7 @@ export class PredictionProcessContentBlockController {
       text,
       tokensCount,
       fromDraftModel,
+      isStructural,
     });
   }
   public appendToolRequest({
