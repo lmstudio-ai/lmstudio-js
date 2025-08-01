@@ -85,13 +85,17 @@ export class WsClientTransport extends ClientTransport {
 
       const abortSignal = this.abortSignal;
       if (abortSignal !== undefined) {
-        const abortListener = () => {
+        if (abortSignal.aborted) {
           this.onWsError(abortSignal.reason);
-        };
-        abortSignal.addEventListener("abort", abortListener, { once: true });
-        this.ws.addEventListener("close", () => {
-          abortSignal.removeEventListener("abort", abortListener);
-        });
+        } else {
+          const abortListener = () => {
+            this.onWsError(abortSignal.reason);
+          };
+          abortSignal.addEventListener("abort", abortListener, { once: true });
+          this.ws.addEventListener("close", () => {
+            abortSignal.removeEventListener("abort", abortListener);
+          });
+        }
       }
     });
   }
