@@ -8,10 +8,16 @@ import {
 } from "@lmstudio/lms-communication";
 import { WsClientTransport } from "./WsClientTransport.js";
 
+interface AuthenticatedWsClientTransportConstructorOpts {
+  parentLogger?: LoggerInterface;
+  abortSignal?: AbortSignal;
+}
+
 interface Opts {
   url: string | Promise<string>;
   clientIdentifier: string;
   clientPasskey: string;
+  abortSignal?: AbortSignal;
 }
 
 export class AuthenticatedWsClientTransport extends WsClientTransport {
@@ -24,14 +30,15 @@ export class AuthenticatedWsClientTransport extends WsClientTransport {
     private readonly clientPasskey: string,
     receivedMessage: (message: ServerToClientMessage) => void,
     errored: (error: any) => void,
-    parentLogger?: LoggerInterface,
+    { parentLogger, abortSignal }: AuthenticatedWsClientTransportConstructorOpts = {},
   ) {
-    super(url, receivedMessage, errored, parentLogger);
+    super(url, receivedMessage, errored, { parentLogger, abortSignal });
   }
   public static createAuthenticatedWsClientTransportFactory({
     url,
     clientIdentifier,
     clientPasskey,
+    abortSignal,
   }: Opts): ClientTransportFactory {
     return (receivedMessage, errored, parentLogger) =>
       new AuthenticatedWsClientTransport(
@@ -40,7 +47,7 @@ export class AuthenticatedWsClientTransport extends WsClientTransport {
         clientPasskey,
         receivedMessage,
         errored,
-        parentLogger,
+        { parentLogger, abortSignal },
       );
   }
   protected override onWsOpen() {
