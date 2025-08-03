@@ -183,12 +183,38 @@ export const virtualModelStringCustomFieldDefinitionSchema =
     ),
   });
 
+export type VirtualModelSelectCustomFieldDefinition = VirtualModelCustomFieldDefinitionBase & {
+  type: "select";
+  options: Array<{
+    label: string;
+    value: string;
+  }>;
+  defaultValue: string;
+  effects: Array<VirtualModelCustomFieldSetJinjaVariableEffect>;
+};
+export const virtualModelSelectCustomFieldDefinitionSchema =
+  virtualModelCustomFieldDefinitionBaseSchema.extend({
+    type: z.literal("select"),
+    options: z.array(
+      z.object({
+        label: z.string(),
+        value: z.string(),
+      }),
+    ),
+    defaultValue: z.string(),
+    effects: z.array(
+      z.discriminatedUnion("type", [virtualModelCustomFieldSetJinjaVariableEffectSchema]),
+    ),
+  });
+
 export type VirtualModelCustomFieldDefinition =
   | VirtualModelBooleanCustomFieldDefinition
-  | VirtualModelStringCustomFieldDefinition;
+  | VirtualModelStringCustomFieldDefinition
+  | VirtualModelSelectCustomFieldDefinition;
 export const virtualModelCustomFieldDefinitionSchema = z.discriminatedUnion("type", [
   virtualModelBooleanCustomFieldDefinitionSchema,
   virtualModelStringCustomFieldDefinitionSchema,
+  virtualModelSelectCustomFieldDefinitionSchema,
 ]) as ZodSchema<VirtualModelCustomFieldDefinition>;
 
 /**
