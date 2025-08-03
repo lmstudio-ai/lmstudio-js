@@ -446,6 +446,8 @@ export {
   VirtualModelDefinitionMetadataOverrides,
   virtualModelDefinitionMetadataOverridesSchema,
   virtualModelDefinitionSchema,
+  VirtualModelSelectCustomFieldDefinition,
+  virtualModelSelectCustomFieldDefinitionSchema,
   VirtualModelStringCustomFieldDefinition,
   virtualModelStringCustomFieldDefinitionSchema,
   VirtualModelSuggestion,
