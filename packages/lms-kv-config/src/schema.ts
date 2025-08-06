@@ -238,7 +238,12 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
         { checked: false, value: -1 },
       )
       .field("offloadKVCacheToGpu", "boolean", {}, true)
-      .field("numForcedCpuExperts", "numeric", { int: true, min: 0, machineDependent: true }, 0)
+      .field(
+        "maxExpertLayersOffload",
+        "llamaAccelerationOffloadRatio",
+        { machineDependent: true },
+        "max",
+      )
       .scope("llama", builder =>
         builder
           .scope("acceleration", builder =>
@@ -446,7 +451,7 @@ export const llmOnnxLoadConfigSchematics = llmSharedLoadConfigSchematics.union(
 
 const llmLlamaMoeAdditionalLoadConfigSchematics = llmLoadSchematics.sliced(
   "numExperts",
-  "numForcedCpuExperts",
+  "maxExpertLayersOffload",
 );
 
 export const llmLlamaMoeLoadConfigSchematics = llmLlamaLoadConfigSchematics.union(

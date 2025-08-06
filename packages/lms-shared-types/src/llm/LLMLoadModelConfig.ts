@@ -41,10 +41,10 @@ export type GPUSetting = {
    */
   ratio?: LLMLlamaAccelerationOffloadRatio;
   /**
-   * Number of layers to force the MoE experts to run on the CPU.
-   * Will noop for layers greater than the number of offloaded layers.
+   * Maximum number of expert layers to offload to the GPU.
+   * Any expert layers above this number will be kept in CPU RAM.
    */
-  numForcedCpuExperts?: number;
+  maxExpertLayersOffload?: number;
   /**
    * The index of the GPU to use as the main GPU.
    */
