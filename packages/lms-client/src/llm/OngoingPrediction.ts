@@ -57,10 +57,12 @@ export class OngoingPrediction<TStructuredOutputType = unknown> extends Streamab
   protected override async collect(fragments: ReadonlyArray<LLMPredictionFragment>) {
     const content = fragments.map(({ content }) => content).join("");
     const reasoningContent = fragments
+      .filter(({ isStructural }) => !isStructural)
       .filter(({ reasoningType }) => reasoningType === "reasoning")
       .map(({ content }) => content)
       .join("");
     const nonReasoningContent = fragments
+      .filter(({ isStructural }) => !isStructural)
       .filter(({ reasoningType }) => reasoningType === "none")
       .map(({ content }) => content)
       .join("");
