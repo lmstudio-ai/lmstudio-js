@@ -38,6 +38,7 @@ export class LLMNamespace extends ModelNamespace<
       "contextLength": config.contextLength,
       "llama.evalBatchSize": config.evalBatchSize,
       "llama.acceleration.offloadRatio": config.gpu?.ratio,
+      "numForcedCpuExperts": config.gpu?.numForcedCpuExperts,
       "load.gpuSplitConfig": convertGPUSettingToGPUSplitConfig(config.gpu),
       "llama.flashAttention": config.flashAttention,
       "llama.ropeFrequencyBase": numberToCheckboxNumeric(config.ropeFrequencyBase, 0, 0),
