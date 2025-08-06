@@ -429,9 +429,7 @@ export const llmSharedLoadConfigSchematics = llmLoadSchematics.sliced(
 const llamaLoadConfigSchematics = globalConfigSchematics.sliced("llama.load.*", "load.*");
 
 export const llmLlamaLoadConfigSchematics = llmSharedLoadConfigSchematics
-  .union(
-    llmLoadSchematics.sliced("llama.*", "load.*", "offloadKVCacheToGpu", "numForcedCpuExperts"),
-  )
+  .union(llmLoadSchematics.sliced("llama.*", "load.*", "offloadKVCacheToGpu"))
   .union(llamaLoadConfigSchematics);
 
 export const llmMlxLoadConfigSchematics = llmSharedLoadConfigSchematics.union(
@@ -446,7 +444,10 @@ export const llmOnnxLoadConfigSchematics = llmSharedLoadConfigSchematics.union(
   llmLoadSchematics.sliced("onnx.*"),
 );
 
-const llmLlamaMoeAdditionalLoadConfigSchematics = llmLoadSchematics.sliced("numExperts");
+const llmLlamaMoeAdditionalLoadConfigSchematics = llmLoadSchematics.sliced(
+  "numExperts",
+  "numForcedCpuExperts",
+);
 
 export const llmLlamaMoeLoadConfigSchematics = llmLlamaLoadConfigSchematics.union(
   llmLlamaMoeAdditionalLoadConfigSchematics,
