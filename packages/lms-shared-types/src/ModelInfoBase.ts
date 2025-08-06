@@ -3,6 +3,7 @@ import {
   modelCompatibilityTypeSchema,
   type ModelCompatibilityType,
 } from "./ModelCompatibilityType.js";
+import { quantizationSchema, type Quantization } from "./Quantization.js";
 
 /**
  * Represents info of a model that is downloaded and sits on the disk. This is the base type shared
@@ -36,9 +37,13 @@ export interface ModelInfoBase {
    */
   paramsString?: string;
   /**
-   * The architecture of the model.
+   * The architecture of the model. May not always be available.
    */
   architecture?: string;
+  /**
+   * The quantization of the model. May not always be available.
+   */
+  quantization?: Quantization;
 }
 export const modelInfoBaseSchema = z.object({
   modelKey: z.string(),
@@ -48,6 +53,7 @@ export const modelInfoBaseSchema = z.object({
   sizeBytes: z.number().int(),
   paramsString: z.string().optional(),
   architecture: z.string().optional(),
+  quantization: quantizationSchema.optional(),
 });
 
 /**
