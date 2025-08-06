@@ -15,7 +15,7 @@ import {
 } from "@lmstudio/lms-shared-types";
 import { z } from "zod";
 
-const startHTTPServerOptsSchema = z.object({
+const startHttpServerOptsSchema = z.object({
   port: z
     .number()
     .int()
@@ -27,7 +27,7 @@ const startHTTPServerOptsSchema = z.object({
     .describe("Enable CORS on the API server. Allows any website to access the server."),
 });
 
-type StartHTTPServerOpts = z.infer<typeof startHTTPServerOptsSchema>;
+type StartHttpServerOpts = z.infer<typeof startHttpServerOptsSchema>;
 
 /** @public */
 export class SystemNamespace {
@@ -125,19 +125,19 @@ export class SystemNamespace {
    *
    * @experimental
    */
-  public async startHTTPServer(opts: StartHTTPServerOpts) {
+  public async startHttpServer(opts: StartHttpServerOpts) {
     const stack = getCurrentStack(1);
 
     opts = this.validator.validateMethodParamOrThrow(
       "client.system",
-      "startHTTPServer",
+      "startHttpServer",
       "args",
-      startHTTPServerOptsSchema,
+      startHttpServerOptsSchema,
       opts,
     );
 
     return await this.systemPort.callRpc(
-      "startHTTPServer",
+      "startHttpServer",
       { port: opts.port, cors: opts.cors },
       {
         stack,
@@ -150,8 +150,8 @@ export class SystemNamespace {
    *
    * @experimental
    */
-  public async stopHTTPServer() {
+  public async stopHttpServer() {
     const stack = getCurrentStack(1);
-    return await this.systemPort.callRpc("stopHTTPServer", undefined, { stack });
+    return await this.systemPort.callRpc("stopHttpServer", undefined, { stack });
   }
 }
