@@ -15,6 +15,20 @@ import {
 } from "@lmstudio/lms-shared-types";
 import { z } from "zod";
 
+const startHttpServerOptsSchema = z.object({
+  port: z
+    .number()
+    .int()
+    .min(1)
+    .max(65535)
+    .describe("Port to run the API server on. Must be between 1 and 65535."),
+  cors: z
+    .boolean()
+    .describe("Enable CORS on the API server. Allows any website to access the server."),
+});
+
+type StartHttpServerOpts = z.infer<typeof startHttpServerOptsSchema>;
+
 /** @public */
 export class SystemNamespace {
   /** @internal */
@@ -104,5 +118,40 @@ export class SystemNamespace {
   public async unstable_getExperimentFlags(): Promise<Array<string>> {
     const stack = getCurrentStack(1);
     return await this.systemPort.callRpc("getExperimentFlags", undefined, { stack });
+  }
+
+  /**
+   * Starts the API server on the specified port.
+   *
+   * @experimental
+   */
+  public async startHttpServer(opts: StartHttpServerOpts) {
+    const stack = getCurrentStack(1);
+
+    opts = this.validator.validateMethodParamOrThrow(
+      "client.system",
+      "startHttpServer",
+      "args",
+      startHttpServerOptsSchema,
+      opts,
+    );
+
+    return await this.systemPort.callRpc(
+      "startHttpServer",
+      { port: opts.port, cors: opts.cors },
+      {
+        stack,
+      },
+    );
+  }
+
+  /**
+   * Stops the API server if it is running.
+   *
+   * @experimental
+   */
+  public async stopHttpServer() {
+    const stack = getCurrentStack(1);
+    return await this.systemPort.callRpc("stopHttpServer", undefined, { stack });
   }
 }
