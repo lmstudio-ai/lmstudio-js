@@ -41,6 +41,11 @@ export type GPUSetting = {
    */
   ratio?: LLMLlamaAccelerationOffloadRatio;
   /**
+   * Maximum number of expert layers to offload to the GPU.
+   * Any expert layers above this number will be kept in CPU RAM.
+   */
+  maxExpertLayersOffloadRatio?: LLMLlamaAccelerationOffloadRatio;
+  /**
    * The index of the GPU to use as the main GPU.
    */
   mainGpu?: number;
