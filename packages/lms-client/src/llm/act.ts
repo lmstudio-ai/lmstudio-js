@@ -913,10 +913,12 @@ export async function internalAct<TPredictionResult, TEndPacket>(
           { roundIndex: predictionsPerformed, ...fragment },
         ]);
         contentArray.push(fragment.content);
-        if (fragment.reasoningType === "reasoning") {
-          reasoningContentArray.push(fragment.content);
-        } else {
-          nonReasoningContentArray.push(fragment.content);
+        if (!fragment.isStructural) {
+          if (fragment.reasoningType === "reasoning") {
+            reasoningContentArray.push(fragment.content);
+          } else {
+            nonReasoningContentArray.push(fragment.content);
+          }
         }
       },
       handlePromptProcessingProgress: progress => {
