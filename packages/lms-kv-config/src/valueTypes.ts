@@ -15,6 +15,7 @@ import {
   llmToolUseSettingSchema,
   modelDomainTypeSchema,
   retrievalChunkingMethodSchema,
+  toolNamingSchema,
 } from "@lmstudio/lms-shared-types";
 import { z } from "zod";
 import {
@@ -578,6 +579,18 @@ export const kvValueTypesLibrary = baseKVValueTypesLibraryBuilder
     },
     stringify: value => {
       return JSON.stringify(value, null, 2); // TODO: pretty print
+    },
+  })
+  .valueType("toolNaming", {
+    paramType: {},
+    schemaMaker: () => {
+      return toolNamingSchema;
+    },
+    effectiveEquals: (a, b) => {
+      return a === b;
+    },
+    stringify: value => {
+      return value;
     },
   })
   .valueType("llamaAccelerationOffloadRatio", {

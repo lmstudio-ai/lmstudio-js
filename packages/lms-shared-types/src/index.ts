@@ -421,6 +421,7 @@ export {
   serializedKVConfigSchematicsFieldSchema,
   serializedKVConfigSchematicsSchema,
 } from "./SerializedKVConfigSchematics.js";
+export { ToolNaming, toolNamingSchema } from "./ToolNaming.js";
 export {
   BooleanOrMixed,
   booleanOrMixedSchema,

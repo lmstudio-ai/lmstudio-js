@@ -105,6 +105,7 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
           ),
       )
       .field("tools", "toolUse", {}, { type: "none" })
+      .field("toolNaming", "toolNaming", {}, "snakeCase")
       .field(
         "promptTemplate",
         "llmPromptTemplate",
@@ -366,6 +367,7 @@ export const llmSharedPredictionConfigSchematics = llmPredictionConfigSchematics
   "seed",
   "contextPrefill",
   "tools",
+  "toolNaming",
   "reasoning.*",
 );
 
