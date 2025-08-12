@@ -105,7 +105,7 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
           ),
       )
       .field("tools", "toolUse", {}, { type: "none" })
-      .field("toolNaming", "toolNaming", {}, "snakeCase")
+      .field("toolNaming", "toolNaming", {}, "removeSpecial")
       .field(
         "promptTemplate",
         "llmPromptTemplate",
