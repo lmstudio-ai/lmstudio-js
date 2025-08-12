@@ -239,7 +239,7 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
       )
       .field("offloadKVCacheToGpu", "boolean", {}, true)
       .field(
-        "maxExpertLayersOffloadRatio",
+        "numCpuExpertLayersRatio",
         "llamaAccelerationOffloadRatio",
         { machineDependent: true, isExperimental: true, },
         "max",
@@ -451,7 +451,7 @@ export const llmOnnxLoadConfigSchematics = llmSharedLoadConfigSchematics.union(
 
 const llmLlamaMoeAdditionalLoadConfigSchematics = llmLoadSchematics.sliced(
   "numExperts",
-  "maxExpertLayersOffloadRatio",
+  "numCpuExpertLayersRatio",
 );
 
 export const llmLlamaMoeLoadConfigSchematics = llmLlamaLoadConfigSchematics.union(
