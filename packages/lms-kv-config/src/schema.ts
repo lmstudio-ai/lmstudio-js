@@ -242,7 +242,7 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
         "numCpuExpertLayersRatio",
         "llamaAccelerationOffloadRatio",
         { machineDependent: true, isExperimental: true, },
-        "max",
+        "off",
       )
       .scope("llama", builder =>
         builder
