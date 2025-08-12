@@ -1,5 +1,6 @@
 import { z, type ZodSchema } from "zod";
 import { kvConfigSchema, type KVConfig } from "../KVConfig.js";
+import { toolNamingSchema, type ToolNaming } from "../ToolNaming.js";
 import { zodSchemaSchema } from "../Zod.js";
 import { llmPromptTemplateSchema, type LLMPromptTemplate } from "./LLMPromptTemplate.js";
 import {
@@ -133,6 +134,11 @@ export interface LLMPredictionConfigInput<TStructuredOutputType = unknown> {
    * use tools, use `model.act` instead.
    */
   rawTools?: LLMToolUseSetting;
+  /**
+   * What transformations to apply to tool names before sending them to the model. See
+   * {@link ToolNaming} for more details.
+   */
+  toolNaming?: ToolNaming;
   /**
    * Controls token sampling diversity by limiting consideration to the K most likely next tokens.
    *
@@ -290,6 +296,7 @@ export const llmPredictionConfigInputSchema = z.object({
   contextOverflowPolicy: llmContextOverflowPolicySchema.optional(),
   structured: z.union([zodSchemaSchema, llmStructuredPredictionSettingSchema]).optional(),
   rawTools: llmToolUseSettingSchema.optional(),
+  toolNaming: toolNamingSchema.optional(),
   topKSampling: z.number().optional(),
   repeatPenalty: z.number().optional().or(z.literal(false)),
   minPSampling: z.number().optional().or(z.literal(false)),
