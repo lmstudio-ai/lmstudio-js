@@ -41,6 +41,13 @@ export type GPUSetting = {
    */
   ratio?: LLMLlamaAccelerationOffloadRatio;
   /**
+   * A number between 0 to 1 representing the ratio of the layers whose expert blocks will be
+   * forced into CPU memory, where 1 means all expert layers will be in CPU memory regardless of
+   * GPU offload configuration and 0 means the expert offload will be determined by GPU offload.
+   * Can also specify the string "off" to mean 0 and the string "max" to mean 1.
+   */
+  numCpuExpertLayersRatio?: LLMLlamaAccelerationOffloadRatio;
+  /**
    * The index of the GPU to use as the main GPU.
    */
   mainGpu?: number;
