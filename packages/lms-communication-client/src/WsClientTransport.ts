@@ -82,6 +82,9 @@ export class WsClientTransport extends ClientTransport {
       this.ws = new WebSocket(url);
       this.ws.addEventListener("open", this.onWsOpen.bind(this));
       this.ws.addEventListener("error", event => this.onWsError(event.error));
+      this.ws.addEventListener("close", () => {
+        this.onWsError(new Error("WebSocket connection closed"));
+      });
 
       const abortSignal = this.abortSignal;
       if (abortSignal !== undefined) {
