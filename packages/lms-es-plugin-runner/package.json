@@ -1,6 +1,6 @@
 {
   "name": "@lmstudio/lms-es-plugin-runner",
-  "version": "0.0.19",
+  "version": "0.0.20",
   "description": "",
   "main": "./dist/cjs/index.js",
   "module": "./dist/esm/index.js",
@@ -12,8 +12,8 @@
   "author": "",
   "license": "Apache-2.0",
   "dependencies": {
-    "@lmstudio/lms-common": "^0.8.8",
-    "@lmstudio/lms-common-server": "^0.2.17",
+    "@lmstudio/lms-common": "^0.8.9",
+    "@lmstudio/lms-common-server": "^0.2.18",
     "@npmcli/arborist": "^8.0.0"
   },
   "devDependencies": {
@@ -53,5 +53,5 @@
     "./dist/esm/**/*.js",
     "./dist/types/**/*.d.ts"
   ],
-  "gitHead": "4215a9a0c13b4e10b983e3523dae11a69058feb1"
+  "gitHead": "d95ce2feb067b4eec446c673155631ee1734e982"
 }
