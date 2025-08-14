@@ -81,6 +81,7 @@ describe("LLM.act", () => {
       numGpuLayers: expect.any(Number),
       timeToFirstTokenSec: expect.any(Number),
       tokensPerSecond: expect.any(Number),
+      totalTimeSec: expect.any(Number),
     });
     const prediction1 = onPredictionCompleted.mock.calls[1][0] as PredictionResult;
     expect(prediction1.content).toContain("4");
@@ -94,6 +95,7 @@ describe("LLM.act", () => {
       numGpuLayers: expect.any(Number),
       timeToFirstTokenSec: expect.any(Number),
       tokensPerSecond: expect.any(Number),
+      totalTimeSec: expect.any(Number),
     });
 
     // Cannot assert on content due to non-determinism
@@ -265,7 +267,7 @@ describe("LLM.act", () => {
     const onToolCallRequestNameReceived = jest.fn();
     const onToolCallRequestArgumentFragmentGenerated = jest.fn();
 
-    await model.act('First say "Hi". Then calculate 1 + 3 with the tool.', [unimplementedAddTool], {
+    await model.act("Please calculate 1 + 3 with the tool.", [unimplementedAddTool], {
       onToolCallRequestNameReceived,
       onToolCallRequestArgumentFragmentGenerated,
     });

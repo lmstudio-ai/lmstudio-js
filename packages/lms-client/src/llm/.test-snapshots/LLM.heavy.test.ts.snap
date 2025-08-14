@@ -59,6 +59,10 @@ exports[`LLM can get model info 1`] = `
   "modelKey": Any<String>,
   "paramsString": "0.5B",
   "path": "lmstudio-community/Qwen2.5-0.5B-Instruct-GGUF/Qwen2.5-0.5B-Instruct-Q4_K_M.gguf",
+  "quantization": {
+    "bits": 4,
+    "name": "Q4_K_M",
+  },
   "sizeBytes": 397807936,
   "trainedForToolUse": true,
   "type": "llm",

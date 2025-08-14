@@ -12,6 +12,7 @@ exports[`LLM + speculative decoding should work with .complete 2`] = `
   "timeToFirstTokenSec": Any<Number>,
   "tokensPerSecond": Any<Number>,
   "totalDraftTokensCount": 3,
+  "totalTimeSec": Any<Number>,
   "totalTokensCount": 20,
   "usedDraftModelKey": Any<String>,
 }
@@ -29,6 +30,10 @@ exports[`LLM + speculative decoding should work with .complete 3`] = `
   "modelKey": Any<String>,
   "paramsString": "3B",
   "path": "lmstudio-community/Qwen2.5-3B-Instruct-GGUF/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
+  "quantization": {
+    "bits": 4,
+    "name": "Q4_K_M",
+  },
   "sizeBytes": 1929903008,
   "trainedForToolUse": true,
   "type": "llm",
@@ -50,6 +55,7 @@ exports[`LLM + speculative decoding should work with .respond 2`] = `
   "timeToFirstTokenSec": Any<Number>,
   "tokensPerSecond": Any<Number>,
   "totalDraftTokensCount": 7,
+  "totalTimeSec": Any<Number>,
   "totalTokensCount": 46,
   "usedDraftModelKey": Any<String>,
 }
@@ -67,6 +73,10 @@ exports[`LLM + speculative decoding should work with .respond 3`] = `
   "modelKey": Any<String>,
   "paramsString": "3B",
   "path": "lmstudio-community/Qwen2.5-3B-Instruct-GGUF/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
+  "quantization": {
+    "bits": 4,
+    "name": "Q4_K_M",
+  },
   "sizeBytes": 1929903008,
   "trainedForToolUse": true,
   "type": "llm",

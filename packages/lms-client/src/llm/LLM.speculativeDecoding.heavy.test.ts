@@ -37,6 +37,7 @@ describe("LLM + speculative decoding", () => {
       numGpuLayers: expect.any(Number),
       timeToFirstTokenSec: expect.any(Number),
       tokensPerSecond: expect.any(Number),
+      totalTimeSec: expect.any(Number),
       usedDraftModelKey: expect.any(String),
     });
     expect(result.modelInfo).toMatchSnapshot({
@@ -58,6 +59,7 @@ describe("LLM + speculative decoding", () => {
       numGpuLayers: expect.any(Number),
       timeToFirstTokenSec: expect.any(Number),
       tokensPerSecond: expect.any(Number),
+      totalTimeSec: expect.any(Number),
       usedDraftModelKey: expect.any(String),
     });
     expect(result.modelInfo).toMatchSnapshot({

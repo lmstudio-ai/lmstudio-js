@@ -50,6 +50,10 @@ exports[`EmbeddingModel can get model info 1`] = `
   "maxContextLength": 2048,
   "modelKey": Any<String>,
   "path": "nomic-ai/nomic-embed-text-v1.5-GGUF/nomic-embed-text-v1.5.Q4_K_M.gguf",
+  "quantization": {
+    "bits": 4,
+    "name": "Q4_K_M",
+  },
   "sizeBytes": 84106624,
   "type": "embedding",
 }
