@@ -47,6 +47,7 @@ describe("LLM with vision", () => {
       numGpuLayers: expect.any(Number),
       timeToFirstTokenSec: expect.any(Number),
       tokensPerSecond: expect.any(Number),
+      totalTimeSec: expect.any(Number),
     });
     expect(result.modelInfo).toMatchSnapshot({
       identifier: expect.any(String),
@@ -69,6 +70,7 @@ describe("LLM with vision", () => {
       numGpuLayers: expect.any(Number),
       timeToFirstTokenSec: expect.any(Number),
       tokensPerSecond: expect.any(Number),
+      totalTimeSec: expect.any(Number),
     });
     expect(result.modelInfo).toMatchSnapshot({
       identifier: expect.any(String),

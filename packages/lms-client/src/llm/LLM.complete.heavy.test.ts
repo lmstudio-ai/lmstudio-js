@@ -30,6 +30,7 @@ describe("LLM.complete", () => {
       numGpuLayers: expect.any(Number),
       timeToFirstTokenSec: expect.any(Number),
       tokensPerSecond: expect.any(Number),
+      totalTimeSec: expect.any(Number),
     });
     expect(result.modelInfo).toMatchSnapshot({
       identifier: expect.any(String),
@@ -55,6 +56,7 @@ describe("LLM.complete", () => {
       numGpuLayers: expect.any(Number),
       timeToFirstTokenSec: expect.any(Number),
       tokensPerSecond: expect.any(Number),
+      totalTimeSec: expect.any(Number),
     });
     expect(result.modelInfo).toMatchSnapshot({
       identifier: expect.any(String),

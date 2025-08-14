@@ -6,6 +6,7 @@ exports[`LLM.complete should call onPredictionFragment 1`] = `
     {
       "containsDrafted": false,
       "content": "4",
+      "isStructural": false,
       "reasoningType": "none",
       "tokensCount": 1,
     },
@@ -14,6 +15,7 @@ exports[`LLM.complete should call onPredictionFragment 1`] = `
     {
       "containsDrafted": false,
       "content": ";",
+      "isStructural": false,
       "reasoningType": "none",
       "tokensCount": 1,
     },
@@ -91,6 +93,7 @@ exports[`LLM.complete should work with streaming 1`] = `
   {
     "containsDrafted": false,
     "content": "4",
+    "isStructural": false,
     "reasoningType": "none",
     "tokensCount": 1,
   },
@@ -105,6 +108,7 @@ exports[`LLM.complete should work with streaming 2`] = `
   "stopReason": "stopStringFound",
   "timeToFirstTokenSec": Any<Number>,
   "tokensPerSecond": Any<Number>,
+  "totalTimeSec": Any<Number>,
   "totalTokensCount": 16,
 }
 `;
@@ -121,6 +125,10 @@ exports[`LLM.complete should work with streaming 3`] = `
   "modelKey": Any<String>,
   "paramsString": "0.5B",
   "path": "lmstudio-community/Qwen2.5-0.5B-Instruct-GGUF/Qwen2.5-0.5B-Instruct-Q4_K_M.gguf",
+  "quantization": {
+    "bits": 4,
+    "name": "Q4_K_M",
+  },
   "sizeBytes": 397807936,
   "trainedForToolUse": true,
   "type": "llm",
@@ -136,6 +144,7 @@ exports[`LLM.complete should work without streaming 2`] = `
   "stopReason": "stopStringFound",
   "timeToFirstTokenSec": Any<Number>,
   "tokensPerSecond": Any<Number>,
+  "totalTimeSec": Any<Number>,
   "totalTokensCount": 16,
 }
 `;
@@ -152,6 +161,10 @@ exports[`LLM.complete should work without streaming 3`] = `
   "modelKey": Any<String>,
   "paramsString": "0.5B",
   "path": "lmstudio-community/Qwen2.5-0.5B-Instruct-GGUF/Qwen2.5-0.5B-Instruct-Q4_K_M.gguf",
+  "quantization": {
+    "bits": 4,
+    "name": "Q4_K_M",
+  },
   "sizeBytes": 397807936,
   "trainedForToolUse": true,
   "type": "llm",

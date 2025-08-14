@@ -1,16 +1,17 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`LLM with vision should work with base64 upload 1`] = `"I see the W3C logo, which"`;
+exports[`LLM with vision should work with base64 upload 1`] = `"I see the logo for W3C,"`;
 
 exports[`LLM with vision should work with base64 upload 2`] = `
 {
   "numGpuLayers": Any<Number>,
   "predictedTokensCount": 10,
-  "promptTokensCount": 27,
+  "promptTokensCount": 25,
   "stopReason": "maxPredictedTokensReached",
   "timeToFirstTokenSec": Any<Number>,
   "tokensPerSecond": Any<Number>,
-  "totalTokensCount": 37,
+  "totalTimeSec": Any<Number>,
+  "totalTokensCount": 35,
 }
 `;
 
@@ -26,6 +27,10 @@ exports[`LLM with vision should work with base64 upload 3`] = `
   "modelKey": Any<String>,
   "paramsString": "2B",
   "path": "lmstudio-community/Qwen2-VL-2B-Instruct-GGUF/Qwen2-VL-2B-Instruct-Q4_K_M.gguf",
+  "quantization": {
+    "bits": 4,
+    "name": "Q4_K_M",
+  },
   "sizeBytes": 3647162336,
   "trainedForToolUse": false,
   "type": "llm",
@@ -33,17 +38,18 @@ exports[`LLM with vision should work with base64 upload 3`] = `
 }
 `;
 
-exports[`LLM with vision should work with file upload 1`] = `"I see the W3C logo, which"`;
+exports[`LLM with vision should work with file upload 1`] = `"I see the logo for W3C,"`;
 
 exports[`LLM with vision should work with file upload 2`] = `
 {
   "numGpuLayers": Any<Number>,
   "predictedTokensCount": 10,
-  "promptTokensCount": 27,
+  "promptTokensCount": 25,
   "stopReason": "maxPredictedTokensReached",
   "timeToFirstTokenSec": Any<Number>,
   "tokensPerSecond": Any<Number>,
-  "totalTokensCount": 37,
+  "totalTimeSec": Any<Number>,
+  "totalTokensCount": 35,
 }
 `;
 
@@ -59,6 +65,10 @@ exports[`LLM with vision should work with file upload 3`] = `
   "modelKey": Any<String>,
   "paramsString": "2B",
   "path": "lmstudio-community/Qwen2-VL-2B-Instruct-GGUF/Qwen2-VL-2B-Instruct-Q4_K_M.gguf",
+  "quantization": {
+    "bits": 4,
+    "name": "Q4_K_M",
+  },
   "sizeBytes": 3647162336,
   "trainedForToolUse": false,
   "type": "llm",
