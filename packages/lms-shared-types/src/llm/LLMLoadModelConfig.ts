@@ -62,6 +62,7 @@ export type GPUSetting = {
 };
 export const gpuSettingSchema = z.object({
   ratio: llmLlamaAccelerationOffloadRatioSchema.optional(),
+  numCpuExpertLayersRatio: llmLlamaAccelerationOffloadRatioSchema.optional(),
   mainGpu: z.number().int().optional(),
   splitStrategy: llmSplitStrategySchema.optional(),
   disabledGpus: z.array(z.number().int()).optional(),
