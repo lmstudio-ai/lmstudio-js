@@ -5,7 +5,7 @@ import {
   type WsAuthenticationResult,
   type WsMessageEvent,
 } from "@lmstudio/lms-communication";
-import { type Server } from "http";
+import { type IncomingMessage, type Server } from "http";
 import { type WebSocket } from "ws";
 import { type Authenticator, type Context, type ContextCreator } from "./Authenticator.js";
 import { ServerPort } from "./ServerPort.js";
@@ -21,11 +21,12 @@ export interface ClientHolder {
   leak(): void;
 }
 
-interface Opts<TContext extends Context> {
+interface AuthenticationServerConstructorOpts<TContext extends Context> {
   backendInterface: BackendInterface<TContext>;
   authenticator: Authenticator<TContext>;
   server: Server;
   pathName: string;
+  guardConnection?: (request: IncomingMessage) => Promise<void>;
   parentLogger?: SimpleLogger;
   authenticationTimeoutMs?: number;
 }
@@ -44,10 +45,11 @@ export class AuthenticatedWsServer<TContext extends Context> extends WsServer<TC
     authenticator,
     server,
     pathName,
+    guardConnection,
     parentLogger,
     authenticationTimeoutMs: timeoutMs,
-  }: Opts<TContext>) {
-    super(backendInterface, server, pathName, parentLogger);
+  }: AuthenticationServerConstructorOpts<TContext>) {
+    super({ backendInterface, server, pathName, guardConnection, parentLogger });
     this.authenticator = authenticator;
     this.timeoutMs = timeoutMs ?? 10_000;
   }
