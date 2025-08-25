@@ -1,5 +1,4 @@
 import { makeTitledPrettyError, text } from "@lmstudio/lms-common";
-import boxen from "boxen";
 import chalk from "chalk";
 // import inquirer from "inquirer";
 import inquirer from "inquirer";
@@ -101,9 +100,8 @@ export async function installCliDarwinOrLinux(path: string, { skipConfirmation }
       );
     } else {
       console.info(
-        boxen(
-          text`
-            ${chalk.bgGreenBright.black("  ✓ Already Installed  ")}
+        text`
+            ${chalk.greenBright("  ✓ Already Installed  ")}
 
             LM Studio CLI tool is already installed for the following shells:
 
@@ -125,13 +123,6 @@ export async function installCliDarwinOrLinux(path: string, { skipConfirmation }
                 try again.
               `)}
           `,
-          {
-            padding: 1,
-            margin: 1,
-            title: "LM Studio CLI Installation",
-            borderColor: "greenBright",
-          },
-        ),
       );
       return;
     }
@@ -149,8 +140,7 @@ export async function installCliDarwinOrLinux(path: string, { skipConfirmation }
 
   if (!skipConfirmation) {
     console.info(
-      boxen(
-        text`
+      text`
           We are about to run the following commands to install the LM Studio CLI tool
           (lms).
 
@@ -158,13 +148,6 @@ export async function installCliDarwinOrLinux(path: string, { skipConfirmation }
 
           It will add the path ${chalk.greenBright(path)} to the PATH environment variable.
         `,
-        {
-          padding: 1,
-          margin: 1,
-          title: "LM Studio CLI Installation",
-          borderColor: "greenBright",
-        },
-      ),
     );
 
     const { cont } = await inquirer.createPromptModule({
@@ -187,9 +170,8 @@ export async function installCliDarwinOrLinux(path: string, { skipConfirmation }
   execSync(commandsToRun.join(" && "));
 
   console.info(
-    boxen(
-      text`
-        ${chalk.bgGreenBright.black("  ✓ Installation Completed  ")}
+    text`
+        ${chalk.greenBright("  ✓ Installation Completed  ")}
 
           ${chalk.cyanBright(text`
             (i) You need to open a new terminal window for these changes to take effect.
@@ -200,12 +182,5 @@ export async function installCliDarwinOrLinux(path: string, { skipConfirmation }
 
             ${chalk.yellowBright("lms")}
       `,
-      {
-        padding: 1,
-        margin: 1,
-        title: "LM Studio CLI Installation",
-        borderColor: "greenBright",
-      },
-    ),
   );
 }

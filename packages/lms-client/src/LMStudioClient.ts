@@ -160,7 +160,7 @@ export class LMStudioClient {
     }
     if (!["ws:", "wss:"].includes(url.protocol)) {
       this.logger.throw(text`
-        Failed to construct LMStudioClient. The baseUrl passed in must have protocol "ws" or "wss". 
+        Failed to construct LMStudioClient. The baseUrl passed in must have protocol "ws" or "wss".
         Received: ${baseUrl}
       `);
     }
@@ -244,7 +244,7 @@ export class LMStudioClient {
             ${chalk.redBright("Failed to connect to LM Studio.")}
 
             Please make sure LM Studio is running on your machine.
-            
+
             If you are attempting to connect to LM Studio on a separate machine, please provide the
             baseUrl option when creating the LMStudioClient:
 
@@ -334,7 +334,7 @@ export class LMStudioClient {
           }
 
           Do this:
-            
+
           ${
             "export async function generate(ctl: GeneratorController) {\n" +
             "  const model = await ctl.client.llm.model(...);\n" +
