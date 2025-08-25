@@ -25,7 +25,7 @@ export class Validator {
         if (e.path.length === 0) {
           return `- ${chalk.redBright(rootObjectName)}: ${e.message}`;
         }
-        const path = chalk.red(`.${e.path.join(".")}`);
+        const path = chalk.redBright(`.${e.path.join(".")}`);
         return `- ${chalk.redBright(rootObjectName)}${path}: ${e.message}`;
       })
       .join("\n");

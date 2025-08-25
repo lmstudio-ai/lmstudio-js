@@ -1,5 +1,4 @@
 import { terminalSize } from "@lmstudio/lms-isomorphic";
-import boxen from "boxen";
 import chalk from "chalk";
 import process from "process";
 import { changeErrorStackInPlace } from "./errorStack.js";
@@ -17,13 +16,10 @@ export function makePrettyError(content: string, stack?: string): Error {
     }
     return error;
   } else {
-    if (stack !== undefined) {
-      content +=
-        "\n\n\n " + chalk.bgWhite.black("  </> STACK TRACE  ") + "\n\n" + chalk.gray(stack);
+    if (stack !== undefined && process.env.LMS_CLI_DEBUG) {
+      content += "\n\n" + chalk.white("</> STACK TRACE  ") + "\n" + chalk.gray(stack);
     }
-    const error = new Error(
-      "\n" + boxen(content, { padding: 1, margin: 1, borderColor: "redBright", title: "Error" }),
-    );
+    const error = new Error(content);
     Object.defineProperty(error, "lmstudioRawError", { value: content, enumerable: false });
     changeErrorStackInPlace(error, "");
     return error;

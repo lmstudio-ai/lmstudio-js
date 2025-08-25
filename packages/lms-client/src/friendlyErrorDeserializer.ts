@@ -14,17 +14,12 @@ type DisplayData<TCode extends ErrorDisplayData["code"]> = Extract<
 >;
 
 function deserializeOtherError(serialized: SerializedLMSExtendedError, stack?: string): Error {
-  let content = chalk.redBright(` ${serialized.title} `);
+  let content = `${serialized.title} `;
   if (serialized.suggestion !== undefined) {
-    content +=
-      "\n\n\n " +
-      chalk.bgWhite.black("  (!) SUGGESTION  ") +
-      "\n\n" +
-      chalk.white(serialized.suggestion);
+    content += "\n\n\n " + "(!) SUGGESTION " + serialized.suggestion;
   }
   if (serialized.cause !== undefined) {
-    content +=
-      "\n\n\n " + chalk.bgWhite.black("  (X) CAUSE  ") + "\n\n" + chalk.gray(serialized.cause);
+    content += "\n\n\n " + chalk.gray("  (X) CAUSE  ") + "\n\n" + chalk.gray(serialized.cause);
   }
   return makePrettyError(content, stack);
 }
@@ -103,7 +98,7 @@ registerErrorDeserializer(
 
 registerErrorDeserializer("generic.specificModelUnloaded", (_, stack) => {
   return makePrettyError(
-    chalk.bgRed.white(text`
+    chalk.redBright(text`
       This model has already been unloaded.
     `),
     stack,
@@ -154,7 +149,7 @@ registerErrorDeserializer(
   ({ loadedModelsSample, totalLoadedModels, query }, stack) => {
     return makePrettyError(
       text`
-        ${chalk.bgRed.white(" No loaded model satisfies all requirements specified in the query. ")}
+        ${chalk.redBright(" No loaded model satisfies all requirements specified in the query. ")}
 
         Loaded Models:
 
@@ -180,7 +175,7 @@ registerErrorDeserializer(
   ({ actualDomain, expectedDomain, path }, stack) => {
     return makePrettyError(
       text`
-        ${chalk.bgRed.white(" Model has wrong domain. ")}
+        ${chalk.redBright(" Model has wrong domain. ")}
 
         Expecting ${chalk.greenBright(path)} to be ${chalk.yellowBright(
           getModelDomainTypeDisplayNameSingular(expectedDomain),

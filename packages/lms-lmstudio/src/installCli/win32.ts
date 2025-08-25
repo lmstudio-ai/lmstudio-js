@@ -1,5 +1,4 @@
 import { text } from "@lmstudio/lms-common";
-import boxen from "boxen";
 import chalk from "chalk";
 // import inquirer from "inquirer";
 import inquirer from "inquirer";
@@ -34,28 +33,20 @@ export async function installCliWin32(path: string, { skipConfirmation }: Instal
   }).trimEnd();
   if (previousPath.includes(path)) {
     console.info(
-      boxen(
-        text`
-          ${chalk.bgGreenBright.black("  ✓ Already Installed  ")}
+      text`
+        ${chalk.greenBright("  ✓ Already Installed  ")}
 
-          The path ${chalk.greenBright(path)} is already in the PATH environment variable.
+        The path ${chalk.greenBright(path)} is already in the PATH environment variable.
 
-            ${chalk.cyanBright(text`
-              (i) If Windows cannot find the CLI tool, please try again in a new terminal window.
-            `)}
+          ${chalk.cyanBright(text`
+            (i) If Windows cannot find the CLI tool, please try again in a new terminal window.
+          `)}
 
-            ${chalk.cyanBright(text`
-              (i) If you are using an integrated terminal in an editor (such as VS Code), please try
-              to restart the editor.
-            `)}
-        `,
-        {
-          padding: 1,
-          margin: 1,
-          title: "LM Studio CLI Installation",
-          borderColor: "greenBright",
-        },
-      ),
+          ${chalk.cyanBright(text`
+            (i) If you are using an integrated terminal in an editor (such as VS Code), please try
+            to restart the editor.
+          `)}
+      `,
     );
     return;
   }
@@ -66,22 +57,14 @@ $path += ";${path}";
 
   if (!skipConfirmation) {
     console.info(
-      boxen(
-        text`
-          We are about to run the following powershell commands to install the LM Studio CLI tool
-          (lms).
+      text`
+        We are about to run the following powershell commands to install the LM Studio CLI tool
+        (lms).
 
-          ${chalk.cyanBright("    " + command.split("\n").join("\n    "))}
+        ${chalk.cyanBright("    " + command.split("\n").join("\n    "))}
 
-          It will add the path ${chalk.greenBright(path)} to the PATH environment variable.
-        `,
-        {
-          padding: 1,
-          margin: 1,
-          title: "LM Studio CLI Installation",
-          borderColor: "greenBright",
-        },
-      ),
+        It will add the path ${chalk.greenBright(path)} to the PATH environment variable.
+      `,
     );
     const { cont } = await inquirer.createPromptModule({
       output: process.stderr,
@@ -103,30 +86,22 @@ $path += ";${path}";
   execSync(command, { shell: powershellPath });
 
   console.info(
-    boxen(
-      text`
-        ${chalk.bgGreenBright.black("  ✓ Installation Completed  ")}
+    text`
+      ${chalk.greenBright("  ✓ Installation Completed  ")}
 
-          ${chalk.cyanBright(text`
-            (i) You need to open a new terminal window for these changes to take effect.
-          `)}
+        ${chalk.cyanBright(text`
+          (i) You need to open a new terminal window for these changes to take effect.
+        `)}
 
-          ${chalk.cyanBright(text`
-            (i) If you are using an integrated terminal in an editor (such as VS Code), please try
-            to restart the editor.
-          `)}
+        ${chalk.cyanBright(text`
+          (i) If you are using an integrated terminal in an editor (such as VS Code), please try
+          to restart the editor.
+        `)}
 
-        The LM Studio CLI tool (lms) has been successfully installed. To test it, run the following
-        command in a new terminal window:
+      The LM Studio CLI tool (lms) has been successfully installed. To test it, run the following
+      command in a new terminal window:
 
-            ${chalk.yellowBright("lms")}
-      `,
-      {
-        padding: 1,
-        margin: 1,
-        title: "LM Studio CLI Installation",
-        borderColor: "greenBright",
-      },
-    ),
+          ${chalk.yellowBright("lms")}
+    `,
   );
 }
