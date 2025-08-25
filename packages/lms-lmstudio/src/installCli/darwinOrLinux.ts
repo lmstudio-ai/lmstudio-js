@@ -101,27 +101,27 @@ export async function installCliDarwinOrLinux(path: string, { skipConfirmation }
     } else {
       console.info(
         text`
-            ${chalk.greenBright("  ✓ Already Installed  ")}
+          ${chalk.greenBright("  ✓ Already Installed  ")}
 
-            LM Studio CLI tool is already installed for the following shells:
+          LM Studio CLI tool is already installed for the following shells:
 
-            ${detectedAlreadyInstalledShells
-              .map(shell =>
-                chalk.cyanBright(
-                  `    · ${shell.shellName} ${chalk.gray(`(~/${shell.configFileName})`)}`,
-                ),
-              )
-              .join("\n")}
+          ${detectedAlreadyInstalledShells
+            .map(shell =>
+              chalk.cyanBright(
+                `    · ${shell.shellName} ${chalk.gray(`(~/${shell.configFileName})`)}`,
+              ),
+            )
+            .join("\n")}
 
-            If your shell is not listed above, please try to add the following directory to the PATH
-            environment variable:
+          If your shell is not listed above, please try to add the following directory to the PATH
+          environment variable:
 
-                ${chalk.yellowBright(path)}
+              ${chalk.yellowBright(path)}
 
-              ${chalk.gray(text`
-                (i) If you are having trouble running the CLI tool, please open a new terminal. and
-                try again.
-              `)}
+            ${chalk.gray(text`
+              (i) If you are having trouble running the CLI tool, please open a new terminal. and
+              try again.
+            `)}
           `,
       );
       return;
@@ -141,13 +141,13 @@ export async function installCliDarwinOrLinux(path: string, { skipConfirmation }
   if (!skipConfirmation) {
     console.info(
       text`
-          We are about to run the following commands to install the LM Studio CLI tool
-          (lms).
+        We are about to run the following commands to install the LM Studio CLI tool
+        (lms).
 
-          ${chalk.cyanBright(commandsToRunFormatted.join("\n"))}
+        ${chalk.cyanBright(commandsToRunFormatted.join("\n"))}
 
-          It will add the path ${chalk.greenBright(path)} to the PATH environment variable.
-        `,
+        It will add the path ${chalk.greenBright(path)} to the PATH environment variable.
+      `,
     );
 
     const { cont } = await inquirer.createPromptModule({
@@ -171,16 +171,16 @@ export async function installCliDarwinOrLinux(path: string, { skipConfirmation }
 
   console.info(
     text`
-        ${chalk.greenBright("  ✓ Installation Completed  ")}
+      ${chalk.greenBright("  ✓ Installation Completed  ")}
 
-          ${chalk.cyanBright(text`
-            (i) You need to open a new terminal window for these changes to take effect.
-          `)}
+        ${chalk.cyanBright(text`
+          (i) You need to open a new terminal window for these changes to take effect.
+        `)}
 
-        The LM Studio CLI tool (lms) has been successfully installed. To test it, run the following
-        command in a new terminal window:
+      The LM Studio CLI tool (lms) has been successfully installed. To test it, run the following
+      command in a new terminal window:
 
-            ${chalk.yellowBright("lms")}
-      `,
+          ${chalk.yellowBright("lms")}
+    `,
   );
 }

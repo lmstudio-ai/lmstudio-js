@@ -14,7 +14,7 @@ type DisplayData<TCode extends ErrorDisplayData["code"]> = Extract<
 >;
 
 function deserializeOtherError(serialized: SerializedLMSExtendedError, stack?: string): Error {
-  let content = chalk.white(`${serialized.title} `);
+  let content = `${serialized.title} `;
   if (serialized.suggestion !== undefined) {
     content += "\n\n\n " + "(!) SUGGESTION " + serialized.suggestion;
   }
