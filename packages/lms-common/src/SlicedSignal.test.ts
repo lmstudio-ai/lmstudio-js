@@ -551,17 +551,6 @@ describe("SlicedSignal", () => {
     expect(fullSubscriber).toHaveBeenCalledWith(
       { e: 2 },
       [
-        // This is a bit weird, but the final result is correct, so leave it for now.
-        {
-          op: "replace",
-          path: [],
-          value: { e: 2 },
-        },
-        {
-          op: "replace",
-          path: [],
-          value: { e: 1 },
-        },
         {
           op: "replace",
           path: [],
@@ -878,5 +867,98 @@ describe("SlicedSignal", () => {
     expect(subscriber1).toHaveBeenCalledWith(shortCircuited);
     expect(isShortCircuited(slicedSignal2.get())).toEqual(true);
     expect(subscriber2).toHaveBeenCalledWith(shortCircuited);
+  });
+
+  it("should work when subscribed to values of a map yet the map is updated such that the subscribed element is added", () => {
+    type Type = Map<string, { arr: Array<number> }>;
+    const [sourceSignal, setSource] = Signal.create<Type>(new Map());
+
+    const [slicedSignal, _setSliced] = makeSlicedSignalFrom([sourceSignal, setSource])
+      .mapAccessWithDefault("a" as string, { arr: [123] })
+      .done();
+
+    const subscriber = jest.fn();
+    slicedSignal.subscribeFull(subscriber);
+
+    expect(slicedSignal.get()).toEqual({ arr: [123] });
+    setSource.withProducer(draft => {
+      expect(draft.get("a")).toBeUndefined();
+      draft.set("a", { arr: [1, 2, 3] });
+    });
+    expect(slicedSignal.get()).toEqual({ arr: [1, 2, 3] });
+
+    expect(subscriber.mock.calls).toMatchInlineSnapshot(`
+      [
+        [
+          {
+            "arr": [
+              1,
+              2,
+              3,
+            ],
+          },
+          [
+            {
+              "op": "replace",
+              "path": [],
+              "value": {
+                "arr": [
+                  1,
+                  2,
+                  3,
+                ],
+              },
+            },
+          ],
+          [],
+        ],
+      ]
+    `);
+  });
+
+  it("should work when subscribed to values of a map yet the map is updated such that the subscribed elements is moved", () => {
+    type Type = Map<string, { arr: Array<number> }>;
+
+    const initialMap: Type = new Map();
+    initialMap.set("a", { arr: [123] });
+
+    const [sourceSignal, setSource] = Signal.create<Type>(initialMap);
+
+    const [slicedSignal, _setSliced] = makeSlicedSignalFrom([sourceSignal, setSource])
+      .mapAccessWithDefault("a" as string, { arr: [456] })
+      .done();
+
+    const subscriber = jest.fn();
+    slicedSignal.subscribeFull(subscriber);
+
+    expect(slicedSignal.get()).toEqual({ arr: [123] });
+    setSource.withProducer(draft => {
+      draft.delete("a");
+    });
+    expect(slicedSignal.get()).toEqual({ arr: [456] });
+
+    expect(subscriber.mock.calls).toMatchInlineSnapshot(`
+      [
+        [
+          {
+            "arr": [
+              456,
+            ],
+          },
+          [
+            {
+              "op": "replace",
+              "path": [],
+              "value": {
+                "arr": [
+                  456,
+                ],
+              },
+            },
+          ],
+          [],
+        ],
+      ]
+    `);
   });
 });

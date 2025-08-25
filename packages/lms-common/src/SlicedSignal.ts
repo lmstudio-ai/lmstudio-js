@@ -314,12 +314,31 @@ class SlicedSignalBuilderImpl<
                   ),
             });
           } else if (relationship === "children") {
-            // If one of the children have been replaced, we need to replace the subset that
-            // corresponds to the change
-            newPatches.push({
-              ...patch,
-              path: patch.path.slice(this.accessPath.length),
-            });
+            if (patch.path.length === this.accessPath.length) {
+              // If we are modifying the exact value we are subscribed to, we need to replace the
+              // whole value.
+              //
+              // This special handling is required because we might be accessing the value of a map
+              // that does not exist yet. The patch that added the value would be an "add" patch
+              // because it added the new entry. To us, we need to treat it as a "replace" patch
+              // because we are replacing the value from "not present" to "present".
+              //
+              // The same applies to "remove" patches - If the value is removed, we need to treat it
+              // as a "replace" patch.
+              newPatches.length = 0;
+              newPatches.push({
+                op: "replace",
+                path: [],
+                value: drill(value, this.accessPath),
+              });
+            } else {
+              // If one of the children have been replaced, we need to replace the subset that
+              // corresponds to the change
+              newPatches.push({
+                ...patch,
+                path: patch.path.slice(this.accessPath.length),
+              });
+            }
           }
           // Otherwise, we don't need to do anything
         }
