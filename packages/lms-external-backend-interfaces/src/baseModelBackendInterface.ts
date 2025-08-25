@@ -21,6 +21,26 @@ import { z, type ZodSchema } from "zod";
 type SpecificModelInstanceInfo = ModelInstanceInfoBase & { brand: true };
 type SpecificModelInfo = ModelInfoBase & { brand: true };
 
+type ModelProcessingStatus = "idle" | "processingPrompt" | "generating" | "computingEmbedding";
+
+const modelProcessingStatusSchema = z.enum([
+  "idle",
+  "processingPrompt",
+  "generating",
+  "computingEmbedding",
+]) as z.ZodType<ModelProcessingStatus>;
+
+export interface ModelProcessingState {
+  status: ModelProcessingStatus;
+  /**
+   * Number of requests that are currently in the queue (Including the current one)
+   */
+  queued: number;
+}
+export const modelProcessingStateSchema = z.object({
+  status: modelProcessingStatusSchema,
+  queued: z.number(),
+}) as z.Schema<ModelProcessingState>;
 /**
  * Create a base model backend interface that are used by all domain-specific model backend
  * interfaces.
@@ -130,6 +150,13 @@ export function createBaseModelBackendInterface<
           type: z.literal("cancel"),
         }),
       ]),
+    })
+    .addRpcEndpoint("getInstanceProcessingState", {
+      parameter: z.object({
+        specifier: modelSpecifierSchema,
+        throwIfNotFound: z.boolean(),
+      }),
+      returns: modelProcessingStateSchema,
     });
 }
 

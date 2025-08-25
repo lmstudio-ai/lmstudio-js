@@ -1,5 +1,8 @@
 import { getCurrentStack } from "@lmstudio/lms-common";
-import { type BaseModelPort } from "@lmstudio/lms-external-backend-interfaces";
+import {
+  type BaseModelPort,
+  type ModelProcessingState,
+} from "@lmstudio/lms-external-backend-interfaces";
 import {
   type KVConfig,
   type ModelInfoBase,
@@ -62,5 +65,13 @@ export abstract class DynamicHandle<
       { stack },
     );
     return loadConfig;
+  }
+
+  public async getInstanceProcessingState(): Promise<ModelProcessingState> {
+    const state = await this.port.callRpc("getInstanceProcessingState", {
+      specifier: this.specifier,
+      throwIfNotFound: true,
+    });
+    return state;
   }
 }
