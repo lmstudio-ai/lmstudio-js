@@ -207,14 +207,51 @@ export const virtualModelSelectCustomFieldDefinitionSchema =
     ),
   });
 
+export type VirtualModelNumberCustomFieldDefinition = VirtualModelCustomFieldDefinitionBase & {
+  type: "number";
+  defaultValue: number;
+  min?: number;
+  max?: number;
+  int?: boolean;
+  /**
+   * If present, the UI should render a slider for this field.
+   */
+  slider?: {
+    min: number;
+    max: number;
+    step: number;
+  };
+  effects: Array<VirtualModelCustomFieldSetJinjaVariableEffect>;
+};
+export const virtualModelNumberCustomFieldDefinitionSchema =
+  virtualModelCustomFieldDefinitionBaseSchema.extend({
+    type: z.literal("number"),
+    defaultValue: z.number(),
+    min: z.number().optional(),
+    max: z.number().optional(),
+    int: z.boolean().optional(),
+    slider: z
+      .object({
+        min: z.number(),
+        max: z.number(),
+        step: z.number(),
+      })
+      .optional(),
+    effects: z.array(
+      z.discriminatedUnion("type", [virtualModelCustomFieldSetJinjaVariableEffectSchema]),
+    ),
+  });
+
 export type VirtualModelCustomFieldDefinition =
   | VirtualModelBooleanCustomFieldDefinition
   | VirtualModelStringCustomFieldDefinition
-  | VirtualModelSelectCustomFieldDefinition;
+  | VirtualModelSelectCustomFieldDefinition
+  | VirtualModelNumberCustomFieldDefinition;
 export const virtualModelCustomFieldDefinitionSchema = z.discriminatedUnion("type", [
   virtualModelBooleanCustomFieldDefinitionSchema,
   virtualModelStringCustomFieldDefinitionSchema,
   virtualModelSelectCustomFieldDefinitionSchema,
+  virtualModelNumberCustomFieldDefinitionSchema,
 ]) as ZodSchema<VirtualModelCustomFieldDefinition>;
 
 /**
