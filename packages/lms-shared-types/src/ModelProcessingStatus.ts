@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z, type ZodSchema } from "zod";
 
 /**
  * @public
@@ -12,7 +12,7 @@ const modelProcessingStatusSchema = z.enum([
   "processingPrompt",
   "generating",
   "computingEmbedding",
-]) as z.ZodType<ModelProcessingStatus>;
+]) as ZodSchema<ModelProcessingStatus>;
 
 /**
  * @public
@@ -29,4 +29,4 @@ export interface ModelProcessingState {
 export const modelProcessingStateSchema = z.object({
   status: modelProcessingStatusSchema,
   queued: z.number(),
-}) as z.Schema<ModelProcessingState>;
+}) as ZodSchema<ModelProcessingState>;
