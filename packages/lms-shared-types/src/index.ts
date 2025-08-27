@@ -335,6 +335,7 @@ export {
   modelInstanceInfoBaseSchema,
 } from "./ModelInfoBase.js";
 export { ModelManifest, modelManifestSchema } from "./ModelManifest.js";
+export { ModelProcessingState, modelProcessingStateSchema } from "./ModelProcessingStatus.js";
 export {
   ModelQuery,
   modelQuerySchema,

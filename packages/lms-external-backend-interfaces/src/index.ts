@@ -2,8 +2,6 @@ export {
   BaseModelBackendInterface,
   BaseModelPort,
   createBaseModelBackendInterface,
-  modelProcessingStateSchema,
-  ModelProcessingState,
 } from "./baseModelBackendInterface.js";
 export {
   createDiagnosticsBackendInterface,

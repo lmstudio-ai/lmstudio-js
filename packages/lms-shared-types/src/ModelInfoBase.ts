@@ -74,15 +74,15 @@ export interface ModelInstanceInfoBase extends ModelInfoBase {
   /**
    * The TTL in milliseconds for the instance. If not set, the instance does not expire.
    */
-  ttlMs?: number;
+  ttlMs: number | null;
   /**
    * Last used time as a unix timestamp in milliseconds.
    */
-  lastUsedTime: number;
+  lastUsedTime: number | null;
 }
 export const modelInstanceInfoBaseSchema = modelInfoBaseSchema.extend({
   identifier: z.string(),
   instanceReference: z.string(),
-  ttlMs: z.number().optional().nullable(),
+  ttlMs: z.number().nullable(),
   lastUsedTime: z.number().nullable(),
 });
