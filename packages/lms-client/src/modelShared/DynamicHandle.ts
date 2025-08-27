@@ -1,6 +1,7 @@
 import { getCurrentStack } from "@lmstudio/lms-common";
 import { type BaseModelPort } from "@lmstudio/lms-external-backend-interfaces";
 import {
+  type ModelProcessingState,
   type KVConfig,
   type ModelInfoBase,
   type ModelInstanceInfoBase,
@@ -62,5 +63,20 @@ export abstract class DynamicHandle<
       { stack },
     );
     return loadConfig;
+  }
+
+  /**
+   * Gets the current processing state of the model instance associated with this `DynamicHandle`.
+   * If no model is currently associated, this will throw an error.
+   *
+   * @experimental [EXP-MODEL-PROCESSING-STATE] Getting the processing state of a model instance is
+   * experimental and may change in the future.
+   */
+  public async getInstanceProcessingState(): Promise<ModelProcessingState> {
+    const state = await this.port.callRpc("getInstanceProcessingState", {
+      specifier: this.specifier,
+      throwIfNotFound: true,
+    });
+    return state;
   }
 }

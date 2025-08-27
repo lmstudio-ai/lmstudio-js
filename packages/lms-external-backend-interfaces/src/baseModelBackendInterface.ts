@@ -7,6 +7,7 @@ import {
   type ModelInfoBase,
   type ModelInstanceInfoBase,
   modelInstanceInfoSchema,
+  modelProcessingStateSchema,
   modelSpecifierSchema,
 } from "@lmstudio/lms-shared-types";
 import { z, type ZodSchema } from "zod";
@@ -20,7 +21,6 @@ import { z, type ZodSchema } from "zod";
 // TypeScript does not support higher order types.
 type SpecificModelInstanceInfo = ModelInstanceInfoBase & { brand: true };
 type SpecificModelInfo = ModelInfoBase & { brand: true };
-
 /**
  * Create a base model backend interface that are used by all domain-specific model backend
  * interfaces.
@@ -130,6 +130,13 @@ export function createBaseModelBackendInterface<
           type: z.literal("cancel"),
         }),
       ]),
+    })
+    .addRpcEndpoint("getInstanceProcessingState", {
+      parameter: z.object({
+        specifier: modelSpecifierSchema,
+        throwIfNotFound: z.boolean(),
+      }),
+      returns: modelProcessingStateSchema,
     });
 }
 
