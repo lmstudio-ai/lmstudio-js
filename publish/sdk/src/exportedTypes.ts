@@ -179,6 +179,7 @@ export type {
   ModelInfoBase,
   ModelInstanceInfo,
   ModelInstanceInfoBase,
+  ModelProcessingState,
   ModelQuery,
   ModelSearchOpts,
   ModelSearchResultDownloadOptionFitEstimation,
