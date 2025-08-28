@@ -33,6 +33,7 @@ export type {
   GeneratorController,
   GeneratorPredictionResult,
   InferParsedConfig,
+  InstallLocalPluginOpts,
   LLMActBaseOpts,
   LLMActionOpts,
   LLMDynamicHandle,

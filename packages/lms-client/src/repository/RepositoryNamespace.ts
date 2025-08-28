@@ -138,6 +138,11 @@ export const createArtifactDownloadPlannerOptsSchema = z.object({
   onPlanUpdated: z.function().optional(),
 }) as ZodSchema<CreateArtifactDownloadPlannerOpts>;
 
+/**
+ * Options to use with {@link RepositoryNamespace#installLocalPlugin}.
+ *
+ * @public
+ */
 export interface InstallLocalPluginOpts {
   path: string;
 }
