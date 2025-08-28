@@ -194,6 +194,16 @@ export function createRepositoryBackendInterface() {
           }),
         ]),
       })
+      /**
+       * Install a plugin that exists in a local folder. It will be installed as if it is downloaded
+       * from the LM Studio Hub.
+       */
+      .addRpcEndpoint("installLocalPlugin", {
+        parameter: z.object({
+          pluginPath: z.string(),
+        }),
+        returns: z.void(),
+      })
   );
 }
 

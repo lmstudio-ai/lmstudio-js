@@ -98,6 +98,7 @@ export type {
   CreateArtifactDownloadPlannerOpts,
   DownloadArtifactOpts,
   EnsureAuthenticatedOpts,
+  InstallLocalPluginOpts,
   LoginWithPreAuthenticatedKeysOpts,
   LoginWithPreAuthenticatedKeysResult,
   PushArtifactOpts,

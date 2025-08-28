@@ -138,6 +138,18 @@ export const createArtifactDownloadPlannerOptsSchema = z.object({
   onPlanUpdated: z.function().optional(),
 }) as ZodSchema<CreateArtifactDownloadPlannerOpts>;
 
+/**
+ * Options to use with {@link RepositoryNamespace#installLocalPlugin}.
+ *
+ * @public
+ */
+export interface InstallLocalPluginOpts {
+  path: string;
+}
+const installLocalPluginOptsSchema = z.object({
+  path: z.string(),
+}) as ZodSchema<InstallLocalPluginOpts>;
+
 /** @public */
 export class RepositoryNamespace {
   /** @internal */
@@ -407,5 +419,26 @@ export class RepositoryNamespace {
     );
     this.downloadPlanFinalizationRegistry.register(planner, { owner, name }, planner);
     return planner;
+  }
+
+  /**
+   * Install a plugin that exists in a local folder. It will be installed as if it is downloaded
+   * from the LM Studio Hub.
+   *
+   * The folder must contain a valid plugin manifest file (`manifest.json`).
+   *
+   * @experimental [EXP-INSTALL-LOCAL] This function may change in the future.
+   */
+  public installLocalPlugin(opts: InstallLocalPluginOpts): Promise<void> {
+    const stack = getCurrentStack(1);
+    const { path } = this.validator.validateMethodParamOrThrow(
+      "repository",
+      "installLocalPlugin",
+      "opts",
+      installLocalPluginOptsSchema,
+      opts,
+      stack,
+    );
+    return this.repositoryPort.callRpc("installLocalPlugin", { pluginPath: path }, { stack });
   }
 }
