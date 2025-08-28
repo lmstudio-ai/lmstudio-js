@@ -19,6 +19,8 @@ import { z } from "zod";
 export class SystemNamespace {
   /** @internal */
   private readonly logger: SimpleLogger;
+  // Step 5b: Add member here for system.unstable
+  public readonly unstable: UnstableSystemNamespace;
   /** @internal */
   public constructor(
     private readonly systemPort: SystemPort,
@@ -26,6 +28,8 @@ export class SystemNamespace {
     parentLogger: LoggerInterface,
   ) {
     this.logger = new SimpleLogger("System", parentLogger);
+    // Step 5c: Instantiate unstable "namespace" here
+    this.unstable = new UnstableSystemNamespace(systemPort, validator, parentLogger);
   }
   /**
    * List all downloaded models.
@@ -104,5 +108,44 @@ export class SystemNamespace {
   public async unstable_getExperimentFlags(): Promise<Array<string>> {
     const stack = getCurrentStack(1);
     return await this.systemPort.callRpc("getExperimentFlags", undefined, { stack });
+  }
+
+  // Step 4. Implement code that calls the new endpoint from the client
+  /**
+   * Select an engine to use for LM Studio. This is an unstable API and may change without notice.
+   *
+   * Can use 'unstable_' prefix as even another way to communicate instability.
+   *
+   * @experimental [QUALIFIER] Details
+   * @deprecated [QUALIFIER] Details
+   */
+  public async unstable_setEngine(name: string, version: string) {
+    // need to call getCurrentStack to get 1 level above the current stack, so points to setEngine
+    const stack = getCurrentStack(1);
+    // do this to give nice error messages if the params are wrong
+    [name, version] = this.validator.validateMethodParamsOrThrow(
+      "client.system",
+      "setEngine",
+      ["name", "version"],
+      [z.string(), z.string()],
+      [name, version],
+      stack,
+    );
+    await this.systemPort.callRpc("setEngine", { engineSpecifier: { name, version } }, { stack });
+  }
+}
+
+// Step 5a: if you want to make an system.unstable "namepace", create this calls and add to
+// SystemNamespace as a public member. Must still export the types in index.ts and expotedTypes.ts
+export class UnstableSystemNamespace {
+  /** @internal */
+  private readonly logger: SimpleLogger;
+  /** @internal */
+  public constructor(
+    private readonly systemPort: SystemPort,
+    private readonly validator: Validator,
+    parentLogger: LoggerInterface,
+  ) {
+    this.logger = new SimpleLogger("UnstableSystem", parentLogger);
   }
 }

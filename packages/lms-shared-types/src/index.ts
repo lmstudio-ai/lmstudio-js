@@ -421,6 +421,8 @@ export {
   serializedKVConfigSchematicsFieldSchema,
   serializedKVConfigSchematicsSchema,
 } from "./SerializedKVConfigSchematics.js";
+// Step 1c. Export the new type and schema
+export { EngineSpecifier, engineSpecifierSchema } from "./system/EngineSpecifier.js";
 export {
   BooleanOrMixed,
   booleanOrMixedSchema,

@@ -103,4 +103,5 @@ export type {
   PushArtifactOpts,
   RepositoryNamespace,
 } from "./repository/RepositoryNamespace.js";
-export type { SystemNamespace } from "./system/SystemNamespace.js";
+// Step 5d: Add unstable namespace here
+export type { SystemNamespace, UnstableSystemNamespace } from "./system/SystemNamespace.js";

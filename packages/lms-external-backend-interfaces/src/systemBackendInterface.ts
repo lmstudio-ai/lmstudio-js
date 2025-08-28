@@ -1,6 +1,10 @@
 import { BackendInterface } from "@lmstudio/lms-communication";
 import { type InferClientPort } from "@lmstudio/lms-communication-client";
-import { backendNotificationSchema, modelInfoSchema } from "@lmstudio/lms-shared-types";
+import {
+  backendNotificationSchema,
+  engineSpecifierSchema,
+  modelInfoSchema,
+} from "@lmstudio/lms-shared-types";
 import { z } from "zod";
 
 export function createSystemBackendInterface() {
@@ -45,6 +49,29 @@ export function createSystemBackendInterface() {
       .addRpcEndpoint("getExperimentFlags", {
         parameter: z.void(),
         returns: z.array(z.string()),
+      })
+      .addRpcEndpoint("startHttpServer", {
+        parameter: z.object({
+          port: z.number().int().min(1).max(65535).optional(),
+          cors: z.boolean().optional(),
+        }),
+        returns: z.void(),
+      })
+      .addRpcEndpoint("stopHttpServer", {
+        parameter: z.void(),
+        returns: z.void(),
+      })
+      // Step 1a. Define the interface. Interfaces that go here will be available externally.
+      // does not have to be coupled with what the final
+      // Note: run npm run watch to develop. This must be compiled before next steps can pickup
+      // Note: currently, no signals happen in external backend interfaces, only RPCs and Channels
+      .addRpcEndpoint("setEngine", {
+        parameter: z.object({
+          engineSpecifier: engineSpecifierSchema,
+        }),
+        returns: z.object({
+          success: z.boolean(),
+        }),
       })
   );
 }

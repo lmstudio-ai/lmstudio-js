@@ -85,6 +85,8 @@ export type {
   ToolCallContext,
   ToolsProvider,
   ToolsProviderController,
+  // Step 5e: Add unstable namespace type here
+  UnstableSystemNamespace,
   VirtualConfigSchematics,
 } from "@lmstudio/lms-client";
 export type { LoggerInterface, StreamablePromise, TextAllowedTypes } from "@lmstudio/lms-common";
@@ -134,6 +136,8 @@ export type {
   EmbeddingModelInfo,
   EmbeddingModelInstanceAdditionalInfo,
   EmbeddingModelInstanceInfo,
+  // STEP 8. Export the new types (not schema) here if user needs access, but not schema
+  EngineSpecifier,
   FileType,
   FunctionToolCallRequest,
   GPUSetting,
