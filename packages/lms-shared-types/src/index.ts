@@ -414,6 +414,7 @@ export {
   Runtime,
   runtimeSchema,
 } from "./Runtime.js";
+export { RuntimeSpecifier, runtimeSpecifierSchema } from "./runtime/RuntimeSpecifier.js";
 export {
   KVConfigSchematicsDeserializationError,
   kvConfigSchematicsDeserializationErrorSchema,

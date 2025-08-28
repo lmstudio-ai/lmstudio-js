@@ -12,6 +12,7 @@ import {
   type EmbeddingModelInfo,
   type LLMInfo,
   type ModelInfo,
+  type RuntimeSpecifier,
 } from "@lmstudio/lms-shared-types";
 import { z } from "zod";
 
@@ -33,6 +34,9 @@ type StartHttpServerOpts = z.infer<typeof startHttpServerOptsSchema>;
 export class SystemNamespace {
   /** @internal */
   private readonly logger: SimpleLogger;
+  /** @public */
+  public readonly unstable: UnstableSystemNamespace;
+  /** @public */
   /** @internal */
   public constructor(
     private readonly systemPort: SystemPort,
@@ -40,6 +44,7 @@ export class SystemNamespace {
     parentLogger: LoggerInterface,
   ) {
     this.logger = new SimpleLogger("System", parentLogger);
+    this.unstable = new UnstableSystemNamespace(systemPort, validator, parentLogger);
   }
   /**
    * List all downloaded models.
@@ -153,5 +158,31 @@ export class SystemNamespace {
   public async stopHttpServer() {
     const stack = getCurrentStack(1);
     return await this.systemPort.callRpc("stopHttpServer", undefined, { stack });
+  }
+}
+
+/** @public */
+export class UnstableSystemNamespace {
+  /** @internal */
+  private readonly logger: SimpleLogger;
+  /** @public */
+  /** @internal */
+  public constructor(
+    private readonly systemPort: SystemPort,
+    private readonly validator: Validator,
+    parentLogger: LoggerInterface,
+  ) {
+    this.logger = new SimpleLogger("System", parentLogger);
+  }
+
+  /**
+   * Gets the runtime index and current selection status.
+   * This is an unstable API and may change without notice.
+   *
+   * @experimental
+   */
+  public async getRuntimeSpecifiers(): Promise<Array<RuntimeSpecifier>> {
+    const stack = getCurrentStack(1);
+    return await this.systemPort.callRpc("getRuntimeSpecifiers", undefined, { stack });
   }
 }
