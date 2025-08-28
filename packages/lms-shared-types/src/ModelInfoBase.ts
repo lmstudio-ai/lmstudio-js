@@ -25,6 +25,10 @@ export interface ModelInfoBase {
    */
   displayName: string;
   /**
+   * Publisher of the model.
+   */
+  publisher: string;
+  /**
    * The relative path of the model.
    */
   path: string;
@@ -49,6 +53,7 @@ export const modelInfoBaseSchema = z.object({
   modelKey: z.string(),
   format: modelCompatibilityTypeSchema,
   displayName: z.string(),
+  publisher: z.string(),
   path: z.string(),
   sizeBytes: z.number().int(),
   paramsString: z.string().optional(),
