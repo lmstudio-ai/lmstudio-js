@@ -24,7 +24,7 @@
     "test-sequential": "jest --testMatch \"**/?(*.)+(test).ts\" --testMatch \"!**/?(*.)+(heavy).(test).ts\" --runInBand",
     "test-full": "jest --testMatch \"**/?(*.)+(test).ts\" --runInBand",
     "test-watch": "jest --watch --testMatch \"**/?(*.)+(test).ts\" --testMatch \"!**/?(*.)+(heavy).(test).ts\"",
-    "test-cli": "jest --testMatch \"**/packages/lms-cli/**/*.test.ts\" --runInBand"
+    "test-cli": "jest --testMatch \"**/packages/lms-cli/**/*.test.ts\" --runInBand --verbose"
   },
   "engines": {
     "node": "^20.12.2",
