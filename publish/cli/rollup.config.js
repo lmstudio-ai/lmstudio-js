@@ -33,9 +33,4 @@ export default {
     json(),
     banner(() => "#!/usr/bin/env node\n"),
   ],
-  external: [],
-  onwarn(warning, warn) {
-    if (warning.code === "UNRESOLVED_IMPORT" && warning.id === "react-devtools-core") return;
-    warn(warning);
-  },
 };
