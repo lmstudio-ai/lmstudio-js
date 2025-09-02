@@ -4,9 +4,7 @@ import commonjs from "@rollup/plugin-commonjs";
 import json from "@rollup/plugin-json";
 import replace from "@rollup/plugin-replace";
 import banner from "rollup-plugin-banner2";
-import { fileURLToPath } from "url";
 
-const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 export default {
@@ -37,8 +35,6 @@ export default {
   ],
   external: [],
   onwarn(warning, warn) {
-    // Suppress circular dependency warnings and unresolved dependency warnings
-    if (warning.code === "CIRCULAR_DEPENDENCY") return;
     if (warning.code === "UNRESOLVED_IMPORT" && warning.id === "react-devtools-core") return;
     warn(warning);
   },
