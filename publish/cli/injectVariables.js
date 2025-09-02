@@ -3,9 +3,7 @@
 
 import { readFileSync, writeFileSync } from "fs";
 import { join } from "path";
-import { fileURLToPath } from "url";
 
-const __filename = fileURLToPath(import.meta.url);
 const __dirname = new URL(".", import.meta.url).pathname;
 
 const content = readFileSync(join(__dirname, "dist", "index.js"), "utf-8");
