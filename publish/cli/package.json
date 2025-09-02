@@ -3,6 +3,7 @@
   "version": "0.0.47",
   "description": "LM Studio CLI",
   "main": "dist/index.js",
+  "type": "module",
   "scripts": {
     "build-rollup": "rollup -c",
     "build-inject-variables": "node ./injectVariables.js",
