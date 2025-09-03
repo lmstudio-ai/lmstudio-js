@@ -11,6 +11,7 @@ import {
   modelSearchResultDownloadOptionDataSchema,
   modelSearchResultEntryDataSchema,
   modelSearchResultIdentifierSchema,
+  staffPickedArtifactSchema,
 } from "@lmstudio/lms-shared-types";
 import { z } from "zod";
 
@@ -203,6 +204,10 @@ export function createRepositoryBackendInterface() {
           pluginPath: z.string(),
         }),
         returns: z.void(),
+      })
+      .addRpcEndpoint("getStaffPicks", {
+        parameter: z.void(),
+        returns: z.array(staffPickedArtifactSchema),
       })
   );
 }
