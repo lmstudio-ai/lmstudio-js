@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export interface StaffPickedArtifact {
+export interface StaffPickedModel {
   owner: string;
   name: string;
   description: string;
@@ -10,7 +10,7 @@ export interface StaffPickedArtifact {
   sizeBytes: number;
 }
 
-export const staffPickedArtifactSchema = z.object({
+export const staffPickedModelSchema = z.object({
   owner: z.string(),
   name: z.string(),
   description: z.string(),
@@ -18,4 +18,4 @@ export const staffPickedArtifactSchema = z.object({
   downloads: z.number(),
   likeCount: z.number(),
   sizeBytes: z.number(),
-}) as z.ZodType<StaffPickedArtifact>;
+}) as z.ZodType<StaffPickedModel>;
