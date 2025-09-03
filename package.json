@@ -9,7 +9,7 @@
     "gen": "cd scripts && node ./generateEsmPackageJson.mjs",
     "watch-tsc": "tsc --build tsconfig.build.json --watch",
     "watch": "concurrently --prefix=none \"npm run watch-tsc\" \"turbo run watch\"",
-    "clean": "turbo run clean",
+    "clean": "shx rm -rf .turbo && turbo run clean",
     "build-scaffolds-json": "cd scaffolds && node ./buildScaffoldsJSON.js",
     "build-sdk": "turbo run build --filter=@lmstudio/sdk",
     "build-cli": "turbo run clean --filter=@lmstudio/lms-cli && turbo run build --filter=@lmstudio/lms-cli --filter=@lmstudio/cli",
