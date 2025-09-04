@@ -18,7 +18,6 @@ import {
 import { z, type ZodSchema } from "zod";
 import { ArtifactDownloadPlanner } from "./ArtifactDownloadPlanner.js";
 import { ModelSearchResultEntry } from "./ModelSearchResultEntry.js";
-import { type StaffPickedArtifact } from "@lmstudio/lms-shared-types";
 
 /**
  * Options to use with {@link RepositoryNamespace#downloadArtifact}
@@ -441,10 +440,5 @@ export class RepositoryNamespace {
       stack,
     );
     return this.repositoryPort.callRpc("installLocalPlugin", { pluginPath: path }, { stack });
-  }
-
-  public async fetchStaffPicks(): Promise<Array<StaffPickedArtifact>> {
-    const stack = getCurrentStack(1);
-    return await this.repositoryPort.callRpc("getStaffPicks", undefined, { stack });
   }
 }
