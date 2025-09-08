@@ -154,6 +154,9 @@ const installLocalPluginOptsSchema = z.object({
 export class RepositoryNamespace {
   /** @internal */
   private readonly logger: SimpleLogger;
+  /** @public */
+  public readonly unstable: UnstableRepositoryNamespace;
+  /** @public */
   /** @internal */
   public constructor(
     private readonly repositoryPort: RepositoryPort,
@@ -161,6 +164,7 @@ export class RepositoryNamespace {
     parentLogger: LoggerInterface,
   ) {
     this.logger = new SimpleLogger("Repository", parentLogger);
+    this.unstable = new UnstableRepositoryNamespace(repositoryPort, validator, this.logger);
   }
 
   public async searchModels(opts: ModelSearchOpts): Promise<Array<ModelSearchResultEntry>> {
@@ -440,5 +444,26 @@ export class RepositoryNamespace {
       stack,
     );
     return this.repositoryPort.callRpc("installLocalPlugin", { pluginPath: path }, { stack });
+  }
+}
+
+/** @public */
+export class UnstableRepositoryNamespace {
+  /** @internal */
+  private readonly logger: SimpleLogger;
+  /** @public */
+  /** @internal */
+  public constructor(
+    private readonly repositoryPort: RepositoryPort,
+    private readonly validator: Validator,
+    parentLogger: LoggerInterface,
+  ) {
+    this.logger = new SimpleLogger("System", parentLogger);
+  }
+
+  public async getModelCatalog() {
+    const stack = getCurrentStack(1);
+    this.logger.debug("Fetching model catalog");
+    return await this.repositoryPort.callRpc("getModelCatalog", undefined, { stack });
   }
 }

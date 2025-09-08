@@ -33,8 +33,6 @@ type StartHttpServerOpts = z.infer<typeof startHttpServerOptsSchema>;
 export class SystemNamespace {
   /** @internal */
   private readonly logger: SimpleLogger;
-  /** @public */
-  public readonly unstable: UnstableSystemNamespace;
   /** @internal */
   public constructor(
     private readonly systemPort: SystemPort,
@@ -42,7 +40,6 @@ export class SystemNamespace {
     parentLogger: LoggerInterface,
   ) {
     this.logger = new SimpleLogger("System", parentLogger);
-    this.unstable = new UnstableSystemNamespace(systemPort, validator, parentLogger);
   }
   /**
    * List all downloaded models.
@@ -156,26 +153,5 @@ export class SystemNamespace {
   public async stopHttpServer() {
     const stack = getCurrentStack(1);
     return await this.systemPort.callRpc("stopHttpServer", undefined, { stack });
-  }
-}
-
-/** @public */
-export class UnstableSystemNamespace {
-  /** @internal */
-  private readonly logger: SimpleLogger;
-  /** @public */
-  /** @internal */
-  public constructor(
-    private readonly systemPort: SystemPort,
-    private readonly validator: Validator,
-    parentLogger: LoggerInterface,
-  ) {
-    this.logger = new SimpleLogger("System", parentLogger);
-  }
-
-  public async getStaffPicks() {
-    const stack = getCurrentStack(1);
-    this.logger.debug("Fetching staff picks");
-    return await this.systemPort.callRpc("getStaffPicks", undefined, { stack });
   }
 }

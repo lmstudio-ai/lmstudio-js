@@ -1,10 +1,6 @@
 import { BackendInterface } from "@lmstudio/lms-communication";
 import { type InferClientPort } from "@lmstudio/lms-communication-client";
-import {
-  backendNotificationSchema,
-  modelInfoSchema,
-  staffPickedModelSchema,
-} from "@lmstudio/lms-shared-types";
+import { backendNotificationSchema, modelInfoSchema } from "@lmstudio/lms-shared-types";
 import { z } from "zod";
 
 export function createSystemBackendInterface() {
@@ -60,10 +56,6 @@ export function createSystemBackendInterface() {
       .addRpcEndpoint("stopHttpServer", {
         parameter: z.void(),
         returns: z.void(),
-      })
-      .addRpcEndpoint("getStaffPicks", {
-        parameter: z.void(),
-        returns: z.array(staffPickedModelSchema),
       })
   );
 }
