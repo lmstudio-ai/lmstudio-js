@@ -2,7 +2,7 @@ import { z } from "zod";
 import {
   type ModelCompatibilityType,
   modelCompatibilityTypeSchema,
-} from "../ModelCompatibilityType";
+} from "../ModelCompatibilityType.js";
 
 /**
  * Represents information about the base properties of an artifact in the Hub.
