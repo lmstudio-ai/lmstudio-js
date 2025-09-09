@@ -156,7 +156,6 @@ export class RepositoryNamespace {
   private readonly logger: SimpleLogger;
   /** @public */
   public readonly unstable: UnstableRepositoryNamespace;
-  /** @public */
   /** @internal */
   public constructor(
     private readonly repositoryPort: RepositoryPort,
@@ -451,7 +450,6 @@ export class RepositoryNamespace {
 export class UnstableRepositoryNamespace {
   /** @internal */
   private readonly logger: SimpleLogger;
-  /** @public */
   /** @internal */
   public constructor(
     private readonly repositoryPort: RepositoryPort,
