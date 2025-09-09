@@ -163,7 +163,7 @@ export class RepositoryNamespace {
     parentLogger: LoggerInterface,
   ) {
     this.logger = new SimpleLogger("Repository", parentLogger);
-    this.unstable = new UnstableRepositoryNamespace(repositoryPort, validator, this.logger);
+    this.unstable = new UnstableRepositoryNamespace(repositoryPort, this.logger);
   }
 
   public async searchModels(opts: ModelSearchOpts): Promise<Array<ModelSearchResultEntry>> {
@@ -453,15 +453,14 @@ export class UnstableRepositoryNamespace {
   /** @internal */
   public constructor(
     private readonly repositoryPort: RepositoryPort,
-    private readonly validator: Validator,
     parentLogger: LoggerInterface,
   ) {
-    this.logger = new SimpleLogger("System", parentLogger);
+    this.logger = new SimpleLogger("Unstable", parentLogger);
   }
 
   /**
-   * @deprecated [DEP-HUB-API-ACCESS] LM Studio Hub API access is still in active development. Stay
-   * tuned for updates.
+   * @deprecated [DEP-HUB-API-ACCESS] LM Studio Hub API access is still in active development
+   * and will change. Not recommended for public adoption.
    */
   public async getModelCatalog() {
     const stack = getCurrentStack(1);
