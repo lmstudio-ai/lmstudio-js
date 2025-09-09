@@ -47,7 +47,7 @@ export class ArtifactDownloadPlanner {
   private readyDeferredPromise = makePromise<void>();
   private readonly logger: SimpleLogger;
   private isReadyBoolean = false;
-  private isChannelClose: boolean = false;
+  private isChannelClosed: boolean = false;
   private planValue: ArtifactDownloadPlan;
   private currentDownload: ArtifactDownloadPlannerCurrentDownload | null = null;
   /**
@@ -93,7 +93,7 @@ export class ArtifactDownloadPlanner {
     };
     this.channel.onClose.subscribe(() => {
       // Keep a track if the channel is closed
-      this.isChannelClose = true;
+      this.isChannelClosed = true;
     });
     this.channel.onMessage.subscribe(message => {
       const messageType = message.type;
@@ -144,7 +144,7 @@ export class ArtifactDownloadPlanner {
 
   public [Symbol.dispose]() {
     // If the channel is still open, we need to cancel the plan.
-    if (this.isChannelClose === false) {
+    if (this.isChannelClosed === false) {
       this.channel.send({ type: "cancel" });
     }
     this.onDisposed();
