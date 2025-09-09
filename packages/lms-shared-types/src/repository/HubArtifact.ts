@@ -4,6 +4,13 @@ import {
   modelCompatibilityTypeSchema,
 } from "../ModelCompatibilityType";
 
+/**
+ * Represents information about the base properties of an artifact in the Hub.
+ *
+ * @deprecated [DEP-HUB-API-ACCESS] LM Studio Hub API access is still in active development. Stay
+ * tuned for updates.
+ * @public
+ */
 export type HubArtifactBase = {
   /** Owner of the artifact */
   owner: string;
@@ -46,6 +53,13 @@ export const hubArtifactBaseSchema = z.object({
   forkedFrom: z.string().optional(),
 });
 
+/**
+ * Represents shared metadata properties for models in the Hub.
+ *
+ * @deprecated [DEP-HUB-API-ACCESS] LM Studio Hub API access is still in active development. Stay
+ * tuned for updates.
+ * @public
+ */
 export interface HubModelSharedMetadata {
   architectures: Array<string>;
   compatibilityTypes: Array<ModelCompatibilityType>;
@@ -59,6 +73,13 @@ export const hubModelSharedMetadataSchema = z.object({
   minMemoryUsageBytes: z.number(),
 });
 
+/**
+ * Represents metadata for models in the Hub.
+ *
+ * @deprecated [DEP-HUB-API-ACCESS] LM Studio Hub API access is still in active development. Stay
+ * tuned for updates.
+ * @public
+ */
 export type HubModelMetadata =
   | ({
       type: "llm";
@@ -88,6 +109,13 @@ export const hubModelMetadataSchema = z.discriminatedUnion("type", [
   }),
 ]);
 
+/**
+ * Represents a model artifact in the Hub.
+ *
+ * @deprecated [DEP-HUB-API-ACCESS] LM Studio Hub API access is still in active development. Stay
+ * tuned for updates.
+ * @public
+ */
 export type HubModel = HubArtifactBase & {
   type: "model";
   metadata: HubModelMetadata;
@@ -98,6 +126,13 @@ export const hubModelSchema = hubArtifactBaseSchema.extend({
   metadata: hubModelMetadataSchema,
 });
 
+/**
+ * Represents a preset artifact in the Hub.
+ *
+ * @deprecated [DEP-HUB-API-ACCESS] LM Studio Hub API access is still in active development. Stay
+ * tuned for updates.
+ * @public
+ */
 export type HubPreset = HubArtifactBase & {
   type: "preset";
 };
@@ -106,6 +141,13 @@ export const hubPresetSchema = hubArtifactBaseSchema.extend({
   type: z.literal("preset"),
 });
 
+/**
+ * Represents a plugin artifact in the Hub.
+ *
+ * @deprecated [DEP-HUB-API-ACCESS] LM Studio Hub API access is still in active development. Stay
+ * tuned for updates.
+ * @public
+ */
 export type HubPlugin = HubArtifactBase & {
   type: "plugin";
 };
@@ -114,6 +156,13 @@ export const hubPluginSchema = hubArtifactBaseSchema.extend({
   type: z.literal("plugin"),
 });
 
+/**
+ * Represents an artifact in the Hub, which can be a model, preset, or plugin.
+ *
+ * @deprecated [DEP-HUB-API-ACCESS] LM Studio Hub API access is still in active development. Stay
+ * tuned for updates.
+ * @public
+ */
 export type HubArtifact = HubModel | HubPreset | HubPlugin;
 
 export const hubArtifactSchema = z.discriminatedUnion("type", [

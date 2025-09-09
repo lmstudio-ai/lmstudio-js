@@ -459,6 +459,10 @@ export class UnstableRepositoryNamespace {
     this.logger = new SimpleLogger("System", parentLogger);
   }
 
+  /**
+   * @deprecated [DEP-HUB-API-ACCESS] LM Studio Hub API access is still in active development. Stay
+   * tuned for updates.
+   */
   public async getModelCatalog() {
     const stack = getCurrentStack(1);
     this.logger.debug("Fetching model catalog");
