@@ -9,22 +9,22 @@ import { z } from "zod";
 
 export function createRuntimeBackendInterface() {
   return new BackendInterface()
-    .addRpcEndpoint("list", {
+    .addRpcEndpoint("engine.list", {
       parameter: z.void(),
       returns: z.array(runtimeEngineInfoSchema),
     })
-    .addRpcEndpoint("getSelections", {
+    .addRpcEndpoint("engine.getSelections", {
       parameter: z.void(),
       returns: z.array(runtimeEngineSelectionInfoSchema),
     })
-    .addRpcEndpoint("select", {
+    .addRpcEndpoint("engine.select", {
       parameter: z.object({
         engine: runtimeEngineSpecifierSchema,
         modelFormat: z.string(),
       }),
       returns: z.void(),
     })
-    .addRpcEndpoint("remove", {
+    .addRpcEndpoint("engine.remove", {
       parameter: runtimeEngineSpecifierSchema,
       returns: z.void(),
     });

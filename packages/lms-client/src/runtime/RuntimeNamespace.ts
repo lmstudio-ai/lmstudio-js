@@ -6,14 +6,13 @@ import {
 } from "@lmstudio/lms-common";
 import { type RuntimePort } from "@lmstudio/lms-external-backend-interfaces";
 import {
-  runtimeEngineSpecifierSchema,
   type RuntimeEngineInfo,
   type RuntimeEngineSelectionInfo,
   type RuntimeEngineSpecifier,
 } from "@lmstudio/lms-shared-types";
 
 /** @public */
-export class RuntimeNamespace {
+export class RuntimeEngineNamespace {
   /** @internal */
   private readonly logger: SimpleLogger;
 
@@ -23,7 +22,7 @@ export class RuntimeNamespace {
     private readonly validator: Validator,
     parentLogger: LoggerInterface,
   ) {
-    this.logger = new SimpleLogger("Runtime", parentLogger);
+    this.logger = new SimpleLogger("RuntimeEngine", parentLogger);
   }
 
   /**
@@ -32,7 +31,7 @@ export class RuntimeNamespace {
    */
   public async list(): Promise<Array<RuntimeEngineInfo>> {
     const stack = getCurrentStack(1);
-    return await this.runtimePort.callRpc("list", undefined, { stack });
+    return await this.runtimePort.callRpc("engine.list", undefined, { stack });
   }
 
   /**
@@ -41,7 +40,7 @@ export class RuntimeNamespace {
    */
   public async getSelections(): Promise<Array<RuntimeEngineSelectionInfo>> {
     const stack = getCurrentStack(1);
-    return await this.runtimePort.callRpc("getSelections", undefined, { stack });
+    return await this.runtimePort.callRpc("engine.getSelections", undefined, { stack });
   }
 
   /**
@@ -53,8 +52,7 @@ export class RuntimeNamespace {
     modelFormat: string;
   }): Promise<void> {
     const stack = getCurrentStack(1);
-
-    await this.runtimePort.callRpc("select", opts, { stack });
+    await this.runtimePort.callRpc("engine.select", opts, { stack });
   }
 
   /**
@@ -63,16 +61,25 @@ export class RuntimeNamespace {
    */
   public async remove(engine: RuntimeEngineSpecifier): Promise<void> {
     const stack = getCurrentStack(1);
+    await this.runtimePort.callRpc("engine.remove", engine, { stack });
+  }
+}
 
-    engine = this.validator.validateMethodParamOrThrow(
-      "client.runtime",
-      "remove",
-      "engine",
-      runtimeEngineSpecifierSchema,
-      engine,
-      stack,
-    );
+/** @public */
+export class RuntimeNamespace {
+  /** @internal */
+  private readonly logger: SimpleLogger;
 
-    await this.runtimePort.callRpc("remove", engine, { stack });
+  /** @public */
+  public readonly engine: RuntimeEngineNamespace;
+
+  /** @internal */
+  public constructor(
+    private readonly runtimePort: RuntimePort,
+    private readonly validator: Validator,
+    parentLogger: LoggerInterface,
+  ) {
+    this.logger = new SimpleLogger("Runtime", parentLogger);
+    this.engine = new RuntimeEngineNamespace(this.runtimePort, this.validator, parentLogger);
   }
 }
