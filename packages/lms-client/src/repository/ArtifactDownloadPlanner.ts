@@ -92,7 +92,7 @@ export class ArtifactDownloadPlanner {
       downloadSizeBytes: 0,
     };
     this.channel.onClose.subscribe(() => {
-      // Keep a track if the channel is closed
+      // Keep track of whether the channel is closed
       this.isChannelClosed = true;
     });
     this.channel.onMessage.subscribe(message => {

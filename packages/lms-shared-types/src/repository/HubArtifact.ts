@@ -16,41 +16,19 @@ export type HubArtifactBase = {
   owner: string;
   /** Name of the artifact */
   name: string;
-  /** Description of the artifact */
-  description: string;
-  /** Unix timestamp in ms when the artifact was created */
-  createdAt: number;
   /** Number of downloads for the artifact */
   downloads: number;
   /** Number of likes the artifact has received */
   likeCount: number;
-  /** Number of times the artifact has been forked */
-  forkCount: number;
   /** Unix timestamp in ms when the artifact was staff picked, only defined if staff picked */
   staffPickedAt?: number;
-  /** URL to the artifact */
-  url: string;
-  /** Revision number for the artifact */
-  revisionNumber: number;
-  /** Indicates if the artifact is private */
-  isPrivate?: boolean;
-  /** If forked, the original artifact in "owner/name" format */
-  forkedFrom?: string;
 };
-
 export const hubArtifactBaseSchema = z.object({
   owner: z.string(),
   name: z.string(),
-  description: z.string(),
-  createdAt: z.number(),
   downloads: z.number(),
   likeCount: z.number(),
-  forkCount: z.number(),
   staffPickedAt: z.number().optional(),
-  url: z.string(),
-  revisionNumber: z.number(),
-  isPrivate: z.boolean().optional(),
-  forkedFrom: z.string().optional(),
 });
 
 /**
@@ -120,42 +98,10 @@ export type HubModel = HubArtifactBase & {
   type: "model";
   metadata: HubModelMetadata;
 };
-
 export const hubModelSchema = hubArtifactBaseSchema.extend({
   type: z.literal("model"),
   metadata: hubModelMetadataSchema,
 });
-
-/**
- * Represents a preset artifact in the Hub.
- *
- * @deprecated [DEP-HUB-API-ACCESS] LM Studio Hub API access is still in active development. Stay
- * tuned for updates.
- * @public
- */
-export type HubPreset = HubArtifactBase & {
-  type: "preset";
-};
-
-export const hubPresetSchema = hubArtifactBaseSchema.extend({
-  type: z.literal("preset"),
-});
-
-/**
- * Represents a plugin artifact in the Hub.
- *
- * @deprecated [DEP-HUB-API-ACCESS] LM Studio Hub API access is still in active development. Stay
- * tuned for updates.
- * @public
- */
-export type HubPlugin = HubArtifactBase & {
-  type: "plugin";
-};
-
-export const hubPluginSchema = hubArtifactBaseSchema.extend({
-  type: z.literal("plugin"),
-});
-
 /**
  * Represents an artifact in the Hub, which can be a model, preset, or plugin.
  *
@@ -163,10 +109,5 @@ export const hubPluginSchema = hubArtifactBaseSchema.extend({
  * tuned for updates.
  * @public
  */
-export type HubArtifact = HubModel | HubPreset | HubPlugin;
-
-export const hubArtifactSchema = z.discriminatedUnion("type", [
-  hubModelSchema,
-  hubPresetSchema,
-  hubPluginSchema,
-]);
+export type HubArtifact = HubModel;
+export const hubArtifactSchema = z.discriminatedUnion("type", [hubModelSchema]);

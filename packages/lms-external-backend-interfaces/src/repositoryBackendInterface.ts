@@ -207,7 +207,9 @@ export function createRepositoryBackendInterface() {
       })
       .addRpcEndpoint("getModelCatalog", {
         parameter: z.void(),
-        returns: z.array(hubModelSchema),
+        returns: z.object({
+          models: z.array(hubModelSchema),
+        }),
       })
   );
 }
