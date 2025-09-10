@@ -1131,33 +1131,33 @@ export async function internalAct<TPredictionResult, TEndPacket>(
               let result: any;
               try {
                 result = await tool.implementation(pushedRequest.arguments ?? {}, toolCallContext);
+                let resultString: string;
+                if (result === undefined) {
+                  resultString = "undefined";
+                } else {
+                  try {
+                    resultString = JSON.stringify(result);
+                  } catch (error) {
+                    throw makePrettyError(
+                      `Return value of tool ${tool.name} cannot be converted to JSON.`,
+                      stack,
+                    );
+                  }
+                }
+                toolCallResults.push({
+                  index: toolCallIndex,
+                  data: {
+                    type: "toolCallResult",
+                    toolCallId: request.id,
+                    content: resultString,
+                  },
+                });
               } catch (error: any) {
                 if (!(error instanceof UnimplementedToolError)) {
                   throw error;
                 }
                 hasCalledUnimplementedTool = true;
               }
-              let resultString: string;
-              if (result === undefined) {
-                resultString = "undefined";
-              } else {
-                try {
-                  resultString = JSON.stringify(result);
-                } catch (error) {
-                  throw makePrettyError(
-                    `Return value of tool ${tool.name} cannot be converted to JSON.`,
-                    stack,
-                  );
-                }
-              }
-              toolCallResults.push({
-                index: toolCallIndex,
-                data: {
-                  type: "toolCallResult",
-                  toolCallId: request.id,
-                  content: resultString,
-                },
-              });
             }, abortController.signal)
             .catch(finalReject),
         );
