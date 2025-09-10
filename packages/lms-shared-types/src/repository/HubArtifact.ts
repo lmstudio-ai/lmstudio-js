@@ -70,7 +70,6 @@ export type HubModelMetadata =
       type: "embedding";
       contextLengths: Array<number>;
     } & HubModelSharedMetadata);
-
 export const hubModelMetadataSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("llm"),
