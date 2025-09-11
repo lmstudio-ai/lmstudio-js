@@ -60,7 +60,6 @@ export { sharedValidator, Validator } from "./Validator.js";
 export {
   compareVersion,
   normalizeThreePartSimpleVersionOrThrow,
-  twoPartSemverLtOrThrow,
   versionIsNewer,
 } from "./versionComparison.js";
 export {

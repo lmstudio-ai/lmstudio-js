@@ -2,39 +2,10 @@ import { SimpleLogger } from "./SimpleLogger";
 import {
   compareVersion,
   normalizeThreePartSimpleVersionOrThrow,
-  twoPartSemverLtOrThrow,
   versionIsNewer,
 } from "./versionComparison";
 
 describe("Version Comparison Functions", () => {
-  describe("twoPartSemverLtOrThrow", () => {
-    it("should return true when first version is less than second", () => {
-      expect(twoPartSemverLtOrThrow("1.0", "1.1")).toBe(true);
-      expect(twoPartSemverLtOrThrow("1.9", "2.0")).toBe(true);
-      expect(twoPartSemverLtOrThrow("0.5", "1.0")).toBe(true);
-      expect(twoPartSemverLtOrThrow("0.2", "0.11")).toBe(true);
-    });
-
-    it("should return false when first version is greater than or equal to second", () => {
-      expect(twoPartSemverLtOrThrow("1.1", "1.0")).toBe(false);
-      expect(twoPartSemverLtOrThrow("2.0", "1.9")).toBe(false);
-      expect(twoPartSemverLtOrThrow("1.0", "1.0")).toBe(false);
-      expect(twoPartSemverLtOrThrow("0.11", "0.2")).toBe(false);
-    });
-
-    it("should throw error for invalid first parameter format", () => {
-      expect(() => twoPartSemverLtOrThrow("1", "1.0")).toThrow();
-      expect(() => twoPartSemverLtOrThrow("1.0.0", "1.0")).toThrow();
-      expect(() => twoPartSemverLtOrThrow("invalid", "1.0")).toThrow();
-    });
-
-    it("should throw error for invalid second parameter format", () => {
-      expect(() => twoPartSemverLtOrThrow("1.0", "1")).toThrow();
-      expect(() => twoPartSemverLtOrThrow("1.0", "1.0.0")).toThrow();
-      expect(() => twoPartSemverLtOrThrow("1.0", "invalid")).toThrow();
-    });
-  });
-
   describe("normalizeThreePartSimpleVersionOrThrow", () => {
     it("should normalize versions with fewer than 3 components", () => {
       expect(normalizeThreePartSimpleVersionOrThrow("1")).toBe("1.0.0");
