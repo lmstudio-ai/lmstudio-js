@@ -47,12 +47,9 @@ export class RuntimeEngineNamespace {
    * Select a runtime engine for a specific model format.
    * @public
    */
-  public async select(opts: {
-    engine: RuntimeEngineSpecifier;
-    modelFormat: string;
-  }): Promise<void> {
+  public async select(engine: RuntimeEngineSpecifier, modelFormat: string): Promise<void> {
     const stack = getCurrentStack(1);
-    await this.runtimePort.callRpc("engine.select", opts, { stack });
+    await this.runtimePort.callRpc("engine.select", { engine, modelFormat }, { stack });
   }
 
   /**
