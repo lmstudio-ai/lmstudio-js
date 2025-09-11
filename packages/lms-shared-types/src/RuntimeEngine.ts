@@ -1,15 +1,29 @@
-import { z } from "zod";
+import { z, type ZodSchema } from "zod";
 
+/**
+ * Uniquely specifies a Runtime Engine
+ *
+ * @public
+ */
 export interface RuntimeEngineSpecifier {
   name: string;
   version: string;
 }
-
-export const runtimeEngineSpecifierSchema = z.object({
+// Keep the original schema without casting for extending
+const runtimeEngineSpecifierSchemaBase = z.object({
   name: z.string(),
   version: z.string(),
 });
 
+// Export with type assertion when needed
+export const runtimeEngineSpecifierSchema =
+  runtimeEngineSpecifierSchemaBase as ZodSchema<RuntimeEngineSpecifier>;
+
+/**
+ * Information about a Runtime Engine
+ *
+ * @public
+ */
 export interface RuntimeEngineInfo extends RuntimeEngineSpecifier {
   engine: string;
   platform: string;
@@ -23,8 +37,7 @@ export interface RuntimeEngineInfo extends RuntimeEngineSpecifier {
   };
   supportedModelFormats: string[];
 }
-
-export const runtimeEngineInfoSchema = runtimeEngineSpecifierSchema.extend({
+export const runtimeEngineInfoSchema = runtimeEngineSpecifierSchemaBase.extend({
   engine: z.string(),
   platform: z.string(),
   cpu: z.object({
@@ -38,12 +51,16 @@ export const runtimeEngineInfoSchema = runtimeEngineSpecifierSchema.extend({
     })
     .optional(),
   supportedModelFormats: z.array(z.string()),
-});
+}) as ZodSchema<RuntimeEngineInfo>;
 
+/**
+ * Information about the selection of a Runtime Engine
+ *
+ * @public
+ */
 export interface RuntimeEngineSelectionInfo extends RuntimeEngineSpecifier {
   modelFormats: string[];
 }
-
-export const runtimeEngineSelectionInfoSchema = runtimeEngineSpecifierSchema.extend({
+export const runtimeEngineSelectionInfoSchema = runtimeEngineSpecifierSchemaBase.extend({
   modelFormats: z.array(z.string()),
-});
+}) as ZodSchema<RuntimeEngineSelectionInfo>;
