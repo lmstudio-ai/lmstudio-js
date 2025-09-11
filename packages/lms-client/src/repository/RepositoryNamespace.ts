@@ -464,7 +464,6 @@ export class UnstableRepositoryNamespace {
    */
   public async getModelCatalog() {
     const stack = getCurrentStack(1);
-    this.logger.debug("Fetching model catalog");
     return (await this.repositoryPort.callRpc("getModelCatalog", undefined, { stack })).models;
   }
 }
