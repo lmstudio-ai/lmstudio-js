@@ -12,6 +12,7 @@ import {
   llmPromptTemplateSchema,
   llmReasoningParsingSchema,
   llmStructuredPredictionSettingSchema,
+  llmToolChoiceSchema,
   llmToolUseSettingSchema,
   modelDomainTypeSchema,
   retrievalChunkingMethodSchema,
@@ -579,6 +580,18 @@ export const kvValueTypesLibrary = baseKVValueTypesLibraryBuilder
     },
     stringify: value => {
       return JSON.stringify(value, null, 2); // TODO: pretty print
+    },
+  })
+  .valueType("toolChoice", {
+    paramType: {},
+    schemaMaker: () => {
+      return llmToolChoiceSchema;
+    },
+    effectiveEquals: (a, b) => {
+      return deepEquals(a, b);
+    },
+    stringify: value => {
+      return JSON.stringify(value, null, 2);
     },
   })
   .valueType("toolNaming", {
