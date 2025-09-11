@@ -58,12 +58,6 @@ export { TimeoutTracker } from "./TimeoutTracker.js";
 export { toJSONSafeNumber } from "./toJSONSafeNumber.js";
 export { sharedValidator, Validator } from "./Validator.js";
 export {
-  compareVersion,
-  normalizeThreePartSimpleVersionOrThrow,
-  twoPartSemverLtOrThrow,
-  versionIsNewer,
-} from "./versionComparison.js";
-export {
   PagerExitedError,
   QueueClearedError,
   WaitQueue,
