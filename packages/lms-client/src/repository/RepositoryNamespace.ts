@@ -154,6 +154,8 @@ const installLocalPluginOptsSchema = z.object({
 export class RepositoryNamespace {
   /** @internal */
   private readonly logger: SimpleLogger;
+  /** @public */
+  public readonly unstable: UnstableRepositoryNamespace;
   /** @internal */
   public constructor(
     private readonly repositoryPort: RepositoryPort,
@@ -161,6 +163,7 @@ export class RepositoryNamespace {
     parentLogger: LoggerInterface,
   ) {
     this.logger = new SimpleLogger("Repository", parentLogger);
+    this.unstable = new UnstableRepositoryNamespace(repositoryPort, this.logger);
   }
 
   public async searchModels(opts: ModelSearchOpts): Promise<Array<ModelSearchResultEntry>> {
@@ -440,5 +443,27 @@ export class RepositoryNamespace {
       stack,
     );
     return this.repositoryPort.callRpc("installLocalPlugin", { pluginPath: path }, { stack });
+  }
+}
+
+/** @public */
+export class UnstableRepositoryNamespace {
+  /** @internal */
+  private readonly logger: SimpleLogger;
+  /** @internal */
+  public constructor(
+    private readonly repositoryPort: RepositoryPort,
+    parentLogger: LoggerInterface,
+  ) {
+    this.logger = new SimpleLogger("Unstable", parentLogger);
+  }
+
+  /**
+   * @deprecated [DEP-HUB-API-ACCESS] LM Studio Hub API access is still in active development
+   * and will change. Not recommended for public adoption.
+   */
+  public async getModelCatalog() {
+    const stack = getCurrentStack(1);
+    return (await this.repositoryPort.callRpc("getModelCatalog", undefined, { stack })).models;
   }
 }

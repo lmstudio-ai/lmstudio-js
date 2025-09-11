@@ -359,6 +359,14 @@ export { PresetManifest, presetManifestSchema } from "./PresetManifest.js";
 export { reasonableKeyStringSchema } from "./reasonable.js";
 export { RemotePluginInfo, remotePluginInfoSchema } from "./RemotePluginInfo.js";
 export {
+  hubModelMetadataSchema,
+  hubModelSchema,
+  hubArtifactSchema,
+  HubModel,
+  HubModelMetadata,
+  HubArtifact,
+} from "./repository/HubArtifact.js";
+export {
   ArtifactDownloadPlan,
   ArtifactDownloadPlanModelInfo,
   artifactDownloadPlanModelInfoSchema,
