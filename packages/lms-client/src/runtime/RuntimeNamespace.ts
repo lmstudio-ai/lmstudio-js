@@ -31,7 +31,7 @@ export class RuntimeEngineNamespace {
    */
   public async list(): Promise<Array<RuntimeEngineInfo>> {
     const stack = getCurrentStack(1);
-    return await this.runtimePort.callRpc("engine.list", undefined, { stack });
+    return await this.runtimePort.callRpc("listEngines", undefined, { stack });
   }
 
   /**
@@ -40,7 +40,7 @@ export class RuntimeEngineNamespace {
    */
   public async getSelections(): Promise<Array<RuntimeEngineSelectionInfo>> {
     const stack = getCurrentStack(1);
-    return await this.runtimePort.callRpc("engine.getSelections", undefined, { stack });
+    return await this.runtimePort.callRpc("getEngineSelections", undefined, { stack });
   }
 
   /**
@@ -49,7 +49,7 @@ export class RuntimeEngineNamespace {
    */
   public async select(engine: RuntimeEngineSpecifier, modelFormat: string): Promise<void> {
     const stack = getCurrentStack(1);
-    await this.runtimePort.callRpc("engine.select", { engine, modelFormat }, { stack });
+    await this.runtimePort.callRpc("selectEngine", { engine, modelFormat }, { stack });
   }
 
   /**
@@ -58,7 +58,7 @@ export class RuntimeEngineNamespace {
    */
   public async remove(engine: RuntimeEngineSpecifier): Promise<void> {
     const stack = getCurrentStack(1);
-    await this.runtimePort.callRpc("engine.remove", engine, { stack });
+    await this.runtimePort.callRpc("removeEngine", engine, { stack });
   }
 }
 
