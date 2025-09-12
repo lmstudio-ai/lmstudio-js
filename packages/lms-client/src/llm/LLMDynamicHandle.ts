@@ -950,6 +950,7 @@ export class LLMDynamicHandle extends DynamicHandle<
       this.predictionConfigInputToKVConfig({
         ...config,
         rawTools: { type: "none" },
+        toolChoice: { type: "generic", mode: "auto" },
       }),
     );
 

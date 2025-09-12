@@ -168,6 +168,7 @@ export type {
   LLMStructuredPredictionSetting,
   LLMStructuredPredictionType,
   LLMTool,
+  LLMToolChoice,
   LLMToolParameters,
   LLMToolUseSetting,
   LocalArtifactFileEntry,

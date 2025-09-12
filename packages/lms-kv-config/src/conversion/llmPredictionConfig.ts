@@ -41,6 +41,11 @@ export function kvConfigToLLMPredictionConfig(config: KVConfig) {
     result.rawTools = tools;
   }
 
+  const toolChoice = parsed.get("llm.prediction.toolChoice");
+  if (toolChoice !== undefined) {
+    result.toolChoice = toolChoice;
+  }
+
   const toolNaming = parsed.get("llm.prediction.toolNaming");
   if (toolNaming !== undefined) {
     result.toolNaming = toolNaming;
@@ -138,6 +143,7 @@ export function llmPredictionConfigToKVConfig(config: LLMPredictionConfig): KVCo
     "toolCallStopStrings": config.toolCallStopStrings,
     "structured": config.structured,
     "tools": config.rawTools,
+    "toolChoice": config.toolChoice,
     "toolNaming": config.toolNaming,
     "topKSampling": config.topKSampling,
     "repeatPenalty": maybeFalseNumberToCheckboxNumeric(config.repeatPenalty, 1.1),

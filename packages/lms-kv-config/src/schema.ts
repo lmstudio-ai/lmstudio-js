@@ -105,6 +105,7 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
           ),
       )
       .field("tools", "toolUse", {}, { type: "none" })
+      .field("toolChoice", "toolChoice", {}, { type: "generic", mode: "auto" })
       .field("toolNaming", "toolNaming", {}, "removeSpecial")
       .field(
         "promptTemplate",
@@ -242,7 +243,7 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
       .field(
         "numCpuExpertLayersRatio",
         "llamaAccelerationOffloadRatio",
-        { machineDependent: true, isExperimental: true, },
+        { machineDependent: true, isExperimental: true },
         "off",
       )
       .scope("llama", builder =>
@@ -373,6 +374,7 @@ export const llmSharedPredictionConfigSchematics = llmPredictionConfigSchematics
   "seed",
   "contextPrefill",
   "tools",
+  "toolChoice",
   "toolNaming",
   "reasoning.*",
 );

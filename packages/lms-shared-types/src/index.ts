@@ -224,6 +224,7 @@ export {
   LLMStructuredPredictionType,
   llmStructuredPredictionTypeSchema,
 } from "./llm/LLMStructuredPredictionSetting.js";
+export { LLMToolChoice, llmToolChoiceSchema } from "./llm/LLMToolChoice.js";
 export {
   LLMTool,
   llmToolArraySchema,

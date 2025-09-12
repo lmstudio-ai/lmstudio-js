@@ -7,6 +7,7 @@ import {
   llmStructuredPredictionSettingSchema,
   type LLMStructuredPredictionSetting,
 } from "./LLMStructuredPredictionSetting.js";
+import { llmToolChoiceSchema, type LLMToolChoice } from "./LLMToolChoice.js";
 import { llmToolUseSettingSchema, type LLMToolUseSetting } from "./LLMToolUseSetting.js";
 
 /**
@@ -134,6 +135,12 @@ export interface LLMPredictionConfigInput<TStructuredOutputType = unknown> {
    * use tools, use `model.act` instead.
    */
   rawTools?: LLMToolUseSetting;
+  /**
+   * How the model should use tools to use when predicting. For example, you can use the type
+   * "generic" with mode "none" to disable tool use, or mode "auto" to let the model decide when
+   * to use tools, or mode "required" to force the model to use tools.
+   */
+  toolChoice?: LLMToolChoice;
   /**
    * What transformations to apply to tool names before sending them to the model. See
    * {@link ToolNaming} for more details.
@@ -296,6 +303,7 @@ export const llmPredictionConfigInputSchema = z.object({
   contextOverflowPolicy: llmContextOverflowPolicySchema.optional(),
   structured: z.union([zodSchemaSchema, llmStructuredPredictionSettingSchema]).optional(),
   rawTools: llmToolUseSettingSchema.optional(),
+  toolChoice: llmToolChoiceSchema.optional(),
   toolNaming: toolNamingSchema.optional(),
   topKSampling: z.number().optional(),
   repeatPenalty: z.number().optional().or(z.literal(false)),
