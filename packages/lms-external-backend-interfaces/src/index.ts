@@ -30,11 +30,6 @@ export {
   RepositoryPort,
 } from "./repositoryBackendInterface.js";
 export {
-  createRuntimeBackendInterface,
-  RuntimeBackendInterface,
-  RuntimePort,
-} from "./runtimeBackendInterface.js";
-export {
   createSystemBackendInterface,
   SystemBackendInterface,
   SystemPort,

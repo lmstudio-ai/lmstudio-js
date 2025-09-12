@@ -22,7 +22,6 @@ import {
   createLlmBackendInterface,
   createPluginsBackendInterface,
   createRepositoryBackendInterface,
-  createRuntimeBackendInterface,
   createSystemBackendInterface,
   type DiagnosticsPort,
   type EmbeddingPort,
@@ -30,7 +29,6 @@ import {
   type LLMPort,
   type PluginsPort,
   type RepositoryPort,
-  type RuntimePort,
   type SystemPort,
 } from "@lmstudio/lms-external-backend-interfaces";
 import { generateRandomBase64 } from "@lmstudio/lms-isomorphic";
@@ -45,7 +43,6 @@ import { friendlyErrorDeserializer } from "./friendlyErrorDeserializer.js";
 import { LLMNamespace } from "./llm/LLMNamespace.js";
 import { PluginsNamespace } from "./plugins/PluginsNamespace.js";
 import { RepositoryNamespace } from "./repository/RepositoryNamespace.js";
-import { RuntimeNamespace } from "./runtime/RuntimeNamespace.js";
 import { SystemNamespace } from "./system/SystemNamespace.js";
 
 /** @public */
@@ -112,7 +109,6 @@ const constructorOptsSchema = z
     filesPort: z.any().optional(),
     repositoryPort: z.any().optional(),
     pluginsPort: z.any().optional(),
-    runtimePort: z.any().optional(),
   })
   .strict();
 
@@ -139,8 +135,6 @@ export class LMStudioClient {
   private readonly repositoryPort: RepositoryPort;
   /** @internal */
   private readonly pluginsPort: PluginsPort;
-  /** @internal */
-  private readonly runtimePort: RuntimePort;
 
   public readonly llm: LLMNamespace;
   public readonly embedding: EmbeddingNamespace;
@@ -153,7 +147,6 @@ export class LMStudioClient {
    * future without warning.
    */
   public readonly plugins: PluginsNamespace;
-  public readonly runtime: RuntimeNamespace;
 
   /** @internal */
   private validateBaseUrlOrThrow(baseUrl: string) {
@@ -318,7 +311,6 @@ export class LMStudioClient {
       filesPort,
       repositoryPort,
       pluginsPort,
-      runtimePort,
     } = new Validator().validateConstructorParamOrThrow(
       "LMStudioClient",
       "opts",
@@ -388,8 +380,6 @@ export class LMStudioClient {
       this.createPort("repository", "Repository", createRepositoryBackendInterface());
     this.pluginsPort =
       pluginsPort ?? this.createPort("plugins", "Plugins", createPluginsBackendInterface());
-    this.runtimePort =
-      runtimePort ?? this.createPort("runtime", "Runtime", createRuntimeBackendInterface());
 
     const validator = new Validator();
 
@@ -410,7 +400,6 @@ export class LMStudioClient {
     this.files = new FilesNamespace(this.filesPort, validator, this.logger);
     this.repository = new RepositoryNamespace(this.repositoryPort, validator, this.logger);
     this.plugins = new PluginsNamespace(this.pluginsPort, this, validator, this.logger, logger);
-    this.runtime = new RuntimeNamespace(this.runtimePort, validator, this.logger);
   }
 
   public async [Symbol.asyncDispose]() {
@@ -422,7 +411,6 @@ export class LMStudioClient {
       this.filesPort[Symbol.asyncDispose](),
       this.repositoryPort[Symbol.asyncDispose](),
       this.pluginsPort[Symbol.asyncDispose](),
-      this.runtimePort[Symbol.asyncDispose](),
     ]);
   }
 }
