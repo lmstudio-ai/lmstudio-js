@@ -9,6 +9,8 @@ import {
 import { type RepositoryPort } from "@lmstudio/lms-external-backend-interfaces";
 import {
   jsonSerializableSchema,
+  type ModelCompatibilityType,
+  modelCompatibilityTypeSchema,
   modelSearchOptsSchema,
   type ArtifactDownloadPlan,
   type DownloadProgressUpdate,
@@ -130,11 +132,15 @@ export const loginWithPreAuthenticatedKeysResultSchema = z.object({
 export interface CreateArtifactDownloadPlannerOpts {
   owner: string;
   name: string;
+  compatibilityTypeFilter?: ModelCompatibilityType[];
+  quantizationFilter?: string[];
   onPlanUpdated?: (plan: ArtifactDownloadPlan) => void;
 }
 export const createArtifactDownloadPlannerOptsSchema = z.object({
   owner: z.string(),
   name: z.string(),
+  compatibilityTypeFilter: z.array(modelCompatibilityTypeSchema).optional(),
+  quantizationFilter: z.array(z.string()).optional(),
   onPlanUpdated: z.function().optional(),
 }) as ZodSchema<CreateArtifactDownloadPlannerOpts>;
 
@@ -396,17 +402,18 @@ export class RepositoryNamespace {
   public createArtifactDownloadPlanner(
     opts: CreateArtifactDownloadPlannerOpts,
   ): ArtifactDownloadPlanner {
-    const { owner, name, onPlanUpdated } = this.validator.validateMethodParamOrThrow(
-      "repository",
-      "createArtifactDownloadPlanner",
-      "opts",
-      createArtifactDownloadPlannerOptsSchema,
-      opts,
-    );
+    const { owner, name, onPlanUpdated, compatibilityTypeFilter, quantizationFilter } =
+      this.validator.validateMethodParamOrThrow(
+        "repository",
+        "createArtifactDownloadPlanner",
+        "opts",
+        createArtifactDownloadPlannerOptsSchema,
+        opts,
+      );
     const stack = getCurrentStack(1);
     const channel = this.repositoryPort.createChannel(
       "createArtifactDownloadPlan",
-      { owner, name },
+      { owner, name, compatibilityTypeFilter, quantizationFilter },
       undefined, // Don't listen to the messages yet.
       { stack },
     );
