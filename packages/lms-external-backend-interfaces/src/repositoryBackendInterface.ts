@@ -12,6 +12,7 @@ import {
   modelSearchResultEntryDataSchema,
   modelSearchResultIdentifierSchema,
   hubModelSchema,
+  modelCompatibilityTypeSchema,
 } from "@lmstudio/lms-shared-types";
 import { z } from "zod";
 
@@ -158,6 +159,8 @@ export function createRepositoryBackendInterface() {
         creationParameter: z.object({
           owner: kebabCaseSchema,
           name: kebabCaseWithDotsSchema,
+          compatibilityTypeFilter: modelCompatibilityTypeSchema.array().optional(),
+          quantizationFilter: z.string().array().optional(),
         }),
         toServerPacket: z.discriminatedUnion("type", [
           /**
