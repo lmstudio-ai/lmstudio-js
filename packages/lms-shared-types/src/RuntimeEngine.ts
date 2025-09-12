@@ -1,6 +1,15 @@
 import { z, type ZodSchema } from "zod";
 
 /**
+ * Supported model formats
+ *
+ * @public
+ */
+export type ModelFormatName = "GGUF" | "MLX";
+
+export const modelFormatNameSchema = z.enum(["GGUF", "MLX"]);
+
+/**
  * Uniquely specifies a Runtime Engine
  *
  * @public
@@ -35,7 +44,7 @@ export interface RuntimeEngineInfo extends RuntimeEngineSpecifier {
     make?: string;
     framework?: string;
   };
-  supportedModelFormats: string[];
+  supportedModelFormatNames: ModelFormatName[];
 }
 export const runtimeEngineInfoSchema = runtimeEngineSpecifierSchemaBase.extend({
   engine: z.string(),
@@ -50,7 +59,7 @@ export const runtimeEngineInfoSchema = runtimeEngineSpecifierSchemaBase.extend({
       framework: z.string().optional(),
     })
     .optional(),
-  supportedModelFormats: z.array(z.string()),
+  supportedModelFormatNames: z.array(modelFormatNameSchema),
 }) as ZodSchema<RuntimeEngineInfo>;
 
 /**
@@ -59,8 +68,8 @@ export const runtimeEngineInfoSchema = runtimeEngineSpecifierSchemaBase.extend({
  * @public
  */
 export interface RuntimeEngineSelectionInfo extends RuntimeEngineSpecifier {
-  modelFormats: string[];
+  modelFormatNames: ModelFormatName[];
 }
 export const runtimeEngineSelectionInfoSchema = runtimeEngineSpecifierSchemaBase.extend({
-  modelFormats: z.array(z.string()),
+  modelFormatNames: z.array(modelFormatNameSchema),
 }) as ZodSchema<RuntimeEngineSelectionInfo>;

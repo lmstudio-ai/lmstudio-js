@@ -177,6 +177,7 @@ export type {
   ModelCompatibilityType,
   ModelDomainType,
   ModelDownloadSource,
+  ModelFormatName,
   ModelInfo,
   ModelInfoBase,
   ModelInstanceInfo,
