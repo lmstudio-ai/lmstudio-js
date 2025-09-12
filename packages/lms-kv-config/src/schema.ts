@@ -374,6 +374,7 @@ export const llmSharedPredictionConfigSchematics = llmPredictionConfigSchematics
   "seed",
   "contextPrefill",
   "tools",
+  "toolChoice",
   "toolNaming",
   "reasoning.*",
 );
