@@ -6,6 +6,7 @@ import {
 } from "@lmstudio/lms-common";
 import { type RuntimePort } from "@lmstudio/lms-external-backend-interfaces";
 import {
+  type ModelFormatName,
   type RuntimeEngineInfo,
   type RuntimeEngineSelectionInfo,
   type RuntimeEngineSpecifier,
@@ -47,9 +48,12 @@ export class RuntimeEngineNamespace {
    * Select a runtime engine for a specific model format.
    * @public
    */
-  public async select(engine: RuntimeEngineSpecifier, modelFormat: string): Promise<void> {
+  public async select(
+    engine: RuntimeEngineSpecifier,
+    modelFormatName: ModelFormatName,
+  ): Promise<void> {
     const stack = getCurrentStack(1);
-    await this.runtimePort.callRpc("selectEngine", { engine, modelFormat }, { stack });
+    await this.runtimePort.callRpc("selectEngine", { engine, modelFormatName }, { stack });
   }
 
   /**
