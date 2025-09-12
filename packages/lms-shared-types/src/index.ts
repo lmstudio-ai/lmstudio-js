@@ -359,14 +359,6 @@ export { PresetManifest, presetManifestSchema } from "./PresetManifest.js";
 export { reasonableKeyStringSchema } from "./reasonable.js";
 export { RemotePluginInfo, remotePluginInfoSchema } from "./RemotePluginInfo.js";
 export {
-  hubModelMetadataSchema,
-  hubModelSchema,
-  hubArtifactSchema,
-  HubModel,
-  HubModelMetadata,
-  HubArtifact,
-} from "./repository/HubArtifact.js";
-export {
   ArtifactDownloadPlan,
   ArtifactDownloadPlanModelInfo,
   artifactDownloadPlanModelInfoSchema,
@@ -386,6 +378,14 @@ export {
   DownloadProgressUpdate,
   downloadProgressUpdateSchema,
 } from "./repository/DownloadProgressUpdate.js";
+export {
+  HubArtifact,
+  hubArtifactSchema,
+  HubModel,
+  HubModelMetadata,
+  hubModelMetadataSchema,
+  hubModelSchema,
+} from "./repository/HubArtifact.js";
 export {
   ModelSearchOpts,
   modelSearchOptsSchema,
@@ -423,6 +423,8 @@ export {
   runtimeSchema,
 } from "./Runtime.js";
 export {
+  ModelFormatName,
+  modelFormatNameSchema,
   RuntimeEngineInfo,
   runtimeEngineInfoSchema,
   RuntimeEngineSelectionInfo,

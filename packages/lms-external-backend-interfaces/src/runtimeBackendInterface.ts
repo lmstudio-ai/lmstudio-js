@@ -1,6 +1,7 @@
 import { BackendInterface } from "@lmstudio/lms-communication";
 import { type InferClientPort } from "@lmstudio/lms-communication-client";
 import {
+  modelFormatNameSchema,
   runtimeEngineInfoSchema,
   runtimeEngineSelectionInfoSchema,
   runtimeEngineSpecifierSchema,
@@ -20,7 +21,7 @@ export function createRuntimeBackendInterface() {
     .addRpcEndpoint("selectEngine", {
       parameter: z.object({
         engine: runtimeEngineSpecifierSchema,
-        modelFormat: z.string(),
+        modelFormatName: modelFormatNameSchema,
       }),
       returns: z.void(),
     })
