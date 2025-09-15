@@ -3,8 +3,8 @@ import { type InferClientPort } from "@lmstudio/lms-communication-client";
 import {
   modelFormatNameSchema,
   runtimeEngineInfoSchema,
-  runtimeEngineSelectionInfoSchema,
   runtimeEngineSpecifierSchema,
+  selectedRuntimeEngineMapSchema,
 } from "@lmstudio/lms-shared-types";
 import { z } from "zod";
 
@@ -16,7 +16,8 @@ export function createRuntimeBackendInterface() {
     })
     .addRpcEndpoint("getEngineSelections", {
       parameter: z.void(),
-      returns: z.array(runtimeEngineSelectionInfoSchema),
+      returns: selectedRuntimeEngineMapSchema,
+      serialization: "superjson",
     })
     .addRpcEndpoint("selectEngine", {
       parameter: z.object({

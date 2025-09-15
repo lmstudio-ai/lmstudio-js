@@ -63,13 +63,12 @@ export const runtimeEngineInfoSchema = runtimeEngineSpecifierSchemaBase.extend({
 }) as ZodSchema<RuntimeEngineInfo>;
 
 /**
- * Information about the selection of a Runtime Engine
+ * Map of a ModelFormatName to a RuntimeEngineSpecifier
  *
  * @public
  */
-export interface RuntimeEngineSelectionInfo extends RuntimeEngineSpecifier {
-  modelFormatNames: ModelFormatName[];
-}
-export const runtimeEngineSelectionInfoSchema = runtimeEngineSpecifierSchemaBase.extend({
-  modelFormatNames: z.array(modelFormatNameSchema),
-}) as ZodSchema<RuntimeEngineSelectionInfo>;
+export type SelectedRuntimeEngineMap = Map<ModelFormatName, RuntimeEngineSpecifier>;
+export const selectedRuntimeEngineMapSchema = z.map(
+  modelFormatNameSchema,
+  runtimeEngineSpecifierSchema,
+);
