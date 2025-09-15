@@ -310,6 +310,7 @@ export {
   promptPreprocessorUpdateSchema,
 } from "./llm/processing/PromptPreprocessorUpdate.js";
 export { TokenSourceIdentifier, tokenSourceIdentifierSchema } from "./llm/TokenSourceIdentifier.js";
+export { LogLevel, logLevelSchema } from "./LogLevel.js";
 export { ModelCompatibilityType, modelCompatibilityTypeSchema } from "./ModelCompatibilityType.js";
 export { ModelDomainType, modelDomainTypeSchema } from "./ModelDomainType.js";
 export {
@@ -421,12 +422,12 @@ export {
 export {
   ModelFormatName,
   modelFormatNameSchema,
-  ModelFormatNameToRuntimeEngineSpecifier,
-  modelFormatNameToRuntimeEngineSpecifier,
   RuntimeEngineInfo,
   runtimeEngineInfoSchema,
   RuntimeEngineSpecifier,
   runtimeEngineSpecifierSchema,
+  SelectedRuntimeEngineMap,
+  selectedRuntimeEngineMapSchema,
 } from "./RuntimeEngine.js";
 export {
   KVConfigSchematicsDeserializationError,

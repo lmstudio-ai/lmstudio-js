@@ -67,8 +67,8 @@ export const runtimeEngineInfoSchema = runtimeEngineSpecifierSchemaBase.extend({
  *
  * @public
  */
-export type ModelFormatNameToRuntimeEngineSpecifier = Map<ModelFormatName, RuntimeEngineSpecifier>;
-export const modelFormatNameToRuntimeEngineSpecifier = z.map(
+export type SelectedRuntimeEngineMap = Map<ModelFormatName, RuntimeEngineSpecifier>;
+export const selectedRuntimeEngineMapSchema = z.map(
   modelFormatNameSchema,
   runtimeEngineSpecifierSchema,
 );
