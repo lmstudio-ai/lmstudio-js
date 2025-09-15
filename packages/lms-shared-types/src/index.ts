@@ -420,6 +420,14 @@ export {
   runtimeSchema,
 } from "./Runtime.js";
 export {
+  RuntimeEngineInfo,
+  runtimeEngineInfoSchema,
+  RuntimeEngineSelectionInfo,
+  runtimeEngineSelectionInfoSchema,
+  RuntimeEngineSpecifier,
+  runtimeEngineSpecifierSchema,
+} from "./RuntimeEngine.js";
+export {
   KVConfigSchematicsDeserializationError,
   kvConfigSchematicsDeserializationErrorSchema,
   SerializedKVConfigSchematics,
