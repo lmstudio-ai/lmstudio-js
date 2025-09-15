@@ -1,4 +1,3 @@
-export { LogLevel, logLevelSchema } from "./LogLevel.js";
 export {
   AllowableEnvVarKeys,
   allowableEnvVarKeys,
@@ -422,10 +421,10 @@ export {
 export {
   ModelFormatName,
   modelFormatNameSchema,
+  ModelFormatNameToRuntimeEngineSpecifier,
+  modelFormatNameToRuntimeEngineSpecifier,
   RuntimeEngineInfo,
   runtimeEngineInfoSchema,
-  RuntimeEngineSelectionInfo,
-  runtimeEngineSelectionInfoSchema,
   RuntimeEngineSpecifier,
   runtimeEngineSpecifierSchema,
 } from "./RuntimeEngine.js";
