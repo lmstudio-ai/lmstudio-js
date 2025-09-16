@@ -1,4 +1,3 @@
-export { LogLevel, logLevelSchema } from "./LogLevel.js";
 export {
   AllowableEnvVarKeys,
   allowableEnvVarKeys,
@@ -311,6 +310,7 @@ export {
   promptPreprocessorUpdateSchema,
 } from "./llm/processing/PromptPreprocessorUpdate.js";
 export { TokenSourceIdentifier, tokenSourceIdentifierSchema } from "./llm/TokenSourceIdentifier.js";
+export { LogLevel, logLevelSchema } from "./LogLevel.js";
 export { ModelCompatibilityType, modelCompatibilityTypeSchema } from "./ModelCompatibilityType.js";
 export { ModelDomainType, modelDomainTypeSchema } from "./ModelDomainType.js";
 export {
@@ -356,14 +356,6 @@ export { PresetManifest, presetManifestSchema } from "./PresetManifest.js";
 export { reasonableKeyStringSchema } from "./reasonable.js";
 export { RemotePluginInfo, remotePluginInfoSchema } from "./RemotePluginInfo.js";
 export {
-  hubModelMetadataSchema,
-  hubModelSchema,
-  hubArtifactSchema,
-  HubModel,
-  HubModelMetadata,
-  HubArtifact,
-} from "./repository/HubArtifact.js";
-export {
   ArtifactDownloadPlan,
   ArtifactDownloadPlanModelInfo,
   artifactDownloadPlanModelInfoSchema,
@@ -383,6 +375,14 @@ export {
   DownloadProgressUpdate,
   downloadProgressUpdateSchema,
 } from "./repository/DownloadProgressUpdate.js";
+export {
+  HubArtifact,
+  hubArtifactSchema,
+  HubModel,
+  HubModelMetadata,
+  hubModelMetadataSchema,
+  hubModelSchema,
+} from "./repository/HubArtifact.js";
 export {
   ModelSearchOpts,
   modelSearchOptsSchema,
@@ -419,6 +419,16 @@ export {
   Runtime,
   runtimeSchema,
 } from "./Runtime.js";
+export {
+  ModelFormatName,
+  modelFormatNameSchema,
+  RuntimeEngineInfo,
+  runtimeEngineInfoSchema,
+  RuntimeEngineSpecifier,
+  runtimeEngineSpecifierSchema,
+  SelectedRuntimeEngineMap,
+  selectedRuntimeEngineMapSchema,
+} from "./RuntimeEngine.js";
 export {
   KVConfigSchematicsDeserializationError,
   kvConfigSchematicsDeserializationErrorSchema,
