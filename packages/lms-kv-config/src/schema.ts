@@ -20,12 +20,14 @@ import {
 } from "./KVConfig.js";
 import { kvValueTypesLibrary } from "./valueTypes.js";
 
+const VIRTUAL_MODEL_CUSTOM_FIELD_EXTENSION_PREFIX = "ext.virtualModel.customField";
+
 // ---------------------------
 //  1. globalConfigSchematics
 // ---------------------------
 
 export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypesLibrary)
-  .extension("ext.virtualModel.customField")
+  .extension(VIRTUAL_MODEL_CUSTOM_FIELD_EXTENSION_PREFIX)
   .field("envVars", "envVars", {}, {})
   .scope("llm.prediction", builder =>
     builder
@@ -480,7 +482,9 @@ export const embeddingLlamaLoadConfigSchematics = embeddingSharedLoadConfigSchem
   .union(llamaLoadConfigSchematics);
 
 export const emptyConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypesLibrary).build();
-
+export const customFieldConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypesLibrary)
+  .extension(VIRTUAL_MODEL_CUSTOM_FIELD_EXTENSION_PREFIX)
+  .build();
 // ------------------
 //  3. Utility types
 // ------------------
