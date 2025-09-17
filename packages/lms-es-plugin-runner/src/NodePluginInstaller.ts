@@ -1,12 +1,11 @@
 import { SimpleLogger } from "@lmstudio/lms-common";
 import Arborist from "@npmcli/arborist";
-import { mkdir, writeFile } from "fs/promises";
 import { join } from "path";
 import { createEsBuildArgs } from "./esbuildArgs.js";
-import { generateEntryFile } from "./generateEntryFile.js";
+import { generateEntryFileAt } from "./generateEntryFile.js";
 import { UtilBinary } from "./UtilBinary.js";
 
-export interface EsPluginInstallerInstallOpts {
+export interface NodePluginInstallerInstallOpts {
   /**
    * Only installs dependencies. Does not build the plugins.
    */
@@ -23,18 +22,7 @@ export interface EsPluginInstallerInstallOpts {
   logger?: SimpleLogger;
 }
 
-export class EsPluginInstaller {
-  /**
-   * Creates the entry.ts file in .lmstudio
-   */
-  private async createEntryFile(cacheFolderPath: string) {
-    await mkdir(cacheFolderPath, { recursive: true });
-    const entryFilePath = join(cacheFolderPath, "entry.ts");
-
-    const content = generateEntryFile({});
-    await writeFile(entryFilePath, content);
-    return entryFilePath;
-  }
+export class NodePluginInstaller {
   /**
    * Creates the esbuild args
    */
@@ -53,8 +41,8 @@ export class EsPluginInstaller {
       skipDependencies = false,
       utilsFolderPathOverride,
       npmRegistry,
-      logger = new SimpleLogger("EsPluginInstaller"),
-    }: EsPluginInstallerInstallOpts = {},
+      logger = new SimpleLogger("DenoPluginInstaller"),
+    }: NodePluginInstallerInstallOpts = {},
   ) {
     if (!skipDependencies) {
       const arb = new Arborist({
@@ -70,7 +58,8 @@ export class EsPluginInstaller {
     }
     const cacheFolderPath = join(pluginPath, ".lmstudio");
     logger.info(`Creating entry file in ${cacheFolderPath}...`);
-    const entryFilePath = await this.createEntryFile(cacheFolderPath);
+    const entryFilePath = join(cacheFolderPath, "entry.ts");
+    await generateEntryFileAt(entryFilePath, {});
     const args = await this.createEsBuildArgs(cacheFolderPath, entryFilePath);
     const esbuild = new UtilBinary("esbuild", { utilsFolderPathOverride });
     logger.info(`Building plugin with esbuild...`);

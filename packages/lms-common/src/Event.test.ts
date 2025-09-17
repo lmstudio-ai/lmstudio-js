@@ -61,3 +61,74 @@ test("events emitted in subscribe should be emitted in next microtask", async ()
   expect(listener).toHaveBeenCalledTimes(2);
   expect(listener).toHaveBeenCalledWith(2);
 });
+
+test("map should transform events and respect unsubscribe", async () => {
+  const [event, emit] = Event.create<number>();
+  const mapped = event.map(n => n * 2);
+  const listener = jest.fn();
+  const unsubscribe = mapped.subscribe(listener);
+
+  emit(1);
+  await Promise.resolve();
+  await Promise.resolve();
+  expect(listener).toHaveBeenCalledTimes(1);
+  expect(listener).toHaveBeenCalledWith(2);
+
+  unsubscribe();
+  emit(2);
+  await Promise.resolve();
+  await Promise.resolve();
+  expect(listener).toHaveBeenCalledTimes(1);
+});
+
+test("batch aggregates events until idle", async () => {
+  jest.useFakeTimers();
+  const [event, emit] = Event.create<number>();
+  const batched = event.batch({ minIdleTimeMs: 10, maxBatchTimeMs: 1000 });
+  const listener = jest.fn();
+  batched.subscribe(listener);
+
+  emit(1);
+  await Promise.resolve();
+  jest.advanceTimersByTime(5);
+  emit(2);
+  await Promise.resolve();
+  jest.advanceTimersByTime(10);
+  await Promise.resolve();
+
+  expect(listener).toHaveBeenCalledTimes(1);
+  expect(listener).toHaveBeenCalledWith([1, 2]);
+  jest.useRealTimers();
+});
+
+test("batch flushes at maxBatchTime even with frequent events", async () => {
+  jest.useFakeTimers();
+  const [event, emit] = Event.create<number>();
+  const batched = event.batch({ minIdleTimeMs: 20, maxBatchTimeMs: 50 });
+  const listener = jest.fn();
+  batched.subscribe(listener);
+
+  emit(1);
+  await Promise.resolve();
+
+  jest.advanceTimersByTime(15);
+  emit(2);
+  await Promise.resolve();
+
+  jest.advanceTimersByTime(15);
+  emit(3);
+  await Promise.resolve();
+
+  jest.advanceTimersByTime(15);
+  emit(4);
+  await Promise.resolve();
+
+  // At this point, maxBatchTime is 50ms since first event at t=0.
+  // Next flush should occur at t=50 regardless of minIdleTime.
+  jest.advanceTimersByTime(5);
+  await Promise.resolve();
+
+  expect(listener).toHaveBeenCalledTimes(1);
+  expect(listener).toHaveBeenCalledWith([1, 2, 3, 4]);
+  jest.useRealTimers();
+});
