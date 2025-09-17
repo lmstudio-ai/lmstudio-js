@@ -480,7 +480,9 @@ export const embeddingLlamaLoadConfigSchematics = embeddingSharedLoadConfigSchem
   .union(llamaLoadConfigSchematics);
 
 export const emptyConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypesLibrary).build();
-
+export const customFieldConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypesLibrary)
+  .extension("ext.virtualModel.customField")
+  .build();
 // ------------------
 //  3. Utility types
 // ------------------

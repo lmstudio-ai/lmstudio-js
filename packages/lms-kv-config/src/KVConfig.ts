@@ -710,7 +710,7 @@ export class KVConfigSchematics<
   }
 
   public configBuilder(): KVConfigBuilder<TKVConfigSchema> {
-    return new KVConfigBuilder(this.fields);
+    return new KVConfigBuilder(this.fields, this.extensionPrefixes);
   }
 
   public clone(): KVConfigSchematics<TKVFieldValueTypeLibraryMap, TKVConfigSchema> {
@@ -1251,7 +1251,10 @@ export function stripBaseKeyFromKVConfig(baseKey: string, config: KVConfig): KVC
 }
 
 export class KVConfigBuilder<TKVConfigSchema extends KVVirtualConfigSchema> {
-  public constructor(private readonly fieldDefs: Map<string, KVConcreteFieldSchema>) {}
+  public constructor(
+    private readonly fieldDefs: Map<string, KVConcreteFieldSchema>,
+    private readonly extensionPrefixes: Array<string>,
+  ) {}
   private readonly fields: Map<string, any> = new Map();
   public with<TKey extends keyof TKVConfigSchema & string>(
     key: TKey,
@@ -1264,6 +1267,22 @@ export class KVConfigBuilder<TKVConfigSchema extends KVVirtualConfigSchema> {
     this.fields.set(field.fullKey, value);
     return this;
   }
+
+  /**
+   * Set a field which starts with one of the registered extension prefixes. This is useful for
+   * setting fields that are not in the schematics, but are allowed due to extension prefixes.
+   * Example: Virtual model custom fields
+   */
+  public withExtensionField(key: string, value: any) {
+    if (!this.extensionPrefixes.some(prefix => key.startsWith(prefix))) {
+      throw new Error(
+        `Key ${key} does not start with any registered extension prefixes in the schematics`,
+      );
+    }
+    this.fields.set(key, value);
+    return this;
+  }
+
   public build() {
     return mapToKVConfig(this.fields);
   }

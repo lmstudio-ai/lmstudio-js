@@ -67,6 +67,7 @@ export {
   retrievalSchematics,
   TypedConfigFieldFilter,
   TypedConfigSchematics,
+  customFieldConfigSchematics,
 } from "./schema.js";
 export {
   BasicKVFieldValueTypeLibraryMap,
