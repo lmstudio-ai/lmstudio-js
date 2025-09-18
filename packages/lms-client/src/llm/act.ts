@@ -15,6 +15,7 @@ import {
   type ChatMessagePartToolCallResultData,
   type LLMPredictionFragment,
   type ToolCallRequest,
+  type ToolCallResult,
 } from "@lmstudio/lms-shared-types";
 import { z, type ZodSchema } from "zod";
 import { Chat, ChatMessage, type ChatLike } from "../Chat.js";
@@ -504,6 +505,29 @@ export interface LLMActBaseOpts<TPredictionResult> {
    */
   onToolCallRequestDequeued?: (roundIndex: number, callId: number) => void;
   /**
+   * A callback that is called when a tool call result is received. This tool call result should be
+   * added to the context if you are managing the context yourself (through onMessage).
+   *
+   * @remarks
+   *
+   * Generally speaking, there are three ways for a tool call result to be produced:
+   *
+   * 1. The tool call executed successfully and returned a result,
+   *    - This includes the case where the tool call technically failed, but it failed gracefully by
+   *      returning a result that indicates the failure.
+   * 2. The tool call generated successfully, but failed to match to a valid tool call. This request
+   *    is automatically passed to the `handleInvalidToolRequest` handler, which returned a result.
+   * 3. The `guardToolCall` handler denied the tool call, which provided a reason for the denial.
+   *
+   * @remarks
+   *
+   * This callback is not guaranteed to be called in the same order as the tool call requests.
+   *
+   * @experimental [EXP-GRANULAR-ACT] More granular .act status reporting is experimental and may
+   * change in the future
+   */
+  onToolCallResult?: (roundIndex: number, callId: number, toolCallResult: ToolCallResult) => void;
+  /**
    * A handler that is called right before a tool call is executed.
    *
    * You may allow/allowAndOverrideParameters/deny the tool call in this handler by calling the
@@ -648,6 +672,7 @@ export const llmActBaseOptsSchema = z.object({
   onToolCallRequestFinalized: z.function().optional(),
   onToolCallRequestFailure: z.function().optional(),
   onToolCallRequestDequeued: z.function().optional(),
+  onToolCallResult: z.function().optional(),
   guardToolCall: z.function().optional(),
   handleInvalidToolRequest: z.function().optional(),
   maxPredictionRounds: z.number().int().min(1).optional(),
@@ -877,6 +902,11 @@ export async function internalAct<TPredictionResult, TEndPacket>(
             content: resultString,
           },
         });
+        safeCallCallback(logger, "onToolCallResult", baseOpts.onToolCallResult, [
+          predictionsPerformed,
+          currentCallId,
+          { toolCallId: request.id, content: resultString },
+        ]);
         nextToolCallIndex++;
       }
     };
@@ -1108,6 +1138,16 @@ export async function internalAct<TPredictionResult, TEndPacket>(
                         }),
                       },
                     });
+                    safeCallCallback(logger, "onToolCallResult", baseOpts.onToolCallResult, [
+                      predictionsPerformed,
+                      callId,
+                      {
+                        toolCallId: request.id,
+                        content: JSON.stringify({
+                          error: guardResult.reason,
+                        }),
+                      },
+                    ]);
                     return;
                   }
                 }
@@ -1152,6 +1192,11 @@ export async function internalAct<TPredictionResult, TEndPacket>(
                     content: resultString,
                   },
                 });
+                safeCallCallback(logger, "onToolCallResult", baseOpts.onToolCallResult, [
+                  predictionsPerformed,
+                  callId,
+                  { toolCallId: request.id, content: resultString },
+                ]);
               } catch (error: any) {
                 if (!(error instanceof UnimplementedToolError)) {
                   throw error;
