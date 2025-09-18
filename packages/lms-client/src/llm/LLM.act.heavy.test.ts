@@ -41,6 +41,7 @@ describe("LLM.act", () => {
     const onPromptProcessingProgress = jest.fn();
     const onRoundStart = jest.fn();
     const onRoundEnd = jest.fn();
+    const onToolCallResult = jest.fn(); // Add this line
 
     await model.act('First say "Hi". Then calculate 1 + 3 with the tool.', [additionTool], {
       temperature: 0,
@@ -51,7 +52,9 @@ describe("LLM.act", () => {
       onPromptProcessingProgress,
       onRoundStart,
       onRoundEnd,
+      onToolCallResult, // Add this line
     });
+
     expect(addImplementation).toHaveBeenCalledTimes(1);
     expect(addImplementation.mock.calls[0][0]).toEqual({ a: 1, b: 3 });
     expect(onMessage).toHaveBeenCalledTimes(3);
@@ -111,6 +114,16 @@ describe("LLM.act", () => {
 
     expect(onRoundEnd).toHaveBeenCalledTimes(2);
     expect(onRoundEnd.mock.calls).toEqual([[0], [1]]);
+
+    expect(onToolCallResult).toHaveBeenCalledTimes(1);
+    expect(onToolCallResult).toHaveBeenCalledWith(
+      0, // roundIndex
+      expect.any(Number), // callId
+      {
+        toolCallId: expect.any(String),
+        content: "4",
+      },
+    );
   });
   it("should queue up tool calls", async () => {
     // In this test, we will make the model call the tool twice in parallel. We will then make the
@@ -130,6 +143,7 @@ describe("LLM.act", () => {
     });
     const onToolCallRequestEnd = jest.fn();
     const onToolCallRequestDequeued = jest.fn();
+    const onToolCallResult = jest.fn();
 
     const additionToolWithQueueControl = tool({
       name: "add",
@@ -157,6 +171,7 @@ describe("LLM.act", () => {
         onPredictionCompleted,
         onToolCallRequestEnd,
         onToolCallRequestDequeued,
+        onToolCallResult,
       },
     );
 
@@ -180,6 +195,23 @@ describe("LLM.act", () => {
       { isQueued: true }, // Second call is queued
     ]);
     expect(onToolCallRequestDequeued).toHaveBeenCalledTimes(1);
+    expect(onToolCallResult).toHaveBeenCalledTimes(2);
+    expect(onToolCallResult).toHaveBeenCalledWith(
+      0, // roundIndex
+      expect.any(Number), // callId
+      {
+        toolCallId: expect.any(String),
+        content: "4", // Result of 1 + 3
+      },
+    );
+    expect(onToolCallResult).toHaveBeenCalledWith(
+      0, // roundIndex
+      expect.any(Number), // callId
+      {
+        toolCallId: expect.any(String),
+        content: "6", // Result of 2 + 4
+      },
+    );
   });
   it("should not queue up tool calls when allowParallelToolExecution is true", async () => {
     // In this test, we will make the model call the tool twice in parallel. We will then make the
