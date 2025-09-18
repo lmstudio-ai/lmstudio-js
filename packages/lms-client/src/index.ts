@@ -85,6 +85,7 @@ export type {
 export type { PromptPreprocessor } from "./plugins/processing/PromptPreprocessor.js";
 export type { ToolsProvider } from "./plugins/processing/ToolsProvider.js";
 export type { ToolsProviderController } from "./plugins/processing/ToolsProviderController.js";
+export type { RemoteToolUseSession } from "./plugins/ToolUseSession.js";
 export type {
   ArtifactDownloadPlanner,
   ArtifactDownloadPlannerDownloadOpts,
