@@ -3,7 +3,14 @@ import { collapseKVStackRaw } from "../KVConfig.js";
 import { llmPredictionConfigSchematics } from "../schema.js";
 import { maybeFalseNumberToCheckboxNumeric } from "./utils.js";
 
-export function kvConfigToLLMPredictionConfig(config: KVConfig, notPartial?: boolean) {
+interface KvConfigToLLMPredictionConfigOpts {
+  notPartial?: boolean;
+}
+
+export function kvConfigToLLMPredictionConfig(
+  config: KVConfig,
+  { notPartial }: KvConfigToLLMPredictionConfigOpts = {},
+) {
   const result: LLMPredictionConfig = {};
   let parsed;
   if (notPartial === true) {

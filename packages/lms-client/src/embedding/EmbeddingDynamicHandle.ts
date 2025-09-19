@@ -155,6 +155,8 @@ export class EmbeddingDynamicHandle extends DynamicHandle<
   public async getLoadConfig(): Promise<EmbeddingLoadModelConfig> {
     const stack = getCurrentStack(1);
     const loadConfig = await this.getLoadKVConfig(stack);
-    return kvConfigToEmbeddingLoadModelConfig(loadConfig, true);
+    return kvConfigToEmbeddingLoadModelConfig(loadConfig, {
+      notPartial: true,
+    });
   }
 }

@@ -7,9 +7,12 @@ import {
 import { collapseKVStackRaw } from "../KVConfig.js";
 import { embeddingLoadSchematics } from "../schema.js";
 
+interface KvConfigToEmbeddingLoadModelConfigOpts {
+  notPartial?: boolean;
+}
 export function kvConfigToEmbeddingLoadModelConfig(
   config: KVConfig,
-  notPartial?: boolean,
+  { notPartial }: KvConfigToEmbeddingLoadModelConfigOpts = {},
 ): EmbeddingLoadModelConfig {
   const result: EmbeddingLoadModelConfig = {};
 

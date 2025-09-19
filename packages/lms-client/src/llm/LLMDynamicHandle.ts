@@ -1208,7 +1208,9 @@ export class LLMDynamicHandle extends DynamicHandle<
   public async getLoadConfig(): Promise<LLMLoadModelConfig> {
     const stack = getCurrentStack(1);
     const loadConfig = await super.getLoadKVConfig(stack);
-    return kvConfigToLLMLoadModelConfig(loadConfig, true);
+    return kvConfigToLLMLoadModelConfig(loadConfig, {
+      notPartial: true,
+    });
   }
 
   /**
@@ -1223,6 +1225,8 @@ export class LLMDynamicHandle extends DynamicHandle<
       "apiOverride",
       basePredictionConfig,
     );
-    return kvConfigToLLMPredictionConfig(collapseKVStack(kvStack), true);
+    return kvConfigToLLMPredictionConfig(collapseKVStack(kvStack), {
+      notPartial: true,
+    });
   }
 }

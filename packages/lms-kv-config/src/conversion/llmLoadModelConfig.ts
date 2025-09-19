@@ -7,9 +7,13 @@ import {
 import { collapseKVStackRaw } from "../KVConfig.js";
 import { llmLoadSchematics } from "../schema.js";
 
+interface KvConfigToLLMLoadModelConfigOpts {
+  notPartial?: boolean;
+}
+
 export function kvConfigToLLMLoadModelConfig(
   config: KVConfig,
-  notPartial?: boolean,
+  { notPartial }: KvConfigToLLMLoadModelConfigOpts = {},
 ): LLMLoadModelConfig {
   const result: LLMLoadModelConfig = {};
 
