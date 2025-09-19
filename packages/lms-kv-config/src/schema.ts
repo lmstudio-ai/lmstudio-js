@@ -429,7 +429,8 @@ export const llmMistralrsPredictionConfigSchematics = llmSharedPredictionConfigS
 
 export const llmLoadSchematics = globalConfigSchematics
   .scoped("llm.load")
-  .union(globalConfigSchematics.sliced("envVars"));
+  .union(globalConfigSchematics.sliced("envVars"))
+  .union(globalConfigSchematics.scoped("load"));
 
 export const llmSharedLoadConfigSchematics = llmLoadSchematics.sliced(
   "contextLength",

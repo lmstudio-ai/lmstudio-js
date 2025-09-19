@@ -91,6 +91,12 @@ export function createBaseModelBackendInterface<
       }),
       returns: kvConfigSchema,
     })
+    .addRpcEndpoint("getBasePredictionConfig", {
+      parameter: z.object({
+        specifier: modelSpecifierSchema,
+      }),
+      returns: kvConfigSchema,
+    })
     .addChannelEndpoint("getOrLoad", {
       creationParameter: z.object({
         identifier: z.string(),

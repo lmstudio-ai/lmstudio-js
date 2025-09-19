@@ -56,13 +56,31 @@ export abstract class DynamicHandle<
     return info;
   }
 
-  protected async getLoadConfig(stack: string): Promise<KVConfig> {
+  /**
+   * Gets the load configuration of the model instance associated with this `DynamicHandle`. Reason
+   * this function is called `getLoadKVConfig` instead of just `getLoadConfig` is to avoid conflict
+   * with the user-facing `getLoadConfig` in `LLMDynamicHandle` and `EmbeddingDynamicHandle`.
+   */
+  protected async getLoadKVConfig(stack: string): Promise<KVConfig> {
     const loadConfig = await this.port.callRpc(
       "getLoadConfig",
       { specifier: this.specifier },
       { stack },
     );
     return loadConfig;
+  }
+
+  /**
+   * Gets the base prediction configuration of the model instance associated with this
+   * `DynamicHandle`.
+   */
+  protected async getBasePredictionKVConfig(stack: string): Promise<KVConfig> {
+    const basePredictionConfig = await this.port.callRpc(
+      "getBasePredictionConfig",
+      { specifier: this.specifier },
+      { stack },
+    );
+    return basePredictionConfig;
   }
 
   /**
