@@ -46,8 +46,15 @@ export type {
   PredictionResult,
   StructuredPredictionResult,
 } from "./llm/PredictionResult.js";
-export { rawFunctionTool, RemoteTool, tool, unimplementedRawFunctionTool } from "./llm/tool.js";
-export type { FunctionTool, RawFunctionTool, Tool, ToolBase, ToolCallContext } from "./llm/tool.js";
+export { rawFunctionTool, tool, unimplementedRawFunctionTool } from "./llm/tool.js";
+export type {
+  FunctionTool,
+  RawFunctionTool,
+  RemoteTool,
+  Tool,
+  ToolBase,
+  ToolCallContext,
+} from "./llm/tool.js";
 export { ToolCallRequestError } from "./llm/ToolCallRequestError.js";
 export { LMStudioClient } from "./LMStudioClient.js";
 export type { LMStudioClientConstructorOpts } from "./LMStudioClient.js";
