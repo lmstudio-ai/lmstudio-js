@@ -1209,7 +1209,7 @@ export class LLMDynamicHandle extends DynamicHandle<
     const stack = getCurrentStack(1);
     const loadConfig = await super.getLoadKVConfig(stack);
     return kvConfigToLLMLoadModelConfig(loadConfig, {
-      notPartial: true,
+      useDefaultsForMissingKeys: true,
     });
   }
 
@@ -1226,7 +1226,7 @@ export class LLMDynamicHandle extends DynamicHandle<
       basePredictionConfig,
     );
     return kvConfigToLLMPredictionConfig(collapseKVStack(kvStack), {
-      notPartial: true,
+      useDefaultsForMissingKeys: true,
     });
   }
 }

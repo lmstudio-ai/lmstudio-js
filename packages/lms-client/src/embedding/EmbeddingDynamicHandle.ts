@@ -156,7 +156,7 @@ export class EmbeddingDynamicHandle extends DynamicHandle<
     const stack = getCurrentStack(1);
     const loadConfig = await this.getLoadKVConfig(stack);
     return kvConfigToEmbeddingLoadModelConfig(loadConfig, {
-      notPartial: true,
+      useDefaultsForMissingKeys: true,
     });
   }
 }

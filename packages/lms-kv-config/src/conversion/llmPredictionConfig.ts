@@ -4,16 +4,19 @@ import { llmPredictionConfigSchematics } from "../schema.js";
 import { maybeFalseNumberToCheckboxNumeric } from "./utils.js";
 
 interface KvConfigToLLMPredictionConfigOpts {
-  notPartial?: boolean;
+  /**
+   * Fills the missing keys passed in with default values
+   */
+  useDefaultsForMissingKeys?: boolean;
 }
 
 export function kvConfigToLLMPredictionConfig(
   config: KVConfig,
-  { notPartial }: KvConfigToLLMPredictionConfigOpts = {},
+  { useDefaultsForMissingKeys }: KvConfigToLLMPredictionConfigOpts = {},
 ) {
   const result: LLMPredictionConfig = {};
   let parsed;
-  if (notPartial === true) {
+  if (useDefaultsForMissingKeys === true) {
     parsed = llmPredictionConfigSchematics.parse(config);
   } else {
     parsed = llmPredictionConfigSchematics.parsePartial(config);

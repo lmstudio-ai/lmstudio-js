@@ -8,17 +8,20 @@ import { collapseKVStackRaw } from "../KVConfig.js";
 import { llmLoadSchematics } from "../schema.js";
 
 interface KvConfigToLLMLoadModelConfigOpts {
-  notPartial?: boolean;
+  /**
+   * Fills the missing keys passed in with default values
+   */
+  useDefaultsForMissingKeys?: boolean;
 }
 
 export function kvConfigToLLMLoadModelConfig(
   config: KVConfig,
-  { notPartial }: KvConfigToLLMLoadModelConfigOpts = {},
+  { useDefaultsForMissingKeys }: KvConfigToLLMLoadModelConfigOpts = {},
 ): LLMLoadModelConfig {
   const result: LLMLoadModelConfig = {};
 
   let parsed;
-  if (notPartial === true) {
+  if (useDefaultsForMissingKeys === true) {
     parsed = llmLoadSchematics.parse(config);
   } else {
     parsed = llmLoadSchematics.parsePartial(config);

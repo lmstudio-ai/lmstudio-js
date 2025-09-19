@@ -8,16 +8,19 @@ import { collapseKVStackRaw } from "../KVConfig.js";
 import { embeddingLoadSchematics } from "../schema.js";
 
 interface KvConfigToEmbeddingLoadModelConfigOpts {
-  notPartial?: boolean;
+  /**
+   * Fills the missing keys passed in with default values
+   */
+  useDefaultsForMissingKeys?: boolean;
 }
 export function kvConfigToEmbeddingLoadModelConfig(
   config: KVConfig,
-  { notPartial }: KvConfigToEmbeddingLoadModelConfigOpts = {},
+  { useDefaultsForMissingKeys }: KvConfigToEmbeddingLoadModelConfigOpts = {},
 ): EmbeddingLoadModelConfig {
   const result: EmbeddingLoadModelConfig = {};
 
   let parsed;
-  if (notPartial === true) {
+  if (useDefaultsForMissingKeys === true) {
     parsed = embeddingLoadSchematics.parse(config);
   } else {
     parsed = embeddingLoadSchematics.parsePartial(config);
