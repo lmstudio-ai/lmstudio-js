@@ -7,6 +7,10 @@ export {
   llmLoadModelConfigToKVConfig,
 } from "./conversion/llmLoadModelConfig.js";
 export {
+  kvConfigToEmbeddingLoadModelConfig,
+  embeddingLoadModelConfigToKVConfig,
+} from "./conversion/embeddingLoadModelConfig.js";
+export {
   addKVConfigToBaseOfStack,
   addKVConfigToStack,
   collapseKVStack,

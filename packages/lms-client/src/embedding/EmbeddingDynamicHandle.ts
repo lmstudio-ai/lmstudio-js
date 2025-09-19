@@ -3,8 +3,13 @@ import { type EmbeddingPort } from "@lmstudio/lms-external-backend-interfaces";
 import {
   embeddingSharedLoadConfigSchematics,
   globalConfigSchematics,
+  kvConfigToEmbeddingLoadModelConfig,
 } from "@lmstudio/lms-kv-config";
-import { type EmbeddingModelInstanceInfo, type ModelSpecifier } from "@lmstudio/lms-shared-types";
+import {
+  type EmbeddingLoadModelConfig,
+  type EmbeddingModelInstanceInfo,
+  type ModelSpecifier,
+} from "@lmstudio/lms-shared-types";
 import { z } from "zod";
 import { DynamicHandle } from "../modelShared/DynamicHandle.js";
 
@@ -145,5 +150,11 @@ export class EmbeddingDynamicHandle extends DynamicHandle<
         { stack },
       )
     ).tokenCount;
+  }
+
+  public async getLoadConfig(): Promise<EmbeddingLoadModelConfig> {
+    const stack = getCurrentStack(1);
+    const loadConfig = await this.getLoadKVConfig(stack);
+    return kvConfigToEmbeddingLoadModelConfig(loadConfig);
   }
 }
