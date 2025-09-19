@@ -71,6 +71,7 @@ export type {
   RawFunctionTool,
   RegisterDevelopmentPluginOpts,
   RegisterDevelopmentPluginResult,
+  RemoteTool,
   RemoteToolUseSession,
   RepositoryNamespace,
   RequestConfirmToolCallOpts,
