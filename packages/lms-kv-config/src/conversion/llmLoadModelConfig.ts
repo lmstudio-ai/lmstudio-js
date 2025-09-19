@@ -7,10 +7,18 @@ import {
 import { collapseKVStackRaw } from "../KVConfig.js";
 import { llmLoadSchematics } from "../schema.js";
 
-export function kvConfigToLLMLoadModelConfig(config: KVConfig): LLMLoadModelConfig {
+export function kvConfigToLLMLoadModelConfig(
+  config: KVConfig,
+  notPartial?: boolean,
+): LLMLoadModelConfig {
   const result: LLMLoadModelConfig = {};
-  const parsed = llmLoadSchematics.parse(config);
 
+  let parsed;
+  if (notPartial === true) {
+    parsed = llmLoadSchematics.parse(config);
+  } else {
+    parsed = llmLoadSchematics.parsePartial(config);
+  }
   const gpuSplitConfig = parsed.get("gpuSplitConfig");
   if (gpuSplitConfig !== undefined) {
     const gpuSetting = convertGPUSplitConfigToGPUSetting(gpuSplitConfig);

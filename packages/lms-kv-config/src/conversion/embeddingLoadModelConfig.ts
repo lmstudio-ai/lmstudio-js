@@ -7,9 +7,18 @@ import {
 import { collapseKVStackRaw } from "../KVConfig.js";
 import { embeddingLoadSchematics } from "../schema.js";
 
-export function kvConfigToEmbeddingLoadModelConfig(config: KVConfig): EmbeddingLoadModelConfig {
+export function kvConfigToEmbeddingLoadModelConfig(
+  config: KVConfig,
+  notPartial?: boolean,
+): EmbeddingLoadModelConfig {
   const result: EmbeddingLoadModelConfig = {};
-  const parsed = embeddingLoadSchematics.parse(config);
+
+  let parsed;
+  if (notPartial === true) {
+    parsed = embeddingLoadSchematics.parse(config);
+  } else {
+    parsed = embeddingLoadSchematics.parsePartial(config);
+  }
 
   const gpuSplitConfig = parsed.get("load.gpuSplitConfig");
   if (gpuSplitConfig !== undefined) {

@@ -2,10 +2,15 @@ import { type KVConfig, type LLMPredictionConfig } from "@lmstudio/lms-shared-ty
 import { collapseKVStackRaw } from "../KVConfig.js";
 import { llmPredictionConfigSchematics } from "../schema.js";
 import { maybeFalseNumberToCheckboxNumeric } from "./utils.js";
-export function kvConfigToLLMPredictionConfig(config: KVConfig) {
-  const result: LLMPredictionConfig = {};
-  const parsed = llmPredictionConfigSchematics.parse(config);
 
+export function kvConfigToLLMPredictionConfig(config: KVConfig, notPartial?: boolean) {
+  const result: LLMPredictionConfig = {};
+  let parsed;
+  if (notPartial === true) {
+    parsed = llmPredictionConfigSchematics.parse(config);
+  } else {
+    parsed = llmPredictionConfigSchematics.parsePartial(config);
+  }
   const maxPredictedTokens = parsed.get("maxPredictedTokens");
   if (maxPredictedTokens !== undefined) {
     result.maxTokens = maxPredictedTokens.checked ? maxPredictedTokens.value : false;
