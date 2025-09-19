@@ -84,13 +84,13 @@ export class EmbeddingDynamicHandle extends DynamicHandle<
 
   public async getContextLength(): Promise<number> {
     const stack = getCurrentStack(1);
-    const loadConfig = await this.getLoadKVConfig(stack);
+    const loadConfig = await super.getLoadKVConfig(stack);
     return embeddingSharedLoadConfigSchematics.access(loadConfig, "contextLength");
   }
 
   public async getEvalBatchSize(): Promise<number> {
     const stack = getCurrentStack(1);
-    const loadConfig = await this.getLoadKVConfig(stack);
+    const loadConfig = await super.getLoadKVConfig(stack);
     return globalConfigSchematics.access(loadConfig, "embedding.load.llama.evalBatchSize");
   }
 
