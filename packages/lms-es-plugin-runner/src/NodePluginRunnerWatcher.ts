@@ -21,7 +21,7 @@ export class NodePluginRunnerWatcher {
   }
 
   private readonly lmstudioCacheFolderPath = join(this.projectPath, ".lmstudio");
-  private readonly entryFilePath = join(this.lmstudioCacheFolderPath, "dev.js");
+  private readonly entryFilePath = join(this.lmstudioCacheFolderPath, "entry.ts");
 
   private started = false;
   public async start() {
