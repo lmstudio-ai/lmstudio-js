@@ -11,6 +11,9 @@ import {
 import { type LLMPort } from "@lmstudio/lms-external-backend-interfaces";
 import {
   addKVConfigToStack,
+  collapseKVStack,
+  kvConfigToLLMLoadModelConfig,
+  kvConfigToLLMPredictionConfig,
   llmPredictionConfigToKVConfig,
   llmSharedLoadConfigSchematics,
   llmSharedPredictionConfigSchematics,
@@ -23,6 +26,8 @@ import {
   type LLMApplyPromptTemplateOpts,
   llmApplyPromptTemplateOptsSchema,
   type LLMInstanceInfo,
+  type LLMLoadModelConfig,
+  type LLMPredictionConfig,
   type LLMPredictionConfigInput,
   llmPredictionConfigInputSchema,
   type LLMPredictionFragment,
@@ -1080,7 +1085,7 @@ export class LLMDynamicHandle extends DynamicHandle<
 
   public async getContextLength(): Promise<number> {
     const stack = getCurrentStack(1);
-    const loadConfig = await this.getLoadConfig(stack);
+    const loadConfig = await this.getLoadKVConfig(stack);
     return llmSharedLoadConfigSchematics.access(loadConfig, "contextLength");
   }
 
@@ -1195,5 +1200,33 @@ export class LLMDynamicHandle extends DynamicHandle<
       { specifier: this.specifier, draftModelKey },
       { stack },
     );
+  }
+
+  /**
+   * Get the configuration used to load the model.
+   */
+  public async getLoadConfig(): Promise<LLMLoadModelConfig> {
+    const stack = getCurrentStack(1);
+    const loadConfig = await super.getLoadKVConfig(stack);
+    return kvConfigToLLMLoadModelConfig(loadConfig, {
+      useDefaultsForMissingKeys: true,
+    });
+  }
+
+  /**
+   * Get the base prediction configuration for the model. This does not include any overrides that
+   * may be provided at prediction time.
+   */
+  public async getBasePredictionConfig(): Promise<LLMPredictionConfig> {
+    const stack = getCurrentStack(1);
+    const basePredictionConfig = await super.getBasePredictionKVConfig(stack);
+    const kvStack = addKVConfigToStack(
+      this.internalKVConfigStack,
+      "apiOverride",
+      basePredictionConfig,
+    );
+    return kvConfigToLLMPredictionConfig(collapseKVStack(kvStack), {
+      useDefaultsForMissingKeys: true,
+    });
   }
 }

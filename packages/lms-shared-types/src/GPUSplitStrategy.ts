@@ -61,3 +61,16 @@ export function convertGPUSettingToGPUSplitConfig(gpuSetting?: GPUSetting): GPUS
     customRatio: [],
   };
 }
+
+export function convertGPUSplitConfigToGPUSetting(splitConfig: GPUSplitConfig): GPUSetting {
+  return {
+    splitStrategy:
+      splitConfig.strategy === "priorityOrder"
+        ? "favorMainGpu"
+        : splitConfig.strategy === "evenly"
+          ? "evenly"
+          : undefined,
+    disabledGpus: splitConfig.disabledGpus,
+    mainGpu: splitConfig.priority.length > 0 ? splitConfig.priority[0] : undefined,
+  };
+}

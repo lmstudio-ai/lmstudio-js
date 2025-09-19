@@ -3,8 +3,13 @@ import { type EmbeddingPort } from "@lmstudio/lms-external-backend-interfaces";
 import {
   embeddingSharedLoadConfigSchematics,
   globalConfigSchematics,
+  kvConfigToEmbeddingLoadModelConfig,
 } from "@lmstudio/lms-kv-config";
-import { type EmbeddingModelInstanceInfo, type ModelSpecifier } from "@lmstudio/lms-shared-types";
+import {
+  type EmbeddingLoadModelConfig,
+  type EmbeddingModelInstanceInfo,
+  type ModelSpecifier,
+} from "@lmstudio/lms-shared-types";
 import { z } from "zod";
 import { DynamicHandle } from "../modelShared/DynamicHandle.js";
 
@@ -79,13 +84,13 @@ export class EmbeddingDynamicHandle extends DynamicHandle<
 
   public async getContextLength(): Promise<number> {
     const stack = getCurrentStack(1);
-    const loadConfig = await this.getLoadConfig(stack);
+    const loadConfig = await super.getLoadKVConfig(stack);
     return embeddingSharedLoadConfigSchematics.access(loadConfig, "contextLength");
   }
 
   public async getEvalBatchSize(): Promise<number> {
     const stack = getCurrentStack(1);
-    const loadConfig = await this.getLoadConfig(stack);
+    const loadConfig = await super.getLoadKVConfig(stack);
     return globalConfigSchematics.access(loadConfig, "embedding.load.llama.evalBatchSize");
   }
 
@@ -145,5 +150,13 @@ export class EmbeddingDynamicHandle extends DynamicHandle<
         { stack },
       )
     ).tokenCount;
+  }
+
+  public async getLoadConfig(): Promise<EmbeddingLoadModelConfig> {
+    const stack = getCurrentStack(1);
+    const loadConfig = await super.getLoadKVConfig(stack);
+    return kvConfigToEmbeddingLoadModelConfig(loadConfig, {
+      useDefaultsForMissingKeys: true,
+    });
   }
 }
