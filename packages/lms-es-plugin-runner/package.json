@@ -27,17 +27,29 @@
       "import": "./dist/esm/index.js",
       "default": "./dist/esm/index.js"
     },
-    "./installer": {
-      "types": "./dist/types/EsPluginInstaller.d.ts",
-      "require": "./dist/cjs/EsPluginInstaller.js",
-      "import": "./dist/esm/EsPluginInstaller.js",
-      "default": "./dist/esm/EsPluginInstaller.js"
+    "./node-installer": {
+      "types": "./dist/types/NodePluginInstaller.d.ts",
+      "require": "./dist/cjs/NodePluginInstaller.js",
+      "import": "./dist/esm/NodePluginInstaller.js",
+      "default": "./dist/esm/NodePluginInstaller.js"
     },
-    "./runner-watcher": {
-      "types": "./dist/types/EsPluginRunnerWatcher.d.ts",
-      "require": "./dist/cjs/EsPluginRunnerWatcher.js",
-      "import": "./dist/esm/EsPluginRunnerWatcher.js",
-      "default": "./dist/esm/EsPluginRunnerWatcher.js"
+    "./deno-installer": {
+      "types": "./dist/types/DenoPluginInstaller.d.ts",
+      "require": "./dist/cjs/DenoPluginInstaller.js",
+      "import": "./dist/esm/DenoPluginInstaller.js",
+      "default": "./dist/esm/DenoPluginInstaller.js"
+    },
+    "./node-runner-watcher": {
+      "types": "./dist/types/NodePluginRunnerWatcher.d.ts",
+      "require": "./dist/cjs/NodePluginRunnerWatcher.js",
+      "import": "./dist/esm/NodePluginRunnerWatcher.js",
+      "default": "./dist/esm/NodePluginRunnerWatcher.js"
+    },
+    "./deno-runner-watcher": {
+      "types": "./dist/types/DenoPluginRunnerWatcher.d.ts",
+      "require": "./dist/cjs/DenoPluginRunnerWatcher.js",
+      "import": "./dist/esm/DenoPluginRunnerWatcher.js",
+      "default": "./dist/esm/DenoPluginRunnerWatcher.js"
     },
     "./util-binary": {
       "types": "./dist/types/UtilBinary.d.ts",

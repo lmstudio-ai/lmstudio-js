@@ -1,3 +1,6 @@
+import { mkdir, writeFile } from "fs/promises";
+import { dirname } from "path";
+
 const template = `\
 import { LMStudioClient, type PluginContext } from "@lmstudio/sdk";
 
@@ -96,6 +99,11 @@ import("./../src/index.ts").then(async module => {
 `;
 
 interface GenerateEntryFileOpts {}
-export function generateEntryFile(_opts: GenerateEntryFileOpts) {
+export function generateEntryFileContents(_opts: GenerateEntryFileOpts) {
   return template;
+}
+export async function generateEntryFileAt(path: string, _opts: GenerateEntryFileOpts) {
+  const directoryPath = dirname(path);
+  await mkdir(directoryPath, { recursive: true });
+  await writeFile(path, template, "utf-8");
 }

@@ -22,7 +22,7 @@ export class UtilBinary {
   }
   public async check() {
     try {
-      access(this.path);
+      await access(this.path);
     } catch {
       throw new Error(text`
         Cannot locate required dependencies (${this.name}). Please make sure you have the latest version

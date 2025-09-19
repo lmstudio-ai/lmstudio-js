@@ -1,15 +1,14 @@
 import { Event, SimpleLogger } from "@lmstudio/lms-common";
-import { mkdir, writeFile } from "fs/promises";
 import { join } from "path";
 import { type UtilBinary } from "./UtilBinary.js";
 import { createEsBuildArgs } from "./esbuildArgs.js";
-import { generateEntryFile } from "./generateEntryFile.js";
+import { generateEntryFileAt } from "./generateEntryFile.js";
 
 const buildFinishedTriggerString = "build finished";
 const trimPrefix = "[watch] ";
 const trimSuffix = "\n";
 
-export class EsPluginRunnerWatcher {
+export class NodePluginRunnerWatcher {
   public readonly updatedEvent: Event<void>;
   private readonly emitUpdateEvent: () => void;
 
@@ -22,6 +21,7 @@ export class EsPluginRunnerWatcher {
   }
 
   private readonly lmstudioCacheFolderPath = join(this.projectPath, ".lmstudio");
+  private readonly entryFilePath = join(this.lmstudioCacheFolderPath, "entry.ts");
 
   private started = false;
   public async start() {
@@ -30,8 +30,8 @@ export class EsPluginRunnerWatcher {
     }
     this.started = true;
     await this.esbuild.check();
-    const entryFilePath = await this.createEntryFile();
-    const args = await this.createEsBuildArgs(entryFilePath);
+    await generateEntryFileAt(this.entryFilePath, {});
+    const args = await this.createEsBuildArgs(this.entryFilePath);
     const esbuildProcess = this.esbuild.spawn(args);
     const esbuildLogger = new SimpleLogger("esbuild", this.logger);
 
@@ -55,17 +55,7 @@ export class EsPluginRunnerWatcher {
       stringBuffer = stringBuffer.slice(-buildFinishedTriggerString.length + 1);
     });
   }
-  /**
-   * Creates the entry.ts file in .lmstudio
-   */
-  private async createEntryFile() {
-    await mkdir(this.lmstudioCacheFolderPath, { recursive: true });
-    const entryFilePath = join(this.lmstudioCacheFolderPath, "entry.ts");
 
-    const content = generateEntryFile({});
-    await writeFile(entryFilePath, content);
-    return entryFilePath;
-  }
   /**
    * Creates the esbuild args
    */

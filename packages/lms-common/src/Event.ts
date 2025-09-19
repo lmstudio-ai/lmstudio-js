@@ -55,6 +55,16 @@ export class Event<TData> extends Subscribable<TData> {
       }
     };
   }
+  public map<TOutput>(mapper: (data: TData) => TOutput): Event<TOutput> {
+    const [mappedEvent, emitMapped] = Event.create<TOutput>();
+    mappedEvent.onSubscribed = () => {
+      mappedEvent.onUnsubscribed = this.subscribe(data => {
+        const mapped = mapper(data);
+        emitMapped(mapped);
+      });
+    };
+    return mappedEvent;
+  }
   public batch({
     minIdleTimeMs = 200,
     maxBatchTimeMs = 1000,
