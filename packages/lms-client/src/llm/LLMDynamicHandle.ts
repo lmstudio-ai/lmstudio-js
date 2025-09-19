@@ -1215,7 +1215,7 @@ export class LLMDynamicHandle extends DynamicHandle<
 
   /**
    * Get the base prediction configuration for the model. This does not include any overrides that
-   * may be provided during prediction time.
+   * may be provided at prediction time.
    */
   public async getBasePredictionConfig(): Promise<LLMPredictionConfig> {
     const stack = getCurrentStack(1);
