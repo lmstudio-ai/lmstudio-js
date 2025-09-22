@@ -1,12 +1,27 @@
 #!/bin/bash
+set -euo pipefail
 
 NODE_VERSION="v20.12.2"
-NODE_DOWNLOAD_URL="https://nodejs.org/dist/${NODE_VERSION}/node-${NODE_VERSION}-linux-x64.tar.xz"
+ARCH=$(uname -m)
 TEMP_DIR="./temp"
 DIST_DIR="./dist"
 NODE_TAR="${TEMP_DIR}/node.tar.xz"
 NODE_DIR="${TEMP_DIR}/node"
 EXE_NAME="lms"
+
+case $ARCH in
+  x86_64)
+    ARCH_SUFFIX="x64"
+    ;;
+  arm64 | aarch64)
+    ARCH_SUFFIX="arm64"
+    ;;
+  *)
+    echo "Unsupported architecture: $ARCH"
+    exit 1
+    ;;
+esac
+NODE_DOWNLOAD_URL="https://nodejs.org/dist/${NODE_VERSION}/node-${NODE_VERSION}-linux-${ARCH_SUFFIX}.tar.xz"
 
 load_env_from_ancestors() {
   local current_dir=$(pwd)
@@ -30,7 +45,7 @@ if [ ! -f "${NODE_DIR}/bin/node" ]; then
   echo "Node.js not found. Downloading..."
   curl $NODE_DOWNLOAD_URL --output $NODE_TAR
   tar -xf $NODE_TAR -C $TEMP_DIR
-  mv "${TEMP_DIR}/node-${NODE_VERSION}-linux-x64" $NODE_DIR
+  mv "${TEMP_DIR}/node-${NODE_VERSION}-linux-${ARCH_SUFFIX}" $NODE_DIR
   rm $NODE_TAR
 else
   echo "Node.js already downloaded."
