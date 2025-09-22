@@ -86,6 +86,14 @@ export {
   serializeError,
 } from "./Error.js";
 export {
+  EstimatedModelMemoryUsage,
+  EstimatedModelMemoryUsageConfidence,
+  estimatedModelMemoryUsageConfidenceSchema,
+  estimatedModelMemoryUsageSchema,
+  EstimatedResourcesUsage,
+  estimatedResourcesUsageSchema,
+} from "./EstimatedResourcesUsage.js";
+export {
   DocumentParsingLibraryIdentifier,
   documentParsingLibraryIdentifierSchema,
   DocumentParsingOpts,

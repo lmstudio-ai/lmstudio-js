@@ -2,6 +2,7 @@ import { type DeepReplaceType2 } from "@lmstudio/lms-common";
 import { BackendInterface } from "@lmstudio/lms-communication";
 import { type ClientPort } from "@lmstudio/lms-communication-client";
 import {
+  estimatedResourcesUsageSchema,
   kvConfigSchema,
   kvConfigStackSchema,
   type ModelInfoBase,
@@ -143,6 +144,13 @@ export function createBaseModelBackendInterface<
         throwIfNotFound: z.boolean(),
       }),
       returns: modelProcessingStateSchema,
+    })
+    .addRpcEndpoint("estimateModelUsage", {
+      parameter: z.object({
+        modelKey: z.string(),
+        loadConfigStack: kvConfigStackSchema,
+      }),
+      returns: estimatedResourcesUsageSchema,
     });
 }
 
