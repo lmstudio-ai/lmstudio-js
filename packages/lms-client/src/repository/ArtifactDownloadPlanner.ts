@@ -60,7 +60,6 @@ export class ArtifactDownloadPlanner {
    * a listener there
    */
   private errorReceivedBeforeDownloadStart: Error | null = null;
-
   /**
    * @internal Do not construct this class yourself.
    */
@@ -143,9 +142,10 @@ export class ArtifactDownloadPlanner {
   }
 
   public [Symbol.dispose]() {
-    // If the channel is still open, we need to cancel the plan.
+    // If the channel is still open, we need to cancel the plan. This ensures we don't cancel the
+    // download even if the download planner goes out of scope.
     if (this.isChannelClosed === false) {
-      this.channel.send({ type: "cancel" });
+      this.channel.send({ type: "cancelPlan" });
     }
     this.onDisposed();
   }
@@ -199,6 +199,8 @@ export class ArtifactDownloadPlanner {
       },
     };
     this.channel.send({ type: "commit" });
+    // Here we send cancel which would cancel the download because the signal was aborted from
+    // outside That would mean the user doesn't want to continue the download
     if (signal.aborted) {
       this.channel.send({ type: "cancel" });
     } else {

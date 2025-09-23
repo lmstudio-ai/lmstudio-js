@@ -173,6 +173,13 @@ export function createRepositoryBackendInterface() {
           z.object({
             type: z.literal("commit"),
           }),
+          /**
+           * If called before committing the plan, the plan is aborted. If called after committing
+           * the plan, the download will still continue.
+           */
+          z.object({
+            type: z.literal("cancelPlan"),
+          }),
         ]),
         toClientPacket: z.discriminatedUnion("type", [
           z.object({
