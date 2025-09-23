@@ -1,11 +1,13 @@
 import {
   convertGPUSettingToGPUSplitConfig,
   convertGPUSplitConfigToGPUSetting,
+  type GPUSetting,
   type KVConfig,
   type LLMLoadModelConfig,
 } from "@lmstudio/lms-shared-types";
 import { collapseKVStackRaw } from "../KVConfig.js";
 import { llmLoadSchematics } from "../schema.js";
+import { maybeFalseValueToCheckboxValue } from "./utils.js";
 
 interface KvConfigToLLMLoadModelConfigOpts {
   /**
@@ -26,15 +28,39 @@ export function kvConfigToLLMLoadModelConfig(
   } else {
     parsed = llmLoadSchematics.parsePartial(config);
   }
+
+  let gpuFields: GPUSetting = {};
+
   const gpuSplitConfig = parsed.get("gpuSplitConfig");
   if (gpuSplitConfig !== undefined) {
-    const gpuSetting = convertGPUSplitConfigToGPUSetting(gpuSplitConfig);
-    result.gpu = gpuSetting;
+    gpuFields = {
+      ...gpuFields,
+      ...convertGPUSplitConfigToGPUSetting(gpuSplitConfig),
+    };
+    result.gpu = gpuFields;
   }
 
   const gpuStrictVramCap = parsed.get("gpuStrictVramCap");
   if (gpuStrictVramCap !== undefined) {
     result.gpuStrictVramCap = gpuStrictVramCap;
+  }
+
+  const llamaAccelerationOffloadRatio = parsed.get("llama.acceleration.offloadRatio");
+  if (llamaAccelerationOffloadRatio !== undefined) {
+    gpuFields = {
+      ...gpuFields,
+      ratio: llamaAccelerationOffloadRatio,
+    };
+    result.gpu = gpuFields;
+  }
+
+  const numCpuExpertLayersRatio = parsed.get("numCpuExpertLayersRatio");
+  if (numCpuExpertLayersRatio !== undefined) {
+    gpuFields = {
+      ...gpuFields,
+      numCpuExpertLayersRatio,
+    };
+    result.gpu = gpuFields;
   }
 
   const offloadKVCacheToGpu = parsed.get("offloadKVCacheToGpu");
@@ -48,13 +74,13 @@ export function kvConfigToLLMLoadModelConfig(
   }
 
   const ropeFrequencyBase = parsed.get("llama.ropeFrequencyBase");
-  if (ropeFrequencyBase !== undefined && ropeFrequencyBase.checked === true) {
-    result.ropeFrequencyBase = ropeFrequencyBase.value;
+  if (ropeFrequencyBase !== undefined) {
+    result.ropeFrequencyBase = ropeFrequencyBase.checked ? ropeFrequencyBase.value : false;
   }
 
   const ropeFrequencyScale = parsed.get("llama.ropeFrequencyScale");
-  if (ropeFrequencyScale !== undefined && ropeFrequencyScale.checked === true) {
-    result.ropeFrequencyScale = ropeFrequencyScale.value;
+  if (ropeFrequencyScale !== undefined) {
+    result.ropeFrequencyScale = ropeFrequencyScale.checked ? ropeFrequencyScale.value : false;
   }
 
   const evalBatchSize = parsed.get("llama.evalBatchSize");
@@ -73,8 +99,8 @@ export function kvConfigToLLMLoadModelConfig(
   }
 
   const seed = parsed.get("seed");
-  if (seed !== undefined && seed.checked === true) {
-    result.seed = seed.value;
+  if (seed !== undefined) {
+    result.seed = seed.checked ? seed.value : false;
   }
 
   const useFp16ForKVCache = parsed.get("llama.useFp16ForKVCache");
@@ -93,13 +119,17 @@ export function kvConfigToLLMLoadModelConfig(
   }
 
   const llamaKCacheQuantizationType = parsed.get("llama.kCacheQuantizationType");
-  if (llamaKCacheQuantizationType !== undefined && llamaKCacheQuantizationType.checked === true) {
-    result.llamaKCacheQuantizationType = llamaKCacheQuantizationType.value;
+  if (llamaKCacheQuantizationType !== undefined) {
+    result.llamaKCacheQuantizationType = llamaKCacheQuantizationType.checked
+      ? llamaKCacheQuantizationType.value
+      : false;
   }
 
   const llamaVCacheQuantizationType = parsed.get("llama.vCacheQuantizationType");
-  if (llamaVCacheQuantizationType !== undefined && llamaVCacheQuantizationType.checked === true) {
-    result.llamaVCacheQuantizationType = llamaVCacheQuantizationType.value;
+  if (llamaVCacheQuantizationType !== undefined) {
+    result.llamaVCacheQuantizationType = llamaVCacheQuantizationType.checked
+      ? llamaVCacheQuantizationType.value
+      : false;
   }
 
   return result;
@@ -109,33 +139,27 @@ export function llmLoadModelConfigToKVConfig(config: LLMLoadModelConfig): KVConf
   const top = llmLoadSchematics.buildPartialConfig({
     "gpuSplitConfig": convertGPUSettingToGPUSplitConfig(config.gpu),
     "gpuStrictVramCap": config.gpuStrictVramCap,
+    "llama.acceleration.offloadRatio": config.gpu?.ratio,
+    "numCpuExpertLayersRatio": config.gpu?.numCpuExpertLayersRatio,
     "offloadKVCacheToGpu": config.offloadKVCacheToGpu,
     "contextLength": config.contextLength,
-    "llama.ropeFrequencyBase":
-      config.ropeFrequencyBase !== undefined
-        ? { value: config.ropeFrequencyBase, checked: true }
-        : undefined,
-    "llama.ropeFrequencyScale":
-      config.ropeFrequencyScale !== undefined
-        ? { value: config.ropeFrequencyScale, checked: true }
-        : undefined,
+    "llama.ropeFrequencyBase": maybeFalseValueToCheckboxValue(config.ropeFrequencyBase, 0),
+    "llama.ropeFrequencyScale": maybeFalseValueToCheckboxValue(config.ropeFrequencyScale, 0),
     "llama.evalBatchSize": config.evalBatchSize,
     "llama.flashAttention": config.flashAttention,
     "llama.keepModelInMemory": config.keepModelInMemory,
-    "seed": config.seed !== undefined ? { value: config.seed, checked: true } : undefined,
+    "seed": maybeFalseValueToCheckboxValue(config.seed, 0),
     "llama.useFp16ForKVCache": config.useFp16ForKVCache,
     "llama.tryMmap": config.tryMmap,
     "numExperts": config.numExperts,
-    "llama.kCacheQuantizationType":
-      config.llamaKCacheQuantizationType !== undefined &&
-      config.llamaKCacheQuantizationType !== false
-        ? { value: config.llamaKCacheQuantizationType, checked: true }
-        : undefined,
-    "llama.vCacheQuantizationType":
-      config.llamaVCacheQuantizationType !== undefined &&
-      config.llamaVCacheQuantizationType !== false
-        ? { value: config.llamaVCacheQuantizationType, checked: true }
-        : undefined,
+    "llama.kCacheQuantizationType": maybeFalseValueToCheckboxValue(
+      config.llamaKCacheQuantizationType,
+      "f16",
+    ),
+    "llama.vCacheQuantizationType": maybeFalseValueToCheckboxValue(
+      config.llamaVCacheQuantizationType,
+      "f16",
+    ),
   });
   return collapseKVStackRaw([top]);
 }

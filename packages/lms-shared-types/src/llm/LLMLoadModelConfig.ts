@@ -161,8 +161,10 @@ export interface LLMLoadModelConfig {
    * This advanced parameter adjusts how positional information is embedded in the model's
    * representations. Increasing this value may enable better performance at high context lengths by
    * modifying how the model processes position-dependent information.
+   *
+   * Set to false to disable custom base frequency.
    */
-  ropeFrequencyBase?: number;
+  ropeFrequencyBase?: number | false;
 
   /**
    * Scaling factor for RoPE (Rotary Positional Encoding) frequency.
@@ -171,8 +173,10 @@ export interface LLMLoadModelConfig {
    * encoded. Higher values allow the model to handle longer contexts by making positional encoding
    * more granular, which can be particularly useful for extending a model beyond its original
    * training context length.
+   *
+   * Set to false to disable custom scaling.
    */
-  ropeFrequencyScale?: number;
+  ropeFrequencyScale?: number | false;
 
   /**
    * Number of input tokens to process together in a single batch during evaluation.
@@ -207,8 +211,10 @@ export interface LLMLoadModelConfig {
    * Setting a specific seed ensures that random operations within the model (like sampling)
    * produce the same results across different runs, which is important for reproducibility
    * in testing and development scenarios.
+   *
+   * Set to false to disable seeding - i.e. the output will be random.
    */
-  seed?: number;
+  seed?: number | false;
 
   /**
    * When enabled, stores the key-value cache in half-precision (FP16) format.
@@ -260,6 +266,10 @@ export interface LLMLoadModelConfig {
    * Different models respond differently to value cache quantization, so experimentation may be
    * needed to find the optimal setting for a specific use case. Set to false to disable
    * quantization.
+   *
+   * Requires Flash Attention to be enabled to function properly.
+   *
+   * Set to false to disable quantization and use full precision.
    */
   llamaVCacheQuantizationType?: LLMLlamaCacheQuantizationType | false;
 }
@@ -268,12 +278,12 @@ export const llmLoadModelConfigSchema = z.object({
   gpuStrictVramCap: z.boolean().optional(),
   offloadKVCacheToGpu: z.boolean().optional(),
   contextLength: z.number().int().min(1).optional(),
-  ropeFrequencyBase: z.number().optional(),
-  ropeFrequencyScale: z.number().optional(),
+  ropeFrequencyBase: z.number().or(z.literal(false)).optional(),
+  ropeFrequencyScale: z.number().or(z.literal(false)).optional(),
   evalBatchSize: z.number().int().min(1).optional(),
   flashAttention: z.boolean().optional(),
   keepModelInMemory: z.boolean().optional(),
-  seed: z.number().int().optional(),
+  seed: z.number().int().or(z.literal(false)).optional(),
   useFp16ForKVCache: z.boolean().optional(),
   tryMmap: z.boolean().optional(),
   numExperts: z.number().int().optional(),

@@ -1,17 +1,14 @@
 import { type SimpleLogger, type Validator } from "@lmstudio/lms-common";
 import { type EmbeddingPort } from "@lmstudio/lms-external-backend-interfaces";
-import { embeddingLlamaLoadConfigSchematics } from "@lmstudio/lms-kv-config";
+import { embeddingLoadModelConfigToKVConfig } from "@lmstudio/lms-kv-config";
 import {
-  convertGPUSettingToGPUSplitConfig,
   embeddingLoadModelConfigSchema,
   type EmbeddingLoadModelConfig,
   type EmbeddingModelInfo,
   type EmbeddingModelInstanceInfo,
-  type KVConfig,
   type ModelSpecifier,
 } from "@lmstudio/lms-shared-types";
 import { ModelNamespace } from "../modelShared/ModelNamespace.js";
-import { numberToCheckboxNumeric } from "../numberToCheckboxNumeric.js";
 import { EmbeddingDynamicHandle } from "./EmbeddingDynamicHandle.js";
 import { EmbeddingModel } from "./EmbeddingModel.js";
 
@@ -32,17 +29,7 @@ export class EmbeddingNamespace extends ModelNamespace<
   /** @internal */
   protected override readonly loadModelConfigSchema = embeddingLoadModelConfigSchema;
   /** @internal */
-  protected override loadConfigToKVConfig(config: EmbeddingLoadModelConfig): KVConfig {
-    return embeddingLlamaLoadConfigSchematics.buildPartialConfig({
-      "llama.acceleration.offloadRatio": config.gpu?.ratio,
-      "load.gpuSplitConfig": convertGPUSettingToGPUSplitConfig(config.gpu),
-      "contextLength": config.contextLength,
-      "llama.ropeFrequencyBase": numberToCheckboxNumeric(config.ropeFrequencyBase, 0, 0),
-      "llama.ropeFrequencyScale": numberToCheckboxNumeric(config.ropeFrequencyScale, 0, 0),
-      "llama.keepModelInMemory": config.keepModelInMemory,
-      "llama.tryMmap": config.tryMmap,
-    });
-  }
+  protected override loadConfigToKVConfig = embeddingLoadModelConfigToKVConfig;
   /** @internal */
   protected override createDomainSpecificModel(
     port: EmbeddingPort,

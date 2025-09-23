@@ -6,6 +6,7 @@ import {
 } from "@lmstudio/lms-shared-types";
 import { collapseKVStackRaw } from "../KVConfig.js";
 import { embeddingLoadSchematics } from "../schema.js";
+import { maybeFalseValueToCheckboxValue } from "./utils.js";
 
 interface KvConfigToEmbeddingLoadModelConfigOpts {
   /**
@@ -36,13 +37,13 @@ export function kvConfigToEmbeddingLoadModelConfig(
     result.contextLength = contextLength;
   }
   const ropeFrequencyBase = parsed.get("llama.ropeFrequencyBase");
-  if (ropeFrequencyBase !== undefined && ropeFrequencyBase.checked === true) {
-    result.ropeFrequencyBase = ropeFrequencyBase.value;
+  if (ropeFrequencyBase !== undefined) {
+    result.ropeFrequencyBase = ropeFrequencyBase.checked ? ropeFrequencyBase.value : false;
   }
 
   const ropeFrequencyScale = parsed.get("llama.ropeFrequencyScale");
-  if (ropeFrequencyScale !== undefined && ropeFrequencyScale.checked === true) {
-    result.ropeFrequencyScale = ropeFrequencyScale.value;
+  if (ropeFrequencyScale !== undefined) {
+    result.ropeFrequencyScale = ropeFrequencyScale.checked ? ropeFrequencyScale.value : false;
   }
 
   const keepModelInMemory = parsed.get("llama.keepModelInMemory");
@@ -62,15 +63,8 @@ export function embeddingLoadModelConfigToKVConfig(config: EmbeddingLoadModelCon
   const top = embeddingLoadSchematics.buildPartialConfig({
     "load.gpuSplitConfig": convertGPUSettingToGPUSplitConfig(config.gpu),
     "contextLength": config.contextLength,
-    "llama.ropeFrequencyBase":
-      config.ropeFrequencyBase !== undefined
-        ? { value: config.ropeFrequencyBase, checked: true }
-        : undefined,
-    "llama.ropeFrequencyScale":
-      config.ropeFrequencyScale !== undefined
-        ? { value: config.ropeFrequencyScale, checked: true }
-        : undefined,
-
+    "llama.ropeFrequencyBase": maybeFalseValueToCheckboxValue(config.ropeFrequencyBase, 0),
+    "llama.ropeFrequencyScale": maybeFalseValueToCheckboxValue(config.ropeFrequencyScale, 0),
     "llama.keepModelInMemory": config.keepModelInMemory,
     "llama.tryMmap": config.tryMmap,
   });
