@@ -6,7 +6,6 @@ import {
   type Validator,
 } from "@lmstudio/lms-common";
 import { type InferClientChannelType } from "@lmstudio/lms-communication";
-import { ConnectionStatus } from "@lmstudio/lms-communication/dist/types/Channel";
 import { type RepositoryBackendInterface } from "@lmstudio/lms-external-backend-interfaces";
 import { type ArtifactDownloadPlan, type DownloadProgressUpdate } from "@lmstudio/lms-shared-types";
 import { z } from "zod";
