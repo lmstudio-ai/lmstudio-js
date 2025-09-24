@@ -27,6 +27,7 @@ export interface ModelSearchResultDownloadOptionData {
   recommended?: boolean;
   downloadIdentifier: string;
   indexedModelIdentifier: string;
+  compatibilityType: ModelCompatibilityType;
 }
 export const modelSearchResultDownloadOptionDataSchema = z.object({
   quantization: z.string().optional(),
@@ -36,6 +37,7 @@ export const modelSearchResultDownloadOptionDataSchema = z.object({
   recommended: z.boolean().optional(),
   downloadIdentifier: z.string(),
   indexedModelIdentifier: z.string(),
+  compatibilityType: modelCompatibilityTypeSchema,
 }) as ZodSchema<ModelSearchResultDownloadOptionData>;
 
 export type ModelSearchResultIdentifier =
