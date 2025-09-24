@@ -131,11 +131,13 @@ export interface CreateArtifactDownloadPlannerOpts {
   owner: string;
   name: string;
   onPlanUpdated?: (plan: ArtifactDownloadPlan) => void;
+  signal?: AbortSignal;
 }
 export const createArtifactDownloadPlannerOptsSchema = z.object({
   owner: z.string(),
   name: z.string(),
   onPlanUpdated: z.function().optional(),
+  signal: z.instanceof(AbortSignal).optional(),
 }) as ZodSchema<CreateArtifactDownloadPlannerOpts>;
 
 /**
@@ -396,7 +398,7 @@ export class RepositoryNamespace {
   public createArtifactDownloadPlanner(
     opts: CreateArtifactDownloadPlannerOpts,
   ): ArtifactDownloadPlanner {
-    const { owner, name, onPlanUpdated } = this.validator.validateMethodParamOrThrow(
+    const { owner, name, onPlanUpdated, signal } = this.validator.validateMethodParamOrThrow(
       "repository",
       "createArtifactDownloadPlanner",
       "opts",
@@ -419,6 +421,7 @@ export class RepositoryNamespace {
       () => {
         this.downloadPlanFinalizationRegistry.unregister(planner);
       },
+      signal,
     );
     this.downloadPlanFinalizationRegistry.register(planner, { owner, name }, planner);
     return planner;
