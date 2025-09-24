@@ -7,6 +7,7 @@ import {
 } from "@lmstudio/lms-common";
 import { type RepositoryPort } from "@lmstudio/lms-external-backend-interfaces";
 import {
+  type ModelCompatibilityType,
   type DownloadProgressUpdate,
   type ModelSearchResultDownloadOptionData,
   type ModelSearchResultDownloadOptionFitEstimation,
@@ -32,6 +33,7 @@ export class ModelSearchResultDownloadOption {
   public readonly sizeBytes: number;
   public readonly fitEstimation?: ModelSearchResultDownloadOptionFitEstimation;
   public readonly indexedModelIdentifier: string;
+  public readonly compatibilityType: ModelCompatibilityType;
   /** @internal */
   public constructor(
     /** @internal */
@@ -46,6 +48,7 @@ export class ModelSearchResultDownloadOption {
     this.sizeBytes = data.sizeBytes;
     this.fitEstimation = this.data.fitEstimation;
     this.indexedModelIdentifier = this.data.indexedModelIdentifier;
+    this.compatibilityType = this.data.compatibilityType;
   }
   public isRecommended() {
     return this.data.recommended ?? false;
