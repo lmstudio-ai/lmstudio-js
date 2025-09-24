@@ -4,10 +4,10 @@
  * @param maybeFalseNumber - The value to translate.
  * @param valueWhenUnchecked - The value to use when the checkbox is unchecked.
  */
-export function maybeFalseNumberToCheckboxNumeric(
-  maybeFalseNumber: undefined | number | false,
-  valueWhenUnchecked: number,
-): undefined | { checked: boolean; value: number } {
+export function maybeFalseValueToCheckboxValue<TValue>(
+  maybeFalseNumber: undefined | TValue | false,
+  valueWhenUnchecked: TValue,
+): undefined | { checked: boolean; value: TValue } {
   if (maybeFalseNumber === undefined) {
     return undefined;
   }

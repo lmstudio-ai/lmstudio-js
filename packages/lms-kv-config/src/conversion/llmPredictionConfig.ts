@@ -1,7 +1,7 @@
 import { type KVConfig, type LLMPredictionConfig } from "@lmstudio/lms-shared-types";
 import { collapseKVStackRaw } from "../KVConfig.js";
 import { llmPredictionConfigSchematics } from "../schema.js";
-import { maybeFalseNumberToCheckboxNumeric } from "./utils.js";
+import { maybeFalseValueToCheckboxValue } from "./utils.js";
 
 interface KvConfigToLLMPredictionConfigOpts {
   /**
@@ -150,7 +150,7 @@ export function llmPredictionConfigToKVConfig(config: LLMPredictionConfig): KVCo
   const top = llmPredictionConfigSchematics.buildPartialConfig({
     "temperature": config.temperature,
     "contextOverflowPolicy": config.contextOverflowPolicy,
-    "maxPredictedTokens": maybeFalseNumberToCheckboxNumeric(config.maxTokens, 1),
+    "maxPredictedTokens": maybeFalseValueToCheckboxValue(config.maxTokens, 1),
     "stopStrings": config.stopStrings,
     "toolCallStopStrings": config.toolCallStopStrings,
     "structured": config.structured,
@@ -158,12 +158,12 @@ export function llmPredictionConfigToKVConfig(config: LLMPredictionConfig): KVCo
     "toolChoice": config.toolChoice,
     "toolNaming": config.toolNaming,
     "topKSampling": config.topKSampling,
-    "repeatPenalty": maybeFalseNumberToCheckboxNumeric(config.repeatPenalty, 1.1),
-    "minPSampling": maybeFalseNumberToCheckboxNumeric(config.minPSampling, 0.05),
-    "topPSampling": maybeFalseNumberToCheckboxNumeric(config.topPSampling, 0.95),
-    "llama.xtcProbability": maybeFalseNumberToCheckboxNumeric(config.xtcProbability, 0),
-    "llama.xtcThreshold": maybeFalseNumberToCheckboxNumeric(config.xtcThreshold, 0),
-    "logProbs": maybeFalseNumberToCheckboxNumeric(config.logProbs, 0),
+    "repeatPenalty": maybeFalseValueToCheckboxValue(config.repeatPenalty, 1.1),
+    "minPSampling": maybeFalseValueToCheckboxValue(config.minPSampling, 0.05),
+    "topPSampling": maybeFalseValueToCheckboxValue(config.topPSampling, 0.95),
+    "llama.xtcProbability": maybeFalseValueToCheckboxValue(config.xtcProbability, 0),
+    "llama.xtcThreshold": maybeFalseValueToCheckboxValue(config.xtcThreshold, 0),
+    "logProbs": maybeFalseValueToCheckboxValue(config.logProbs, 0),
     "llama.cpuThreads": config.cpuThreads,
     "promptTemplate": config.promptTemplate,
     "speculativeDecoding.draftModel": config.draftModel,
