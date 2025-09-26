@@ -50,7 +50,12 @@ export const gpuSplitConfigSchema = z.object({
   customRatio: z.array(z.number().min(0)),
 });
 
-export function convertGPUSettingToGPUSplitConfig(gpuSetting?: GPUSetting): GPUSplitConfig {
+export function convertGPUSettingToGPUSplitConfig(
+  gpuSetting?: GPUSetting,
+): GPUSplitConfig | undefined {
+  if (gpuSetting === undefined) {
+    return undefined;
+  }
   return {
     strategy:
       gpuSetting?.splitStrategy == "favorMainGpu"
