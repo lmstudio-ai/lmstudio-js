@@ -10,6 +10,15 @@ export function createSystemBackendInterface() {
         parameter: z.void(),
         returns: z.array(modelInfoSchema),
       })
+      /**
+       * Given a model key, list downloaded model variants of this model.
+       */
+      .addRpcEndpoint("listDownloadedModelVariants", {
+        parameter: z.object({
+          modelKey: z.string(),
+        }),
+        returns: z.array(modelInfoSchema),
+      })
       .addChannelEndpoint("alive", {
         creationParameter: z.void(),
         toServerPacket: z.void(),

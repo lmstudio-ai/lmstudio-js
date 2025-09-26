@@ -66,6 +66,31 @@ export class SystemNamespace {
     }
     return models.filter(model => model.type === domain);
   }
+
+  /**
+   * A model can have multiple variants (e.g. different quantization, or different format). This
+   * method returns detailed info about all the variants of the given modelKey.
+   *
+   * If the modelKey does not have any variants, will throw.
+   */
+  public async listDownloadedModelVariants(modelKey: string): Promise<Array<ModelInfo>> {
+    const stack = getCurrentStack(1);
+    modelKey = this.validator.validateMethodParamOrThrow(
+      "client.system",
+      "listDownloadedModelVariants",
+      "modelKey",
+      z.string(),
+      modelKey,
+      stack,
+    );
+    const variants = await this.systemPort.callRpc(
+      "listDownloadedModelVariants",
+      { modelKey },
+      { stack },
+    );
+    return variants;
+  }
+
   public async whenDisconnected(): Promise<void> {
     const stack = getCurrentStack(1);
     const channel = this.systemPort.createChannel("alive", undefined, undefined, { stack });
