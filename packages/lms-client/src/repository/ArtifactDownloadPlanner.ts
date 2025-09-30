@@ -47,7 +47,7 @@ export class ArtifactDownloadPlanner {
   private readyDeferredPromise = makePromise<void>();
   private readonly logger: SimpleLogger;
   private isReadyBoolean = false;
-  private isChannelClosed: boolean = false;
+  private isPlanCommited: boolean = false;
   private planValue: ArtifactDownloadPlan;
   private currentDownload: ArtifactDownloadPlannerCurrentDownload | null = null;
   /**
@@ -60,7 +60,6 @@ export class ArtifactDownloadPlanner {
    * a listener there
    */
   private errorReceivedBeforeDownloadStart: Error | null = null;
-
   /**
    * @internal Do not construct this class yourself.
    */
@@ -75,6 +74,7 @@ export class ArtifactDownloadPlanner {
     >,
     private readonly validator: Validator,
     private readonly onDisposed: () => void,
+    public readonly signal?: AbortSignal,
   ) {
     this.logger = new SimpleLogger(`ArtifactDownloadPlanner(${owner}/${name})`);
     // Don't unhandled rejection - we don't require user to await on this promise.
@@ -91,10 +91,6 @@ export class ArtifactDownloadPlanner {
       ],
       downloadSizeBytes: 0,
     };
-    this.channel.onClose.subscribe(() => {
-      // Keep track of whether the channel is closed
-      this.isChannelClosed = true;
-    });
     this.channel.onMessage.subscribe(message => {
       const messageType = message.type;
       switch (messageType) {
@@ -140,12 +136,22 @@ export class ArtifactDownloadPlanner {
         this.currentDownload.downloadFailed(error);
       }
     });
+    if (this.signal !== undefined) {
+      if (this.signal.aborted) {
+        this.channel.send({ type: "cancelPlan" });
+      } else {
+        this.signal.addEventListener("abort", () => {
+          this.channel.send({ type: "cancelPlan" });
+        });
+      }
+    }
   }
 
   public [Symbol.dispose]() {
-    // If the channel is still open, we need to cancel the plan.
-    if (this.isChannelClosed === false) {
-      this.channel.send({ type: "cancel" });
+    // If the channel is still open, we need to cancel the plan. This ensures we don't cancel the
+    // download even if the download planner goes out of scope.
+    if (this.isPlanCommited === false) {
+      this.channel.send({ type: "cancelPlan" });
     }
     this.onDisposed();
   }
@@ -199,11 +205,14 @@ export class ArtifactDownloadPlanner {
       },
     };
     this.channel.send({ type: "commit" });
+    this.isPlanCommited = true;
+    // Here we send cancel because the signal was aborted from the outside. This means the user
+    // doesn't want to continue the download
     if (signal.aborted) {
-      this.channel.send({ type: "cancel" });
+      this.channel.send({ type: "cancelDownload" });
     } else {
       signal.addEventListener("abort", () => {
-        this.channel.send({ type: "cancel" });
+        this.channel.send({ type: "cancelDownload" });
       });
     }
     return await promise.catch(error => {

@@ -161,17 +161,22 @@ export function createRepositoryBackendInterface() {
         }),
         toServerPacket: z.discriminatedUnion("type", [
           /**
-           * If called before committing the plan, the plan is aborted. If called after committing
-           * the plan, the download is canceled.
+           * Cancels the download.
            */
           z.object({
-            type: z.literal("cancel"),
+            type: z.literal("cancelDownload"),
           }),
           /**
            * Can only be called after plan ready. Once called, starts the plan.
            */
           z.object({
             type: z.literal("commit"),
+          }),
+          /**
+           * Aborts the plan.
+           */
+          z.object({
+            type: z.literal("cancelPlan"),
           }),
         ]),
         toClientPacket: z.discriminatedUnion("type", [
