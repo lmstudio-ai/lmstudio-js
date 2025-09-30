@@ -207,7 +207,7 @@ export class ArtifactDownloadPlanner {
     this.channel.send({ type: "commit" });
     this.isPlanCommited = true;
     // Here we send cancel because the signal was aborted from the outside. This means the user
-    // doesn't  want to continue the download
+    // doesn't want to continue the download
     if (signal.aborted) {
       this.channel.send({ type: "cancelDownload" });
     } else {
