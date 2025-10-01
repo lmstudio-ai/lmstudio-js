@@ -176,7 +176,7 @@ export function createPluginsBackendInterface() {
             /**
              * The base URL the plugin should use to connect to the server.
              */
-            baseUrl: z.string(),
+            baseUrl: z.string().optional(),
 
             /**
              * If the plugin is a sandboxed deno plugin, this is the path to the Deno broker IPC

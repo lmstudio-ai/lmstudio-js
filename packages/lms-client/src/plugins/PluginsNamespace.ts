@@ -65,7 +65,7 @@ const registerDevelopmentPluginOptsSchema = z.object({
 interface RegisterDevelopmentPluginResultBase {
   clientIdentifier: string;
   clientPasskey: string;
-  baseUrl: string;
+  baseUrl?: string;
   denoBrokerIpcPath?: string;
 }
 
@@ -77,7 +77,7 @@ interface RegisterDevelopmentPluginResultBase {
 export interface RegisterDevelopmentPluginResult {
   clientIdentifier: string;
   clientPasskey: string;
-  baseUrl: string;
+  baseUrl?: string;
   /**
    * If the plugin is a sandboxed deno plugin, this is the path to the Deno broker IPC socket.
    */
