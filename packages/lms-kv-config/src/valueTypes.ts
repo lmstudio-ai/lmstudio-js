@@ -288,7 +288,7 @@ const baseKVValueTypesLibraryBuilder = new KVFieldValueTypesLibraryBuilder({
   })
   .valueType("directory", {
     paramType: {
-      access: z.enum(["read", "readWrite", "none"]).optional(),
+      accessPermission: z.enum(["read", "readWrite", "none"]).optional(),
     },
     schemaMaker: () => {
       return z.string();
@@ -302,7 +302,7 @@ const baseKVValueTypesLibraryBuilder = new KVFieldValueTypesLibraryBuilder({
   })
   .valueType("directoryGroup", {
     paramType: {
-      access: z.enum(["read", "readWrite", "none"]).optional(),
+      accessPermission: z.enum(["read", "readWrite", "none"]).optional(),
     },
     schemaMaker: () => {
       return z.array(z.string());
