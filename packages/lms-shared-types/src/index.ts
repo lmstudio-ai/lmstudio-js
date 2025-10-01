@@ -488,3 +488,4 @@ export {
   virtualModelSuggestionSchema,
 } from "./VirtualModelDefinition.js";
 export { zodSchemaSchema } from "./Zod.js";
+export { Quantization, quantizationSchema } from "./Quantization.js";
