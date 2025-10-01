@@ -19,9 +19,8 @@ export const pluginRunnerTypeSchema = z.enum([
  *
  * Configures the type of file system access.
  */
-export type PluginSandboxFileSystemSettingsType = "fullAccess" | "restricted" | "none";
+export type PluginSandboxFileSystemSettingsType = "restricted" | "none";
 export const pluginSandboxFileSystemSettingsTypeSchema = z.enum([
-  "fullAccess",
   "restricted",
   "none",
 ]) as ZodSchema<PluginSandboxFileSystemSettingsType>;

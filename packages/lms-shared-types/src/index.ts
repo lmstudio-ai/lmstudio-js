@@ -360,6 +360,14 @@ export {
   pluginManifestSchema,
   PluginRunnerType,
   pluginRunnerTypeSchema,
+  PluginSandboxFileSystemSettings,
+  pluginSandboxFileSystemSettingsSchema,
+  PluginSandboxFileSystemSettingsType,
+  pluginSandboxFileSystemSettingsTypeSchema,
+  PluginSandboxNetworkSettings,
+  pluginSandboxNetworkSettingsSchema,
+  PluginSandboxSettings,
+  pluginSandboxSettingsSchema,
 } from "./PluginManifest.js";
 export { PresetManifest, presetManifestSchema } from "./PresetManifest.js";
 export { reasonableKeyStringSchema } from "./reasonable.js";

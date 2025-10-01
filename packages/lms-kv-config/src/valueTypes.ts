@@ -285,6 +285,37 @@ const baseKVValueTypesLibraryBuilder = new KVFieldValueTypesLibraryBuilder({
       }
       return quoted.join(", ");
     },
+  })
+  .valueType("directory", {
+    paramType: {
+      accessPermission: z.enum(["read", "readWrite", "none"]).optional(),
+    },
+    schemaMaker: () => {
+      return z.string();
+    },
+    effectiveEquals: (a, b) => {
+      return a === b;
+    },
+    stringify: value => {
+      return value;
+    },
+  })
+  .valueType("directoryGroup", {
+    paramType: {
+      accessPermission: z.enum(["read", "readWrite", "none"]).optional(),
+    },
+    schemaMaker: () => {
+      return z.array(z.string());
+    },
+    effectiveEquals: (a, b) => {
+      return a.length === b.length && a.every((v, i) => v === b[i]);
+    },
+    stringify: value => {
+      if (value.length === 0) {
+        return "<Empty>";
+      }
+      return value.join(", ");
+    },
   });
 
 /**
