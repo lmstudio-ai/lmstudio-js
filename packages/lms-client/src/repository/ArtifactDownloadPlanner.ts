@@ -133,10 +133,10 @@ export class ArtifactDownloadPlanner {
       if (this.currentDownload === null) {
         this.errorReceivedBeforeDownloadStart = error;
         this.readyDeferredPromise.reject(error);
-        this.isErrored = true;
       } else {
         this.currentDownload.downloadFailed(error);
       }
+      this.isErrored = true;
     });
     if (this.signal !== undefined) {
       if (this.signal.aborted) {
