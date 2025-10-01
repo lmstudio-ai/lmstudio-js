@@ -55,6 +55,12 @@ export {
 export { CitationSource, citationSourceSchema } from "./CitationSource.js";
 export { ColorPalette, colorPalette, colorPaletteSchema } from "./ColorPalette.js";
 export {
+  DenoBrokerRequest,
+  denoBrokerRequestSchema,
+  DenoBrokerResponse,
+  denoBrokerResponseSchema,
+} from "./DenoBroker.js";
+export {
   DiagnosticsLogEvent,
   DiagnosticsLogEventData,
   diagnosticsLogEventDataSchema,
