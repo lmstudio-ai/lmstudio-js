@@ -97,7 +97,9 @@ export type {
   InnerFieldStringifyOpts,
   KVConcreteFieldValueType,
   KVConcreteFieldValueTypesMap,
+  KVConfigBuilder,
   KVFieldValueTypeLibrary,
+  KVVirtualConfigSchema,
   KVVirtualFieldValueType,
   KVVirtualFieldValueTypesMapping,
 } from "@lmstudio/lms-kv-config";

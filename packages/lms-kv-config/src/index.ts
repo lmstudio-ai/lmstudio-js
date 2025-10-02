@@ -1,15 +1,15 @@
 export {
-  kvConfigToLLMPredictionConfig,
-  llmPredictionConfigToKVConfig,
-} from "./conversion/llmPredictionConfig.js";
+  embeddingLoadModelConfigToKVConfig,
+  kvConfigToEmbeddingLoadModelConfig,
+} from "./conversion/embeddingLoadModelConfig.js";
 export {
   kvConfigToLLMLoadModelConfig,
   llmLoadModelConfigToKVConfig,
 } from "./conversion/llmLoadModelConfig.js";
 export {
-  kvConfigToEmbeddingLoadModelConfig,
-  embeddingLoadModelConfigToKVConfig,
-} from "./conversion/embeddingLoadModelConfig.js";
+  kvConfigToLLMPredictionConfig,
+  llmPredictionConfigToKVConfig,
+} from "./conversion/llmPredictionConfig.js";
 export {
   addKVConfigToBaseOfStack,
   addKVConfigToStack,
@@ -25,6 +25,7 @@ export {
   KVConcreteFieldSchema,
   KVConcreteFieldValueType,
   KVConcreteFieldValueTypesMap,
+  KVConfigBuilder,
   kvConfigEquals,
   KVConfigSchematics,
   KVConfigSchematicsBuilder,
@@ -43,6 +44,7 @@ export {
   stripBaseKeyFromKVConfig,
 } from "./KVConfig.js";
 export {
+  customFieldConfigSchematics,
   embeddingLlamaLoadConfigSchematics,
   embeddingLoadSchematics,
   embeddingSharedLoadConfigSchematics,
@@ -75,7 +77,6 @@ export {
   retrievalSchematics,
   TypedConfigFieldFilter,
   TypedConfigSchematics,
-  customFieldConfigSchematics,
 } from "./schema.js";
 export {
   BasicKVFieldValueTypeLibraryMap,
