@@ -66,6 +66,13 @@ export function createSystemBackendInterface() {
         parameter: z.void(),
         returns: z.void(),
       })
+      .addRpcEndpoint("info", {
+        parameter: z.void(),
+        returns: z.object({
+          pid: z.number().int(),
+          isDaemon: z.boolean(),
+        }),
+      })
   );
 }
 

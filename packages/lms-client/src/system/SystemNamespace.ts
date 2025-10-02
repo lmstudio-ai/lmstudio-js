@@ -179,4 +179,12 @@ export class SystemNamespace {
     const stack = getCurrentStack(1);
     return await this.systemPort.callRpc("stopHttpServer", undefined, { stack });
   }
+
+  /**
+   * Get process information including PID and daemon status.
+   */
+  public async getInfo(): Promise<{ pid: number; isDaemon: boolean }> {
+    const stack = getCurrentStack(1);
+    return await this.systemPort.callRpc("info", undefined, { stack });
+  }
 }
