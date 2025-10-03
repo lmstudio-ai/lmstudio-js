@@ -165,8 +165,27 @@ export function createPluginsBackendInterface() {
         toClientPacket: z.discriminatedUnion("type", [
           z.object({
             type: z.literal("ready"),
+            /**
+             * The client identifier the plugin should use to connect to the server.
+             */
             clientIdentifier: z.string(),
+            /**
+             * The client passkey the plugin should use to connect to the server.
+             */
             clientPasskey: z.string(),
+            /**
+             * The base URL the plugin should use to connect to the server.
+             */
+            baseUrl: z.string().optional(),
+
+            /**
+             * If the plugin is a sandboxed deno plugin, this is the path to the Deno broker IPC
+             * socket.
+             *
+             * The lifetime of this broker is tied to the development plugin. i.e. when the
+             * development plugin is unregistered, the broker will be terminated automatically.
+             */
+            denoBrokerIpcPath: z.string().optional(),
           }),
         ]),
         toServerPacket: z.discriminatedUnion("type", [
