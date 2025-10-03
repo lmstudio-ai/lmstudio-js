@@ -48,6 +48,7 @@ export class ArtifactDownloadPlanner {
   private readonly logger: SimpleLogger;
   private isReadyBoolean = false;
   private isPlanCommited: boolean = false;
+  private isErrored: boolean = false;
   private planValue: ArtifactDownloadPlan;
   private currentDownload: ArtifactDownloadPlannerCurrentDownload | null = null;
   /**
@@ -135,6 +136,7 @@ export class ArtifactDownloadPlanner {
       } else {
         this.currentDownload.downloadFailed(error);
       }
+      this.isErrored = true;
     });
     if (this.signal !== undefined) {
       if (this.signal.aborted) {
@@ -150,7 +152,7 @@ export class ArtifactDownloadPlanner {
   public [Symbol.dispose]() {
     // If the channel is still open, we need to cancel the plan. This ensures we don't cancel the
     // download even if the download planner goes out of scope.
-    if (this.isPlanCommited === false) {
+    if (this.isPlanCommited === false && this.isErrored == false) {
       this.channel.send({ type: "cancelPlan" });
     }
     this.onDisposed();
