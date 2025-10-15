@@ -34,6 +34,7 @@ import {
   type SystemPort,
 } from "@lmstudio/lms-external-backend-interfaces";
 import { generateRandomBase64 } from "@lmstudio/lms-isomorphic";
+import { lmstudioAPITokenRegex } from "@lmstudio/lms-shared-types";
 import chalk from "chalk";
 import process from "process";
 import { z } from "zod";
@@ -78,6 +79,15 @@ export interface LMStudioClientConstructorOpts {
    */
   verboseErrorMessages?: boolean;
   /**
+   * The API token to access this LM Studio instance. This is not required unless LM Studio is
+   * configured to mandate API tokens.
+   *
+   * API tokens are create within LM Studio.
+   */
+  apiToken?: string;
+  /**
+   * @deprecated Please use {@link apiToken} instead.
+   *
    * Changes the client identifier used to authenticate with LM Studio. By default, it uses a
    * randomly generated string.
    *
@@ -86,6 +96,8 @@ export interface LMStudioClientConstructorOpts {
    */
   clientIdentifier?: string;
   /**
+   * @deprecated Please use {@link apiToken} instead.
+   *
    * Changes the client passkey used to authenticate with LM Studio. By default, it uses a randomly
    * generated string.
    *
@@ -99,6 +111,7 @@ const constructorOptsSchema = z
     logger: z.any().optional(),
     baseUrl: z.string().optional(),
     verboseErrorMessages: z.boolean().optional(),
+    apiToken: z.string().optional(),
     clientIdentifier: z.string().optional(),
     clientPasskey: z.string().optional(),
 
@@ -307,8 +320,9 @@ export class LMStudioClient {
       logger,
       baseUrl,
       verboseErrorMessages,
-      clientIdentifier,
-      clientPasskey,
+      apiToken,
+      clientIdentifier: clientIdentifierInput,
+      clientPasskey: clientPasskeyInput,
       disableConnection,
       llmPort,
       embeddingPort,
@@ -357,8 +371,36 @@ export class LMStudioClient {
       );
     }
 
+    let clientIdentifier = clientIdentifierInput;
+    let clientPasskey = clientPasskeyInput;
+
+    if (apiToken !== undefined && (clientIdentifier !== undefined || clientPasskey !== undefined)) {
+      throw new Error(text`
+        You cannot pass both apiToken and clientIdentifier/clientPasskey. clientIdentifier and
+        clientPasskey are legacy authentication methods and have been replaced by apiToken.
+      `);
+    }
+
+    if (apiToken !== undefined) {
+      const match = apiToken.match(lmstudioAPITokenRegex);
+      if (match === null) {
+        throw new Error(text`
+          The apiToken you passed in when constructing the LMStudioClient does not look like a valid
+          LM Studio API token.
+
+          LM Studio API tokens are obtained from LM Studio, and they look like this:
+          sk-lm-xxxxxxxxxxxxxxxxxxxxxxxxxxxxx.
+        `);
+      }
+      if (match.groups === undefined) {
+        throw new Error("Unexpected - match.groups is undefined.");
+      }
+      clientIdentifier = match.groups.clientIdentifier;
+      clientPasskey = match.groups.clientPasskey;
+    }
+
     this.logger = new SimpleLogger("LMStudioClient", logger);
-    this.clientIdentifier = clientIdentifier ?? generateRandomBase64(18);
+    this.clientIdentifier = clientIdentifier ?? `guest:${generateRandomBase64(18)}`;
     this.clientPasskey = clientPasskey ?? generateRandomBase64(18);
 
     const stack = getCurrentStack(1);

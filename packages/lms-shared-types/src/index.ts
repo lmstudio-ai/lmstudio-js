@@ -319,6 +319,7 @@ export {
   promptPreprocessorUpdateSchema,
 } from "./llm/processing/PromptPreprocessorUpdate.js";
 export { TokenSourceIdentifier, tokenSourceIdentifierSchema } from "./llm/TokenSourceIdentifier.js";
+export { lmstudioAPITokenRegex } from "./lmstudioAPIToken.js";
 export { LogLevel, logLevelSchema } from "./LogLevel.js";
 export { ModelCompatibilityType, modelCompatibilityTypeSchema } from "./ModelCompatibilityType.js";
 export { ModelDomainType, modelDomainTypeSchema } from "./ModelDomainType.js";
@@ -370,6 +371,7 @@ export {
   pluginSandboxSettingsSchema,
 } from "./PluginManifest.js";
 export { PresetManifest, presetManifestSchema } from "./PresetManifest.js";
+export { Quantization, quantizationSchema } from "./Quantization.js";
 export { reasonableKeyStringSchema } from "./reasonable.js";
 export { RemotePluginInfo, remotePluginInfoSchema } from "./RemotePluginInfo.js";
 export {
@@ -488,4 +490,3 @@ export {
   virtualModelSuggestionSchema,
 } from "./VirtualModelDefinition.js";
 export { zodSchemaSchema } from "./Zod.js";
-export { Quantization, quantizationSchema } from "./Quantization.js";

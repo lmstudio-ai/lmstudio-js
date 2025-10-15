@@ -4,7 +4,7 @@ import {
   SimpleLogger,
   SyncEvent,
   text,
-  type LoggerInterface
+  type LoggerInterface,
 } from "@lmstudio/lms-common";
 import { type AuthPacket } from "@lmstudio/lms-communication";
 import { type ClientHolder } from "./AuthenticatedWsServer.js";
