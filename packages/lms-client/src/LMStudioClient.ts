@@ -82,7 +82,7 @@ export interface LMStudioClientConstructorOpts {
    * The API token to access this LM Studio instance. This is not required unless LM Studio is
    * configured to mandate API tokens.
    *
-   * You can find API token settings in LM Studio: `Developer Tab -> Settings`
+   * API tokens are create within LM Studio.
    */
   apiToken?: string;
   /**
@@ -388,8 +388,8 @@ export class LMStudioClient {
           The apiToken you passed in when constructing the LMStudioClient does not look like a valid
           LM Studio API token.
 
-          LM Studio API tokens are obtained from LM Studio (Developer Tab -> Settings), and they
-          look like this: sk-lm-xxxxxxxxxxxxxxxxxxxxxxxxxxxxx.
+          LM Studio API tokens are obtained from LM Studio, and they look like this:
+          sk-lm-xxxxxxxxxxxxxxxxxxxxxxxxxxxxx.
         `);
       }
       if (match.groups === undefined) {
