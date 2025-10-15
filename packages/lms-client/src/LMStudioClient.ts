@@ -400,7 +400,7 @@ export class LMStudioClient {
     }
 
     this.logger = new SimpleLogger("LMStudioClient", logger);
-    this.clientIdentifier = clientIdentifier ?? generateRandomBase64(18);
+    this.clientIdentifier = clientIdentifier ?? `guest:${generateRandomBase64(18)}`;
     this.clientPasskey = clientPasskey ?? generateRandomBase64(18);
 
     const stack = getCurrentStack(1);
