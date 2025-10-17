@@ -383,6 +383,7 @@ export class LMStudioClient {
 
     if (
       process.env.LMSTUDIO_API_TOKEN !== undefined &&
+      process.env.LMSTUDIO_API_TOKEN !== "" &&
       (clientIdentifier !== undefined || clientPasskey !== undefined)
     ) {
       throw new Error(text`
@@ -408,7 +409,10 @@ export class LMStudioClient {
       }
       clientIdentifier = match.groups.clientIdentifier;
       clientPasskey = match.groups.clientPasskey;
-    } else if (process.env.LMSTUDIO_API_TOKEN !== undefined) {
+    } else if (
+      process.env.LMSTUDIO_API_TOKEN !== undefined &&
+      process.env.LMSTUDIO_API_TOKEN !== ""
+    ) {
       const match = process.env.LMSTUDIO_API_TOKEN.match(lmstudioAPITokenRegex);
       if (match === null) {
         throw new Error(text`
