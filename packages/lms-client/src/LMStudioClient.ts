@@ -381,12 +381,39 @@ export class LMStudioClient {
       `);
     }
 
+    if (
+      process.env.LMSTUDIO_API_TOKEN !== undefined &&
+      (clientIdentifier !== undefined || clientPasskey !== undefined)
+    ) {
+      throw new Error(text`
+        You cannot set LMSTUDIO_API_TOKEN environment variable and pass in
+        clientIdentifier/clientPasskey. clientIdentifier and clientPasskey are legacy
+        authentication methods and have been replaced by apiToken.
+      `);
+    }
+
     if (apiToken !== undefined) {
       const match = apiToken.match(lmstudioAPITokenRegex);
       if (match === null) {
         throw new Error(text`
           The apiToken you passed in when constructing the LMStudioClient does not look like a valid
           LM Studio API token.
+
+          LM Studio API tokens are obtained from LM Studio, and they look like this:
+          sk-lm-xxxxxxxxxxxxxxxxxxxxxxxxxxxxx.
+        `);
+      }
+      if (match.groups === undefined) {
+        throw new Error("Unexpected - match.groups is undefined.");
+      }
+      clientIdentifier = match.groups.clientIdentifier;
+      clientPasskey = match.groups.clientPasskey;
+    } else if (process.env.LMSTUDIO_API_TOKEN !== undefined) {
+      const match = process.env.LMSTUDIO_API_TOKEN.match(lmstudioAPITokenRegex);
+      if (match === null) {
+        throw new Error(text`
+          The LMSTUDIO_API_TOKEN environment variable does not look like a valid LM Studio API
+          token.
 
           LM Studio API tokens are obtained from LM Studio, and they look like this:
           sk-lm-xxxxxxxxxxxxxxxxxxxxxxxxxxxxx.
