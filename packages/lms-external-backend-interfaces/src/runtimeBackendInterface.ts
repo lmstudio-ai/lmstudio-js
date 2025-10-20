@@ -74,7 +74,6 @@ export function createRuntimeBackendInterface() {
           }),
           z.object({
             type: z.literal("success"),
-            defaultIdentifier: z.string(),
           }),
         ]),
         toServerPacket: z.discriminatedUnion("type", [
