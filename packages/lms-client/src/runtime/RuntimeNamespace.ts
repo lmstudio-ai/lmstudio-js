@@ -11,6 +11,7 @@ import {
   type RuntimeEngineSpecifier,
   type SelectedRuntimeEngineMap,
 } from "@lmstudio/lms-shared-types";
+import { RuntimeExtensionsNamespace } from "./RuntimeExtensionsNamespace";
 
 /** @public */
 export class RuntimeEngineNamespace {
@@ -28,7 +29,9 @@ export class RuntimeEngineNamespace {
 
   /**
    * List all available runtime engines.
-   * @public
+   *
+   * @experimental [EXP-RUNTIME-EXTENSION] Runtime extensions related APIs are experimental and may
+   * change in the future.
    */
   public async list(): Promise<Array<RuntimeEngineInfo>> {
     const stack = getCurrentStack(1);
@@ -37,7 +40,9 @@ export class RuntimeEngineNamespace {
 
   /**
    * Get all runtime engine selections.
-   * @public
+   *
+   * @experimental [EXP-RUNTIME-EXTENSION] Runtime extensions related APIs are experimental and may
+   * change in the future.
    */
   public async getSelections(): Promise<SelectedRuntimeEngineMap> {
     const stack = getCurrentStack(1);
@@ -46,7 +51,9 @@ export class RuntimeEngineNamespace {
 
   /**
    * Select a runtime engine for a specific model format.
-   * @public
+   *
+   * @experimental [EXP-RUNTIME-EXTENSION] Runtime extensions related APIs are experimental and may
+   * change in the future.
    */
   public async select(
     engine: RuntimeEngineSpecifier,
@@ -58,7 +65,9 @@ export class RuntimeEngineNamespace {
 
   /**
    * Remove a runtime engine.
-   * @public
+   *
+   * @experimental [EXP-RUNTIME-EXTENSION] Runtime extensions related APIs are experimental and may
+   * change in the future.
    */
   public async remove(engine: RuntimeEngineSpecifier): Promise<void> {
     const stack = getCurrentStack(1);
@@ -71,8 +80,21 @@ export class RuntimeNamespace {
   /** @internal */
   private readonly logger: SimpleLogger;
 
-  /** @public */
+  /**
+   * @public
+   *
+   * @experimental [EXP-RUNTIME-EXTENSION] Runtime extensions related APIs are experimental and may
+   * change in the future.
+   */
   public readonly engine: RuntimeEngineNamespace;
+
+  /**
+   * @public
+   *
+   * @experimental [EXP-RUNTIME-EXTENSION] Runtime extensions related APIs are experimental and may
+   * change in the future.
+   */
+  public readonly extensions: RuntimeExtensionsNamespace;
 
   /** @internal */
   public constructor(
@@ -82,5 +104,10 @@ export class RuntimeNamespace {
   ) {
     this.logger = new SimpleLogger("Runtime", parentLogger);
     this.engine = new RuntimeEngineNamespace(this.runtimePort, this.validator, parentLogger);
+    this.extensions = new RuntimeExtensionsNamespace(
+      this.runtimePort,
+      this.validator,
+      parentLogger,
+    );
   }
 }
