@@ -18,28 +18,45 @@ import { z, type ZodSchema } from "zod";
 
 /**
  * Options to use with {@link RuntimeExtensionsNamespace.search}.
+ *
+ * @experimental [EXP-RUNTIME-EXTENSION] Runtime extensions related APIs are experimental and may
+ * change in the future.
  */
 export interface RuntimeExtensionsSearchOpts {
-  channel: "stable" | "beta";
-  includeIncompatible: boolean;
+  channel?: "stable" | "beta";
+  includeIncompatible?: boolean;
 }
 const runtimeExtensionsSearchOptsSchema = z.object({
-  channel: z.enum(["stable", "beta"]),
-  includeIncompatible: z.boolean(),
+  channel: z.enum(["stable", "beta"]).optional(),
+  includeIncompatible: z.boolean().optional(),
 }) as ZodSchema<RuntimeExtensionsSearchOpts>;
 
 /**
  * Options to use with {@link RuntimeExtensionsNamespace.download}.
+ *
+ * @experimental [EXP-RUNTIME-EXTENSION] Runtime extensions related APIs are experimental and may
+ * change in the future.
  */
 export interface DownloadRuntimeExtensionOpts {
   onProgress?: (update: DownloadProgressUpdate) => void;
   onStartFinalizing?: () => void;
   signal?: AbortSignal;
+  /**
+   * If another version of this runtime extension is installed and currently selected, controls
+   * whether to switch those selections to the newly downloaded version.
+   *
+   * - false (default): download only; keep existing selections.
+   * - true: update selections to the new version.
+   *
+   * No effect if no other version exists or is being used.
+   */
+  updateSelections?: boolean;
 }
 const downloadOptsSchema = z.object({
   onProgress: z.function().optional(),
   onStartFinalizing: z.function().optional(),
   signal: z.instanceof(AbortSignal).optional(),
+  updateSelections: z.boolean().optional(),
 }) as ZodSchema<DownloadRuntimeExtensionOpts>;
 
 export class RuntimeExtensionsNamespace {
@@ -64,7 +81,7 @@ export class RuntimeExtensionsNamespace {
   ): Promise<Array<DownloadableRuntimeExtensionInfo>> {
     const stack = getCurrentStack(1);
 
-    [query, opts] = this.validator.validateMethodParamsOrThrow(
+    [query, opts = {}] = this.validator.validateMethodParamsOrThrow(
       "client.runtime.extensions",
       "search",
       ["query", "opts"],
@@ -77,8 +94,8 @@ export class RuntimeExtensionsNamespace {
       "searchRuntimeExtensions",
       {
         query,
-        channelOverride: opts?.channel,
-        includeIncompatible: opts?.includeIncompatible ?? false,
+        channelOverride: opts.channel,
+        includeIncompatible: opts.includeIncompatible ?? false,
       },
       { stack },
     );
@@ -111,6 +128,7 @@ export class RuntimeExtensionsNamespace {
       {
         name: specifier.name,
         version: specifier.version,
+        updateSelections: opts.updateSelections ?? false,
       },
       message => {
         const messageType = message.type;
@@ -125,7 +143,7 @@ export class RuntimeExtensionsNamespace {
           }
           case "success": {
             resolve();
-            return message.defaultIdentifier;
+            return;
           }
           default: {
             const exhaustiveCheck: never = message;
@@ -152,9 +170,11 @@ export class RuntimeExtensionsNamespace {
     const stopHandleAbortSignal = handleAbortSignal(opts.signal, () => {
       channel.send({ type: "cancel" });
     });
-    promise.finally(() => {
-      stopHandleAbortSignal();
-    });
+    promise
+      .finally(() => {
+        stopHandleAbortSignal();
+      })
+      .catch(() => {});
     return await promise;
   }
 }

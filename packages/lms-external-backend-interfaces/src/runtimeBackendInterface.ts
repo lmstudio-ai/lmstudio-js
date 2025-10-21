@@ -63,6 +63,16 @@ export function createRuntimeBackendInterface() {
         creationParameter: z.object({
           name: z.string(),
           version: z.string(),
+          /**
+           * If another version of this runtime extension is installed and currently selected,
+           * controls whether to switch those selections to the newly downloaded version.
+           *
+           * - false: download only; keep existing selections.
+           * - true: update selections to the new version.
+           *
+           * No effect if no other version exists or is being used.
+           */
+          updateSelections: z.boolean(),
         }),
         toClientPacket: z.discriminatedUnion("type", [
           z.object({

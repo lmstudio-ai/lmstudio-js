@@ -82,12 +82,12 @@ export const runtimeExtensionInfoSchema = z.discriminatedUnion("type", [
 
 export interface DownloadableRuntimeExtensionInfoAdditionalFields {
   /**
-   * If the extension is already installed, the version of the local installation.
+   * If the extension is already installed, the local versions available.
    */
-  localVersion: string | null;
+  localVersions: Array<string>;
 }
 export const downloadableRuntimeExtensionInfoAdditionalFieldsSchema = z.object({
-  localVersion: z.string().nullable(),
+  localVersions: z.array(z.string()),
 });
 
 export type DownloadableRuntimeEngineExtension = RuntimeEngineExtensionInfo &
