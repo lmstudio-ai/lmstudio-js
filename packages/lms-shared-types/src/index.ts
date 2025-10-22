@@ -449,6 +449,26 @@ export {
   selectedRuntimeEngineMapSchema,
 } from "./RuntimeEngine.js";
 export {
+  DownloadableRuntimeEngineExtension,
+  downloadableRuntimeEngineExtensionSchema,
+  DownloadableRuntimeExtensionInfo,
+  DownloadableRuntimeExtensionInfoAdditionalFields,
+  downloadableRuntimeExtensionInfoAdditionalFieldsSchema,
+  downloadableRuntimeExtensionInfoSchema,
+  DownloadableRuntimeFrameworkExtension,
+  downloadableRuntimeFrameworkExtensionSchema,
+  RuntimeEngineExtensionInfo,
+  runtimeEngineExtensionInfoSchema,
+  RuntimeExtensionInfo,
+  RuntimeExtensionInfoBase,
+  runtimeExtensionInfoSchema,
+  RuntimeExtensionSpecifier,
+  runtimeExtensionSpecifierSchema,
+  runtimeExtensionSpecifierSchemaBase,
+  RuntimeFrameworkExtensionInfo,
+  runtimeFrameworkExtensionInfoSchema,
+} from "./RuntimeExtension.js";
+export {
   KVConfigSchematicsDeserializationError,
   kvConfigSchematicsDeserializationErrorSchema,
   SerializedKVConfigSchematics,
