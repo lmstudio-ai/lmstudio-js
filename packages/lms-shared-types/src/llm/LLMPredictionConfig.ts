@@ -2,6 +2,7 @@ import { z, type ZodSchema } from "zod";
 import { kvConfigSchema, type KVConfig } from "../KVConfig.js";
 import { toolNamingSchema, type ToolNaming } from "../ToolNaming.js";
 import { zodSchemaSchema } from "../Zod.js";
+import { imageResizeSettingsSchema, type ImageResizeSettings } from "./ImageResizeSettings.js";
 import { llmPromptTemplateSchema, type LLMPromptTemplate } from "./LLMPromptTemplate.js";
 import {
   llmStructuredPredictionSettingSchema,
@@ -287,6 +288,14 @@ export interface LLMPredictionConfigInput<TStructuredOutputType = unknown> {
    */
   reasoningParsing?: LLMReasoningParsing;
   /**
+   * Controls how images are resized before being sent to the LLM.
+   *
+   * @experimental [EXP-IMAGE-RESIZE] Image resize settings are experimental and may change in the
+   * future.
+   * @public
+   */
+  imageResize?: ImageResizeSettings;
+  /**
    * Raw KV Config.
    *
    * @experimental
@@ -316,6 +325,7 @@ export const llmPredictionConfigInputSchema = z.object({
   speculativeDecodingMinDraftLengthToConsider: z.number().int().min(0).optional(),
   speculativeDecodingMinContinueDraftingProbability: z.number().optional(),
   reasoningParsing: llmReasoningParsingSchema.optional(),
+  imageResize: imageResizeSettingsSchema.optional(),
   raw: kvConfigSchema.optional(),
 });
 

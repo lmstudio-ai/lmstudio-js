@@ -138,6 +138,7 @@ export {
   kvConfigStackSchema,
 } from "./KVConfig.js";
 export { ContentBlockStyle, contentBlockStyleSchema } from "./llm/ContentBlockStyle.js";
+export { ImageResizeSettings, imageResizeSettingsSchema } from "./llm/ImageResizeSettings.js";
 export {
   LLMApplyPromptTemplateOpts,
   llmApplyPromptTemplateOptsSchema,

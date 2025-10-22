@@ -171,6 +171,14 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
           },
         ),
       )
+      .scope("vision", builder =>
+        builder.field(
+          "imageResizeSettings",
+          "imageResizeSettings",
+          {},
+          { maxWidth: 500, maxHeight: 500 },
+        ),
+      )
       .scope("llama", builder =>
         builder
           .field("cpuThreads", "numeric", { min: 1, int: true }, 4)
@@ -379,6 +387,7 @@ export const llmSharedPredictionConfigSchematics = llmPredictionConfigSchematics
   "toolChoice",
   "toolNaming",
   "reasoning.*",
+  "vision.*",
 );
 
 export const llmLlamaPredictionConfigSchematics = llmSharedPredictionConfigSchematics.union(

@@ -141,6 +141,11 @@ export function kvConfigToLLMPredictionConfig(
     result.reasoningParsing = reasoningParsing;
   }
 
+  const imageResize = parsed.get("vision.imageResizeSettings");
+  if (imageResize !== undefined) {
+    result.imageResize = imageResize;
+  }
+
   result.raw = config;
 
   return result;
@@ -173,6 +178,7 @@ export function llmPredictionConfigToKVConfig(config: LLMPredictionConfig): KVCo
     "speculativeDecoding.minContinueDraftingProbability":
       config.speculativeDecodingMinContinueDraftingProbability,
     "reasoning.parsing": config.reasoningParsing,
+    "vision.imageResizeSettings": config.imageResize,
   });
   if (config.raw !== undefined) {
     return collapseKVStackRaw([config.raw, top]);
