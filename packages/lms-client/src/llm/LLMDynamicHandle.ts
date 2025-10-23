@@ -1208,8 +1208,22 @@ export class LLMDynamicHandle extends DynamicHandle<
   public async getLoadConfig(): Promise<LLMLoadModelConfig> {
     const stack = getCurrentStack(1);
     const loadConfig = await super.getLoadKVConfig(stack);
+    const modelInfo = await this.getModelInfo();
+    if (modelInfo === undefined) {
+      const modelSpecifier =
+        this.specifier.type === "instanceReference"
+          ? this.specifier.instanceReference
+          : this.specifier.query.identifier ?? this.specifier.query.path ?? "unknown";
+
+      throw makePrettyError(
+        `Could not get model info for the loaded model - ${modelSpecifier}`,
+        stack,
+      );
+    }
+
     return kvConfigToLLMLoadModelConfig(loadConfig, {
       useDefaultsForMissingKeys: true,
+      modelFormat: modelInfo.format,
     });
   }
 

@@ -16,3 +16,16 @@ export function maybeFalseValueToCheckboxValue<TValue>(
   }
   return { checked: true, value: maybeFalseNumber };
 }
+
+export function maybeFalseValueToValue<TValue>(
+  maybeFalseValue: undefined | TValue | false,
+  valueWhenFalse: TValue,
+): undefined | TValue {
+  if (maybeFalseValue === undefined) {
+    return undefined;
+  }
+  if (maybeFalseValue === false) {
+    return valueWhenFalse;
+  }
+  return maybeFalseValue;
+}

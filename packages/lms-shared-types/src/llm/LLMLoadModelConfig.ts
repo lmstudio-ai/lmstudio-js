@@ -111,12 +111,18 @@ export const llmMlxKvCacheGroupSizeTypesSchema = z.union([
   z.literal(64),
   z.literal(128),
 ]);
+export type LLMMlxKvCacheQuantization = {
+  enabled: boolean;
+  bits: LLMMlxKvCacheBitsType;
+  groupSize: LLMMlxKvCacheGroupSizeType;
+  quantizedStart: number;
+};
 export const llmMlxKvCacheQuantizationSchema = z.object({
   enabled: z.boolean(),
   bits: llmMlxKvCacheBitsTypeSchema,
   groupSize: llmMlxKvCacheGroupSizeTypesSchema,
   quantizedStart: z.number().int().nonnegative(),
-});
+}) as z.Schema<LLMMlxKvCacheQuantization>;
 
 /** @public */
 export interface LLMLoadModelConfig {
@@ -272,6 +278,22 @@ export interface LLMLoadModelConfig {
    * Set to false to disable quantization and use full precision.
    */
   llamaVCacheQuantizationType?: LLMLlamaCacheQuantizationType | false;
+
+  /**
+   * Quantization settings for the MLX model's key-value cache.
+   *
+   * Similar to Llama cache quantization, this option allows for reducing the precision of the
+   * key-value cache used in attention mechanisms, which can significantly decrease memory usage
+   * during inference. The quantization settings include the number of bits used, group size, and
+   * the starting point for quantization.
+   *
+   * Reducing precision can impact output quality, and the effect varies between different models.
+   * Experimentation may be necessary to find the optimal quantization settings for a specific
+   * model and use case.
+   *
+   * Set to false to disable quantization and use full precision.
+   */
+  mlxKvCacheQuantization?: LLMMlxKvCacheQuantization | false;
 }
 export const llmLoadModelConfigSchema = z.object({
   gpu: gpuSettingSchema.optional(),
@@ -295,4 +317,5 @@ export const llmLoadModelConfigSchema = z.object({
     .enum(llmLlamaCacheQuantizationTypes)
     .or(z.literal(false))
     .optional(),
+  mlxKvCacheQuantization: llmMlxKvCacheQuantizationSchema.or(z.literal(false)).optional(),
 });
