@@ -12,7 +12,7 @@ import {
   llmLoadSchematics,
   llmMlxLoadConfigSchematics,
 } from "../schema.js";
-import { maybeFalseValueToCheckboxValue, maybeFalseValueToObjectValue } from "./utils.js";
+import { maybeFalseValueToCheckboxValue, maybeFalseValueToValue } from "./utils.js";
 
 interface KvConfigToLLMLoadModelConfigOpts {
   /**
@@ -215,7 +215,7 @@ export function llmLoadModelConfigToKVConfig(config: LLMLoadModelConfig): KVConf
       config.llamaVCacheQuantizationType,
       "f16",
     ),
-    "mlx.kvCacheQuantization": maybeFalseValueToObjectValue(config.mlxKvCacheQuantization, {
+    "mlx.kvCacheQuantization": maybeFalseValueToValue(config.mlxKvCacheQuantization, {
       enabled: false,
       bits: 8,
       groupSize: 64,

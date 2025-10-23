@@ -17,15 +17,15 @@ export function maybeFalseValueToCheckboxValue<TValue>(
   return { checked: true, value: maybeFalseNumber };
 }
 
-export function maybeFalseValueToObjectValue<TValue>(
-  maybeFalseNumber: undefined | TValue | false,
+export function maybeFalseValueToValue<TValue>(
+  maybeFalseValue: undefined | TValue | false,
   valueWhenFalse: TValue,
 ): undefined | TValue {
-  if (maybeFalseNumber === undefined) {
+  if (maybeFalseValue === undefined) {
     return undefined;
   }
-  if (maybeFalseNumber === false) {
+  if (maybeFalseValue === false) {
     return valueWhenFalse;
   }
-  return maybeFalseNumber;
+  return maybeFalseValue;
 }
