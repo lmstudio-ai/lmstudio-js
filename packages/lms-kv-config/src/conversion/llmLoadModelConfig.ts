@@ -173,7 +173,8 @@ function kvConfigToLLMMlxLoadModelConfig(
 
 export function kvConfigToLLMLoadModelConfig(
   config: KVConfig,
-  { useDefaultsForMissingKeys, modelFormat }: KvConfigToLLMLoadModelConfigOpts = {},
+  // Default to gguf for backward compatibility
+  { useDefaultsForMissingKeys, modelFormat = "gguf" }: KvConfigToLLMLoadModelConfigOpts = {},
 ): LLMLoadModelConfig {
   switch (modelFormat) {
     case "gguf":
