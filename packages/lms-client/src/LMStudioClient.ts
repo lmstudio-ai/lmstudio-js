@@ -381,18 +381,6 @@ export class LMStudioClient {
       `);
     }
 
-    if (
-      process.env.LM_API_TOKEN !== undefined &&
-      process.env.LM_API_TOKEN !== "" &&
-      (clientIdentifier !== undefined || clientPasskey !== undefined)
-    ) {
-      throw new Error(text`
-        You cannot set LM_API_TOKEN environment variable and pass in
-        clientIdentifier/clientPasskey. clientIdentifier and clientPasskey are legacy
-        authentication methods and have been replaced by apiToken.
-      `);
-    }
-
     if (apiToken !== undefined) {
       const match = apiToken.match(lmstudioAPITokenRegex);
       if (match === null) {
