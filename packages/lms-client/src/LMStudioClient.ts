@@ -397,6 +397,8 @@ export class LMStudioClient {
       }
       clientIdentifier = match.groups.clientIdentifier;
       clientPasskey = match.groups.clientPasskey;
+    } else if (clientIdentifier !== undefined || clientPasskey !== undefined) {
+      // Use provided legacy clientIdentifier/clientPasskey as-is (precedence over env var)
     } else if (process.env.LM_API_TOKEN !== undefined && process.env.LM_API_TOKEN !== "") {
       const match = process.env.LM_API_TOKEN.match(lmstudioAPITokenRegex);
       if (match === null) {
