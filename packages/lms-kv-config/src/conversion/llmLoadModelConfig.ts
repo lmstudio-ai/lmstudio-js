@@ -141,7 +141,7 @@ function kvConfigToLLMLlamaLoadModelConfig(
   return result;
 }
 
-export function kvConfigToLLMMlxLoadModelConfig(
+function kvConfigToLLMMlxLoadModelConfig(
   config: KVConfig,
   { useDefaultsForMissingKeys }: Omit<KvConfigToLLMLoadModelConfigOpts, "modelFormat"> = {},
 ): LLMLoadModelConfig {
