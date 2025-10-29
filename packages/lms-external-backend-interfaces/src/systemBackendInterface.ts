@@ -59,6 +59,7 @@ export function createSystemBackendInterface() {
         parameter: z.object({
           port: z.number().int().min(1).max(65535).optional(),
           cors: z.boolean().optional(),
+          networkInterface: z.string().optional(),
         }),
         returns: z.void(),
       })

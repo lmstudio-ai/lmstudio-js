@@ -21,10 +21,18 @@ const startHttpServerOptsSchema = z.object({
     .int()
     .min(1)
     .max(65535)
-    .describe("Port to run the API server on. Must be between 1 and 65535."),
+    .describe("Port to run the API server on. Must be between 1 and 65535.")
+    .optional(),
   cors: z
     .boolean()
-    .describe("Enable CORS on the API server. Allows any website to access the server."),
+    .describe("Enable CORS on the API server. Allows any website to access the server.")
+    .optional(),
+  networkInterface: z
+    .string()
+    .describe(
+      'Network interface to bind the server to. Use "0.0.0.0" to accept connections from the local network, or "127.0.0.1" (default) for localhost only.',
+    )
+    .optional(),
 });
 
 type StartHttpServerOpts = z.infer<typeof startHttpServerOptsSchema>;
@@ -163,7 +171,7 @@ export class SystemNamespace {
 
     return await this.systemPort.callRpc(
       "startHttpServer",
-      { port: opts.port, cors: opts.cors },
+      { port: opts.port, cors: opts.cors, networkInterface: opts.networkInterface },
       {
         stack,
       },
