@@ -22,8 +22,23 @@
     "dist/index.mjs",
     "README.md"
   ],
+  "keywords": [
+    "lmstudio",
+    "lm-studio",
+    "llm",
+    "sdk",
+    "local-llm",
+    "language-model",
+    "ai",
+    "artificial-intelligence",
+    "machine-learning",
+    "ml",
+    "typescript",
+    "javascript",
+    "nodejs"
+  ],
   "author": "",
-  "license": "Apache-2.0",
+  "license": "MIT",
   "dependencies": {
     "@lmstudio/lms-isomorphic": "^0.4.6",
     "chalk": "^4.1.2",
@@ -37,7 +52,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/lmstudio-ai/lmstudio.js.git"
+    "url": "git+https://github.com/lmstudio-ai/lmstudio-js.git"
   },
   "exports": {
     ".": {
