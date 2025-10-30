@@ -69,6 +69,10 @@ export interface VirtualModelDefinitionMetadataOverrides {
    * fill-in-the-middle and non-fill-in-the-middle concrete models.
    */
   fim?: BooleanOrMixed;
+  /**
+   * (LLM only) The preferred maximum image dimension in pixels for vision-capable models.
+   */
+  preferredMaxImageDimensionPixels?: number;
 }
 export const virtualModelDefinitionMetadataOverridesSchema: ZodSchema<VirtualModelDefinitionMetadataOverrides> =
   z.object({
@@ -82,6 +86,7 @@ export const virtualModelDefinitionMetadataOverridesSchema: ZodSchema<VirtualMod
     vision: booleanOrMixedSchema.optional(),
     reasoning: booleanOrMixedSchema.optional(),
     fim: booleanOrMixedSchema.optional(),
+    preferredMaxImageDimensionPixels: z.number().int().min(1).optional(),
   });
 
 export interface VirtualModelDefinitionConcreteModelBase {

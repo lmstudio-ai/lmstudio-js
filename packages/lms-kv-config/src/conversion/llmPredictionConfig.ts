@@ -141,9 +141,18 @@ export function kvConfigToLLMPredictionConfig(
     result.reasoningParsing = reasoningParsing;
   }
 
-  const imageResize = parsed.get("vision.imageResizeSettings");
-  if (imageResize !== undefined) {
-    result.imageResize = imageResize;
+  const userMaxImageDimensionPixels = parsed.get("vision.userMaxImageDimensionPixels");
+  if (userMaxImageDimensionPixels !== undefined) {
+    result.userMaxImageDimensionPixels = userMaxImageDimensionPixels.checked
+      ? userMaxImageDimensionPixels.value
+      : false;
+  }
+
+  const ignoreModelPreferredMaxImageDimension = parsed.get(
+    "vision.ignoreModelPreferredMaxImageDimension",
+  );
+  if (ignoreModelPreferredMaxImageDimension !== undefined) {
+    result.ignoreModelPreferredMaxImageDimension = ignoreModelPreferredMaxImageDimension;
   }
 
   result.raw = config;
@@ -178,7 +187,11 @@ export function llmPredictionConfigToKVConfig(config: LLMPredictionConfig): KVCo
     "speculativeDecoding.minContinueDraftingProbability":
       config.speculativeDecodingMinContinueDraftingProbability,
     "reasoning.parsing": config.reasoningParsing,
-    "vision.imageResizeSettings": config.imageResize,
+    "vision.userMaxImageDimensionPixels": maybeFalseValueToCheckboxValue(
+      config.userMaxImageDimensionPixels,
+      1024,
+    ),
+    "vision.ignoreModelPreferredMaxImageDimension": config.ignoreModelPreferredMaxImageDimension,
   });
   if (config.raw !== undefined) {
     return collapseKVStackRaw([config.raw, top]);
