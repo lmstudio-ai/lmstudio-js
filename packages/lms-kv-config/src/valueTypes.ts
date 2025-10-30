@@ -1,7 +1,6 @@
 import {
   allowableEnvVarsSchema,
   gpuSplitConfigSchema,
-  imageResizeSettingsSchema,
   kvConfigFieldDependencySchema,
   llmContextOverflowPolicySchema,
   llmContextReferenceSchema,
@@ -636,18 +635,6 @@ export const kvValueTypesLibrary = baseKVValueTypesLibraryBuilder
     },
     stringify: value => {
       return value;
-    },
-  })
-  .valueType("imageResizeSettings", {
-    paramType: {},
-    schemaMaker: () => {
-      return imageResizeSettingsSchema;
-    },
-    effectiveEquals: (a, b) => {
-      return a.maxWidth === b.maxWidth && a.maxHeight === b.maxHeight;
-    },
-    stringify: value => {
-      return JSON.stringify(value, null, 2); // TODO: pretty print
     },
   })
   .valueType("llamaAccelerationOffloadRatio", {

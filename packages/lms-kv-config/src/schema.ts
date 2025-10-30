@@ -172,12 +172,14 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
         ),
       )
       .scope("vision", builder =>
-        builder.field(
-          "imageResizeSettings",
-          "imageResizeSettings",
-          {},
-          { maxWidth: 500, maxHeight: 500 },
-        ),
+        builder
+          .field(
+            "userMaxImageDimensionPixels",
+            "checkboxNumeric",
+            { int: true, min: 1 },
+            { checked: true, value: 1024 },
+          )
+          .field("ignoreModelPreferredMaxImageDimension", "boolean", {}, false),
       )
       .scope("llama", builder =>
         builder

@@ -2,7 +2,6 @@ import { z, type ZodSchema } from "zod";
 import { kvConfigSchema, type KVConfig } from "../KVConfig.js";
 import { toolNamingSchema, type ToolNaming } from "../ToolNaming.js";
 import { zodSchemaSchema } from "../Zod.js";
-import { imageResizeSettingsSchema, type ImageResizeSettings } from "./ImageResizeSettings.js";
 import { llmPromptTemplateSchema, type LLMPromptTemplate } from "./LLMPromptTemplate.js";
 import {
   llmStructuredPredictionSettingSchema,
@@ -288,13 +287,30 @@ export interface LLMPredictionConfigInput<TStructuredOutputType = unknown> {
    */
   reasoningParsing?: LLMReasoningParsing;
   /**
-   * Controls how images are resized before being sent to the LLM.
+   * The maximum number of pixels of the larger dimension (width or height) of images sent to the
+   * model. Images exceeding this dimension will be resized while maintaining aspect ratio.
+   *
+   * @remarks
+   *
+   * The effective max dimension will be the minimum of this value and the model's preferred max
+   * image dimension unless `ignoreModelPreferredMaxImageDimension` is set to true.
+   *
+   * If you wish to disable size capping altogether, set this to false and
+   * `ignoreModelPreferredMaxImageDimension` to true. Disabling image size capping is not
+   * recommended as large images can overload the system.
    *
    * @experimental [EXP-IMAGE-RESIZE] Image resize settings are experimental and may change in the
    * future.
-   * @public
    */
-  imageResize?: ImageResizeSettings;
+  userMaxImageDimensionPixels?: number | false;
+  /**
+   * Whether to respect the model's preferred max image dimension when resizing images. See
+   * {@link userMaxImageDimensionPixels} for more info.
+   *
+   * @experimental [EXP-IMAGE-RESIZE] Image resize settings are experimental and may change in the
+   * future.
+   */
+  ignoreModelPreferredMaxImageDimension?: boolean;
   /**
    * Raw KV Config.
    *
@@ -325,7 +341,8 @@ export const llmPredictionConfigInputSchema = z.object({
   speculativeDecodingMinDraftLengthToConsider: z.number().int().min(0).optional(),
   speculativeDecodingMinContinueDraftingProbability: z.number().optional(),
   reasoningParsing: llmReasoningParsingSchema.optional(),
-  imageResize: imageResizeSettingsSchema.optional(),
+  userMaxImageDimensionPixels: z.number().int().min(1).optional().or(z.literal(false)),
+  ignoreModelPreferredMaxImageDimension: z.boolean().optional(),
   raw: kvConfigSchema.optional(),
 });
 
