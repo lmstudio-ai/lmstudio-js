@@ -25,3 +25,51 @@ export class ToolCallRequestError extends Error {
     super(message);
   }
 }
+
+/**
+ * Represents an error that is caused by an invalid tool name.
+ *
+ * @public
+ * @experimental [EXP-GRANULAR-ACT] More granular .act status reporting is experimental and may
+ * change in the future
+ */
+export class ToolCallRequestInvalidNameError extends ToolCallRequestError {
+  public constructor(
+    message: string,
+    rawContent: string | undefined,
+    public readonly toolName: string,
+  ) {
+    super(message, rawContent);
+  }
+}
+
+/**
+ * Represents an error that is caused by invalid tool arguments.
+ *
+ * @public
+ * @experimental [EXP-GRANULAR-ACT] More granular .act status reporting is experimental and may
+ * change in the future
+ */
+export class ToolCallRequestInvalidArgumentsError extends ToolCallRequestError {
+  public constructor(
+    message: string,
+    rawContent: string | undefined,
+    public readonly toolName: string,
+    public readonly toolArguments: Record<string, any> | undefined,
+  ) {
+    super(message, rawContent);
+  }
+}
+
+/**
+ * Represents an error that is caused by invalid tool arguments.
+ *
+ * @public
+ * @experimental [EXP-GRANULAR-ACT] More granular .act status reporting is experimental and may
+ * change in the future
+ */
+export class ToolCallRequestInvalidFormatError extends ToolCallRequestError {
+  public constructor(message: string, rawContent: string | undefined) {
+    super(message, rawContent);
+  }
+}
