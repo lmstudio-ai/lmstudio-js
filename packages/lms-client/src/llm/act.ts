@@ -23,7 +23,12 @@ import { ActResult } from "./ActResult.js";
 import { type LLMPredictionFragmentWithRoundIndex } from "./LLMDynamicHandle.js";
 import { PredictionResult } from "./PredictionResult.js";
 import { SimpleToolCallContext, UnimplementedToolError, type Tool } from "./tool.js";
-import { ToolCallRequestError } from "./ToolCallRequestError.js";
+import {
+  ToolCallRequestError,
+  ToolCallRequestInvalidArgumentsError,
+  ToolCallRequestInvalidFormatError,
+  ToolCallRequestInvalidNameError,
+} from "./ToolCallRequestError.js";
 
 /**
  * Each call uses a globally unique call ID that starts somewhere before the half of the
@@ -238,7 +243,7 @@ class GuardToolCallController {
     throw makeTitledPrettyError(
       `Cannot call ${calledMethodName} after a result has been set`,
       text`
-        This tool call guard has already set a result previously (${this.resultContainer[0].type}). 
+        This tool call guard has already set a result previously (${this.resultContainer[0].type}).
         You cannot set a result more than once.
       `,
       stack,
@@ -1022,9 +1027,10 @@ export async function internalAct<TPredictionResult, TEndPacket>(
         const tool = toolsMap.get(request.name);
         if (tool === undefined) {
           // Tool does not exist.
-          const toolCallRequestError = new ToolCallRequestError(
+          const toolCallRequestError = new ToolCallRequestInvalidNameError(
             `Cannot find tool with name ${request.name}.`,
             rawContent,
+            request.name,
           );
           toolCallPromises.push(
             internalHandleInvalidToolCallRequest(
@@ -1046,7 +1052,12 @@ export async function internalAct<TPredictionResult, TEndPacket>(
           tool.checkParameters(pushedRequest.arguments); // Defaults to empty object
         } catch (error: any) {
           // Failed to parse the parameters
-          const toolCallRequestError = new ToolCallRequestError(error.message, rawContent);
+          const toolCallRequestError = new ToolCallRequestInvalidArgumentsError(
+            error.message,
+            rawContent,
+            request.name,
+            request.arguments,
+          );
           toolCallPromises.push(
             internalHandleInvalidToolCallRequest(
               toolCallRequestError,
@@ -1209,7 +1220,10 @@ export async function internalAct<TPredictionResult, TEndPacket>(
       },
       handleToolCallGenerationFailed: (error, rawContent) => {
         isGeneratingToolCall = false;
-        const toolCallRequestError = new ToolCallRequestError(error.message, rawContent);
+        const toolCallRequestError = new ToolCallRequestInvalidFormatError(
+          error.message,
+          rawContent,
+        );
         toolCallPromises.push(
           internalHandleInvalidToolCallRequest(
             toolCallRequestError,

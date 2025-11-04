@@ -9,6 +9,12 @@ export {
   rawFunctionTool,
   tool,
   ToolCallRequestError,
+  ToolCallRequestInvalidArgumentsError,
+  ToolCallRequestInvalidFormatError,
+  ToolCallRequestInvalidNameError,
+  LLMDynamicHandle,
+  EmbeddingDynamicHandle,
+  EmbeddingModel,
   unimplementedRawFunctionTool,
 } from "@lmstudio/lms-client";
 export { MaybeMutable, text } from "@lmstudio/lms-common";

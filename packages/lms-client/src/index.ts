@@ -55,7 +55,12 @@ export type {
   ToolBase,
   ToolCallContext,
 } from "./llm/tool.js";
-export { ToolCallRequestError } from "./llm/ToolCallRequestError.js";
+export {
+  ToolCallRequestError,
+  ToolCallRequestInvalidArgumentsError,
+  ToolCallRequestInvalidFormatError,
+  ToolCallRequestInvalidNameError,
+} from "./llm/ToolCallRequestError.js";
 export { LMStudioClient } from "./LMStudioClient.js";
 export type { LMStudioClientConstructorOpts } from "./LMStudioClient.js";
 export type { DynamicHandle } from "./modelShared/DynamicHandle.js";
