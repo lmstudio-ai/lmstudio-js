@@ -55,7 +55,7 @@ export class ToolCallRequestInvalidArgumentsError extends ToolCallRequestError {
     message: string,
     rawContent: string | undefined,
     public readonly toolName: string,
-    public readonly toolArguments: any,
+    public readonly toolArguments: Record<string, any> | undefined,
   ) {
     super(message, rawContent);
   }
