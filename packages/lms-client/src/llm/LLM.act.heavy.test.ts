@@ -41,7 +41,8 @@ describe("LLM.act", () => {
     const onPromptProcessingProgress = jest.fn();
     const onRoundStart = jest.fn();
     const onRoundEnd = jest.fn();
-    const onToolCallResult = jest.fn(); // Add this line
+    const onToolCallSuccess = jest.fn();
+    const onToolCallResult = jest.fn();
 
     await model.act('First say "Hi". Then calculate 1 + 3 with the tool.', [additionTool], {
       temperature: 0,
@@ -52,7 +53,8 @@ describe("LLM.act", () => {
       onPromptProcessingProgress,
       onRoundStart,
       onRoundEnd,
-      onToolCallResult, // Add this line
+      onToolCallSuccess,
+      onToolCallResult,
     });
 
     expect(addImplementation).toHaveBeenCalledTimes(1);
@@ -114,6 +116,16 @@ describe("LLM.act", () => {
 
     expect(onRoundEnd).toHaveBeenCalledTimes(2);
     expect(onRoundEnd.mock.calls).toEqual([[0], [1]]);
+
+    expect(onToolCallSuccess).toHaveBeenCalledTimes(1);
+    expect(onToolCallSuccess).toHaveBeenCalledWith(
+      0, // roundIndex
+      expect.any(Number), // callId
+      {
+        toolCallId: expect.any(String),
+        content: "4",
+      },
+    );
 
     expect(onToolCallResult).toHaveBeenCalledTimes(1);
     expect(onToolCallResult).toHaveBeenCalledWith(

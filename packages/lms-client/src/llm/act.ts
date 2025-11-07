@@ -510,6 +510,22 @@ export interface LLMActBaseOpts<TPredictionResult> {
    */
   onToolCallRequestDequeued?: (roundIndex: number, callId: number) => void;
   /**
+   * A callback invoked when a tool call succeeds and its result is available.
+   *
+   * This differs from {@link onToolCallResult} in that it is called only when the tool call
+   * succeeds. There are cases where a tool call fails (e.g., an invalid tool name), but
+   * the conversation can continue by providing the model with an error message in the form of a
+   * tool call result. In those cases, this callback is not invoked.
+   *
+   * If you are managing your own context, use {@link onToolCallResult} instead, as it
+   * covers all cases where a tool call result should be added to the context. See its documentation
+   * for more details.
+   *
+   * @experimental [EXP-GRANULAR-ACT] More granular .act status reporting is experimental and may
+   * change in the future
+   */
+  onToolCallSuccess?: (roundIndex: number, callId: number, toolCallResult: ToolCallResult) => void;
+  /**
    * A callback that is called when a tool call result is received. This tool call result should be
    * added to the context if you are managing the context yourself (through onMessage).
    *
@@ -677,6 +693,7 @@ export const llmActBaseOptsSchema = z.object({
   onToolCallRequestFinalized: z.function().optional(),
   onToolCallRequestFailure: z.function().optional(),
   onToolCallRequestDequeued: z.function().optional(),
+  onToolCallSuccess: z.function().optional(),
   onToolCallResult: z.function().optional(),
   guardToolCall: z.function().optional(),
   handleInvalidToolRequest: z.function().optional(),
@@ -1203,6 +1220,11 @@ export async function internalAct<TPredictionResult, TEndPacket>(
                     content: resultString,
                   },
                 });
+                safeCallCallback(logger, "onToolCallSuccess", baseOpts.onToolCallSuccess, [
+                  predictionsPerformed,
+                  callId,
+                  { toolCallId: request.id, content: resultString },
+                ]);
                 safeCallCallback(logger, "onToolCallResult", baseOpts.onToolCallResult, [
                   predictionsPerformed,
                   callId,
