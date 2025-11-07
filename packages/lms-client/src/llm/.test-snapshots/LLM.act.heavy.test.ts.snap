@@ -8,16 +8,19 @@ exports[`LLM.act should call the tool with the correct parameters 1`] = `
   "format": "gguf",
   "identifier": Any<String>,
   "instanceReference": Any<String>,
+  "lastUsedTime": null,
   "maxContextLength": 32768,
   "modelKey": Any<String>,
   "paramsString": "0.5B",
   "path": "lmstudio-community/Qwen2.5-0.5B-Instruct-GGUF/Qwen2.5-0.5B-Instruct-Q4_K_M.gguf",
+  "publisher": "lmstudio-community",
   "quantization": {
     "bits": 4,
     "name": "Q4_K_M",
   },
   "sizeBytes": 397807936,
   "trainedForToolUse": true,
+  "ttlMs": 3600000,
   "type": "llm",
   "vision": false,
 }
@@ -27,12 +30,12 @@ exports[`LLM.act should call the tool with the correct parameters 2`] = `
 {
   "numGpuLayers": Any<Number>,
   "predictedTokensCount": 38,
-  "promptTokensCount": 201,
+  "promptTokensCount": 192,
   "stopReason": "eosFound",
   "timeToFirstTokenSec": Any<Number>,
   "tokensPerSecond": Any<Number>,
   "totalTimeSec": Any<Number>,
-  "totalTokensCount": 239,
+  "totalTokensCount": 230,
 }
 `;
 
@@ -44,16 +47,19 @@ exports[`LLM.act should call the tool with the correct parameters 3`] = `
   "format": "gguf",
   "identifier": Any<String>,
   "instanceReference": Any<String>,
+  "lastUsedTime": null,
   "maxContextLength": 32768,
   "modelKey": Any<String>,
   "paramsString": "0.5B",
   "path": "lmstudio-community/Qwen2.5-0.5B-Instruct-GGUF/Qwen2.5-0.5B-Instruct-Q4_K_M.gguf",
+  "publisher": "lmstudio-community",
   "quantization": {
     "bits": 4,
     "name": "Q4_K_M",
   },
   "sizeBytes": 397807936,
   "trainedForToolUse": true,
+  "ttlMs": 3600000,
   "type": "llm",
   "vision": false,
 }
@@ -62,12 +68,12 @@ exports[`LLM.act should call the tool with the correct parameters 3`] = `
 exports[`LLM.act should call the tool with the correct parameters 4`] = `
 {
   "numGpuLayers": Any<Number>,
-  "predictedTokensCount": 23,
-  "promptTokensCount": 258,
+  "predictedTokensCount": 13,
+  "promptTokensCount": 249,
   "stopReason": "eosFound",
   "timeToFirstTokenSec": Any<Number>,
   "tokensPerSecond": Any<Number>,
   "totalTimeSec": Any<Number>,
-  "totalTokensCount": 281,
+  "totalTokensCount": 262,
 }
 `;
