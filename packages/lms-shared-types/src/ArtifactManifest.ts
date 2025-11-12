@@ -29,7 +29,7 @@ export const artifactManifestSchema = z
           "Sandboxing is only supported for deno runners. Either disable sandboxing, or switch to deno.",
       });
     }
-  }) as ZodSchema<ArtifactManifest>;
+  }) as unknown as ZodSchema<ArtifactManifest>;
 
 /**
  * Represents the type of an artifact.

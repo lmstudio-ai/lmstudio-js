@@ -1,4 +1,4 @@
-import { z, type ZodSchema } from "zod";
+import { z } from "zod";
 import { artifactManifestBaseSchema, type ArtifactManifestBase } from "./ArtifactManifestBase.js";
 
 /**
@@ -11,5 +11,4 @@ export interface ProjectManifest extends ArtifactManifestBase {
 export const projectManifestSchema = z.object({
   type: z.literal("project"),
   ...artifactManifestBaseSchema.shape,
-}) as ZodSchema<ProjectManifest>;
-
+});
