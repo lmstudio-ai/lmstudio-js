@@ -2,16 +2,18 @@ import { z, type ZodSchema } from "zod";
 import { modelManifestSchema, type ModelManifest } from "./ModelManifest.js";
 import { pluginManifestUnrefinedSchema, type PluginManifest } from "./PluginManifest.js";
 import { presetManifestSchema, type PresetManifest } from "./PresetManifest.js";
+import { projectManifestSchema, type ProjectManifest } from "./ProjectManifest.js";
 
 /**
  * The type for the manifest.json file.
  */
-export type ArtifactManifest = PluginManifest | PresetManifest | ModelManifest;
+export type ArtifactManifest = PluginManifest | PresetManifest | ModelManifest | ProjectManifest;
 export const artifactManifestSchema = z
   .discriminatedUnion("type", [
     pluginManifestUnrefinedSchema,
     presetManifestSchema,
     modelManifestSchema,
+    projectManifestSchema,
   ])
   .superRefine((artifactManifest, ctx) => {
     if (
@@ -34,5 +36,5 @@ export const artifactManifestSchema = z
  *
  * @public
  */
-export type ArtifactType = "plugin" | "preset" | "model";
-export const artifactTypeSchema = z.enum(["plugin", "preset", "model"]);
+export type ArtifactType = "plugin" | "preset" | "model" | "project";
+export const artifactTypeSchema = z.enum(["plugin", "preset", "model", "project"]);

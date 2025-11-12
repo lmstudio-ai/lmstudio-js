@@ -11,6 +11,13 @@ export {
   ArtifactType,
   artifactTypeSchema,
 } from "./ArtifactManifest.js";
+export { ProjectManifest, projectManifestSchema } from "./ProjectManifest.js";
+export {
+  ProjectYaml,
+  projectYamlSchema,
+  ProjectYamlArtifactEntry,
+  projectYamlArtifactEntrySchema,
+} from "./ProjectYaml.js";
 export {
   ArtifactArtifactDependency,
   artifactArtifactDependencySchema,
