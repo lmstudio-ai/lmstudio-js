@@ -12,10 +12,10 @@ export const projectYamlArtifactEntrySchema: ZodSchema<ProjectYamlArtifactEntry>
 
 export interface ProjectYaml {
   version: number;
-  artifacts: Record<string, ProjectYamlArtifactEntry>;
+  artifacts: ProjectYamlArtifactEntry[];
 }
 
 export const projectYamlSchema: ZodSchema<ProjectYaml> = z.object({
   version: z.number().int().positive(),
-  artifacts: z.record(projectYamlArtifactEntrySchema),
+  artifacts: z.array(projectYamlArtifactEntrySchema),
 });
