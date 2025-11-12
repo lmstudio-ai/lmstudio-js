@@ -11,11 +11,9 @@ export const projectYamlArtifactEntrySchema: ZodSchema<ProjectYamlArtifactEntry>
 });
 
 export interface ProjectYaml {
-  version: number;
   artifacts: ProjectYamlArtifactEntry[];
 }
 
 export const projectYamlSchema: ZodSchema<ProjectYaml> = z.object({
-  version: z.number().int().positive(),
   artifacts: z.array(projectYamlArtifactEntrySchema),
 });
