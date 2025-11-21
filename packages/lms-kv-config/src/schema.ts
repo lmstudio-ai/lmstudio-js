@@ -20,7 +20,7 @@ import {
 } from "./KVConfig.js";
 import { kvValueTypesLibrary } from "./valueTypes.js";
 
-const VIRTUAL_MODEL_CUSTOM_FIELD_EXTENSION_PREFIX = "ext.virtualModel.customField";
+export const VIRTUAL_MODEL_CUSTOM_FIELD_EXTENSION_PREFIX = "ext.virtualModel.customField";
 
 // ---------------------------
 //  1. globalConfigSchematics

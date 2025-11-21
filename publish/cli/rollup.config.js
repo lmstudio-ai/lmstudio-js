@@ -10,6 +10,7 @@ module.exports = {
     {
       file: join(__dirname, "dist", "index.js"),
       format: "cjs",
+      inlineDynamicImports: true,
     },
   ],
   context: "globalThis",
