@@ -1,8 +1,10 @@
 // Inject the current version by replacing the magic string <LMS-CLI-CURRENT-VERSION>
 // This is much faster than rollup-plugin-replace
 
-const { readFileSync, writeFileSync } = require("fs");
-const { join } = require("path");
+import { readFileSync, writeFileSync } from "fs";
+import { join } from "path";
+
+const __dirname = new URL(".", import.meta.url).pathname;
 
 const content = readFileSync(join(__dirname, "dist", "index.js"), "utf-8");
 const packageJson = readFileSync(join(__dirname, "package.json"), "utf-8");
