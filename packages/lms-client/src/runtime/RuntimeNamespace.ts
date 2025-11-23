@@ -11,6 +11,11 @@ import {
   type RuntimeEngineSpecifier,
   type SelectedRuntimeEngineMap,
 } from "@lmstudio/lms-shared-types";
+import {
+  runtimeHardwareSurveyScopeSchema,
+  type RuntimeHardwareSurveyResult,
+  type RuntimeHardwareSurveyScope,
+} from "@lmstudio/lms-shared-types";
 import { RuntimeExtensionsNamespace } from "./RuntimeExtensionsNamespace";
 
 /** @public */
@@ -109,5 +114,28 @@ export class RuntimeNamespace {
       this.validator,
       parentLogger,
     );
+  }
+
+  /**
+   * Perform a hardware survey for available runtime engines.
+   *
+   * @experimental [EXP-RUNTIME-EXTENSION] Runtime extensions related APIs are experimental and may
+   * change in the future.
+   */
+  public async surveyHardware(
+    scope?: RuntimeHardwareSurveyScope,
+  ): Promise<RuntimeHardwareSurveyResult> {
+    const stack = getCurrentStack(1);
+    [scope] = this.validator.validateMethodParamsOrThrow(
+      "client.runtime",
+      "surveyHardware",
+      ["scope"],
+      [runtimeHardwareSurveyScopeSchema.optional()],
+      [scope],
+      stack,
+    );
+    return await this.runtimePort.callRpc("surveyHardware", scope, {
+      stack,
+    });
   }
 }

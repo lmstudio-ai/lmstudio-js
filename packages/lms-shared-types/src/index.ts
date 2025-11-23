@@ -478,6 +478,20 @@ export {
   runtimeFrameworkExtensionInfoSchema,
 } from "./RuntimeExtension.js";
 export {
+  RuntimeHardwareGpuDetectionPlatform,
+  runtimeHardwareGpuDetectionPlatformSchema,
+  RuntimeHardwareGpuInfo,
+  runtimeHardwareGpuInfoSchema,
+  RuntimeHardwareGpuIntegrationType,
+  runtimeHardwareGpuIntegrationTypeSchema,
+  RuntimeHardwareSurveyEngine,
+  runtimeHardwareSurveyEngineSchema,
+  RuntimeHardwareSurveyResult,
+  runtimeHardwareSurveyResultSchema,
+  RuntimeHardwareSurveyScope,
+  runtimeHardwareSurveyScopeSchema,
+} from "./RuntimeHardwareSurvey.js";
+export {
   KVConfigSchematicsDeserializationError,
   kvConfigSchematicsDeserializationErrorSchema,
   SerializedKVConfigSchematics,
