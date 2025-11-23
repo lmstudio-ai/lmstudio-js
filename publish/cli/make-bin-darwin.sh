@@ -44,12 +44,6 @@ mkdir -p "${DIST_DIR}" "${BUILD_DIR}"
 )
 chmod +x "${DIST_DIR}/${EXE_NAME}"
 
-if ! command -v codesign &> /dev/null
-then
-  echo "Warning: codesign could not be found"
-  exit 1
-fi
-
 if [[ -z "${LMS_NO_SIGN}" ]]; then
 
   if [[ -z "${APPLE_SIGNING_IDENTITY}" ]]; then
@@ -57,6 +51,11 @@ if [[ -z "${LMS_NO_SIGN}" ]]; then
     exit 1
   fi
 
+  if ! command -v codesign &> /dev/null
+  then
+  echo "Warning: codesign could not be found"
+  exit 1
+  fi
   if [[ -n "${DIST_DIR}" ]] && [[ -n "${EXE_NAME}" ]]; then
     codesign --sign "${APPLE_SIGNING_IDENTITY}" --options runtime --entitlements entitlements.plist "${DIST_DIR}/${EXE_NAME}"
     if [ "$LMS_SKIP_NOTARIZATION" = "1" ] || [ "$LMS_SKIP_NOTARIZATION" = "true" ]; then

@@ -25,6 +25,7 @@ if (lmsKey !== null) {
 const nodeBuiltinModuleReplacements = [
   "assert",
   "buffer",
+  "process",
   "child_process",
   "console",
   "crypto",
@@ -37,7 +38,6 @@ const nodeBuiltinModuleReplacements = [
   "net",
   "os",
   "path",
-  "process",
   "readline",
   "stream",
   "string_decoder",

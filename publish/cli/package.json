@@ -8,7 +8,6 @@
     "build-rollup": "rollup -c",
     "build-inject-variables": "node ./injectVariables.js",
     "build": "npm run build-rollup && npm run build-inject-variables",
-    "make-bin:bun": "bash make-bin-bun.sh",
     "make-bin:win32": "powershell -File make-bin-win32.ps1",
     "make-bin:linux": "bash make-bin-linux.sh",
     "make-bin:darwin": "bash make-bin-darwin.sh",
