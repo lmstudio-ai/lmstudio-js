@@ -1,15 +1,19 @@
 // Inject the current version by replacing the magic string <LMS-CLI-CURRENT-VERSION>
 // This is much faster than rollup-plugin-replace
 
-const { readFileSync, writeFileSync } = require("fs");
-const { join } = require("path");
+import { readFileSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const content = readFileSync(join(__dirname, "dist", "index.js"), "utf-8");
-const packageJson = readFileSync(join(__dirname, "package.json"), "utf-8");
+const currentFilePath = fileURLToPath(import.meta.url);
+const currentDirectoryPath = dirname(currentFilePath);
+
+const content = readFileSync(join(currentDirectoryPath, "dist", "index.js"), "utf-8");
+const packageJson = readFileSync(join(currentDirectoryPath, "package.json"), "utf-8");
 let lmsKey = null;
 try {
-  lmsKey = readFileSync(join(__dirname, "lms-key"), "utf-8").trim();
-} catch (e) {
+  lmsKey = readFileSync(join(currentDirectoryPath, "lms-key"), "utf-8").trim();
+} catch (error) {
   console.error("Failed to read lms-key. Build in development mode.");
 }
 
@@ -18,4 +22,37 @@ if (lmsKey !== null) {
   replaced = replaced.replaceAll("<LMS-CLI-LMS-KEY>", lmsKey);
 }
 
-writeFileSync(join(__dirname, "dist", "index.js"), replaced, "utf-8");
+const nodeBuiltinModuleReplacements = [
+  "assert",
+  "buffer",
+  "child_process",
+  "console",
+  "crypto",
+  "events",
+  "fs",
+  "fs/promises",
+  "http",
+  "https",
+  "module",
+  "net",
+  "os",
+  "path",
+  "process",
+  "readline",
+  "stream",
+  "string_decoder",
+  "tls",
+  "tty",
+  "readline/promises",
+  "url",
+  "util",
+  "zlib",
+];
+
+for (const moduleName of nodeBuiltinModuleReplacements) {
+  const from = `'${moduleName}'`;
+  const to = `'node:${moduleName}'`;
+  replaced = replaced.replaceAll(from, to);
+}
+
+writeFileSync(join(currentDirectoryPath, "dist", "index.js"), replaced, "utf-8");

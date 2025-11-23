@@ -44,7 +44,6 @@ export {
   stripBaseKeyFromKVConfig,
 } from "./KVConfig.js";
 export {
-  VIRTUAL_MODEL_CUSTOM_FIELD_EXTENSION_PREFIX,
   customFieldConfigSchematics,
   embeddingLlamaLoadConfigSchematics,
   embeddingLoadSchematics,

@@ -1,15 +1,21 @@
-const { nodeResolve } = require("@rollup/plugin-node-resolve");
-const { join, resolve } = require("path");
-const commonjs = require("@rollup/plugin-commonjs");
-const json = require("@rollup/plugin-json");
-const banner = require("rollup-plugin-banner2");
+import { nodeResolve } from "@rollup/plugin-node-resolve";
+import commonjs from "@rollup/plugin-commonjs";
+import json from "@rollup/plugin-json";
+import banner from "rollup-plugin-banner2";
+import { dirname, join, resolve as resolvePath } from "node:path";
+import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
 
-module.exports = {
-  input: resolve(require.resolve("@lmstudio/lms-cli")),
+const requireForConfig = createRequire(import.meta.url);
+const currentFilePath = fileURLToPath(import.meta.url);
+const currentDirectoryPath = dirname(currentFilePath);
+
+export default {
+  input: resolvePath(requireForConfig.resolve("@lmstudio/lms-cli")),
   output: [
     {
-      file: join(__dirname, "dist", "index.js"),
-      format: "cjs",
+      file: join(currentDirectoryPath, "dist", "index.js"),
+      format: "es",
       inlineDynamicImports: true,
     },
   ],
