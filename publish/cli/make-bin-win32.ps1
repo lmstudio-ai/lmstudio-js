@@ -1,7 +1,6 @@
 $DIST_DIR = "./dist"
 $EXE_NAME = "lms.exe"
 $ENTRY_JS = "./dist/index.js"
-$BUILD_DIR = ".bun"
 
 # Function to load .env files from current directory up to the root
 function Load-EnvFromAncestors {
@@ -48,8 +47,8 @@ if (-Not (Test-Path $ENTRY_JS)) {
 
 # Build the Bun-compiled executable inside .bun so Bun's
 # temporary .bun-build artifacts are kept there
-Push-Location $BUILD_DIR
-& bun build "../dist/index.js" --compile --outfile "../${DIST_DIR}/${EXE_NAME}"
+Push-Location $DIST_DIR
+& bun build "./index.js" --compile --outfile "./${EXE_NAME}"
 Pop-Location
 
 if (-Not $env:LMS_NO_SIGN) {

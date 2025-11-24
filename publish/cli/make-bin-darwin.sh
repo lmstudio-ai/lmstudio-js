@@ -36,7 +36,10 @@ if [ ! -f "${ENTRY_JS}" ]; then
 fi
 
 
-bun build "${ENTRY_JS}" --compile  --outfile "./${DIST_DIR}/${EXE_NAME}"
+(
+  cd "${DIST_DIR}"
+  bun build "./index.js" --compile --outfile "./${EXE_NAME}"
+)
 chmod +x "${DIST_DIR}/${EXE_NAME}"
 
 if [[ -z "${LMS_NO_SIGN}" ]]; then
