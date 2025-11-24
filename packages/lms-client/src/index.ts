@@ -13,6 +13,11 @@ export {
   type InferParsedConfig,
 } from "./customConfig.js";
 export type { DiagnosticsNamespace } from "./diagnostics/DiagnosticsNamespace.js";
+export type {
+  DiagnosticsLogEvent,
+  DiagnosticsLogEventData,
+  DiagnosticsLogRuntimeEventData,
+} from "@lmstudio/lms-shared-types";
 export type { EmbeddingDynamicHandle } from "./embedding/EmbeddingDynamicHandle.js";
 export type { EmbeddingModel } from "./embedding/EmbeddingModel.js";
 export type { EmbeddingNamespace } from "./embedding/EmbeddingNamespace.js";
