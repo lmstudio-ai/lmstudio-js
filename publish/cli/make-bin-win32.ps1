@@ -1,6 +1,6 @@
 $DIST_DIR = "./dist"
 $EXE_NAME = "lms.exe"
-$ENTRY_JS = "./dist/index.js"
+$ENTRY_JS = "../../packages/lms-cli/dist/index.js"
 $BUILD_DIR = ".bun"
 
 # Function to load .env files from current directory up to the root

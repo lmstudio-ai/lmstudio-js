@@ -23,7 +23,11 @@ export default {
   context: "globalThis",
   external: ["ink", "react", "react/jsx-runtime", /^node:/],
   plugins: [
+    // Json should be before swc to handle imports correctly
+    // or else swc might throw errors on json imports
     json(),
+    // We use swc to transpile TypeScript and JSX
+    // to JavaScript
     swc({
       jsc: {
         parser: {
@@ -32,7 +36,7 @@ export default {
         },
         transform: {
           react: {
-            runtime: "automatic", // or "classic"
+            runtime: "automatic",
           },
         },
       },

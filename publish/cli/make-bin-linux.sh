@@ -3,7 +3,7 @@ set -euo pipefail
 
 DIST_DIR="./dist"
 EXE_NAME="lms"
-ENTRY_JS="./dist/index.js"
+ENTRY_JS="../../packages/lms-cli/dist/index.js"
 BUILD_DIR=".bun"
 
 if ! command -v bun >/dev/null 2>&1; then
