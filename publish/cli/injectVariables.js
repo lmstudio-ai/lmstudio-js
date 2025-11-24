@@ -22,37 +22,4 @@ if (lmsKey !== null) {
   replaced = replaced.replaceAll("<LMS-CLI-LMS-KEY>", lmsKey);
 }
 
-const nodeBuiltinModuleReplacements = [
-  "assert",
-  "buffer",
-  "process",
-  "child_process",
-  "console",
-  "crypto",
-  "events",
-  "fs",
-  "fs/promises",
-  "http",
-  "https",
-  "module",
-  "net",
-  "os",
-  "path",
-  "readline",
-  "stream",
-  "string_decoder",
-  "tls",
-  "tty",
-  "readline/promises",
-  "url",
-  "util",
-  "zlib",
-];
-
-for (const moduleName of nodeBuiltinModuleReplacements) {
-  const from = `'${moduleName}'`;
-  const to = `'node:${moduleName}'`;
-  replaced = replaced.replaceAll(from, to);
-}
-
 writeFileSync(join(currentDirectoryPath, "dist", "index.js"), replaced, "utf-8");
