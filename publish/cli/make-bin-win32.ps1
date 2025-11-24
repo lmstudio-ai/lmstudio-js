@@ -34,8 +34,17 @@ New-Item -Path $DIST_DIR -ItemType Directory -Force | Out-Null
 
 # Ensure bun is available
 if (-not (Get-Command "bun" -ErrorAction SilentlyContinue)) {
-    Write-Host "Error: bun is not installed or not in PATH"
-    exit 1
+    Write-Host "bun not found. Installing bun..."
+    powershell -c "irm bun.sh/install.ps1|iex"
+
+    # Refresh PATH for current session
+    $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+
+    if (-not (Get-Command "bun" -ErrorAction SilentlyContinue)) {
+        Write-Host "Error: Failed to install bun"
+        exit 1
+    }
+    Write-Host "bun installed successfully"
 }
 
 # Ensure the built JS entry exists
