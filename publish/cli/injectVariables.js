@@ -1,9 +1,9 @@
 // Inject the current version by replacing the magic string <LMS-CLI-CURRENT-VERSION>
 // This is much faster than rollup-plugin-replace
 
-import { readFileSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { readFileSync, writeFileSync } from "fs";
+import { dirname, join } from "path";
+import { fileURLToPath } from "url";
 
 const currentFilePath = fileURLToPath(import.meta.url);
 const currentDirectoryPath = dirname(currentFilePath);

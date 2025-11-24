@@ -2,8 +2,7 @@
 
 DIST_DIR="./dist"
 EXE_NAME="lms"
-ENTRY_JS="./dist/index.js"
-BUILD_DIR=".bun"
+ENTRY_JS="../../packages/lms-cli/dist/index.js"
 
 KEYCHAIN_ARGUMENTS=()
 if [[ -n "${APPLE_KEYCHAIN}" ]]; then
@@ -36,12 +35,8 @@ if [ ! -f "${ENTRY_JS}" ]; then
   exit 1
 fi
 
-mkdir -p "${DIST_DIR}" "${BUILD_DIR}"
 
-(
-  cd "${BUILD_DIR}"
-  bun build "../dist/index.js" --compile --outfile "../${DIST_DIR}/${EXE_NAME}"
-)
+bun build "${ENTRY_JS}" --compile  --outfile "./${DIST_DIR}/${EXE_NAME}"
 chmod +x "${DIST_DIR}/${EXE_NAME}"
 
 if [[ -z "${LMS_NO_SIGN}" ]]; then
