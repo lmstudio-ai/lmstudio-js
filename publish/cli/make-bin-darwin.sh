@@ -2,7 +2,7 @@
 
 DIST_DIR="./dist"
 EXE_NAME="lms"
-ENTRY_JS="../../packages/lms-cli/dist/index.js"
+ENTRY_JS="./dist/index.js"
 
 KEYCHAIN_ARGUMENTS=()
 if [[ -n "${APPLE_KEYCHAIN}" ]]; then

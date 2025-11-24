@@ -21,7 +21,12 @@ export default {
     },
   ],
   context: "globalThis",
-  external: ["ink", "react", "react/jsx-runtime", /^node:/],
+  // Keep core runtime dependencies external so:
+  // - Rollup still emits a single CLI entry that resolves these from node_modules at runtime.
+  // - The rollup JS bundle stays small and does not inline react/ink.
+  // - When we later run `bun build --compile`, Bun still sees `ws` as a normal import and can
+  //   integrate it with its own HTTP/WebSocket implementation instead of a fully inlined shim.
+  external: ["ink", "react", "react/jsx-runtime", "ws", /^node:/],
   plugins: [
     // Json should be before swc to handle imports correctly
     // or else swc might throw errors on json imports
