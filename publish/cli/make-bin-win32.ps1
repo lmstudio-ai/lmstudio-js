@@ -31,7 +31,6 @@ function Load-EnvFromAncestors {
 Load-EnvFromAncestors
 
 New-Item -Path $DIST_DIR -ItemType Directory -Force | Out-Null
-New-Item -Path $BUILD_DIR -ItemType Directory -Force | Out-Null
 
 # Ensure bun is available
 if (-not (Get-Command "bun" -ErrorAction SilentlyContinue)) {
