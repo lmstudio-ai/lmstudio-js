@@ -7,10 +7,10 @@
   </picture>
   
 </p>
-<p align="center"><code>Use local LLMs in JS/TS/Node</code></p>
+<p align="center"><code>Use local LLMs in TypeScript</code></p>
 <p align="center"><i>LM Studio Client SDK</i></p>
 
-`lmstudio-ts` is LM Studio's official JavaScript/TypeScript client SDK, it allows you to
+`lmstudio-js` is LM Studio's official JavaScript client SDK, written in TypeScript. It allows you to
 
 - Use LLMs to [respond in chats](https://lmstudio.ai/docs/typescript/llm-prediction/chat-completion) or predict [text completions](https://lmstudio.ai/docs/typescript/llm-prediction/completion)
 - Define functions as tools, and turn LLMs into [autonomous agents](https://lmstudio.ai/docs/typescript/agent/act) that run completely locally
