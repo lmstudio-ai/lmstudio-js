@@ -22,10 +22,23 @@ export const diagnosticsLogServerEventDataSchema = z.object({
   level: logLevelSchema,
 });
 
+export const diagnosticsLogRuntimeEventDataSchema = z.object({
+  type: z.literal("runtime.log"),
+  level: logLevelSchema,
+  message: z.string(),
+  engineName: z.string(),
+  engineVersion: z.string(),
+  engineType: z.string(),
+  modelIdentifier: z.string().optional(),
+  instanceReference: z.string().optional(),
+  pid: z.number().int().optional(),
+});
+
 export const diagnosticsLogEventDataSchema = z.discriminatedUnion("type", [
   diagnosticsLogInputEventDataSchema,
   diagnosticsLogOutputEventDataSchema,
   diagnosticsLogServerEventDataSchema,
+  diagnosticsLogRuntimeEventDataSchema,
 ]);
 
 /**
@@ -60,10 +73,26 @@ export type DiagnosticsLogServerEventData = {
 /**
  * @public
  */
+export type DiagnosticsLogRuntimeEventData = {
+  type: "runtime.log";
+  level: LogLevel;
+  message: string;
+  engineName: string;
+  engineVersion: string;
+  engineType: string;
+  modelIdentifier?: string;
+  instanceReference?: string;
+  pid?: number;
+};
+
+/**
+ * @public
+ */
 export type DiagnosticsLogEventData =
   | DiagnosticsLogInputEventData
   | DiagnosticsLogOutputEventData
-  | DiagnosticsLogServerEventData;
+  | DiagnosticsLogServerEventData
+  | DiagnosticsLogRuntimeEventData;
 
 export const diagnosticsLogEventSchema = z.object({
   timestamp: z.number(),
