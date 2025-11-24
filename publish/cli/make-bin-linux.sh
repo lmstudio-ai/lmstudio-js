@@ -15,8 +15,6 @@ if [ ! -f "${ENTRY_JS}" ]; then
   exit 1
 fi
 
-mkdir -p "${DIST_DIR}" "${BUILD_DIR}"
-
 (
   cd "${DIST_DIR}"
   bun build "index.js" --compile --outfile "../${DIST_DIR}/${EXE_NAME}"
