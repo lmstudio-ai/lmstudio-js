@@ -25,6 +25,7 @@
     "@lmstudio/lms-cli": "^0.3.43"
   },
   "devDependencies": {
+    "@rollup/plugin-swc": "^0.4.0",
     "postject": "^1.0.0-alpha.6",
     "run-script-os": "^1.1.6"
   },

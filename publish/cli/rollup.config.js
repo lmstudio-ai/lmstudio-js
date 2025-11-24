@@ -5,6 +5,7 @@ import banner from "rollup-plugin-banner2";
 import { dirname, join, resolve as resolvePath } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
+import swc from "@rollup/plugin-swc";
 
 const requireForConfig = createRequire(import.meta.url);
 const currentFilePath = fileURLToPath(import.meta.url);
@@ -20,12 +21,26 @@ export default {
     },
   ],
   context: "globalThis",
+  external: ["ink", "react", "react/jsx-runtime", /^node:/],
   plugins: [
+    json(),
+    swc({
+      jsc: {
+        parser: {
+          syntax: "typescript",
+          tsx: true,
+        },
+        transform: {
+          react: {
+            runtime: "automatic", // or "classic"
+          },
+        },
+      },
+    }),
     nodeResolve({
       extensions: [".ts", ".tsx", ".js", ".jsx"],
     }),
     commonjs(),
-    json(),
     banner(() => "#!/usr/bin/env node\n"),
   ],
 };
