@@ -128,6 +128,7 @@ export type {
   ContentBlockStyle,
   DiagnosticsLogEvent,
   DiagnosticsLogEventData,
+  DiagnosticsLogRuntimeEventData,
   DocumentParsingLibraryIdentifier,
   DocumentParsingOpts,
   DownloadProgressUpdate,

@@ -64,6 +64,8 @@ export { ColorPalette, colorPalette, colorPaletteSchema } from "./ColorPalette.j
 export {
   DiagnosticsLogEvent,
   DiagnosticsLogEventData,
+  DiagnosticsLogRuntimeEventData,
+  diagnosticsLogRuntimeEventDataSchema,
   diagnosticsLogEventDataSchema,
   diagnosticsLogEventSchema,
 } from "./diagnostics/DiagnosticsLogEvent.js";
