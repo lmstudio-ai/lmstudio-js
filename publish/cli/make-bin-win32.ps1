@@ -1,3 +1,4 @@
+$BUN_VERSION = "1.3.3"
 $DIST_DIR = "./dist"
 $EXE_NAME = "lms.exe"
 $ENTRY_JS = "./dist/index.js"
@@ -35,7 +36,7 @@ New-Item -Path $DIST_DIR -ItemType Directory -Force | Out-Null
 # Ensure bun is available
 if (-not (Get-Command "bun" -ErrorAction SilentlyContinue)) {
     Write-Host "bun not found. Installing bun..."
-    powershell -c "irm bun.sh/install.ps1|iex"
+    iex "& {$(irm https://bun.sh/install.ps1)} -Version $BUN_VERSION"
 
     # Refresh PATH for current session
     $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")

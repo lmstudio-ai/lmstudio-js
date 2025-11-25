@@ -1,13 +1,14 @@
 #!/bin/bash
 set -euo pipefail
 
+BUN_VERSION="bun-v1.3.3"
 DIST_DIR="./dist"
 EXE_NAME="lms"
 ENTRY_JS="./dist/index.js"
 
 if ! command -v bun >/dev/null 2>&1; then
   echo "bun not found. Installing bun..."
-  curl -fsSL https://bun.sh/install | bash
+  curl -fsSL https://bun.sh/install | bash -s "$BUN_VERSION"
 
   # Source bun setup
   export BUN_INSTALL="$HOME/.bun"
