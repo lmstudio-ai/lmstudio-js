@@ -1,7 +1,7 @@
 import { apiServerPorts, type LoggerInterface } from "@lmstudio/lms-common";
 import { spawn } from "child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
-import { dirname, join } from "path";
+import { join } from "path";
 import { findLMStudioHome } from "./findLMStudioHome.js";
 
 interface AppInstallLocation {
@@ -16,7 +16,7 @@ export interface FindOrStartLlmsterOptions {
    * Called when the LM Studio daemon is not running and no existing installation can be found.
    * Should install llmster and return the path to the newly installed executable.
    */
-  installLlmster?: () => Promise<string> | string;
+  installLlmster?: () => Promise<{ path: string; argv: Array<string>; cwd: string }>;
   /**
    * Maximum number of polling attempts while waiting for the daemon to become available. Defaults
    * to 60 (about 60 seconds).
@@ -58,23 +58,13 @@ export async function findOrStartLlmster(
   if (!appInstallLocation || !existsSync(appInstallLocation.path)) {
     logger.debug(`No valid LM Studio installation found at ${appInstallLocationPath}.`);
 
-    if (installLlmster) {
+    if (installLlmster !== undefined) {
       try {
-        logger.info("Installing LM Studio (llmster)...");
-        const installedPath = await Promise.resolve(installLlmster());
-        if (typeof installedPath === "string" && installedPath.trim() !== "") {
-          const normalizedPath = installedPath.trim();
-          appInstallLocation = {
-            path: normalizedPath,
-            argv: [normalizedPath],
-            cwd: dirname(normalizedPath),
-          };
-          ensureDirectoryExists(dirname(appInstallLocationPath));
-          writeFileSync(appInstallLocationPath, JSON.stringify(appInstallLocation), "utf-8");
-          logger.debug(`Recorded LM Studio installation to ${appInstallLocationPath}.`);
-        } else {
-          logger.error("installLlmster did not return a valid path string.");
-        }
+        logger.info("Installing llmster...");
+        const { path, argv, cwd } = await installLlmster();
+        appInstallLocation = { path, argv, cwd };
+        writeFileSync(appInstallLocationPath, JSON.stringify(appInstallLocation), "utf-8");
+        logger.debug(`Recorded LM Studio installation to ${appInstallLocationPath}.`);
       } catch (e) {
         logger.error("installLlmster threw an error:", e);
       }
@@ -89,7 +79,7 @@ export async function findOrStartLlmster(
   }
 
   // 3. Start the daemon from the resolved installation.
-  wakeUpServiceFromLocation(appInstallLocation, logger);
+  wakeUpServiceFromLocation(logger);
 
   // 4. Poll for the daemon to become available.
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -192,14 +182,11 @@ export async function tryFindLocalAPIServer(logger: LoggerInterface): Promise<{
   }
 }
 
-function wakeUpServiceFromLocation(
-  appInstallLocation: AppInstallLocation,
-  logger: LoggerInterface,
-) {
+function wakeUpServiceFromLocation(logger: LoggerInterface) {
   logger.info("Waking up LM Studio service...");
 
   const args: Array<string> = [];
-  const { path, argv, cwd = false } = appInstallLocation;
+  const { path, argv, cwd } = appInstallLocation;
   if (argv[1] === ".") {
     // We are in development environment
     args.push(".");
