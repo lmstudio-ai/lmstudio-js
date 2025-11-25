@@ -108,4 +108,52 @@ describe("LazySignal", () => {
       ["tag1", "tag2"],
     );
   });
+
+  it("should publish errors through errorSignal when upstream errors", () => {
+    const rejectSpy = jest.spyOn(Promise, "reject").mockImplementation(reason => {
+      return Promise.resolve(reason);
+    });
+    let errorListener: any /* ((error: unknown) => void) | null */ = null;
+    const lazySignal = LazySignal.createWithoutInitialValue((_, onError) => {
+      errorListener = onError;
+      return () => {};
+    });
+    const errorSubscriber = jest.fn();
+    lazySignal.errorSignal.subscribe(errorSubscriber);
+    lazySignal.subscribe(() => {});
+    expect(errorListener).not.toBeNull();
+    const upstreamError = new Error("upstream failed");
+    errorListener?.(upstreamError);
+    expect(lazySignal.errorSignal.get()).toBe(upstreamError);
+    expect(errorSubscriber).toHaveBeenLastCalledWith(upstreamError);
+    errorListener?.(new Error("ignored"));
+    expect(lazySignal.errorSignal.get()).toBe(upstreamError);
+    rejectSpy.mockRestore();
+  });
+
+  it("should not resubscribe to upstream after an error", () => {
+    const rejectSpy = jest.spyOn(Promise, "reject").mockImplementation(reason => {
+      return Promise.resolve(reason);
+    });
+    let errorListener: any /* ((error: unknown) => void) | null */ = null;
+    const unsubscribeMock = jest.fn();
+    const subscribeUpstream = jest.fn().mockImplementation((_, onError) => {
+      errorListener = onError;
+      return unsubscribeMock;
+    });
+    const lazySignal = LazySignal.createWithoutInitialValue(subscribeUpstream);
+    const unsubscribe = lazySignal.subscribe(() => {});
+    expect(subscribeUpstream).toHaveBeenCalledTimes(1);
+    const upstreamError = new Error("boom");
+    expect(errorListener).not.toBeNull();
+    errorListener?.(upstreamError);
+    expect(lazySignal.errorSignal.get()).toBe(upstreamError);
+    expect(unsubscribeMock).not.toHaveBeenCalled();
+    const secondUnsubscribe = lazySignal.subscribe(() => {});
+    expect(subscribeUpstream).toHaveBeenCalledTimes(1);
+    expect(lazySignal.isStale()).toBe(true);
+    unsubscribe();
+    secondUnsubscribe();
+    rejectSpy.mockRestore();
+  });
 });
