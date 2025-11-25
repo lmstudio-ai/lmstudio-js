@@ -5,8 +5,9 @@ import { z, type ZodSchema } from "zod";
  *
  * @public
  */
-export type ModelFormatName = "GGUF" | "MLX" | "GGML";
-export const modelFormatNameSchema = z.enum(["GGUF", "MLX", "GGML"]);
+// TODO: "vLLM" probably wrong string
+export type ModelFormatName = "GGUF" | "MLX" | "GGML" | "vLLM";
+export const modelFormatNameSchema = z.enum(["GGUF", "MLX", "GGML", "vLLM"]);
 
 /**
  * Uniquely specifies a Runtime Engine
