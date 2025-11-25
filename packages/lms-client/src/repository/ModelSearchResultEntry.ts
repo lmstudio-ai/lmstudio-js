@@ -1,11 +1,20 @@
 import { type SimpleLogger, type Validator } from "@lmstudio/lms-common";
 import { type RepositoryPort } from "@lmstudio/lms-external-backend-interfaces";
-import { type ModelSearchResultEntryData } from "@lmstudio/lms-shared-types";
+import {
+  type ModelSearchResultEntryData,
+  type ModelSearchResultMetadata,
+} from "@lmstudio/lms-shared-types";
 import { ModelSearchResultDownloadOption } from "./ModelSearchResultDownloadOption.js";
 
 /** @public */
 export class ModelSearchResultEntry {
   public readonly name: string;
+
+  /**
+   * Rich metadata for staff-picked models. Includes model type, capabilities, and stats.
+   * Only present when the result comes from the catalog (staff picks).
+   */
+  public readonly metadata: ModelSearchResultMetadata | undefined;
 
   /**
    * @internal
@@ -19,6 +28,7 @@ export class ModelSearchResultEntry {
     private readonly data: ModelSearchResultEntryData,
   ) {
     this.name = data.name;
+    this.metadata = data.metadata;
   }
 
   public isExactMatch(): boolean {
@@ -34,8 +44,13 @@ export class ModelSearchResultEntry {
       modelSearchResultIdentifier: this.data.identifier,
     });
     return results.map(
-      data =>
-        new ModelSearchResultDownloadOption(this.repositoryPort, this.validator, this.logger, data),
+      resultData =>
+        new ModelSearchResultDownloadOption(
+          this.repositoryPort,
+          this.validator,
+          this.logger,
+          resultData,
+        ),
     );
   }
 }

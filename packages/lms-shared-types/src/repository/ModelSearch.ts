@@ -60,17 +60,75 @@ export const modelSearchResultIdentifierSchema = z.discriminatedUnion("type", [
   }),
 ]) as ZodSchema<ModelSearchResultIdentifier>;
 
+/**
+ * Shared metadata properties for model search results.
+ * @public
+ */
+export interface ModelSearchResultSharedMetadata {
+  architectures: Array<string>;
+  compatibilityTypes: Array<ModelCompatibilityType>;
+  paramsStrings: Array<string>;
+  minMemoryUsageBytes: number;
+  downloads: number;
+  likeCount: number;
+}
+const modelSearchResultSharedMetadataSchema = z.object({
+  architectures: z.array(z.string()),
+  compatibilityTypes: z.array(modelCompatibilityTypeSchema),
+  paramsStrings: z.array(z.string()),
+  minMemoryUsageBytes: z.number(),
+  downloads: z.number(),
+  likeCount: z.number(),
+});
+
+/**
+ * Metadata for model search results. Includes model type, capabilities, and stats.
+ * @public
+ */
+export type ModelSearchResultMetadata =
+  | ({
+      type: "llm";
+      trainedForToolUse: boolean | "mixed";
+      vision: boolean | "mixed";
+      reasoning: boolean | "mixed";
+      contextLengths: Array<number>;
+    } & ModelSearchResultSharedMetadata)
+  | ({
+      type: "embedding";
+      contextLengths: Array<number>;
+    } & ModelSearchResultSharedMetadata);
+export const modelSearchResultMetadataSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("llm"),
+    ...modelSearchResultSharedMetadataSchema.shape,
+    trainedForToolUse: z.union([z.boolean(), z.literal("mixed")]),
+    vision: z.union([z.boolean(), z.literal("mixed")]),
+    reasoning: z.union([z.boolean(), z.literal("mixed")]),
+    contextLengths: z.array(z.number()),
+  }),
+  z.object({
+    type: z.literal("embedding"),
+    ...modelSearchResultSharedMetadataSchema.shape,
+    contextLengths: z.array(z.number()),
+  }),
+]) as ZodSchema<ModelSearchResultMetadata>;
+
 export interface ModelSearchResultEntryData {
   name: string;
   identifier: ModelSearchResultIdentifier;
   exact?: boolean;
   staffPick?: boolean;
+  /**
+   * Rich metadata for staff-picked models. Only present when the result comes from the catalog.
+   */
+  metadata?: ModelSearchResultMetadata;
 }
 export const modelSearchResultEntryDataSchema = z.object({
   name: z.string(),
   identifier: modelSearchResultIdentifierSchema,
   exact: z.boolean().optional(),
   staffPick: z.boolean().optional(),
+  metadata: modelSearchResultMetadataSchema.optional(),
 }) as ZodSchema<ModelSearchResultEntryData>;
 
 /** @public */
