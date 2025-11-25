@@ -16,6 +16,8 @@ export type HubArtifactBase = {
   owner: string;
   /** Name of the artifact */
   name: string;
+  /** Description of the artifact */
+  description: string;
   /** Number of downloads for the artifact */
   downloads: number;
   /** Number of likes the artifact has received */
@@ -26,6 +28,7 @@ export type HubArtifactBase = {
 export const hubArtifactBaseSchema = z.object({
   owner: z.string(),
   name: z.string(),
+  description: z.string(),
   downloads: z.number(),
   likeCount: z.number(),
   staffPickedAt: z.number().optional(),
