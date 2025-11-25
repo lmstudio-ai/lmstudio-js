@@ -421,9 +421,6 @@ export {
   modelSearchResultEntryDataSchema,
   ModelSearchResultIdentifier,
   modelSearchResultIdentifierSchema,
-  ModelSearchResultMetadata,
-  modelSearchResultMetadataSchema,
-  ModelSearchResultSharedMetadata,
 } from "./repository/ModelSearch.js";
 export {
   InternalRetrievalResult,
