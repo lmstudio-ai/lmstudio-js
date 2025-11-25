@@ -28,6 +28,6 @@ fi
 
 (
   cd "${DIST_DIR}"
-  bun build "index.js" --compile --outfile "../${DIST_DIR}/${EXE_NAME}"
+  bun build "index.js" --compile --outfile "./${EXE_NAME}"
 )
 chmod +x "${DIST_DIR}/${EXE_NAME}"
