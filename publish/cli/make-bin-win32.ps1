@@ -1,26 +1,7 @@
-$NODE_VERSION = "v20.12.2"
-$TEMP_DIR = "./temp"
+$BUN_VERSION = "1.3.3"
 $DIST_DIR = "./dist"
-$NODE_ZIP = "${TEMP_DIR}/node.zip"
-$NODE_DIR = "${TEMP_DIR}/node"
 $EXE_NAME = "lms.exe"
-
-# Get the architecture using PowerShell
-$ARCH = (Get-WmiObject -Class Win32_Processor).Architecture
-
-# Map the PowerShell architecture numbers to URL suffixes
-switch ($ARCH) {
-    0 { $ARCH_SUFFIX = "x64" }  # x86 architecture, defaulting to x64 binaries
-    9 { $ARCH_SUFFIX = "x64" }  # x64 architecture
-    12 { $ARCH_SUFFIX = "arm64" }
-    default {
-        Write-Host "Unsupported architecture: $ARCH"
-        exit 1
-    }
-}
-
-# Set the download URL based on the architecture suffix
-$NODE_DOWNLOAD_URL = "https://nodejs.org/dist/${NODE_VERSION}/node-${NODE_VERSION}-win-${ARCH_SUFFIX}.zip"
+$ENTRY_JS = "./dist/index.js"
 
 # Function to load .env files from current directory up to the root
 function Load-EnvFromAncestors {
@@ -50,34 +31,34 @@ function Load-EnvFromAncestors {
 # Call the function to load .env files
 Load-EnvFromAncestors
 
-# Create temp and dist directories if they don't exist
-New-Item -Path $TEMP_DIR -ItemType Directory -Force | Out-Null
 New-Item -Path $DIST_DIR -ItemType Directory -Force | Out-Null
 
-# Download Node.js if it's not already downloaded
-if (-Not (Test-Path "${NODE_DIR}/node.exe")) {
-    Write-Host "Node.js not found. Downloading..."
-    Invoke-WebRequest -Uri $NODE_DOWNLOAD_URL -OutFile $NODE_ZIP
-    Expand-Archive -Path $NODE_ZIP -DestinationPath $TEMP_DIR
-    Move-Item -Path "${TEMP_DIR}/node-${NODE_VERSION}-win-${ARCH_SUFFIX}" -Destination $NODE_DIR
-    Remove-Item -Path $NODE_ZIP
-} else {
-    Write-Host "Node.js already downloaded."
+# Ensure bun is available
+if (-not (Get-Command "bun" -ErrorAction SilentlyContinue)) {
+    Write-Host "bun not found. Installing bun..."
+    iex "& {$(irm https://bun.sh/install.ps1)} -Version $BUN_VERSION"
+
+    # Refresh PATH for current session
+    $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+
+    if (-not (Get-Command "bun" -ErrorAction SilentlyContinue)) {
+        Write-Host "Error: Failed to install bun"
+        exit 1
+    }
+    Write-Host "bun installed successfully"
 }
 
-# Generate the blob
-& "${NODE_DIR}/node.exe" --experimental-sea-config ./sea-config.json
-
-# Copy the node executable and rename it
-Copy-Item -Path "${NODE_DIR}/node.exe" -Destination "${DIST_DIR}/${EXE_NAME}"
-
-if (-Not $env:LMS_NO_SIGN) {
-    # Remove the signature
-    & signtool remove /s "${DIST_DIR}/${EXE_NAME}"
+# Ensure the built JS entry exists
+if (-Not (Test-Path $ENTRY_JS)) {
+    Write-Host "Error: expected ESM entry at $ENTRY_JS. Run 'npm run build' first."
+    exit 1
 }
 
-# Inject the blob into the copied binary
-& postject "${DIST_DIR}/${EXE_NAME}" NODE_SEA_BLOB ./temp/sea-prep.blob --sentinel-fuse NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2
+# Build the Bun-compiled executable inside .bun so Bun's
+# temporary .bun-build artifacts are kept there
+Push-Location $DIST_DIR
+& bun build "./index.js" --compile --outfile "./${EXE_NAME}"
+Pop-Location
 
 if (-Not $env:LMS_NO_SIGN) {
     # Signing

@@ -6,3 +6,4 @@ coverage
 .env
 .DS_Store
 .turbo
+*.bun-build

@@ -135,6 +135,11 @@ export class WsClientTransport extends ClientTransport {
     if (this.status === WsClientTransportStatus.Disconnected) {
       return;
     }
+    if (this.disposed) {
+      // Suppress errors during intentional disposal
+      this.status = WsClientTransportStatus.Disconnected;
+      return;
+    }
     this.logger.warn("WebSocket error:", error);
     if (error.code === "ECONNREFUSED") {
       this.logger.warnText`
@@ -187,6 +192,9 @@ export class WsClientTransport extends ClientTransport {
   }
   private updateShouldRef(shouldRef: boolean) {
     this.shouldRef = shouldRef;
+    if (!WsClientTransport.supportsRefing()) {
+      return;
+    }
     if (this.ws === null) {
       return;
     }
@@ -198,6 +206,18 @@ export class WsClientTransport extends ClientTransport {
     } else {
       (this.ws as any)._socket.unref();
     }
+  }
+  private static supportsRefing(): boolean {
+    if (typeof process === "undefined") {
+      return false;
+    }
+    if (process.versions === undefined) {
+      return false;
+    }
+    if (!("node" in process.versions)) {
+      return false;
+    }
+    return !("bun" in process.versions);
   }
   public override sendViaTransport(message: ClientToServerMessage) {
     if (this.status === WsClientTransportStatus.Connected) {
@@ -211,7 +231,9 @@ export class WsClientTransport extends ClientTransport {
   }
   public override async [Symbol.asyncDispose]() {
     await super[Symbol.asyncDispose]();
-    if (this.shouldRef) {
+    // Only wait for communications to close in Node where ref/unref is supported
+    // In Bun, we close immediately since we can't keep the socket alive without blocking
+    if (this.shouldRef && WsClientTransport.supportsRefing()) {
       // If the connection needs to held up, wait until all communications are terminates
       const { promise: disposedPromise, resolve: resolveDisposed } = makePromise<void>();
       this.resolveDisposed = resolveDisposed;

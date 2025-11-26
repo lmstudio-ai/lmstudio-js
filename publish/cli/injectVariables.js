@@ -1,15 +1,19 @@
 // Inject the current version by replacing the magic string <LMS-CLI-CURRENT-VERSION>
 // This is much faster than rollup-plugin-replace
 
-const { readFileSync, writeFileSync } = require("fs");
-const { join } = require("path");
+import { readFileSync, writeFileSync } from "fs";
+import { dirname, join } from "path";
+import { fileURLToPath } from "url";
 
-const content = readFileSync(join(__dirname, "dist", "index.js"), "utf-8");
-const packageJson = readFileSync(join(__dirname, "package.json"), "utf-8");
+const currentFilePath = fileURLToPath(import.meta.url);
+const currentDirectoryPath = dirname(currentFilePath);
+
+const content = readFileSync(join(currentDirectoryPath, "dist", "index.js"), "utf-8");
+const packageJson = readFileSync(join(currentDirectoryPath, "package.json"), "utf-8");
 let lmsKey = null;
 try {
-  lmsKey = readFileSync(join(__dirname, "lms-key"), "utf-8").trim();
-} catch (e) {
+  lmsKey = readFileSync(join(currentDirectoryPath, "lms-key"), "utf-8").trim();
+} catch (error) {
   console.error("Failed to read lms-key. Build in development mode.");
 }
 
@@ -18,4 +22,4 @@ if (lmsKey !== null) {
   replaced = replaced.replaceAll("<LMS-CLI-LMS-KEY>", lmsKey);
 }
 
-writeFileSync(join(__dirname, "dist", "index.js"), replaced, "utf-8");
+writeFileSync(join(currentDirectoryPath, "dist", "index.js"), replaced, "utf-8");
