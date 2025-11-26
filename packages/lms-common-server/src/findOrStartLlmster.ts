@@ -4,7 +4,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { join } from "path";
 import { findLMStudioHome } from "./findLMStudioHome.js";
 
-interface AppInstallLocation {
+interface InstallLocation {
   path: string;
   argv: Array<string>;
   cwd: string;
@@ -52,25 +52,54 @@ export async function findOrStartLlmster(
   logger.debug("No running LM Studio daemon detected.");
 
   // 2. Try to start from an existing installation, or install if missing.
-  const appInstallLocationPath = getAppInstallLocationPath();
-  let appInstallLocation = readAppInstallLocation(appInstallLocationPath, logger);
+  const appInstallLocationFilePath = getAppInstallLocationFilePath();
+  const appInstallLocation = readInstallLocationFile(appInstallLocationFilePath, logger);
+  logger.debug("Found LM Studio install location:", appInstallLocation);
 
-  if (!appInstallLocation || !existsSync(appInstallLocation.path)) {
-    logger.debug(`No valid LM Studio installation found at ${appInstallLocationPath}.`);
+  const llmsterInstallLocationFilePath = getLlmsterInstallLocationFilePath();
+  const llmsterInstallLocation = readInstallLocationFile(llmsterInstallLocationFilePath, logger);
+  logger.debug("Found llmster install location:", llmsterInstallLocation);
+
+  let installLocation: InstallLocation | null = null;
+  let isDaemon = false;
+  if (llmsterInstallLocation !== null) {
+    // Always prefer llmster for now
+    installLocation = llmsterInstallLocation;
+    isDaemon = true;
+
+    // Print different logging messages to help with debugging
+    if (appInstallLocation !== null) {
+      logger.debug(`Both LM Studio and llmster install locations found; using llmster.`);
+    } else {
+      logger.debug(`Using llmster install location.`);
+    }
+  } else {
+    if (appInstallLocation !== null) {
+      logger.debug(`Using LM Studio install location.`);
+      installLocation = appInstallLocation;
+      isDaemon = false;
+    } else {
+      logger.debug(`No LM Studio or llmster install location found.`);
+    }
+  }
+
+  if (installLocation === null || !existsSync(installLocation.path)) {
+    logger.debug(`No valid LM Studio installation found at ${appInstallLocationFilePath}.`);
 
     if (installLlmster !== undefined) {
       try {
         logger.info("Installing llmster...");
         const { path, argv, cwd } = await installLlmster();
-        appInstallLocation = { path, argv, cwd };
-        writeFileSync(appInstallLocationPath, JSON.stringify(appInstallLocation), "utf-8");
-        logger.debug(`Recorded LM Studio installation to ${appInstallLocationPath}.`);
+        installLocation = { path, argv, cwd };
+        writeFileSync(llmsterInstallLocationFilePath, JSON.stringify(installLocation), "utf-8");
+        logger.debug(`Recorded LM Studio installation to ${llmsterInstallLocationFilePath}.`);
+        isDaemon = true;
       } catch (e) {
         logger.error("installLlmster threw an error:", e);
       }
     }
 
-    if (!appInstallLocation || !existsSync(appInstallLocation.path)) {
+    if (installLocation === null || !existsSync(installLocation.path)) {
       logger.error(
         "LM Studio daemon is not running and no valid installation could be found or installed.",
       );
@@ -79,7 +108,7 @@ export async function findOrStartLlmster(
   }
 
   // 3. Start the daemon from the resolved installation.
-  wakeUpServiceFromLocation(logger);
+  wakeUpServiceFromLocation(logger, installLocation, isDaemon);
 
   // 4. Poll for the daemon to become available.
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -97,9 +126,14 @@ export async function findOrStartLlmster(
   return null;
 }
 
-function getAppInstallLocationPath(): string {
+function getAppInstallLocationFilePath(): string {
   const lmstudioHome = findLMStudioHome();
   return join(lmstudioHome, ".internal", "app-install-location.json");
+}
+
+function getLlmsterInstallLocationFilePath(): string {
+  const lmstudioHome = findLMStudioHome();
+  return join(lmstudioHome, ".internal", "llmster-install-location.json");
 }
 
 function ensureDirectoryExists(path: string) {
@@ -108,22 +142,19 @@ function ensureDirectoryExists(path: string) {
   }
 }
 
-function readAppInstallLocation(
-  appInstallLocationPath: string,
+function readInstallLocationFile(
+  installLocationFilePath: string,
   logger: LoggerInterface,
-): AppInstallLocation | null {
+): InstallLocation | null {
   try {
-    if (!existsSync(appInstallLocationPath)) {
-      logger.debug(`App install location file does not exist at ${appInstallLocationPath}.`);
+    if (!existsSync(installLocationFilePath)) {
+      logger.debug(`Install location file does not exist at ${installLocationFilePath}.`);
       return null;
     }
-    const content = readFileSync(appInstallLocationPath, "utf-8");
-    return JSON.parse(content) as AppInstallLocation;
+    const content = readFileSync(installLocationFilePath, "utf-8");
+    return JSON.parse(content) as InstallLocation;
   } catch (e) {
-    logger.debug(
-      `Failed to read or parse app install location file at ${appInstallLocationPath}.`,
-      e,
-    );
+    logger.debug(`Failed to read or parse install location file at ${installLocationFilePath}.`, e);
     return null;
   }
 }
@@ -182,11 +213,15 @@ export async function tryFindLocalAPIServer(logger: LoggerInterface): Promise<{
   }
 }
 
-function wakeUpServiceFromLocation(logger: LoggerInterface) {
+function wakeUpServiceFromLocation(
+  logger: LoggerInterface,
+  installLocation: InstallLocation,
+  isDaemon: boolean,
+) {
   logger.info("Waking up LM Studio service...");
 
   const args: Array<string> = [];
-  const { path, argv, cwd } = appInstallLocation;
+  const { path, argv, cwd } = installLocation;
   if (argv[1] === ".") {
     // We are in development environment
     args.push(".");
@@ -202,7 +237,7 @@ function wakeUpServiceFromLocation(logger: LoggerInterface) {
   } as NodeJS.ProcessEnv;
 
   try {
-    if (process.platform === "win32" && daemon) {
+    if (process.platform === "win32" && isDaemon) {
       // On Windows + daemon, launch via PowerShell's Start-Process with a Hidden window style
       // to avoid opening a console window.
       const escapePs = (s: string) => `'${s.replace(/'/g, "''")}'`;
