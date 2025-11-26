@@ -192,7 +192,7 @@ export class WsClientTransport extends ClientTransport {
   }
   private updateShouldRef(shouldRef: boolean) {
     this.shouldRef = shouldRef;
-    if (!WsClientTransport.isRunningInNode()) {
+    if (!WsClientTransport.supportsRefing()) {
       return;
     }
     if (this.ws === null) {
@@ -207,7 +207,7 @@ export class WsClientTransport extends ClientTransport {
       (this.ws as any)._socket.unref();
     }
   }
-  private static isRunningInNode(): boolean {
+  private static supportsRefing(): boolean {
     if (typeof process === "undefined") {
       return false;
     }
@@ -233,7 +233,7 @@ export class WsClientTransport extends ClientTransport {
     await super[Symbol.asyncDispose]();
     // Only wait for communications to close in Node where ref/unref is supported
     // In Bun, we close immediately since we can't keep the socket alive without blocking
-    if (this.shouldRef && WsClientTransport.isRunningInNode()) {
+    if (this.shouldRef && WsClientTransport.supportsRefing()) {
       // If the connection needs to held up, wait until all communications are terminates
       const { promise: disposedPromise, resolve: resolveDisposed } = makePromise<void>();
       this.resolveDisposed = resolveDisposed;
