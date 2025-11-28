@@ -122,4 +122,4 @@ export type {
   PushArtifactOpts,
   RepositoryNamespace,
 } from "./repository/RepositoryNamespace.js";
-export type { SystemNamespace } from "./system/SystemNamespace.js";
+export type { ServiceInfo, SystemNamespace } from "./system/SystemNamespace.js";
