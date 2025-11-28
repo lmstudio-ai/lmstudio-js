@@ -72,6 +72,9 @@ export function createSystemBackendInterface() {
         returns: z.object({
           pid: z.number().int(),
           isDaemon: z.boolean(),
+          version: z.string(),
+          build: z.string().optional(),
+          channel: z.string().optional(),
         }),
       })
   );
