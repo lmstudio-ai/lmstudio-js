@@ -41,7 +41,6 @@ export interface ServiceInfo {
   isDaemon: boolean;
   version: string;
   build?: string;
-  channel?: string;
 }
 
 /** @public */

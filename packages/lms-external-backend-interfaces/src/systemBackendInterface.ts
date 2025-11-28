@@ -74,7 +74,6 @@ export function createSystemBackendInterface() {
           isDaemon: z.boolean(),
           version: z.string(),
           build: z.string().optional(),
-          channel: z.string().optional(),
         }),
       })
   );
