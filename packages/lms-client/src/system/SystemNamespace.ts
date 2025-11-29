@@ -40,7 +40,6 @@ export interface ServiceInfo {
   pid: number;
   isDaemon: boolean;
   version: string;
-  build?: string;
 }
 
 /** @public */
