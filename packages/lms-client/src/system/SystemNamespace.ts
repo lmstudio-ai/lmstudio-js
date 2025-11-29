@@ -36,6 +36,11 @@ const startHttpServerOptsSchema = z.object({
 });
 
 type StartHttpServerOpts = z.infer<typeof startHttpServerOptsSchema>;
+export interface ServiceInfo {
+  pid: number;
+  isDaemon: boolean;
+  version: string;
+}
 
 /** @public */
 export class SystemNamespace {
@@ -191,7 +196,7 @@ export class SystemNamespace {
   /**
    * Get process information including PID and daemon status.
    */
-  public async getInfo(): Promise<{ pid: number; isDaemon: boolean }> {
+  public async getInfo(): Promise<ServiceInfo> {
     const stack = getCurrentStack(1);
     return await this.systemPort.callRpc("info", undefined, { stack });
   }

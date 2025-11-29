@@ -71,6 +71,7 @@ export type {
   RemoteTool,
   RemoteToolUseSession,
   RepositoryNamespace,
+  ServiceInfo,
   RequestConfirmToolCallOpts,
   RequestConfirmToolCallResult,
   RetrievalCallbacks,
