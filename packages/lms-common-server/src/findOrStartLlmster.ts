@@ -226,8 +226,10 @@ function wakeUpServiceFromLocation(
     // We are in development environment
     args.push(".");
   }
-  // Also add the headless flag
-  args.push("--run-as-service");
+  // Add the headless flag only for the app (LM Studio), not for the llmster daemon.
+  if (isDaemon === false) {
+    args.push("--run-as-service");
+  }
 
   logger.debug("Preparing to spawn LM Studio daemon process:", { path, args, cwd });
 
