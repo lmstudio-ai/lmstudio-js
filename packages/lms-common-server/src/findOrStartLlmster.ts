@@ -1,6 +1,6 @@
 import { apiServerPorts, type LoggerInterface } from "@lmstudio/lms-common";
 import { spawn } from "child_process";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
+import { existsSync, readFileSync, writeFileSync } from "fs";
 import { join } from "path";
 import { findLMStudioHome } from "./findLMStudioHome.js";
 
@@ -8,6 +8,12 @@ interface InstallLocation {
   path: string;
   argv: Array<string>;
   cwd: string;
+}
+
+export interface APIServerStatus {
+  package: string;
+  version: string;
+  port: number;
 }
 
 export interface FindOrStartLlmsterOptions {
@@ -37,7 +43,7 @@ export interface FindOrStartLlmsterOptions {
  */
 export async function findOrStartLlmster(
   options: FindOrStartLlmsterOptions = {},
-): Promise<number | null> {
+): Promise<APIServerStatus | null> {
   const { installLlmster, maxAttempts = 60, pollIntervalMs = 1000 } = options;
   const logger: LoggerInterface = (options.logger ?? console) as LoggerInterface;
 
@@ -46,7 +52,7 @@ export async function findOrStartLlmster(
   if (serverStatus !== null) {
     logger.debug(`Found running LM Studio daemon at port ${serverStatus}`);
     logger.debug(`package=${serverStatus.package}, version=${serverStatus.version}`);
-    return serverStatus.port;
+    return serverStatus;
   }
 
   logger.debug("No running LM Studio daemon detected.");
@@ -118,7 +124,7 @@ export async function findOrStartLlmster(
     if (serverStatus !== null) {
       logger.debug(`LM Studio daemon became available at port ${serverStatus}`);
       logger.debug(`package=${serverStatus.package}, version=${serverStatus.version}`);
-      return serverStatus.port;
+      return serverStatus;
     }
   }
 
@@ -134,12 +140,6 @@ function getAppInstallLocationFilePath(): string {
 function getLlmsterInstallLocationFilePath(): string {
   const lmstudioHome = findLMStudioHome();
   return join(lmstudioHome, ".internal", "llmster-install-location.json");
-}
-
-function ensureDirectoryExists(path: string) {
-  if (!existsSync(path)) {
-    mkdirSync(path, { recursive: true });
-  }
 }
 
 function readInstallLocationFile(
@@ -162,7 +162,7 @@ function readInstallLocationFile(
 async function getLocalServerStatusAtPortOrThrow(
   port: number,
   timeoutMs?: number,
-): Promise<{ package: string; version: string; port: number }> {
+): Promise<APIServerStatus> {
   const controller = new AbortController();
   const timeout =
     typeof timeoutMs === "number" ? setTimeout(() => controller.abort(), timeoutMs) : undefined;
@@ -198,11 +198,9 @@ async function getLocalServerStatusAtPortOrThrow(
   return { package: json.package, version: json.version, port };
 }
 
-export async function tryFindLocalAPIServer(logger: LoggerInterface): Promise<{
-  package: string;
-  version: string;
-  port: number;
-} | null> {
+export async function tryFindLocalAPIServer(
+  logger: LoggerInterface,
+): Promise<APIServerStatus | null> {
   try {
     return await Promise.any(
       apiServerPorts.map(port => getLocalServerStatusAtPortOrThrow(port, 3000)),
@@ -244,17 +242,17 @@ function wakeUpServiceFromLocation(
       // to avoid opening a console window.
       const escapePs = (s: string) => `'${s.replace(/'/g, "''")}'`;
       const argList = args.join(" ");
-      const psCommand = [
-        "Start-Process",
-        "-FilePath",
-        escapePs(path),
-        "-ArgumentList",
-        escapePs(argList),
-        "-WorkingDirectory",
-        escapePs(cwd),
-        "-WindowStyle",
-        "Hidden",
-      ].join(" ");
+
+      const psCommandParts = ["Start-Process", "-FilePath", escapePs(path)];
+
+      // Only add ArgumentList if there are actual arguments
+      if (argList.trim() !== "") {
+        psCommandParts.push("-ArgumentList", escapePs(argList));
+      }
+
+      psCommandParts.push("-WorkingDirectory", escapePs(cwd), "-WindowStyle", "Hidden");
+
+      const psCommand = psCommandParts.join(" ");
 
       logger.debug("Spawning llmster via PowerShell Start-Process (hidden window).", {
         psCommand,
