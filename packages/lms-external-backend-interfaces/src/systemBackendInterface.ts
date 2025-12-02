@@ -75,6 +75,10 @@ export function createSystemBackendInterface() {
           version: z.string(),
         }),
       })
+      .addRpcEndpoint("requestShutdown", {
+        parameter: z.void(),
+        returns: z.void(),
+      })
   );
 }
 

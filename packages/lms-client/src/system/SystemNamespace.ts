@@ -200,4 +200,13 @@ export class SystemNamespace {
     const stack = getCurrentStack(1);
     return await this.systemPort.callRpc("info", undefined, { stack });
   }
+
+  /**
+   * Requests the daemon to exit gracefully. This method can only be called by privileged clients,
+   * for example, the lms CLI.
+   */
+  public async requestShutdown(): Promise<void> {
+    const stack = getCurrentStack(1);
+    await this.systemPort.callRpc("requestShutdown", undefined, { stack });
+  }
 }
