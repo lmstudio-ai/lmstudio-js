@@ -50,7 +50,7 @@ export async function findOrStartLlmster(
   // 1. Try to find an already running daemon.
   const serverStatus = await tryFindLocalAPIServer(logger);
   if (serverStatus !== null) {
-    logger.debug(`Found running LM Studio daemon at port ${serverStatus}`);
+    logger.debug(`Found running LM Studio daemon at port ${serverStatus.port}`);
     logger.debug(`package=${serverStatus.package}, version=${serverStatus.version}`);
     return serverStatus;
   }
