@@ -44,27 +44,26 @@ export type RuntimeHardwareSurveyCompatibilityStatus =
   | "Error surveying hardware"
   | "Error checking compatibility"
   | "Unknown";
-export const runtimeHardwareSurveyCompatibilityStatusSchema =
-  z.enum([
-    "Compatible",
-    "Incompatible app version",
-    "Incompatible backend version",
-    "Invalid CPU architecture",
-    "Invalid CPU instruction set extensions",
-    "CPU survey unsuccesful",
-    "GPU survey unsuccessful",
-    "GPU required but none found",
-    "GPU targets required but none specified",
-    "GPU driver unsupported",
-    "No supported GPUs",
-    "Incompatible platform",
-    "Library outdated",
-    "Invalid library version format",
-    "Missing libraries",
-    "Error surveying hardware",
-    "Error checking compatibility",
-    "Unknown",
-  ]) as ZodSchema<RuntimeHardwareSurveyCompatibilityStatus>;
+export const runtimeHardwareSurveyCompatibilityStatusSchema = z.enum([
+  "Compatible",
+  "Incompatible app version",
+  "Incompatible backend version",
+  "Invalid CPU architecture",
+  "Invalid CPU instruction set extensions",
+  "CPU survey unsuccesful",
+  "GPU survey unsuccessful",
+  "GPU required but none found",
+  "GPU targets required but none specified",
+  "GPU driver unsupported",
+  "No supported GPUs",
+  "Incompatible platform",
+  "Library outdated",
+  "Invalid library version format",
+  "Missing libraries",
+  "Error surveying hardware",
+  "Error checking compatibility",
+  "Unknown",
+]) as ZodSchema<RuntimeHardwareSurveyCompatibilityStatus>;
 
 export interface RuntimeHardwareSurveyCompatibility {
   status: RuntimeHardwareSurveyCompatibilityStatus;
