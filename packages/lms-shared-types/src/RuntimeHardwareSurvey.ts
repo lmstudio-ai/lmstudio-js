@@ -220,7 +220,6 @@ export interface RuntimeHardwareSurveyEngine {
   version: string;
   engine: string;
   platform: string;
-  gpuFramework: "ROCm" | "Metal" | "Vulkan" | "CUDA";
   compatibility: RuntimeHardwareSurveyCompatibility;
   supportedModelFormatNames: ModelFormatName[];
   hardwareSurvey: RuntimeHardwareSurveyHardware;
@@ -232,7 +231,6 @@ export const runtimeHardwareSurveyEngineSchema = z.object({
   version: z.string(),
   engine: z.string(),
   platform: z.string(),
-  gpuFramework: z.enum(["ROCm", "Metal", "Vulkan", "CUDA"]),
   compatibility: runtimeHardwareSurveyCompatibilitySchema,
   supportedModelFormatNames: z.array(modelFormatNameSchema),
   hardwareSurvey: runtimeHardwareSurveyHardwareSchema,
