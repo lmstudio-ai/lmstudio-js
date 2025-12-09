@@ -490,6 +490,10 @@ export {
   runtimeHardwareSurveyResultSchema,
   RuntimeHardwareSurveyScope,
   runtimeHardwareSurveyScopeSchema,
+  RuntimeHardwareSurveyMemoryInfo,
+  runtimeHardwareSurveyMemoryInfoSchema,
+  RuntimeHardwareSurveyResultCode,
+  runtimeHardwareSurveyResultCodeSchema,
 } from "./RuntimeHardwareSurvey.js";
 export {
   KVConfigSchematicsDeserializationError,
