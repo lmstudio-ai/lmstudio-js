@@ -35,17 +35,8 @@ New-Item -Path $DIST_DIR -ItemType Directory -Force | Out-Null
 
 # Ensure bun is available
 if (-not (Get-Command "bun" -ErrorAction SilentlyContinue)) {
-    Write-Host "bun not found. Installing bun..."
-    iex "& {$(irm https://bun.sh/install.ps1)} -Version $BUN_VERSION"
-
-    # Refresh PATH for current session
-    $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-
-    if (-not (Get-Command "bun" -ErrorAction SilentlyContinue)) {
-        Write-Host "Error: Failed to install bun"
-        exit 1
-    }
-    Write-Host "bun installed successfully"
+    Write-Host "Error: bun not found. Please install bun version $BUN_VERSION"
+    exit 1
 }
 
 # Ensure the built JS entry exists
