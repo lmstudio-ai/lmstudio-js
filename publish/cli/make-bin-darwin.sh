@@ -26,16 +26,27 @@ load_env_from_ancestors() {
 
 load_env_from_ancestors
 
-LOCAL_BUN_DIR="./local-bun"
+LOCAL_BUN_DIR="./temp/bun"
+LOCAL_BUN_RELATIVE_BINARY="bun-darwin-aarch64/bun"
 if ! command -v bun >/dev/null 2>&1; then
-  echo "bun not installed. Downloading bun version ${BUN_VERSION}..."
-  mkdir -p "${LOCAL_BUN_DIR}"
-  # No need to support x86_64 macs
-  curl -fsSL "https://github.com/oven-sh/bun/releases/download/${BUN_VERSION}/bun-darwin-aarch64.zip" -o "${LOCAL_BUN_DIR}/bun.zip"
-  unzip -o "${LOCAL_BUN_DIR}/bun.zip" -d "${LOCAL_BUN_DIR}"
-  chmod +x "${LOCAL_BUN_DIR}/bun-darwin-aarch64/bun"
-  export PATH="${LOCAL_BUN_DIR}/bun-darwin-aarch64:${PATH}"
-  echo "Bun installed locally at ${LOCAL_BUN_DIR}"
+  if [ -x "${LOCAL_BUN_DIR}/${LOCAL_BUN_RELATIVE_BINARY}" ]; then
+    LOCAL_BUN_ABSOLUTE_DIR="$(cd "${LOCAL_BUN_DIR}" && pwd)"
+    BUN_CMD="${LOCAL_BUN_ABSOLUTE_DIR}/${LOCAL_BUN_RELATIVE_BINARY}"
+    echo "Using cached Bun from ${LOCAL_BUN_DIR}"
+  else
+    echo "bun not installed. Downloading bun version ${BUN_VERSION}..."
+    mkdir -p "${LOCAL_BUN_DIR}"
+    # No need to support x86_64 macs
+    curl -fsSL "https://github.com/oven-sh/bun/releases/download/${BUN_VERSION}/bun-darwin-aarch64.zip" -o "${LOCAL_BUN_DIR}/bun.zip"
+    unzip -o "${LOCAL_BUN_DIR}/bun.zip" -d "${LOCAL_BUN_DIR}"
+    LOCAL_BUN_ABSOLUTE_DIR="$(cd "${LOCAL_BUN_DIR}" && pwd)"
+    BUN_CMD="${LOCAL_BUN_ABSOLUTE_DIR}/${LOCAL_BUN_RELATIVE_BINARY}"
+    chmod +x "${BUN_CMD}"
+    rm -f "${LOCAL_BUN_ABSOLUTE_DIR}/bun.zip"
+    echo "Bun installed locally at ${LOCAL_BUN_DIR}"
+  fi
+else
+  BUN_CMD="bun"
 fi
 
 if [ ! -f "${ENTRY_JS}" ]; then
@@ -46,7 +57,7 @@ fi
 
 (
   cd "${DIST_DIR}"
-  bun build "./index.js" --compile --outfile "./${EXE_NAME}"
+  "${BUN_CMD}" build "./index.js" --compile --outfile "./${EXE_NAME}"
 )
 chmod +x "${DIST_DIR}/${EXE_NAME}"
 
