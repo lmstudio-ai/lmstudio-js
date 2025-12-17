@@ -34,9 +34,28 @@ Load-EnvFromAncestors
 New-Item -Path $DIST_DIR -ItemType Directory -Force | Out-Null
 
 # Ensure bun is available
+$LOCAL_BUN_DIR = "./local-bun"
 if (-not (Get-Command "bun" -ErrorAction SilentlyContinue)) {
-    Write-Host "Error: bun not found. Please install bun version $BUN_VERSION"
-    exit 1
+    Write-Host "bun not installed. Downloading bun version $BUN_VERSION..."
+
+    $arch = [System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture
+    if ($arch -eq "Arm64") {
+        $BUN_PLATFORM = "bun-windows-x64-baseline"
+    } elseif ($arch -eq "X64") {
+        $BUN_PLATFORM = "bun-windows-x64"
+    } else {
+        Write-Host "Unsupported architecture: $arch"
+        exit 1
+    }
+
+    New-Item -Path $LOCAL_BUN_DIR -ItemType Directory -Force | Out-Null
+    $bunUrl = "https://github.com/oven-sh/bun/releases/download/bun-v$BUN_VERSION/$BUN_PLATFORM.zip"
+    $bunZip = Join-Path $LOCAL_BUN_DIR "bun.zip"
+    Invoke-WebRequest -Uri $bunUrl -OutFile $bunZip
+    Expand-Archive -Path $bunZip -DestinationPath $LOCAL_BUN_DIR -Force
+    $bunPath = Join-Path (Resolve-Path $LOCAL_BUN_DIR).Path $BUN_PLATFORM
+    $env:PATH = "$bunPath;$env:PATH"
+    Write-Host "Bun installed locally at $LOCAL_BUN_DIR"
 }
 
 # Ensure the built JS entry exists
