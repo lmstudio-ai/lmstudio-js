@@ -52,7 +52,7 @@ export function createRuntimeBackendInterface() {
            * By default, uses app global settings. If specified, overrides the global setting for
            * this request.
            */
-          channelOverride: z.string().optional(),
+          channelOverride: z.string().min(1).max(30).optional(),
           /**
            * Whether to include incompatible engines in the results.
            */
