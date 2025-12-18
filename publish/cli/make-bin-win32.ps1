@@ -1,4 +1,5 @@
 $BUN_VERSION = "1.3.3"
+$BUN_TAG = "bun-v$BUN_VERSION"
 $DIST_DIR = "./dist"
 $EXE_NAME = "lms.exe"
 $ENTRY_JS = "./dist/index.js"
@@ -34,38 +35,35 @@ Load-EnvFromAncestors
 New-Item -Path $DIST_DIR -ItemType Directory -Force | Out-Null
 
 # Ensure bun is available
-$LOCAL_BUN_DIR = "./temp/bun"
-if (-not (Get-Command "bun" -ErrorAction SilentlyContinue)) {
-    $arch = [System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture
-    if ($arch -eq "Arm64") {
-        $BUN_PLATFORM = "bun-windows-x64-baseline"
-    } elseif ($arch -eq "X64") {
-        $BUN_PLATFORM = "bun-windows-x64"
-    } else {
-        Write-Host "Unsupported architecture: $arch"
-        exit 1
-    }
+$LOCAL_BUN_DIR = "./temp/$BUN_TAG"
 
-    $localBunAbsoluteDir = [System.IO.Path]::GetFullPath($LOCAL_BUN_DIR)
-    $bunExePath = Join-Path (Join-Path $localBunAbsoluteDir $BUN_PLATFORM) "bun.exe"
-
-    if (Test-Path $bunExePath) {
-        Write-Host "Using cached Bun from $LOCAL_BUN_DIR"
-        $BUN_CMD = $bunExePath
-    } else {
-        Write-Host "bun not installed. Downloading bun version $BUN_VERSION..."
-        New-Item -Path $LOCAL_BUN_DIR -ItemType Directory -Force | Out-Null
-        $bunUrl = "https://github.com/oven-sh/bun/releases/download/bun-v$BUN_VERSION/$BUN_PLATFORM.zip"
-        $bunZip = Join-Path $localBunAbsoluteDir "bun.zip"
-        Invoke-WebRequest -Uri $bunUrl -OutFile $bunZip
-        Expand-Archive -Path $bunZip -DestinationPath $localBunAbsoluteDir -Force
-        Remove-Item -Path $bunZip -Force -ErrorAction SilentlyContinue
-        $BUN_CMD = $bunExePath
-        Write-Host "Bun installed locally at $LOCAL_BUN_DIR"
-    }
+$arch = [System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture
+if ($arch -eq "Arm64") {
+    $BUN_PLATFORM = "bun-windows-x64-baseline"
+} elseif ($arch -eq "X64") {
+    $BUN_PLATFORM = "bun-windows-x64"
 } else {
-    $BUN_CMD = "bun"
+    Write-Host "Unsupported architecture: $arch"
+    exit 1
 }
+
+$localBunAbsoluteDir = [System.IO.Path]::GetFullPath($LOCAL_BUN_DIR)
+$bunExePath = Join-Path (Join-Path $localBunAbsoluteDir $BUN_PLATFORM) "bun.exe"
+
+if (Test-Path $bunExePath) {
+    $BUN_CMD = $bunExePath
+} else {
+    Write-Host "$BUN_TAG not present. Downloading..."
+    New-Item -Path $LOCAL_BUN_DIR -ItemType Directory -Force | Out-Null
+    $bunUrl = "https://github.com/oven-sh/bun/releases/download/$BUN_TAG/$BUN_PLATFORM.zip"
+    $bunZip = Join-Path $localBunAbsoluteDir "bun.zip"
+    Invoke-WebRequest -Uri $bunUrl -OutFile $bunZip
+    Expand-Archive -Path $bunZip -DestinationPath $localBunAbsoluteDir -Force
+    Remove-Item -Path $bunZip -Force -ErrorAction SilentlyContinue
+    $BUN_CMD = $bunExePath
+}
+
+Write-Host "Using bun at $BUN_CMD"
 
 # Ensure the built JS entry exists
 if (-Not (Test-Path $ENTRY_JS)) {

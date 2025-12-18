@@ -1,6 +1,7 @@
 #!/bin/bash
 
-BUN_VERSION="bun-v1.3.3"
+BUN_VERSION="1.3.3"
+BUN_TAG="bun-v${BUN_VERSION}"
 DIST_DIR="./dist"
 EXE_NAME="lms"
 ENTRY_JS="./dist/index.js"
@@ -26,28 +27,25 @@ load_env_from_ancestors() {
 
 load_env_from_ancestors
 
-LOCAL_BUN_DIR="./temp/bun"
+LOCAL_BUN_DIR="./temp/${BUN_TAG}"
 LOCAL_BUN_RELATIVE_BINARY="bun-darwin-aarch64/bun"
-if ! command -v bun >/dev/null 2>&1; then
-  if [ -x "${LOCAL_BUN_DIR}/${LOCAL_BUN_RELATIVE_BINARY}" ]; then
-    LOCAL_BUN_ABSOLUTE_DIR="$(cd "${LOCAL_BUN_DIR}" && pwd)"
-    BUN_CMD="${LOCAL_BUN_ABSOLUTE_DIR}/${LOCAL_BUN_RELATIVE_BINARY}"
-    echo "Using cached Bun from ${LOCAL_BUN_DIR}"
-  else
-    echo "bun not installed. Downloading bun version ${BUN_VERSION}..."
-    mkdir -p "${LOCAL_BUN_DIR}"
-    # No need to support x86_64 macs
-    curl -fsSL "https://github.com/oven-sh/bun/releases/download/${BUN_VERSION}/bun-darwin-aarch64.zip" -o "${LOCAL_BUN_DIR}/bun.zip"
-    unzip -o "${LOCAL_BUN_DIR}/bun.zip" -d "${LOCAL_BUN_DIR}"
-    LOCAL_BUN_ABSOLUTE_DIR="$(cd "${LOCAL_BUN_DIR}" && pwd)"
-    BUN_CMD="${LOCAL_BUN_ABSOLUTE_DIR}/${LOCAL_BUN_RELATIVE_BINARY}"
-    chmod +x "${BUN_CMD}"
-    rm -f "${LOCAL_BUN_ABSOLUTE_DIR}/bun.zip"
-    echo "Bun installed locally at ${LOCAL_BUN_DIR}"
-  fi
-else
-  BUN_CMD="bun"
+
+if [ ! -x "${LOCAL_BUN_DIR}/${LOCAL_BUN_RELATIVE_BINARY}" ]; then
+  echo "${BUN_TAG} not present. Downloading..."
+  mkdir -p "${LOCAL_BUN_DIR}"
+  curl -fsSL \
+    "https://github.com/oven-sh/bun/releases/download/${BUN_TAG}/bun-darwin-aarch64.zip" \
+    -o "${LOCAL_BUN_DIR}/bun.zip"
+  unzip -o "${LOCAL_BUN_DIR}/bun.zip" -d "${LOCAL_BUN_DIR}"
+  chmod +x "${LOCAL_BUN_DIR}/${LOCAL_BUN_RELATIVE_BINARY}"
+  rm -f "${LOCAL_BUN_DIR}/bun.zip"
 fi
+
+LOCAL_BUN_ABSOLUTE_DIR="$(cd "${LOCAL_BUN_DIR}" && pwd)"
+BUN_CMD="${LOCAL_BUN_ABSOLUTE_DIR}/${LOCAL_BUN_RELATIVE_BINARY}"
+
+echo "Using bun at ${BUN_CMD}"
+
 
 if [ ! -f "${ENTRY_JS}" ]; then
   echo "Error: expected ESM entry at ${ENTRY_JS}. Run 'npm run build' first." >&2
