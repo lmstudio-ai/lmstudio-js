@@ -6,6 +6,8 @@ import {
   modelFormatNameSchema,
   runtimeEngineInfoSchema,
   runtimeEngineSpecifierSchema,
+  runtimeHardwareSurveyResultSchema,
+  runtimeHardwareSurveyScopeSchema,
   selectedRuntimeEngineMapSchema,
 } from "@lmstudio/lms-shared-types";
 import { z } from "zod";
@@ -32,6 +34,10 @@ export function createRuntimeBackendInterface() {
       .addRpcEndpoint("removeEngine", {
         parameter: runtimeEngineSpecifierSchema,
         returns: z.void(),
+      })
+      .addRpcEndpoint("surveyHardware", {
+        parameter: runtimeHardwareSurveyScopeSchema.optional(),
+        returns: runtimeHardwareSurveyResultSchema,
       })
       /**
        * Search available online engines by a query string.
