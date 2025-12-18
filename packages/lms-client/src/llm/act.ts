@@ -1171,14 +1171,14 @@ export async function internalAct<TPredictionResult, TEndPacket>(
                     safeCallCallback(logger, "onToolCallResult", baseOpts.onToolCallResult, [
                       predictionsPerformed,
                       callId,
-                    {
-                      toolCallId: request.id,
-                      name: request.name,
-                      content: JSON.stringify({
-                        error: guardResult.reason,
-                      }),
-                    },
-                  ]);
+                      {
+                        toolCallId: request.id,
+                        name: request.name,
+                        content: JSON.stringify({
+                          error: guardResult.reason,
+                        }),
+                      },
+                    ]);
                     return;
                   }
                 }
