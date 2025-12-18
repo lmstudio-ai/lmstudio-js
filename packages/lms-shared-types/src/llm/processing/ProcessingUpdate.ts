@@ -171,6 +171,10 @@ export type ProcessingUpdateContentBlockAppendToolResult = {
    * Result of the tool call.
    */
   content: string;
+  /**
+   * Name of the tool that produced this result.
+   */
+  name?: string;
 };
 export const processingUpdateContentBlockAppendToolResultSchema = z.object({
   type: z.literal("contentBlock.appendToolResult"),
@@ -178,6 +182,7 @@ export const processingUpdateContentBlockAppendToolResultSchema = z.object({
   callId: z.number().int(),
   toolCallRequestId: z.string().optional(),
   content: z.string(),
+  name: z.string().optional(),
 });
 
 export type ProcessingUpdateContentBlockAppendToolRequest = {

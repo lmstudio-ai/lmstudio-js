@@ -921,13 +921,14 @@ export async function internalAct<TPredictionResult, TEndPacket>(
           data: {
             type: "toolCallResult",
             toolCallId: request.id,
+            name: request?.name,
             content: resultString,
           },
         });
         safeCallCallback(logger, "onToolCallResult", baseOpts.onToolCallResult, [
           predictionsPerformed,
           currentCallId,
-          { toolCallId: request.id, content: resultString },
+          { toolCallId: request.id, name: request?.name, content: resultString },
         ]);
         nextToolCallIndex++;
       }
@@ -1161,6 +1162,7 @@ export async function internalAct<TPredictionResult, TEndPacket>(
                       data: {
                         type: "toolCallResult",
                         toolCallId: request.id,
+                        name: request.name,
                         content: JSON.stringify({
                           error: guardResult.reason,
                         }),
@@ -1169,13 +1171,14 @@ export async function internalAct<TPredictionResult, TEndPacket>(
                     safeCallCallback(logger, "onToolCallResult", baseOpts.onToolCallResult, [
                       predictionsPerformed,
                       callId,
-                      {
-                        toolCallId: request.id,
-                        content: JSON.stringify({
-                          error: guardResult.reason,
-                        }),
-                      },
-                    ]);
+                    {
+                      toolCallId: request.id,
+                      name: request.name,
+                      content: JSON.stringify({
+                        error: guardResult.reason,
+                      }),
+                    },
+                  ]);
                     return;
                   }
                 }
@@ -1217,18 +1220,19 @@ export async function internalAct<TPredictionResult, TEndPacket>(
                   data: {
                     type: "toolCallResult",
                     toolCallId: request.id,
+                    name: request.name,
                     content: resultString,
                   },
                 });
                 safeCallCallback(logger, "onToolCallSuccess", baseOpts.onToolCallSuccess, [
                   predictionsPerformed,
                   callId,
-                  { toolCallId: request.id, content: resultString },
+                  { toolCallId: request.id, name: request.name, content: resultString },
                 ]);
                 safeCallCallback(logger, "onToolCallResult", baseOpts.onToolCallResult, [
                   predictionsPerformed,
                   callId,
-                  { toolCallId: request.id, content: resultString },
+                  { toolCallId: request.id, name: request.name, content: resultString },
                 ]);
               } catch (error: any) {
                 if (!(error instanceof UnimplementedToolError)) {
