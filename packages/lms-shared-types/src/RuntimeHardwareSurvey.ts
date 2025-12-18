@@ -31,7 +31,7 @@ export type RuntimeHardwareSurveyCompatibilityStatus =
   | "Incompatible backend version"
   | "Invalid CPU architecture"
   | "Invalid CPU instruction set extensions"
-  | "CPU survey unsuccesful"
+  | "CPU survey unsuccessful"
   | "GPU survey unsuccessful"
   | "GPU required but none found"
   | "GPU targets required but none specified"
@@ -50,7 +50,7 @@ export const runtimeHardwareSurveyCompatibilityStatusSchema = z.enum([
   "Incompatible backend version",
   "Invalid CPU architecture",
   "Invalid CPU instruction set extensions",
-  "CPU survey unsuccesful",
+  "CPU survey unsuccessful",
   "GPU survey unsuccessful",
   "GPU required but none found",
   "GPU targets required but none specified",
