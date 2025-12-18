@@ -1,4 +1,5 @@
 $BUN_VERSION = "1.3.3"
+$BUN_TAG = "bun-v$BUN_VERSION"
 $DIST_DIR = "./dist"
 $EXE_NAME = "lms.exe"
 $ENTRY_JS = "./dist/index.js"
@@ -34,19 +35,35 @@ Load-EnvFromAncestors
 New-Item -Path $DIST_DIR -ItemType Directory -Force | Out-Null
 
 # Ensure bun is available
-if (-not (Get-Command "bun" -ErrorAction SilentlyContinue)) {
-    Write-Host "bun not found. Installing bun..."
-    iex "& {$(irm https://bun.sh/install.ps1)} -Version $BUN_VERSION"
+$LOCAL_BUN_DIR = "./temp/$BUN_TAG"
 
-    # Refresh PATH for current session
-    $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-
-    if (-not (Get-Command "bun" -ErrorAction SilentlyContinue)) {
-        Write-Host "Error: Failed to install bun"
-        exit 1
-    }
-    Write-Host "bun installed successfully"
+$arch = [System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture
+if ($arch -eq "Arm64") {
+    $BUN_PLATFORM = "bun-windows-x64-baseline"
+} elseif ($arch -eq "X64") {
+    $BUN_PLATFORM = "bun-windows-x64"
+} else {
+    Write-Host "Unsupported architecture: $arch"
+    exit 1
 }
+
+$localBunAbsoluteDir = [System.IO.Path]::GetFullPath($LOCAL_BUN_DIR)
+$bunExePath = Join-Path (Join-Path $localBunAbsoluteDir $BUN_PLATFORM) "bun.exe"
+
+if (Test-Path $bunExePath) {
+    $BUN_CMD = $bunExePath
+} else {
+    Write-Host "$BUN_TAG not present. Downloading..."
+    New-Item -Path $LOCAL_BUN_DIR -ItemType Directory -Force | Out-Null
+    $bunUrl = "https://github.com/oven-sh/bun/releases/download/$BUN_TAG/$BUN_PLATFORM.zip"
+    $bunZip = Join-Path $localBunAbsoluteDir "bun.zip"
+    Invoke-WebRequest -Uri $bunUrl -OutFile $bunZip
+    Expand-Archive -Path $bunZip -DestinationPath $localBunAbsoluteDir -Force
+    Remove-Item -Path $bunZip -Force -ErrorAction SilentlyContinue
+    $BUN_CMD = $bunExePath
+}
+
+Write-Host "Using bun at $BUN_CMD"
 
 # Ensure the built JS entry exists
 if (-Not (Test-Path $ENTRY_JS)) {
@@ -57,7 +74,7 @@ if (-Not (Test-Path $ENTRY_JS)) {
 # Build the Bun-compiled executable inside .bun so Bun's
 # temporary .bun-build artifacts are kept there
 Push-Location $DIST_DIR
-& bun build "./index.js" --compile --outfile "./${EXE_NAME}"
+& $BUN_CMD build "./index.js" --compile --outfile "./${EXE_NAME}"
 Pop-Location
 
 if (-Not $env:LMS_NO_SIGN) {
