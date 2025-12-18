@@ -91,10 +91,12 @@ export const chatMessagePartToolCallRequestDataSchema = z.object({
 export interface ToolCallResult {
   content: string;
   toolCallId?: string;
+  name?: string;
 }
 export const toolCallResultSchema = z.object({
   content: z.string(),
   toolCallId: z.string().optional(),
+  name: z.string().optional(),
 }) as ZodSchema<ToolCallResult>;
 
 /**
@@ -107,6 +109,7 @@ export const chatMessagePartToolCallResultDataSchema = z.object({
   type: z.literal("toolCallResult"),
   content: z.string(),
   toolCallId: z.string().optional(),
+  name: z.string().optional(),
 });
 
 /**
