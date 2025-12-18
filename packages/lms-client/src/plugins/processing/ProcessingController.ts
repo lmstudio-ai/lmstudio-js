@@ -682,6 +682,7 @@ export interface ContentBlockAppendToolResultOpts {
   callId: number;
   toolCallRequestId?: string;
   content: string;
+  name?: string;
 }
 
 /**
@@ -761,6 +762,7 @@ export class PredictionProcessContentBlockController {
     callId,
     toolCallRequestId,
     content,
+    name,
   }: ContentBlockAppendToolResultOpts) {
     if (this.role !== "tool") {
       throw new Error(
@@ -772,6 +774,7 @@ export class PredictionProcessContentBlockController {
       id: this.id,
       callId,
       toolCallRequestId,
+      name,
       content,
     });
   }
