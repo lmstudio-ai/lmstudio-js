@@ -5,8 +5,8 @@ import { z } from "zod";
  *
  * @public
  */
-export type ModelFormatName = "GGUF" | "MLX" | "GGML" | "TORCH";
-export const modelFormatNameSchema = z.enum(["GGUF", "MLX", "GGML", "TORCH"]);
+export type ModelFormatName = "GGUF" | "MLX" | "GGML" | "PT";
+export const modelFormatNameSchema = z.enum(["GGUF", "MLX", "GGML", "PT"]);
 
 /**
  * Common CPU information structure
