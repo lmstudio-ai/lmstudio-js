@@ -1,17 +1,14 @@
 import { z, type ZodSchema } from "zod";
 import {
-  type ModelFormatName,
-  modelFormatNameSchema,
+  type BaseSpecifier,
+  baseSpecifierSchema,
   type CpuInfo,
   cpuInfoSchema,
   type GpuInfo,
   gpuInfoSchema,
-  type BaseSpecifier,
-  baseSpecifierSchema,
-} from "./RuntimeCommon";
-
-export type { ModelFormatName };
-export { modelFormatNameSchema };
+  type ModelFormatName,
+  modelFormatNameSchema,
+} from "./RuntimeCommon.js";
 
 /**
  * Uniquely specifies a Runtime Extension
