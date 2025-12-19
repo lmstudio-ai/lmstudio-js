@@ -1,10 +1,6 @@
 import { z, type ZodSchema } from "zod";
-import {
-  modelFormatNameSchema,
-  runtimeEngineSpecifierSchema,
-  type ModelFormatName,
-  type RuntimeEngineSpecifier,
-} from "./RuntimeEngine.js";
+import { modelFormatNameSchema, type ModelFormatName } from "./RuntimeCommon.js";
+import { runtimeEngineSpecifierSchema, type RuntimeEngineSpecifier } from "./RuntimeEngine.js";
 
 export type RuntimeHardwareSurveyScope =
   | { type: "selected" }
