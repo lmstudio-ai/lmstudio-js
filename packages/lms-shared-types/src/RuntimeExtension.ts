@@ -1,26 +1,26 @@
 import { z, type ZodSchema } from "zod";
+import {
+  type ModelFormatName,
+  modelFormatNameSchema,
+  type CpuInfo,
+  cpuInfoSchema,
+  type GpuInfo,
+  gpuInfoSchema,
+  type BaseSpecifier,
+  baseSpecifierSchema,
+} from "./RuntimeCommon";
 
-/**
- * Supported model formats
- *
- * @public
- */
-export type ModelFormatName = "GGUF" | "MLX" | "GGML";
-export const modelFormatNameSchema = z.enum(["GGUF", "MLX", "GGML"]);
+export type { ModelFormatName };
+export { modelFormatNameSchema };
 
 /**
  * Uniquely specifies a Runtime Extension
  *
  * @public
  */
-export interface RuntimeExtensionSpecifier {
-  name: string;
-  version: string;
-}
-export const runtimeExtensionSpecifierSchema = z.object({
-  name: z.string(),
-  version: z.string(),
-}) as ZodSchema<RuntimeExtensionSpecifier>;
+export interface RuntimeExtensionSpecifier extends BaseSpecifier {}
+export const runtimeExtensionSpecifierSchema =
+  baseSpecifierSchema as ZodSchema<RuntimeExtensionSpecifier>;
 
 /**
  * Information about a Runtime Extension
@@ -32,30 +32,14 @@ export interface RuntimeExtensionInfoBase {
   version: string;
   package: string;
   platform: string;
-  cpu: {
-    architecture: string;
-    instructionSetExtensions?: string[];
-  };
-  gpu?: {
-    make?: string;
-    framework?: string;
-  };
+  cpu: CpuInfo;
+  gpu?: GpuInfo;
 }
-export const runtimeExtensionSpecifierSchemaBase = z.object({
-  name: z.string(),
-  version: z.string(),
+export const runtimeExtensionSpecifierSchemaBase = baseSpecifierSchema.extend({
   package: z.string(),
   platform: z.string(),
-  cpu: z.object({
-    architecture: z.string(),
-    instructionSetExtensions: z.array(z.string()).optional(),
-  }),
-  gpu: z
-    .object({
-      make: z.string().optional(),
-      framework: z.string().optional(),
-    })
-    .optional(),
+  cpu: cpuInfoSchema,
+  gpu: gpuInfoSchema.optional(),
 });
 
 export interface RuntimeEngineExtensionInfo extends RuntimeExtensionInfoBase {
