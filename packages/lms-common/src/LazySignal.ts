@@ -4,6 +4,7 @@ import { Subscribable } from "./Subscribable.js";
 import { makePromise } from "./makePromise.js";
 import { makeSetterWithPatches, type Setter } from "./makeSetter.js";
 
+const isLazySignalSymbol = Symbol("isLazySignal");
 export type NotAvailable = typeof LazySignal.NOT_AVAILABLE;
 export type StripNotAvailable<T> = T extends NotAvailable ? never : T;
 export function isAvailable<T>(data: T): data is StripNotAvailable<T> {
@@ -41,6 +42,14 @@ export type SubscribeUpstream<TData> = (
  * emitted a value yet.
  */
 export class LazySignal<TData> extends Subscribable<TData> implements SignalLike<TData> {
+  public readonly [isLazySignalSymbol] = true;
+  public static isLazySignal(value: unknown): value is LazySignal<unknown> {
+    return (
+      typeof value === "object" &&
+      value !== null &&
+      Object.prototype.hasOwnProperty.call(value, isLazySignalSymbol)
+    );
+  }
   public static readonly NOT_AVAILABLE = Symbol("notAvailable");
   private readonly signal: Signal<TData>;
   private readonly setValue: Setter<TData>;
