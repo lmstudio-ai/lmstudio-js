@@ -23,11 +23,11 @@ import { z, type ZodSchema } from "zod";
  * change in the future.
  */
 export interface RuntimeExtensionsSearchOpts {
-  channel?: "stable" | "beta";
+  channel?: string;
   includeIncompatible?: boolean;
 }
 const runtimeExtensionsSearchOptsSchema = z.object({
-  channel: z.enum(["stable", "beta"]).optional(),
+  channel: z.string().optional(),
   includeIncompatible: z.boolean().optional(),
 }) as ZodSchema<RuntimeExtensionsSearchOpts>;
 
