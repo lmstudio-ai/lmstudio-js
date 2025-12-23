@@ -4,6 +4,7 @@ import { Subscribable } from "./Subscribable.js";
 import { makePromise } from "./makePromise.js";
 import { makeSetterWithPatches, type Setter } from "./makeSetter.js";
 
+const isLazySignalSymbol = Symbol("isLazySignal");
 export type NotAvailable = typeof LazySignal.NOT_AVAILABLE;
 export type StripNotAvailable<T> = T extends NotAvailable ? never : T;
 export function isAvailable<T>(data: T): data is StripNotAvailable<T> {
@@ -41,6 +42,14 @@ export type SubscribeUpstream<TData> = (
  * emitted a value yet.
  */
 export class LazySignal<TData> extends Subscribable<TData> implements SignalLike<TData> {
+  public readonly [isLazySignalSymbol] = true;
+  public static isLazySignal(value: unknown): value is LazySignal<unknown> {
+    return (
+      typeof value === "object" &&
+      value !== null &&
+      Object.prototype.hasOwnProperty.call(value, isLazySignalSymbol)
+    );
+  }
   public static readonly NOT_AVAILABLE = Symbol("notAvailable");
   private readonly signal: Signal<TData>;
   private readonly setValue: Setter<TData>;
@@ -48,6 +57,22 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
   private upstreamUnsubscribe: (() => void) | null = null;
   private subscribersCount = 0;
   private isSubscribedToUpstream = false;
+  private hasEncounteredError = false;
+  /**
+   * If not null, indicates that the upstream has encountered an error - Once an error is received,
+   * the error will be stored here and will not change again.
+   *
+   * When a signal has encountered an error, it will not attempt to connect to the upstream anymore.
+   * The subscribers will not receive any more updates - That means, `pull` will hang forever (TBD).
+   *
+   * Signals are not perfect carriers of errors and it is recommended to use other means to
+   * propagate business logic errors if possible. However, an error is always possible to occur
+   * when, for example, the network connection that carries the signal is lost.
+   *
+   * Subscribe to this signal to be notified of errors.
+   */
+  public readonly errorSignal: Signal<Error | null>;
+  private readonly setError: Setter<Error | null>;
   /**
    * This event will be triggered even if the value did not change. This is for resolving .pull.
    */
@@ -210,6 +235,7 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
     super();
     [this.signal, this.setValue] = Signal.create<TData>(initialValue, equalsPredicate) as any;
     [this.updateReceivedEvent, this.emitUpdateReceivedEvent] = Event.create();
+    [this.errorSignal, this.setError] = Signal.create<Error | null>(null);
   }
 
   /**
@@ -233,6 +259,9 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
   }
 
   private subscribeToUpstream() {
+    if (this.hasEncounteredError) {
+      return;
+    }
     this.isSubscribedToUpstream = true;
     let subscribed = true;
     let becameStale = false;
@@ -252,10 +281,19 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
         if (!subscribed) {
           return;
         }
-        Promise.reject(error); // Prints a global error for now
+        const normalizedError =
+          error instanceof Error
+            ? error
+            : new Error(error === undefined ? "Unknown error" : String(error));
+        if (!this.hasEncounteredError) {
+          this.hasEncounteredError = true;
+          this.setError(normalizedError);
+        }
+        Promise.reject(normalizedError); // Prints a global error for now
         this.dataIsStale = true;
         this.isSubscribedToUpstream = false;
         this.upstreamUnsubscribe = null;
+        becameStale = true;
         subscribed = false;
       },
     );
@@ -337,7 +375,7 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
   }
 
   public subscribe(subscriber: Subscriber<TData>): () => void {
-    if (!this.isSubscribedToUpstream) {
+    if (!this.isSubscribedToUpstream && !this.hasEncounteredError) {
       this.subscribeToUpstream();
     }
     this.subscribersCount++;
@@ -357,7 +395,7 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
   }
 
   public subscribeFull(subscriber: SignalFullSubscriber<TData>): () => void {
-    if (!this.isSubscribedToUpstream) {
+    if (!this.isSubscribedToUpstream && !this.hasEncounteredError) {
       this.subscribeToUpstream();
     }
     this.subscribersCount++;
