@@ -109,7 +109,7 @@ describe("LazySignal", () => {
     );
   });
 
-  it("should publish errors through errorSignal when upstream errors", () => {
+  it("should reject errorPromise when upstream errors", async () => {
     const rejectSpy = jest.spyOn(Promise, "reject").mockImplementation(reason => {
       return Promise.resolve(reason);
     });
@@ -118,20 +118,21 @@ describe("LazySignal", () => {
       errorListener = onError;
       return () => {};
     });
-    const errorSubscriber = jest.fn();
-    lazySignal.errorSignal.subscribe(errorSubscriber);
     lazySignal.subscribe(() => {});
     expect(errorListener).not.toBeNull();
     const upstreamError = new Error("upstream failed");
     errorListener?.(upstreamError);
-    expect(lazySignal.errorSignal.get()).toBe(upstreamError);
-    expect(errorSubscriber).toHaveBeenLastCalledWith(upstreamError);
+    // Wait for the promise rejection to propagate
+    const caughtError = await lazySignal.errorPromise.catch(e => e);
+    expect(caughtError).toBe(upstreamError);
+    // Subsequent errors should be ignored (promise only rejects once)
     errorListener?.(new Error("ignored"));
-    expect(lazySignal.errorSignal.get()).toBe(upstreamError);
+    const caughtError2 = await lazySignal.errorPromise.catch(e => e);
+    expect(caughtError2).toBe(upstreamError);
     rejectSpy.mockRestore();
   });
 
-  it("should not resubscribe to upstream after an error", () => {
+  it("should not resubscribe to upstream after an error", async () => {
     const rejectSpy = jest.spyOn(Promise, "reject").mockImplementation(reason => {
       return Promise.resolve(reason);
     });
@@ -147,7 +148,8 @@ describe("LazySignal", () => {
     const upstreamError = new Error("boom");
     expect(errorListener).not.toBeNull();
     errorListener?.(upstreamError);
-    expect(lazySignal.errorSignal.get()).toBe(upstreamError);
+    const caughtError = await lazySignal.errorPromise.catch(e => e);
+    expect(caughtError).toBe(upstreamError);
     expect(unsubscribeMock).not.toHaveBeenCalled();
     const secondUnsubscribe = lazySignal.subscribe(() => {});
     expect(subscribeUpstream).toHaveBeenCalledTimes(1);
