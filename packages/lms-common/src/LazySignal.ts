@@ -234,10 +234,10 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
     equalsPredicate: (a: TData, b: TData) => boolean = (a, b) => a === b,
   ) {
     super();
-    const { promise: errorPromise, resolve: resolveError } = makePromise<never>();
+    const { promise: errorPromise, reject: rejectError } = makePromise<never>();
     this.errorPromise = errorPromise;
     this.raiseError = (error: Error) => {
-      resolveError(Promise.reject(error));
+      rejectError(new Error("LazySignal upstream error", { cause: error }));
     };
     [this.signal, this.setValue] = Signal.create<TData>(initialValue, equalsPredicate) as any;
     [this.updateReceivedEvent, this.emitUpdateReceivedEvent] = Event.create();
