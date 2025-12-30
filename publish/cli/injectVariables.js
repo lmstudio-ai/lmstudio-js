@@ -20,7 +20,10 @@ try {
 const lmsCliPath = join(currentDirectoryPath, "..", "..", "packages", "lms-cli");
 let commitHash = "unknown";
 try {
-  commitHash = execSync("git rev-parse HEAD", { cwd: lmsCliPath, encoding: "utf-8" }).trim();
+  commitHash = execSync("git rev-parse --short HEAD", {
+    cwd: lmsCliPath,
+    encoding: "utf-8",
+  }).trim();
 } catch (error) {
   console.error("Failed to get commit hash from lms-cli submodule.");
 }
