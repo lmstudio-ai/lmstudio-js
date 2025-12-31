@@ -724,6 +724,10 @@ export class ClientPort<
     return [signal, setter];
   }
 
+  public ensureConnectedOrStartConnection(): void {
+    this.transport.ensureConnectedOrStartConnection();
+  }
+
   public async [Symbol.asyncDispose]() {
     await this.transport[Symbol.asyncDispose]();
   }
