@@ -301,6 +301,31 @@ export class OWLSignal<TData> extends Subscribable<TData> implements SignalLike<
   }
 
   /**
+   * Returns whether the inner signal has encountered an error. A signal in error state will not
+   * attempt to reconnect to upstream until `recoverFromError()` is called.
+   */
+  public hasError(): boolean {
+    return this.innerSignal.hasError();
+  }
+
+  /**
+   * A promise that rejects when the upstream encounters an error. Delegates to the inner
+   * LazySignal's error promise.
+   */
+  public get errorPromise(): Promise<never> {
+    return this.innerSignal.errorPromise;
+  }
+
+  /**
+   * Attempts to recover from an error state by delegating to the inner LazySignal.
+   *
+   * @returns true if recovery was attempted (signal was in error state), false otherwise
+   */
+  public recoverFromError(): boolean {
+    return this.innerSignal.recoverFromError();
+  }
+
+  /**
    * Gets the current value of the signal. If the value is not available, it will return
    * {@link OWLSignal.NOT_AVAILABLE}. (A value will only be unavailable if the signal is created
    * without an initial value and the upstream has not emitted a value yet.)

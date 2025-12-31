@@ -60,11 +60,11 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
   private hasEncounteredError = false;
 
   /**
-   * A promise that rejects when the upstream encounters an error. Once an error is received,
-   * the promise will reject and will not change again.
+   * A promise that rejects when the upstream encounters an error. After recovery via
+   * `recoverFromError()`, a new promise is created to catch subsequent errors.
    *
-   * When a signal has encountered an error, it will not attempt to connect to the upstream anymore.
-   * The subscribers will not receive any more updates - That means, `pull` will hang forever (TBD).
+   * When a signal has encountered an error, it will not attempt to connect to the upstream anymore
+   * until `recoverFromError()` is called.
    *
    * Signals are not perfect carriers of errors and it is recommended to use other means to
    * propagate business logic errors if possible. However, an error is always possible to occur
@@ -72,8 +72,8 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
    *
    * Attach a `.catch()` handler to this promise to be notified of errors.
    */
-  public readonly errorPromise: Promise<never>;
-  private readonly raiseError: (error: Error) => void;
+  public errorPromise!: Promise<never>;
+  private raiseError!: (error: Error) => void;
   /**
    * This event will be triggered even if the value did not change. This is for resolving .pull.
    */
@@ -234,13 +234,23 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
     equalsPredicate: (a: TData, b: TData) => boolean = (a, b) => a === b,
   ) {
     super();
+    // Initialize with dummy values, will be set by resetErrorPromise
+    this.resetErrorPromise();
+    [this.signal, this.setValue] = Signal.create<TData>(initialValue, equalsPredicate) as any;
+    [this.updateReceivedEvent, this.emitUpdateReceivedEvent] = Event.create();
+  }
+
+  /**
+   * Creates a fresh error promise. Called during construction and after recovery.
+   */
+  private resetErrorPromise() {
     const { promise: errorPromise, reject: rejectError } = makePromise<never>();
     this.errorPromise = errorPromise;
+    // Prevent unhandled rejection if no one attaches a .catch() handler
+    this.errorPromise.catch(() => {});
     this.raiseError = (error: Error) => {
       rejectError(new Error("LazySignal upstream error", { cause: error }));
     };
-    [this.signal, this.setValue] = Signal.create<TData>(initialValue, equalsPredicate) as any;
-    [this.updateReceivedEvent, this.emitUpdateReceivedEvent] = Event.create();
   }
 
   /**
@@ -261,6 +271,44 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
    */
   public isStale() {
     return this.dataIsStale;
+  }
+
+  /**
+   * Returns whether the signal has encountered an error.
+   * A signal in error state will not attempt to reconnect to upstream
+   * until `recoverFromError()` is called.
+   */
+  public hasError(): boolean {
+    return this.hasEncounteredError;
+  }
+
+  /**
+   * Attempts to recover from an error state. If the signal has encountered an error, this method
+   * will:
+   * 1. Clear the error state
+   * 2. Mark data as stale
+   * 3. Reset the error promise so future errors can be caught
+   * 4. If there are active subscribers, immediately attempt to resubscribe to upstream
+   *
+   * This is useful for recovering from transport-level errors when a connection is re-established.
+   *
+   * @returns true if recovery was attempted (signal was in error state), false otherwise
+   */
+  public recoverFromError(): boolean {
+    if (!this.hasEncounteredError) {
+      return false;
+    }
+
+    this.hasEncounteredError = false;
+    this.dataIsStale = true;
+    this.resetErrorPromise();
+
+    // If we have subscribers, immediately try to reconnect
+    if (this.subscribersCount > 0) {
+      this.subscribeToUpstream();
+    }
+
+    return true;
   }
 
   private subscribeToUpstream() {

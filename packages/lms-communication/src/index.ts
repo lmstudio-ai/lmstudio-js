@@ -17,6 +17,7 @@ export {
 } from "./BackendInterface.js";
 export {
   Channel,
+  ConnectionStatus,
   InferChannelClientToServerPacketType,
   InferChannelServerToClientPacketType,
   InferClientChannelType,

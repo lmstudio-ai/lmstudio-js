@@ -200,10 +200,22 @@ export abstract class ClientTransport extends Transport<
    * This usually indicates the `socket.unref()` should be called to allow the process to exit.
    */
   public onHavingNoOpenCommunication() {}
+  /**
+   * Attempts to ensure the transport is connected. For transports that support reconnection (like
+   * WebSocket), this will initiate a connection if disconnected.
+   *
+   * This method is synchronous and does NOT wait for connection to complete. It simply triggers a
+   * connection attempt if needed.
+   *
+   * Default implementation is a no-op (for transports that don't support reconnection or are always
+   * connected).
+   */
+  public ensureConnectedOrStartConnection(): void {}
 }
 
 export type ClientTransportFactory = (
   receivedMessage: (message: ServerToClientMessage) => void,
+  connected: () => void,
   errored: (error: any) => void,
   parentLogger: LoggerInterface,
 ) => ClientTransport;
