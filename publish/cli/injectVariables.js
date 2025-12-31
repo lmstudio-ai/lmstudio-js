@@ -1,4 +1,4 @@
-// Inject commit hash and keys
+// Inject commit hash by replacing the magic string <LMS-CLI-COMMIT-HASH>
 // This is much faster than rollup-plugin-replace
 
 import { readFileSync, writeFileSync } from "fs";
