@@ -402,6 +402,106 @@ describe("Signal Recovery", () => {
     });
   });
 
+  describe("Pull Behavior", () => {
+    it("should hang on .pull() while disconnected and resolve after reconnect", async () => {
+      const [serverSignal, setServerSignal] = Signal.create({ value: 0 });
+
+      const backendInterface = new BackendInterface().addSignalEndpoint("testSignal", {
+        creationParameter: z.object({ id: z.string() }),
+        signalData: z.object({ value: z.number() }),
+      });
+
+      backendInterface.handleSignalEndpoint("testSignal", () => serverSignal);
+
+      const { clientPort, simulateDisconnect, simulateReconnect } = createControllableMockedPorts(
+        backendInterface,
+        createTestContextCreator(),
+      );
+
+      const clientSignal = clientPort.createSignal("testSignal", { id: "test-1" });
+      clientSignal.subscribe(() => {});
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      // Verify pull works normally when connected
+      expect(await clientSignal.pull()).toEqual({ value: 0 });
+
+      // Disconnect
+      simulateDisconnect();
+
+      // Update server value while disconnected
+      setServerSignal({ value: 999 });
+
+      // Start a pull - it should hang while disconnected
+      let pullResolved = false;
+      let pullResult: { value: number } | undefined;
+      const pullPromise = clientSignal.pull().then(result => {
+        pullResolved = true;
+        pullResult = result;
+        return result;
+      });
+
+      // Give it a tick - pull should NOT have resolved
+      await new Promise(resolve => setTimeout(resolve, 0));
+      expect(pullResolved).toBe(false);
+
+      // Reconnect - pull should now resolve with the latest value
+      simulateReconnect();
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      // Wait for pull to complete
+      await pullPromise;
+
+      expect(pullResolved).toBe(true);
+      expect(pullResult).toEqual({ value: 999 });
+    });
+
+    it("should resolve multiple pending .pull() calls after reconnect", async () => {
+      const [serverSignal, setServerSignal] = Signal.create({ value: 0 });
+
+      const backendInterface = new BackendInterface().addSignalEndpoint("testSignal", {
+        creationParameter: z.object({ id: z.string() }),
+        signalData: z.object({ value: z.number() }),
+      });
+
+      backendInterface.handleSignalEndpoint("testSignal", () => serverSignal);
+
+      const { clientPort, simulateDisconnect, simulateReconnect } = createControllableMockedPorts(
+        backendInterface,
+        createTestContextCreator(),
+      );
+
+      const clientSignal = clientPort.createSignal("testSignal", { id: "test-1" });
+      clientSignal.subscribe(() => {});
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      // Disconnect
+      simulateDisconnect();
+
+      // Update server value
+      setServerSignal({ value: 42 });
+
+      // Start multiple pulls - they should all hang
+      const pull1 = clientSignal.pull();
+      const pull2 = clientSignal.pull();
+      const pull3 = clientSignal.pull();
+
+      // Give it a tick - none should have resolved
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      // Reconnect
+      simulateReconnect();
+
+      // All pulls should resolve with the same latest value
+      const [result1, result2, result3] = await Promise.all([pull1, pull2, pull3]);
+
+      expect(result1).toEqual({ value: 42 });
+      expect(result2).toEqual({ value: 42 });
+      expect(result3).toEqual({ value: 42 });
+    });
+  });
+
   describe("Edge Cases", () => {
     it("should handle immediate reconnect after disconnect", async () => {
       const [serverSignal, setServerSignal] = Signal.create({ value: 0 });
