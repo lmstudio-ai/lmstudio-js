@@ -54,6 +54,7 @@ interface OpenSignalSubscription {
   receivedPatches: (newValue: any, patches: Array<Patch>, tags: Array<WriteTag>) => void;
   errored: (error: any) => void;
   stack?: string;
+  signal: LazySignal<any>;
 }
 
 interface OpenWritableSignalSubscription {
@@ -63,6 +64,7 @@ interface OpenWritableSignalSubscription {
   firstUpdateReceived: boolean;
   errored: (error: any) => void;
   stack?: string;
+  signal: OWLSignal<any>;
 }
 
 function defaultErrorDeserializer(
@@ -86,6 +88,11 @@ export class ClientPort<
   private openSignalSubscriptions = new Map<number, OpenSignalSubscription>();
   private openWritableSignalSubscriptions = new Map<number, OpenWritableSignalSubscription>();
   private openCommunicationsCount = 0;
+  /**
+   * Signals that errored due to transport-level issues and can be recovered on reconnection.
+   */
+  private recoverableSignals = new Set<LazySignal<any>>();
+  private recoverableWritableSignals = new Set<OWLSignal<any>>();
   private nextChannelId = 0;
   private nextSubscribeId = 0;
   private nextWritableSubscribeId = 0;
@@ -123,7 +130,7 @@ export class ClientPort<
     this.logger = new SimpleLogger("ClientPort", parentLogger);
     this.errorDeserializer = errorDeserializer ?? defaultErrorDeserializer;
     this.verboseErrorMessage = verboseErrorMessage ?? true;
-    this.transport = factory(this.receivedMessage, this.errored, this.logger);
+    this.transport = factory(this.receivedMessage, this.onConnected, this.errored, this.logger);
   }
 
   private communicationWarning(warning: string) {
@@ -474,6 +481,21 @@ export class ClientPort<
       }
     }
   };
+  /**
+   * Called when the transport connection is established.
+   * Triggers recovery for all signals that errored due to transport issues.
+   */
+  private onConnected = () => {
+    for (const signal of this.recoverableSignals) {
+      signal.recoverFromError();
+    }
+    this.recoverableSignals.clear();
+
+    for (const signal of this.recoverableWritableSignals) {
+      signal.recoverFromError();
+    }
+    this.recoverableWritableSignals.clear();
+  };
   private errored = (error: any) => {
     for (const openChannel of this.openChannels.values()) {
       openChannel.errored(error);
@@ -483,12 +505,15 @@ export class ClientPort<
       ongoingRpc.reject(error);
     }
     this.ongoingRpcs.clear();
-    for (const openSignalSubscription of this.openSignalSubscriptions.values()) {
-      openSignalSubscription.errored(error);
+    // Track signals for recovery before erroring them
+    for (const subscription of this.openSignalSubscriptions.values()) {
+      this.recoverableSignals.add(subscription.signal);
+      subscription.errored(error);
     }
     this.openSignalSubscriptions.clear();
-    for (const openWritableSignalSubscription of this.openWritableSignalSubscriptions.values()) {
-      openWritableSignalSubscription.errored(error);
+    for (const subscription of this.openWritableSignalSubscriptions.values()) {
+      this.recoverableWritableSignals.add(subscription.signal);
+      subscription.errored(error);
     }
     this.openWritableSignalSubscriptions.clear();
     this.updateOpenCommunicationsCount();
@@ -611,6 +636,7 @@ export class ClientPort<
         receivedPatches: setDownstream.withValueAndPatches,
         errored: errorListener,
         stack,
+        signal,
       });
       this.updateOpenCommunicationsCount();
       return () => {
@@ -619,6 +645,8 @@ export class ClientPort<
           subscribeId,
         });
         this.openSignalSubscriptions.delete(subscribeId);
+        // Remove from recoverable set if present (signal unsubscribed before recovery)
+        this.recoverableSignals.delete(signal);
       };
     });
 
@@ -679,6 +707,7 @@ export class ClientPort<
         firstUpdateReceived: false,
         errored: errorListener,
         stack,
+        signal,
       });
       this.updateOpenCommunicationsCount();
       return () => {
@@ -688,9 +717,15 @@ export class ClientPort<
           subscribeId,
         });
         this.openWritableSignalSubscriptions.delete(subscribeId);
+        // Remove from recoverable set if present (signal unsubscribed before recovery)
+        this.recoverableWritableSignals.delete(signal);
       };
     }, writeUpstream);
     return [signal, setter];
+  }
+
+  public ensureConnectedOrStartConnection(): void {
+    this.transport.ensureConnectedOrStartConnection();
   }
 
   public async [Symbol.asyncDispose]() {

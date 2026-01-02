@@ -37,6 +37,7 @@ export class WsClientTransport extends ClientTransport {
   protected constructor(
     private readonly url: string | Promise<string>,
     private readonly receivedMessage: (message: ServerToClientMessage) => void,
+    private readonly connected: () => void,
     private readonly errored: (error: any) => void,
     { abortSignal, parentLogger }: WsClientTransportConstructorOpts = {},
   ) {
@@ -56,8 +57,8 @@ export class WsClientTransport extends ClientTransport {
       abortSignal?: AbortSignal;
     } = {},
   ): ClientTransportFactory {
-    return (receivedMessage, errored, parentLogger) =>
-      new WsClientTransport(url, receivedMessage, errored, {
+    return (receivedMessage, connected, errored, parentLogger) =>
+      new WsClientTransport(url, receivedMessage, connected, errored, {
         abortSignal,
         parentLogger,
       });
@@ -109,6 +110,7 @@ export class WsClientTransport extends ClientTransport {
     this.queuedMessages = [];
     this.updateShouldRef(this.shouldRef);
     // this.setupWebsocketKeepAlive(this.ws!, this.onWsTimeout.bind(this));
+    this.connected();
   }
   protected onWsMessage(event: WsMessageEvent) {
     if (this.status !== WsClientTransportStatus.Connected) {
@@ -189,6 +191,15 @@ export class WsClientTransport extends ClientTransport {
   }
   public override onHavingOneOrMoreOpenCommunication() {
     this.updateShouldRef(true);
+  }
+  public override ensureConnectedOrStartConnection(): void {
+    if (this.status === WsClientTransportStatus.Connected) {
+      return;
+    }
+    if (this.status === WsClientTransportStatus.Disconnected) {
+      this.connect();
+    }
+    // If status is Connecting, connection is already in progress
   }
   private updateShouldRef(shouldRef: boolean) {
     this.shouldRef = shouldRef;

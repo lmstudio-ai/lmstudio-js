@@ -29,10 +29,11 @@ export class AuthenticatedWsClientTransport extends WsClientTransport {
     private readonly clientIdentifier: string,
     private readonly clientPasskey: string,
     receivedMessage: (message: ServerToClientMessage) => void,
+    connected: () => void,
     errored: (error: any) => void,
     { parentLogger, abortSignal }: AuthenticatedWsClientTransportConstructorOpts = {},
   ) {
-    super(url, receivedMessage, errored, { parentLogger, abortSignal });
+    super(url, receivedMessage, connected, errored, { parentLogger, abortSignal });
   }
   public static createAuthenticatedWsClientTransportFactory({
     url,
@@ -40,12 +41,13 @@ export class AuthenticatedWsClientTransport extends WsClientTransport {
     clientPasskey,
     abortSignal,
   }: Opts): ClientTransportFactory {
-    return (receivedMessage, errored, parentLogger) =>
+    return (receivedMessage, connected, errored, parentLogger) =>
       new AuthenticatedWsClientTransport(
         url,
         clientIdentifier,
         clientPasskey,
         receivedMessage,
+        connected,
         errored,
         { parentLogger, abortSignal },
       );
