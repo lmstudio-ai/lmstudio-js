@@ -5,6 +5,7 @@ export {
   LazySignal,
   NotAvailable,
   StripNotAvailable,
+  SubscribeUpstream,
 } from "./LazySignal.js";
 
 export { apiServerPorts } from "./apiServerPorts.js";

@@ -109,7 +109,7 @@ describe("LazySignal", () => {
     );
   });
 
-  it("should reject errorPromise when upstream errors", async () => {
+  it("should emit error on errorSignal when upstream errors", async () => {
     let errorListener: any /* ((error: unknown) => void) | null */ = null;
     const lazySignal = LazySignal.createWithoutInitialValue((_, onError) => {
       errorListener = onError;
@@ -119,13 +119,14 @@ describe("LazySignal", () => {
     expect(errorListener).not.toBeNull();
     const upstreamError = new Error("upstream failed");
     errorListener?.(upstreamError);
-    // Wait for the promise rejection to propagate
-    const caughtError = await lazySignal.errorPromise.catch(e => e);
-    expect(caughtError.cause).toBe(upstreamError);
-    // Subsequent errors should be ignored (promise only rejects once)
+    // Wait for the error to propagate
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(lazySignal.errorSignal.get()).toBeInstanceOf(Error);
+    expect((lazySignal.errorSignal.get() as Error).message).toBe("upstream failed");
+    // Subsequent errors should be ignored (error already set)
     errorListener?.(new Error("ignored"));
-    const caughtError2 = await lazySignal.errorPromise.catch(e => e);
-    expect(caughtError2.cause).toBe(upstreamError);
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect((lazySignal.errorSignal.get() as Error).message).toBe("upstream failed");
   });
 
   it("should not resubscribe to upstream after an error", async () => {
@@ -141,8 +142,8 @@ describe("LazySignal", () => {
     const upstreamError = new Error("boom");
     expect(errorListener).not.toBeNull();
     errorListener?.(upstreamError);
-    const caughtError = await lazySignal.errorPromise.catch(e => e);
-    expect(caughtError.cause).toBe(upstreamError);
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(lazySignal.errorSignal.get()).toBeInstanceOf(Error);
     expect(unsubscribeMock).not.toHaveBeenCalled();
     const secondUnsubscribe = lazySignal.subscribe(() => {});
     expect(subscribeUpstream).toHaveBeenCalledTimes(1);
@@ -247,7 +248,7 @@ describe("LazySignal", () => {
       expect(subscribeUpstream).toHaveBeenCalledTimes(1);
     });
 
-    it("should create a new error promise that catches subsequent errors", async () => {
+    it("should clear error on errorSignal and emit new errors after recovery", async () => {
       let errorListener: any /* ((error: unknown) => void) | null */ = null;
       const subscribeUpstream = jest.fn().mockImplementation((_, onError) => {
         errorListener = onError;
@@ -259,17 +260,21 @@ describe("LazySignal", () => {
       // First error
       const firstError = new Error("first error");
       errorListener?.(firstError);
-      const caughtFirst = await lazySignal.errorPromise.catch(e => e);
-      expect(caughtFirst.cause).toBe(firstError);
+      await new Promise(resolve => setTimeout(resolve, 0));
+      expect(lazySignal.errorSignal.get()).toBeInstanceOf(Error);
+      expect((lazySignal.errorSignal.get() as Error).message).toBe("first error");
 
       // Recover
       lazySignal.recoverFromError();
+      await new Promise(resolve => setTimeout(resolve, 0));
+      expect(lazySignal.errorSignal.get()).toBe(null);
 
-      // Second error - should be caught by new promise
+      // Second error - should be caught by error signal
       const secondError = new Error("second error");
       errorListener?.(secondError);
-      const caughtSecond = await lazySignal.errorPromise.catch(e => e);
-      expect(caughtSecond.cause).toBe(secondError);
+      await new Promise(resolve => setTimeout(resolve, 0));
+      expect(lazySignal.errorSignal.get()).toBeInstanceOf(Error);
+      expect((lazySignal.errorSignal.get() as Error).message).toBe("second error");
     });
 
     it("should allow new subscriptions to trigger upstream subscription after recovery", () => {

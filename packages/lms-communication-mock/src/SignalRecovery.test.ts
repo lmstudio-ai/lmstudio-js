@@ -248,7 +248,7 @@ describe("Signal Recovery", () => {
   });
 
   describe("Error Promise", () => {
-    it("should receive new error promise after recovery", async () => {
+    it("should emit errors on errorSignal and clear after recovery", async () => {
       const [serverSignal] = Signal.create({ value: 0 });
 
       const backendInterface = new BackendInterface().addSignalEndpoint("testSignal", {
@@ -268,26 +268,39 @@ describe("Signal Recovery", () => {
 
       await new Promise(resolve => setTimeout(resolve, 0));
 
-      // Capture error promise before first disconnect
-      const firstErrorPromise = clientSignal.errorPromise;
+      // Subscribe to error signal
+      const errors: Array<Error | null> = [];
+      clientSignal.errorSignal.subscribe(error => {
+        errors.push(error);
+      });
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      // Should start with no error
+      expect(clientSignal.errorSignal.get()).toBe(null);
 
       // First disconnect
       simulateDisconnect();
-      const firstError = await firstErrorPromise.catch(e => e);
-      expect(firstError).toBeDefined();
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      // Should have an error
+      expect(clientSignal.errorSignal.get()).not.toBe(null);
+      expect(clientSignal.errorSignal.get()).toBeInstanceOf(Error);
 
       // Reconnect
       simulateReconnect();
       await new Promise(resolve => setTimeout(resolve, 0));
 
-      // The error promise should be different after recovery
-      const secondErrorPromise = clientSignal.errorPromise;
-      expect(secondErrorPromise).not.toBe(firstErrorPromise);
+      // Error should be cleared (set to null)
+      expect(clientSignal.errorSignal.get()).toBe(null);
 
-      // Second disconnect - should be caught by new promise
+      // Second disconnect - should emit new error
       simulateDisconnect();
-      const secondError = await secondErrorPromise.catch(e => e);
-      expect(secondError).toBeDefined();
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      // Should have an error again
+      expect(clientSignal.errorSignal.get()).not.toBe(null);
+      expect(clientSignal.errorSignal.get()).toBeInstanceOf(Error);
     });
   });
 

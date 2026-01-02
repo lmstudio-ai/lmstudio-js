@@ -60,20 +60,10 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
   private hasEncounteredError = false;
 
   /**
-   * A promise that rejects when the upstream encounters an error. After recovery via
-   * `recoverFromError()`, a new promise is created to catch subsequent errors.
-   *
-   * When a signal has encountered an error, it will not attempt to connect to the upstream anymore
-   * until `recoverFromError()` is called.
-   *
-   * Signals are not perfect carriers of errors and it is recommended to use other means to
-   * propagate business logic errors if possible. However, an error is always possible to occur
-   * when, for example, the network connection that carries the signal is lost.
-   *
-   * Attach a `.catch()` handler to this promise to be notified of errors.
+   * A signal that contains the current error.
    */
-  public errorPromise!: Promise<never>;
-  private raiseError!: (error: Error) => void;
+  public readonly errorSignal: Signal<Error | null>;
+  private readonly setError: Setter<Error | null>;
   /**
    * This event will be triggered even if the value did not change. This is for resolving .pull.
    */
@@ -235,22 +225,9 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
   ) {
     super();
     // Initialize with dummy values, will be set by resetErrorPromise
-    this.resetErrorPromise();
     [this.signal, this.setValue] = Signal.create<TData>(initialValue, equalsPredicate) as any;
     [this.updateReceivedEvent, this.emitUpdateReceivedEvent] = SyncEvent.create();
-  }
-
-  /**
-   * Creates a fresh error promise. Called during construction and after recovery.
-   */
-  private resetErrorPromise() {
-    const { promise: errorPromise, reject: rejectError } = makePromise<never>();
-    this.errorPromise = errorPromise;
-    // Prevent unhandled rejection if no one attaches a .catch() handler
-    this.errorPromise.catch(() => {});
-    this.raiseError = (error: Error) => {
-      rejectError(new Error("LazySignal upstream error", { cause: error }));
-    };
+    [this.errorSignal, this.setError] = Signal.create<Error | null>(null);
   }
 
   /**
@@ -301,7 +278,7 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
 
     this.hasEncounteredError = false;
     this.dataIsStale = true;
-    this.resetErrorPromise();
+    this.setError(null);
 
     // If we have subscribers, immediately try to reconnect
     if (this.subscribersCount > 0) {
@@ -340,7 +317,7 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
             : new Error(error === undefined ? "Unknown error" : String(error));
         if (!this.hasEncounteredError) {
           this.hasEncounteredError = true;
-          this.raiseError(normalizedError);
+          this.setError(normalizedError);
         }
         this.dataIsStale = true;
         this.isSubscribedToUpstream = false;
