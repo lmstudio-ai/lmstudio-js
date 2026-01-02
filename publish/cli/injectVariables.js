@@ -29,6 +29,7 @@ try {
   throw error;
 }
 
+// Just a sanity check
 if (commitHash.length === 0) {
   throw new Error("Commit hash is empty");
 }
