@@ -327,5 +327,49 @@ describe("LazySignal", () => {
       expect(listener).toHaveBeenCalledWith("recovered");
       expect(lazySignal.isStale()).toBe(false);
     });
+
+    it("should resolve pending pull() after recovery when new data arrives", async () => {
+      let setDownstream: any /* ((data: string) => void) | null */ = null;
+      let errorListener: any /* ((error: unknown) => void) | null */ = null;
+      const subscribeUpstream = jest.fn().mockImplementation((cb, onError) => {
+        setDownstream = cb;
+        errorListener = onError;
+        return () => {};
+      });
+      const lazySignal = LazySignal.createWithoutInitialValue<string>(subscribeUpstream);
+      lazySignal.subscribeFull(() => {});
+
+      // Initial data
+      setDownstream?.("initial");
+      expect(lazySignal.get()).toBe("initial");
+
+      // Error occurs
+      errorListener?.(new Error("test error"));
+      expect(lazySignal.hasError()).toBe(true);
+
+      // Call pull() while in error state - should hang until recovery
+      const pullPromise = lazySignal.pull();
+
+      // Verify pull hasn't resolved yet
+      let resolved = false;
+      pullPromise.then(() => {
+        resolved = true;
+      });
+      await Promise.resolve(); // Let any pending microtasks run
+      expect(resolved).toBe(false);
+
+      // Recover from error
+      lazySignal.recoverFromError();
+
+      // Still shouldn't resolve until new data arrives
+      await Promise.resolve();
+      expect(resolved).toBe(false);
+
+      // New data arrives after recovery
+      setDownstream?.("after-recovery");
+
+      // Now pull should resolve with the new value
+      await expect(pullPromise).resolves.toBe("after-recovery");
+    });
   });
 });

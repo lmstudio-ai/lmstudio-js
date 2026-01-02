@@ -1,6 +1,6 @@
-import { Event } from "./Event.js";
 import { Signal, type SignalFullSubscriber, type SignalLike, type Subscriber } from "./Signal.js";
 import { Subscribable } from "./Subscribable.js";
+import { SyncEvent } from "./SyncEvent.js";
 import { makePromise } from "./makePromise.js";
 import { makeSetterWithPatches, type Setter } from "./makeSetter.js";
 
@@ -77,7 +77,7 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
   /**
    * This event will be triggered even if the value did not change. This is for resolving .pull.
    */
-  private readonly updateReceivedEvent: Event<void>;
+  private readonly updateReceivedEvent: SyncEvent<void>;
   private readonly emitUpdateReceivedEvent: () => void;
   private readonly updateReceivedSynchronousCallbacks = new Set<() => void>();
 
@@ -237,7 +237,7 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
     // Initialize with dummy values, will be set by resetErrorPromise
     this.resetErrorPromise();
     [this.signal, this.setValue] = Signal.create<TData>(initialValue, equalsPredicate) as any;
-    [this.updateReceivedEvent, this.emitUpdateReceivedEvent] = Event.create();
+    [this.updateReceivedEvent, this.emitUpdateReceivedEvent] = SyncEvent.create();
   }
 
   /**
@@ -392,10 +392,12 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
       // If not stale, definitely not "NOT_AVAILABLE"
       resolve(this.get() as StripNotAvailable<TData>);
     } else {
-      const unsubscribe = this.subscribe(() => {});
+      // Register event listener BEFORE subscribe() because subscribe() may trigger
+      // subscribeToUpstream() which can emit the event synchronously
       this.updateReceivedEvent.subscribeOnce(() => {
         resolve(this.get() as StripNotAvailable<TData>);
       });
+      const unsubscribe = this.subscribe(() => {});
       promise.then(unsubscribe);
     }
     return promise;
