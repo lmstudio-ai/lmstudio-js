@@ -18,16 +18,10 @@ try {
 }
 
 const lmsCliPath = join(currentDirectoryPath, "..", "..", "packages", "lms-cli");
-let commitHash = "unknown";
-try {
-  commitHash = execSync("git rev-parse --short HEAD", {
-    cwd: lmsCliPath,
-    encoding: "utf-8",
-  }).trim();
-} catch (error) {
-  console.error("Failed to get commit hash from lms-cli submodule.");
-}
-
+const commitHash = execSync("git rev-parse --short HEAD", {
+  cwd: lmsCliPath,
+  encoding: "utf-8",
+}).trim();
 let replaced = content.replaceAll("<LMS-CLI-COMMIT-HASH>", commitHash);
 if (lmsKey !== null) {
   replaced = replaced.replaceAll("<LMS-CLI-LMS-KEY>", lmsKey);
