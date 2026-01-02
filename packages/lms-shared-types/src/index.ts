@@ -11,13 +11,6 @@ export {
   ArtifactType,
   artifactTypeSchema,
 } from "./ArtifactManifest.js";
-export { ProjectManifest, projectManifestSchema } from "./ProjectManifest.js";
-export {
-  ProjectYaml,
-  projectYamlSchema,
-  ProjectYamlArtifactEntry,
-  projectYamlArtifactEntrySchema,
-} from "./ProjectYaml.js";
 export {
   ArtifactArtifactDependency,
   artifactArtifactDependencySchema,
@@ -64,10 +57,10 @@ export { ColorPalette, colorPalette, colorPaletteSchema } from "./ColorPalette.j
 export {
   DiagnosticsLogEvent,
   DiagnosticsLogEventData,
-  DiagnosticsLogRuntimeEventData,
-  diagnosticsLogRuntimeEventDataSchema,
   diagnosticsLogEventDataSchema,
   diagnosticsLogEventSchema,
+  DiagnosticsLogRuntimeEventData,
+  diagnosticsLogRuntimeEventDataSchema,
 } from "./diagnostics/DiagnosticsLogEvent.js";
 export {
   EmbeddingLoadModelConfig,
@@ -380,6 +373,13 @@ export {
   pluginSandboxSettingsSchema,
 } from "./PluginManifest.js";
 export { PresetManifest, presetManifestSchema } from "./PresetManifest.js";
+export { ProjectManifest, projectManifestSchema } from "./ProjectManifest.js";
+export {
+  ProjectYaml,
+  ProjectYamlArtifactEntry,
+  projectYamlArtifactEntrySchema,
+  projectYamlSchema,
+} from "./ProjectYaml.js";
 export { Quantization, quantizationSchema } from "./Quantization.js";
 export { reasonableKeyStringSchema } from "./reasonable.js";
 export { RemotePluginInfo, remotePluginInfoSchema } from "./RemotePluginInfo.js";
@@ -448,8 +448,16 @@ export {
   runtimeSchema,
 } from "./Runtime.js";
 export {
+  BaseSpecifier,
+  baseSpecifierSchema,
+  CpuInfo,
+  cpuInfoSchema,
+  GpuInfo,
+  gpuInfoSchema,
   ModelFormatName,
   modelFormatNameSchema,
+} from "./RuntimeCommon.js";
+export {
   RuntimeEngineInfo,
   runtimeEngineInfoSchema,
   RuntimeEngineSpecifier,

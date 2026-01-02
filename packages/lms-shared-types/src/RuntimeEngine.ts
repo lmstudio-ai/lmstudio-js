@@ -1,27 +1,24 @@
 import { z, type ZodSchema } from "zod";
-
-/**
- * Supported model formats
- *
- * @public
- */
-export type ModelFormatName = "GGUF" | "MLX" | "GGML";
-export const modelFormatNameSchema = z.enum(["GGUF", "MLX", "GGML"]);
+import {
+  type BaseSpecifier,
+  baseSpecifierSchema,
+  type CpuInfo,
+  cpuInfoSchema,
+  type GpuInfo,
+  gpuInfoSchema,
+  type ModelFormatName,
+  modelFormatNameSchema,
+} from "./RuntimeCommon.js";
 
 /**
  * Uniquely specifies a Runtime Engine
  *
  * @public
  */
-export interface RuntimeEngineSpecifier {
-  name: string;
-  version: string;
-}
+export interface RuntimeEngineSpecifier extends BaseSpecifier {}
+
 // Keep the original schema without casting for extending
-const runtimeEngineSpecifierSchemaBase = z.object({
-  name: z.string(),
-  version: z.string(),
-});
+const runtimeEngineSpecifierSchemaBase = baseSpecifierSchema;
 
 // Export with type assertion when needed
 export const runtimeEngineSpecifierSchema =
@@ -35,29 +32,15 @@ export const runtimeEngineSpecifierSchema =
 export interface RuntimeEngineInfo extends RuntimeEngineSpecifier {
   engine: string;
   platform: string;
-  cpu: {
-    architecture: string;
-    instructionSetExtensions?: string[];
-  };
-  gpu?: {
-    make?: string;
-    framework?: string;
-  };
+  cpu: CpuInfo;
+  gpu?: GpuInfo;
   supportedModelFormatNames: ModelFormatName[];
 }
 export const runtimeEngineInfoSchema = runtimeEngineSpecifierSchemaBase.extend({
   engine: z.string(),
   platform: z.string(),
-  cpu: z.object({
-    architecture: z.string(),
-    instructionSetExtensions: z.array(z.string()).optional(),
-  }),
-  gpu: z
-    .object({
-      make: z.string().optional(),
-      framework: z.string().optional(),
-    })
-    .optional(),
+  cpu: cpuInfoSchema,
+  gpu: gpuInfoSchema.optional(),
   supportedModelFormatNames: z.array(modelFormatNameSchema),
 }) as ZodSchema<RuntimeEngineInfo>;
 
