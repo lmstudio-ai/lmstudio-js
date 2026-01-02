@@ -191,6 +191,116 @@ describe("Writable Signal Recovery", () => {
     });
   });
 
+  describe("Error Signal", () => {
+    it("should emit errors on writable errorSignal and clear after recovery", async () => {
+      const [serverSignal, serverSetter] = Signal.create({ value: 0 });
+
+      const backendInterface = new BackendInterface().addWritableSignalEndpoint(
+        "testWritableSignal",
+        {
+          creationParameter: z.object({ id: z.string() }),
+          signalData: z.object({ value: z.number() }),
+        },
+      );
+
+      backendInterface.handleWritableSignalEndpoint("testWritableSignal", () => {
+        return [serverSignal, serverSetter] as const;
+      });
+
+      const { clientPort, simulateDisconnect, simulateReconnect } = createControllableMockedPorts(
+        backendInterface,
+        createTestContextCreator(),
+      );
+
+      const [clientSignal] = clientPort.createWritableSignal("testWritableSignal", {
+        id: "test-1",
+      });
+      clientSignal.subscribe(() => {});
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      const errors: Array<Error | null> = [];
+      clientSignal.errorSignal.subscribe(error => {
+        errors.push(error);
+      });
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(clientSignal.errorSignal.get()).toBe(null);
+
+      simulateDisconnect();
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(clientSignal.errorSignal.get()).not.toBe(null);
+      expect(clientSignal.errorSignal.get()).toBeInstanceOf(Error);
+
+      simulateReconnect();
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(clientSignal.errorSignal.get()).toBe(null);
+      // Ensure subscription still works after recovery
+      serverSetter({ value: 1 });
+      await new Promise(resolve => setTimeout(resolve, 0));
+      expect(isAvailable(clientSignal.get())).toBe(true);
+    });
+
+    it("should clear in-flight writes when disconnect happens before confirmation", async () => {
+      const [serverSignal, serverSetter] = Signal.create({ value: 0 });
+      const serverValues: number[] = [];
+      serverSignal.subscribe(value => {
+        serverValues.push(value.value);
+      });
+
+      const backendInterface = new BackendInterface().addWritableSignalEndpoint(
+        "testWritableSignal",
+        {
+          creationParameter: z.object({ id: z.string() }),
+          signalData: z.object({ value: z.number() }),
+        },
+      );
+
+      backendInterface.handleWritableSignalEndpoint("testWritableSignal", () => {
+        return [serverSignal, serverSetter] as const;
+      });
+
+      const { clientPort, simulateDisconnect, simulateReconnect } = createControllableMockedPorts(
+        backendInterface,
+        createTestContextCreator(),
+      );
+
+      const [clientSignal, clientSetter] = clientPort.createWritableSignal("testWritableSignal", {
+        id: "test-1",
+      });
+      clientSignal.subscribe(() => {});
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      clientSetter({ value: 1 });
+      simulateDisconnect();
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(clientSignal.hasError()).toBe(true);
+      expect(clientSignal.errorSignal.get()).toBeInstanceOf(Error);
+
+      simulateReconnect();
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(clientSignal.hasError()).toBe(false);
+      expect(clientSignal.errorSignal.get()).toBe(null);
+
+      // Ensure the client re-synchronizes with server state before issuing new writes
+      serverSetter({ value: 10 });
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      clientSetter.withUpdater(({ value }) => ({ value: value + 1 }));
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(serverValues).toContain(11);
+      expect(clientSignal.get()).toEqual({ value: 11 });
+    });
+  });
+
   describe("Mixed Signal Types", () => {
     it("should recover both readonly and writable signals", async () => {
       const [readonlyServerSignal] = Signal.create({ value: 10 });
