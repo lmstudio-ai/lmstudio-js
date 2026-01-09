@@ -11,6 +11,7 @@ import {
   jsonSerializableSchema,
   modelSearchOptsSchema,
   type ArtifactDownloadPlan,
+  type AuthenticationStatus,
   type DownloadProgressUpdate,
   type LocalArtifactFileList,
   type ModelSearchOpts,
