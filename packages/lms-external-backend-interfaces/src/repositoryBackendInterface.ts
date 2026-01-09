@@ -2,7 +2,9 @@ import { BackendInterface } from "@lmstudio/lms-communication";
 import { type InferClientPort } from "@lmstudio/lms-communication-client";
 import {
   artifactDownloadPlanSchema,
+  authenticationStatusSchema,
   downloadProgressUpdateSchema,
+  hubModelSchema,
   jsonSerializableSchema,
   kebabCaseSchema,
   kebabCaseWithDotsSchema,
@@ -11,7 +13,6 @@ import {
   modelSearchResultDownloadOptionDataSchema,
   modelSearchResultEntryDataSchema,
   modelSearchResultIdentifierSchema,
-  hubModelSchema,
 } from "@lmstudio/lms-shared-types";
 import { z } from "zod";
 
@@ -127,18 +128,51 @@ export function createRepositoryBackendInterface() {
           }),
         ]),
       })
+      .addRpcEndpoint("isAuthenticated", {
+        parameter: z.void(),
+        returns: z.object({
+          authenticated: z.boolean(),
+        }),
+      })
       .addChannelEndpoint("ensureAuthenticated", {
         creationParameter: z.void(),
         toServerPacket: z.void(),
         toClientPacket: z.discriminatedUnion("type", [
           z.object({
-            type: z.literal("authenticationUrl"),
-            url: z.string(),
+            type: z.literal("authenticationCode"),
+            /**
+             * The code to enter.
+             */
+            code: z.string(),
+            /**
+             * The URL for user to manually enter the code.
+             */
+            manualUrl: z.string(),
+            /**
+             * The URL that will be automatically filled.
+             */
+            filledUrl: z.string(),
           }),
           z.object({
             type: z.literal("authenticated"),
           }),
         ]),
+      })
+      /**
+       * Gets the current authentication status.
+       */
+      .addRpcEndpoint("getAuthenticationStatus", {
+        parameter: z.void(),
+        returns: z.object({
+          /**
+           * Null if not authenticated.
+           */
+          authenticationStatus: authenticationStatusSchema.nullable(),
+        }),
+      })
+      .addRpcEndpoint("deauthenticate", {
+        parameter: z.void(),
+        returns: z.void(),
       })
       .addRpcEndpoint("loginWithPreAuthenticatedKeys", {
         parameter: z.object({
