@@ -11,6 +11,7 @@ import {
   jsonSerializableSchema,
   modelSearchOptsSchema,
   type ArtifactDownloadPlan,
+  type AuthenticationStatus,
   type DownloadProgressUpdate,
   type LocalArtifactFileList,
   type ModelSearchOpts,
@@ -88,10 +89,23 @@ export const pushArtifactOptsSchema = z.object({
  * @public
  */
 export interface EnsureAuthenticatedOpts {
-  onAuthenticationUrl: (url: string) => void;
+  onAuthenticationCode: (opts: {
+    /**
+     * The code to enter.
+     */
+    code: string;
+    /**
+     * The URL for user to manually enter the code.
+     */
+    manualUrl: string;
+    /**
+     * The URL that will be automatically filled.
+     */
+    filledUrl: string;
+  }) => void;
 }
 export const ensureAuthenticatedOptsSchema = z.object({
-  onAuthenticationUrl: z.function(),
+  onAuthenticationCode: z.function(),
 }) as ZodSchema<EnsureAuthenticatedOpts>;
 
 /**
@@ -339,9 +353,13 @@ export class RepositoryNamespace {
     const channel = this.repositoryPort.createChannel("ensureAuthenticated", undefined, message => {
       const type = message.type;
       switch (type) {
-        case "authenticationUrl": {
-          safeCallCallback(this.logger, "onAuthenticationUrl", opts.onAuthenticationUrl, [
-            message.url,
+        case "authenticationCode": {
+          safeCallCallback(this.logger, "onAuthenticationCode", opts.onAuthenticationCode, [
+            {
+              code: message.code,
+              manualUrl: message.manualUrl,
+              filledUrl: message.filledUrl,
+            },
           ]);
           break;
         }
@@ -357,6 +375,41 @@ export class RepositoryNamespace {
     });
     channel.onError.subscribeOnce(reject);
     await promise;
+  }
+
+  /**
+   * @deprecated [DEP-HUB-API-ACCESS] LM Studio Hub API access is still in active development. Stay
+   * tuned for updates.
+   */
+  public async getAuthenticationStatus(): Promise<AuthenticationStatus | null> {
+    const stack = getCurrentStack(1);
+    const { authenticationStatus } = await this.repositoryPort.callRpc(
+      "getAuthenticationStatus",
+      undefined,
+      { stack },
+    );
+    return authenticationStatus;
+  }
+
+  /**
+   * @deprecated [DEP-HUB-API-ACCESS] LM Studio Hub API access is still in active development. Stay
+   * tuned for updates.
+   */
+  public async deauthenticate(): Promise<void> {
+    const stack = getCurrentStack(1);
+    await this.repositoryPort.callRpc("deauthenticate", undefined, { stack });
+  }
+
+  /**
+   * @deprecated [DEP-HUB-API-ACCESS] LM Studio Hub API access is still in active development. Stay
+   * tuned for updates.
+   */
+  public async isAuthenticated(): Promise<boolean> {
+    const stack = getCurrentStack(1);
+    const { authenticated } = await this.repositoryPort.callRpc("isAuthenticated", undefined, {
+      stack,
+    });
+    return authenticated;
   }
 
   public async loginWithPreAuthenticatedKeys(

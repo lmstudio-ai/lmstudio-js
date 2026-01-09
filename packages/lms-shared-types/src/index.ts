@@ -400,6 +400,10 @@ export {
   localArtifactFileListSchema,
 } from "./repository/ArtifactUpload.js";
 export {
+  AuthenticationStatus,
+  authenticationStatusSchema,
+} from "./repository/AuthenticationStatus.js";
+export {
   DownloadProgressUpdate,
   downloadProgressUpdateSchema,
 } from "./repository/DownloadProgressUpdate.js";
@@ -495,11 +499,11 @@ export {
   RuntimeHardwareSurveyEngine,
   runtimeHardwareSurveyEngineSchema,
   RuntimeHardwareSurveyResult,
+  RuntimeHardwareSurveyResultCode,
+  runtimeHardwareSurveyResultCodeSchema,
   runtimeHardwareSurveyResultSchema,
   RuntimeHardwareSurveyScope,
   runtimeHardwareSurveyScopeSchema,
-  RuntimeHardwareSurveyResultCode,
-  runtimeHardwareSurveyResultCodeSchema,
 } from "./RuntimeHardwareSurvey.js";
 export {
   KVConfigSchematicsDeserializationError,
