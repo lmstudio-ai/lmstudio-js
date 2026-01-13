@@ -180,6 +180,7 @@ export type {
   LocalArtifactFileEntry,
   LocalArtifactFileList,
   LogLevel,
+  LogProbs,
   ModelCompatibilityType,
   ModelDomainType,
   ModelDownloadSource,

@@ -199,9 +199,13 @@ export {
   llmReasoningParsingSchema,
 } from "./llm/LLMPredictionConfig.js";
 export {
+  LLMCandidateToken,
+  llmCandidateTokenSchema,
   LLMPredictionFragment,
   LLMPredictionFragmentInputOpts,
   llmPredictionFragmentInputOptsSchema,
+  LLMToken,
+  llmTokenSchema,
   LLMPredictionFragmentReasoningType,
   llmPredictionFragmentReasoningTypeSchema,
   llmPredictionFragmentSchema,

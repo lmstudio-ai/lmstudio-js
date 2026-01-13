@@ -23,6 +23,41 @@ export const llmPredictionFragmentReasoningTypeSchema = z.enum([
 ]);
 
 /**
+ * Token candidate considered by the sampler.
+ *
+ * @public
+ *
+ */
+export interface LLMCandidateToken {
+  text: string;
+  id: number;
+  logProb: number;
+}
+export const llmCandidateTokenSchema = z.object({
+  text: z.string(),
+  id: z.number().int(),
+  logProb: z.number(),
+}) as ZodSchema<LLMCandidateToken>;
+
+/**
+ * Selected token with its sampling alternatives.
+ *
+ * @public
+ */
+export interface LLMToken {
+  text: string;
+  id: number;
+  logProb: number;
+  candidates: LLMCandidateToken[];
+}
+export const llmTokenSchema = z.object({
+  text: z.string(),
+  id: z.number().int(),
+  logProb: z.number(),
+  candidates: z.array(llmCandidateTokenSchema),
+}) as ZodSchema<LLMToken>;
+
+/**
  * Represents a fragment of a prediction from an LLM. Note that a fragment may contain multiple
  * tokens.
  *
@@ -55,6 +90,10 @@ export interface LLMPredictionFragment {
    * @experimental WIP - do not use yet.
    */
   isStructural: boolean;
+  /**
+   * Tokens and their sampling metadata.
+   */
+  tokens: LLMToken[];
 }
 export const llmPredictionFragmentSchema = z.object({
   content: z.string(),
@@ -62,6 +101,7 @@ export const llmPredictionFragmentSchema = z.object({
   containsDrafted: z.boolean(),
   reasoningType: llmPredictionFragmentReasoningTypeSchema,
   isStructural: z.boolean(),
+  tokens: z.array(llmTokenSchema),
 });
 
 /**
