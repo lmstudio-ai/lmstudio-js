@@ -47,14 +47,14 @@ export const llmCandidateTokenSchema = z.object({
 export interface LLMToken {
   text: string;
   id: number;
-  logProb: number;
-  candidates: LLMCandidateToken[];
+  logProb?: number;
+  candidates?: LLMCandidateToken[];
 }
 export const llmTokenSchema = z.object({
   text: z.string(),
   id: z.number().int(),
-  logProb: z.number(),
-  candidates: z.array(llmCandidateTokenSchema),
+  logProb: z.number().optional(),
+  candidates: z.array(llmCandidateTokenSchema).optional(),
 }) as ZodSchema<LLMToken>;
 
 /**
@@ -91,7 +91,8 @@ export interface LLMPredictionFragment {
    */
   isStructural: boolean;
   /**
-   * Tokens and their sampling metadata.
+   * Tokens and their sampling metadata. Token-level logProbs are only populated when `logProbs` is
+   * requested in the prediction config.
    */
   tokens: LLMToken[];
 }
