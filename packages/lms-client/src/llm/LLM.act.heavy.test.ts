@@ -112,11 +112,6 @@ describe("LLM.act", () => {
       processedPromptTokenCount: expect.any(Number),
       unprocessedPromptTokenCount: expect.any(Number),
     });
-    const assertMaybeDetails = (details?: unknown) => {
-      if (details !== undefined) {
-        expect(details).toEqual(promptProcessingDetails);
-      }
-    };
     const expectedProgressPairs = [
       [0, 0],
       [0, 1],
@@ -128,7 +123,7 @@ describe("LLM.act", () => {
         call => call[0] === roundIndex && call[1] === progress,
       );
       expect(matchingCall).toBeDefined();
-      assertMaybeDetails(matchingCall?.[2]);
+      expect(matchingCall?.[2]).toEqual(promptProcessingDetails);
     }
 
     expect(onRoundStart).toHaveBeenCalledTimes(2);

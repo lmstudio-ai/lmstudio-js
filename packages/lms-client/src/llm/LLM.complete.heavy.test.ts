@@ -108,18 +108,13 @@ describe("LLM.complete", () => {
       processedPromptTokenCount: expect.any(Number),
       unprocessedPromptTokenCount: expect.any(Number),
     });
-    const assertMaybeDetails = (details?: unknown) => {
-      if (details !== undefined) {
-        expect(details).toEqual(promptProcessingDetails);
-      }
-    };
     const expectedProgressValues = [0, 1];
     for (const progress of expectedProgressValues) {
       const matchingCall = onPromptProcessingProgress.mock.calls.find(
         call => call[0] === progress,
       );
       expect(matchingCall).toBeDefined();
-      assertMaybeDetails(matchingCall?.[1]);
+      expect(matchingCall?.[1]).toEqual(promptProcessingDetails);
     }
   });
   it("should call onPredictionFragment", async () => {

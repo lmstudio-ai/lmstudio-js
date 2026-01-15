@@ -47,7 +47,7 @@ export function createLlmBackendInterface() {
           z.object({
             type: z.literal("promptProcessingProgress"),
             progress: z.number(),
-            details: promptProcessingDetailsSchema.optional(),
+            details: promptProcessingDetailsSchema,
           }),
           z.object({
             type: z.literal("toolCallGenerationStart"),

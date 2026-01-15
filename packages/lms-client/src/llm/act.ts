@@ -354,14 +354,13 @@ export interface LLMActBaseOpts<TPredictionResult> {
    * - `(1, 0.3)` when the second prediction's prompt processing is 50% done.
    * - `(1, 0.7)` when the second prediction's prompt processing is 70% done.
    *
-   * If available, `details` provides token counts for the prompt:
-   * `cachedTokenCount`, `totalPromptTokenCount`, `processedPromptTokenCount`,
-   * and `unprocessedPromptTokenCount`. It may be `undefined` if the backend does not emit details.
+   * `details` provides token counts for the prompt: `cachedTokenCount`,
+   * `totalPromptTokenCount`, `processedPromptTokenCount`, and `unprocessedPromptTokenCount`.
    */
   onPromptProcessingProgress?: (
     roundIndex: number,
     progress: number,
-    details?: PromptProcessingDetails,
+    details: PromptProcessingDetails,
   ) => void;
   /**
    * A callback that is called when the model starts generating a tool call request.
@@ -731,7 +730,7 @@ interface ActPredictionImplementationArgs<TEndPacket> {
   handleFragment: (fragment: LLMPredictionFragment) => void;
   handlePromptProcessingProgress: (
     progress: number,
-    details?: PromptProcessingDetails,
+    details: PromptProcessingDetails,
   ) => void;
   handleToolCallGenerationStart: (toolCallId: string | undefined) => void;
   handleToolCallGenerationNameReceived: (name: string) => void;
