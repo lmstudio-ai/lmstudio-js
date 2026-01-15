@@ -10,14 +10,23 @@ export interface PromptProcessingDetails {
   cachedTokenCount: number;
   /**
    * Total number of prompt tokens in the request.
+   * ```
+   * totalPromptTokenCount = cachedTokenCount + processedPromptTokenCount + unprocessedPromptTokenCount
+   * ```
    */
   totalPromptTokenCount: number;
   /**
    * Tokens processed by the model (work already completed).
+   * ```
+   * totalPromptTokenCount = cachedTokenCount + processedPromptTokenCount + unprocessedPromptTokenCount
+   * ```
    */
   processedPromptTokenCount: number;
   /**
    * Tokens queued for processing but not yet completed.
+   * ```
+   * totalPromptTokenCount = cachedTokenCount + processedPromptTokenCount + unprocessedPromptTokenCount
+   * ```
    */
   unprocessedPromptTokenCount: number;
 }
