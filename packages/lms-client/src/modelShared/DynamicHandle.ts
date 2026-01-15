@@ -1,10 +1,10 @@
 import { getCurrentStack } from "@lmstudio/lms-common";
 import { type BaseModelPort } from "@lmstudio/lms-external-backend-interfaces";
 import {
-  type ModelProcessingState,
   type KVConfig,
   type ModelInfoBase,
   type ModelInstanceInfoBase,
+  type ModelProcessingState,
   type ModelSpecifier,
 } from "@lmstudio/lms-shared-types";
 
@@ -36,6 +36,9 @@ export abstract class DynamicHandle<
     /** @internal */
     protected readonly specifier: ModelSpecifier,
   ) {}
+
+  /** @internal */
+  protected readonly internalIgnoreServerSessionConfig: boolean | undefined = undefined;
 
   /**
    * Gets the information of the model that is currently associated with this `DynamicHandle`. If no
@@ -77,7 +80,10 @@ export abstract class DynamicHandle<
   protected async getBasePredictionKVConfig(stack: string): Promise<KVConfig> {
     const basePredictionConfig = await this.port.callRpc(
       "getBasePredictionConfig",
-      { specifier: this.specifier },
+      {
+        specifier: this.specifier,
+        ignoreServerSessionConfig: this.internalIgnoreServerSessionConfig,
+      },
       { stack },
     );
     return basePredictionConfig;

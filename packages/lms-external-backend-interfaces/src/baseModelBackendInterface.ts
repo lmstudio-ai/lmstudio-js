@@ -95,6 +95,7 @@ export function createBaseModelBackendInterface<
     .addRpcEndpoint("getBasePredictionConfig", {
       parameter: z.object({
         specifier: modelSpecifierSchema,
+        ignoreServerSessionConfig: z.boolean().optional(),
       }),
       returns: kvConfigSchema,
     })
