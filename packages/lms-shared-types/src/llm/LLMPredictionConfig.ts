@@ -340,6 +340,7 @@ export const llmPredictionConfigInputSchema = z.object({
   speculativeDecodingNumDraftTokensExact: z.number().int().min(1).optional(),
   speculativeDecodingMinDraftLengthToConsider: z.number().int().min(0).optional(),
   speculativeDecodingMinContinueDraftingProbability: z.number().optional(),
+  logProbs: z.number().int().min(0).optional().or(z.literal(false)),
   reasoningParsing: llmReasoningParsingSchema.optional(),
   userMaxImageDimensionPixels: z.number().int().min(1).optional().or(z.literal(false)),
   ignoreModelPreferredMaxImageDimension: z.boolean().optional(),

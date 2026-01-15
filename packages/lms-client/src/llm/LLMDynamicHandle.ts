@@ -75,6 +75,9 @@ export interface LLMPredictionOpts<TStructuredOutputType = unknown>
   onFirstToken?: () => void;
   /**
    * A callback for each fragment that is output by the model.
+   *
+   * Token-level logProbs for the fragment—only when `logProbs` is requested—are available via
+   * `fragment.tokens`.
    */
   onPredictionFragment?: (fragment: LLMPredictionFragment) => void;
   /**

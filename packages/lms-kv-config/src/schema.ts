@@ -418,6 +418,7 @@ export const llmMlxPredictionConfigSchematics = llmSharedPredictionConfigSchemat
     "minPSampling",
     "topPSampling",
     "topKSampling",
+    "logProbs",
     "speculativeDecoding.draftModel",
     "speculativeDecoding.numDraftTokensExact",
   ),
