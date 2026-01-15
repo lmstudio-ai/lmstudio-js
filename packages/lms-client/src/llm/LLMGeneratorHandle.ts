@@ -38,6 +38,9 @@ export interface LLMGeneratorPredictionOpts {
   onFirstToken?: () => void;
   /**
    * A callback that is called when a prediction fragment is generated.
+   *
+   * Token-level logProbs for the fragment—only when `logProbs` is requested—are available via
+   * `fragment.tokens`.
    */
   onPredictionFragment?: (fragment: LLMPredictionFragment) => void;
   /**

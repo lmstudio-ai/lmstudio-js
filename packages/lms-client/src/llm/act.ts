@@ -295,6 +295,9 @@ export interface LLMActBaseOpts<TPredictionResult> {
    * fragment that is emitted. The fragment itself is augmented with the round index (the index of
    * the prediction within `.act(...)`, 0-indexed).
    *
+   * Token-level logProbs for the fragment—only when `logProbs` is requested—are available via
+   * `fragment.tokens`.
+   *
    * For example, for an `.act` invocation with 2 predictions, the callback may be called in the
    * following sequence.
    *
