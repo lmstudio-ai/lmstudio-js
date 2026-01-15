@@ -68,11 +68,12 @@ export interface LLMPredictionOpts<TStructuredOutputType = unknown>
    * a number between 0 and 1, representing the progress of the prompt processing.
    *
    * Prompt processing progress callbacks will only be called before the first token is emitted.
+   *
+   * If available, `details` provides token counts for the prompt:
+   * `cachedTokenCount`, `totalPromptTokenCount`, `processedPromptTokenCount`,
+   * and `unprocessedPromptTokenCount`. It may be `undefined` if the backend does not emit details.
    */
-  onPromptProcessingProgress?: (
-    progress: number,
-    details?: PromptProcessingDetails,
-  ) => void;
+  onPromptProcessingProgress?: (progress: number, details?: PromptProcessingDetails) => void;
   /**
    * A callback that is called when the model has output the first token.
    */

@@ -353,6 +353,10 @@ export interface LLMActBaseOpts<TPredictionResult> {
    *   not called.
    * - `(1, 0.3)` when the second prediction's prompt processing is 50% done.
    * - `(1, 0.7)` when the second prediction's prompt processing is 70% done.
+   *
+   * If available, `details` provides token counts for the prompt:
+   * `cachedTokenCount`, `totalPromptTokenCount`, `processedPromptTokenCount`,
+   * and `unprocessedPromptTokenCount`. It may be `undefined` if the backend does not emit details.
    */
   onPromptProcessingProgress?: (
     roundIndex: number,
