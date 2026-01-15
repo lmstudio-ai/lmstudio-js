@@ -250,6 +250,10 @@ export {
   llmToolUseSettingSchema,
 } from "./llm/LLMToolUseSetting.js";
 export {
+  PromptProcessingDetails,
+  promptProcessingDetailsSchema,
+} from "./llm/PromptProcessingDetails.js";
+export {
   PredictionLoopHandlerUpdate,
   predictionLoopHandlerUpdateSchema,
 } from "./llm/processing/PredictionLoopHandlerUpdate.js";

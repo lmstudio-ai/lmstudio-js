@@ -106,8 +106,20 @@ describe("LLM.respond", () => {
       maxTokens: 1,
       onPromptProcessingProgress,
     });
-    expect(onPromptProcessingProgress).toHaveBeenCalledWith(0);
-    expect(onPromptProcessingProgress).toHaveBeenCalledWith(1);
+    const promptProcessingDetails = expect.objectContaining({
+      cachedTokenCount: expect.any(Number),
+      totalPromptTokenCount: expect.any(Number),
+      processedPromptTokenCount: expect.any(Number),
+      unprocessedPromptTokenCount: expect.any(Number),
+    });
+    const expectedProgressValues = [0, 1];
+    for (const progress of expectedProgressValues) {
+      const matchingCall = onPromptProcessingProgress.mock.calls.find(
+        call => call[0] === progress,
+      );
+      expect(matchingCall).toBeDefined();
+      expect(matchingCall?.[1]).toEqual(promptProcessingDetails);
+    }
   });
   it("should call onPredictionFragment callback", async () => {
     const onPredictionFragment = jest.fn();

@@ -35,6 +35,7 @@ import {
   type LLMStructuredPredictionSetting,
   type LLMToolUseSetting,
   type ModelSpecifier,
+  type PromptProcessingDetails,
   type ToolCallRequest,
   zodSchemaSchema,
 } from "@lmstudio/lms-shared-types";
@@ -67,8 +68,11 @@ export interface LLMPredictionOpts<TStructuredOutputType = unknown>
    * a number between 0 and 1, representing the progress of the prompt processing.
    *
    * Prompt processing progress callbacks will only be called before the first token is emitted.
+   *
+   * `details` provides token counts for the prompt: `cachedTokenCount`,
+   * `totalPromptTokenCount`, `processedPromptTokenCount`, and `unprocessedPromptTokenCount`.
    */
-  onPromptProcessingProgress?: (progress: number) => void;
+  onPromptProcessingProgress?: (progress: number, details: PromptProcessingDetails) => void;
   /**
    * A callback that is called when the model has output the first token.
    */
@@ -489,7 +493,7 @@ export class LLMDynamicHandle extends DynamicHandle<
               this.logger,
               "onPromptProcessingProgress",
               extraOpts.onPromptProcessingProgress,
-              [message.progress],
+              [message.progress, message.details],
             );
             break;
           }
@@ -1018,7 +1022,7 @@ export class LLMDynamicHandle extends DynamicHandle<
                 break;
               }
               case "promptProcessingProgress": {
-                handlePromptProcessingProgress(message.progress);
+                handlePromptProcessingProgress(message.progress, message.details);
                 break;
               }
               case "toolCallGenerationStart": {

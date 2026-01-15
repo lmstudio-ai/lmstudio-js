@@ -14,6 +14,7 @@ import {
   type ChatMessagePartToolCallRequestData,
   type ChatMessagePartToolCallResultData,
   type LLMPredictionFragment,
+  type PromptProcessingDetails,
   type ToolCallRequest,
   type ToolCallResult,
 } from "@lmstudio/lms-shared-types";
@@ -352,8 +353,15 @@ export interface LLMActBaseOpts<TPredictionResult> {
    *   not called.
    * - `(1, 0.3)` when the second prediction's prompt processing is 50% done.
    * - `(1, 0.7)` when the second prediction's prompt processing is 70% done.
+   *
+   * `details` provides token counts for the prompt: `cachedTokenCount`,
+   * `totalPromptTokenCount`, `processedPromptTokenCount`, and `unprocessedPromptTokenCount`.
    */
-  onPromptProcessingProgress?: (roundIndex: number, progress: number) => void;
+  onPromptProcessingProgress?: (
+    roundIndex: number,
+    progress: number,
+    details: PromptProcessingDetails,
+  ) => void;
   /**
    * A callback that is called when the model starts generating a tool call request.
    *
@@ -720,7 +728,7 @@ interface ActPredictionImplementationArgs<TEndPacket> {
   history: ChatHistoryData;
   signal: AbortSignal;
   handleFragment: (fragment: LLMPredictionFragment) => void;
-  handlePromptProcessingProgress: (progress: number) => void;
+  handlePromptProcessingProgress: (progress: number, details: PromptProcessingDetails) => void;
   handleToolCallGenerationStart: (toolCallId: string | undefined) => void;
   handleToolCallGenerationNameReceived: (name: string) => void;
   handleToolCallGenerationArgumentFragmentGenerated: (content: string) => void;
@@ -977,12 +985,12 @@ export async function internalAct<TPredictionResult, TEndPacket>(
           }
         }
       },
-      handlePromptProcessingProgress: progress => {
+      handlePromptProcessingProgress: (progress, details) => {
         safeCallCallback(
           logger,
           "onPromptProcessingProgress",
           baseOpts.onPromptProcessingProgress,
-          [predictionsPerformed, progress],
+          [predictionsPerformed, progress, details],
         );
       },
       handleToolCallGenerationStart: toolCallId => {
