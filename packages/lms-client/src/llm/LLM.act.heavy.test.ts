@@ -106,10 +106,30 @@ describe("LLM.act", () => {
     // Cannot assert on content due to non-determinism
     expect(onPredictionFragment).toHaveBeenCalled();
 
-    expect(onPromptProcessingProgress).toHaveBeenCalledWith(0, 0, undefined);
-    expect(onPromptProcessingProgress).toHaveBeenCalledWith(0, 1, undefined);
-    expect(onPromptProcessingProgress).toHaveBeenCalledWith(1, 0, undefined);
-    expect(onPromptProcessingProgress).toHaveBeenCalledWith(1, 1, undefined);
+    const promptProcessingDetails = expect.objectContaining({
+      cachedTokenCount: expect.any(Number),
+      totalPromptTokenCount: expect.any(Number),
+      processedPromptTokenCount: expect.any(Number),
+      unprocessedPromptTokenCount: expect.any(Number),
+    });
+    const assertMaybeDetails = (details?: unknown) => {
+      if (details !== undefined) {
+        expect(details).toEqual(promptProcessingDetails);
+      }
+    };
+    const expectedProgressPairs = [
+      [0, 0],
+      [0, 1],
+      [1, 0],
+      [1, 1],
+    ];
+    for (const [roundIndex, progress] of expectedProgressPairs) {
+      const matchingCall = onPromptProcessingProgress.mock.calls.find(
+        call => call[0] === roundIndex && call[1] === progress,
+      );
+      expect(matchingCall).toBeDefined();
+      assertMaybeDetails(matchingCall?.[2]);
+    }
 
     expect(onRoundStart).toHaveBeenCalledTimes(2);
     expect(onRoundStart.mock.calls).toEqual([[0], [1]]);
