@@ -114,7 +114,7 @@ export interface LLMPredictionFragment {
    * Tokens and their sampling metadata. Token-level logProbs are only populated when `logProbs` is
    * requested in the prediction config.
    */
-  tokens: LLMToken[];
+  tokens?: LLMToken[];
 }
 export const llmPredictionFragmentSchema = z.object({
   content: z.string(),
@@ -122,7 +122,7 @@ export const llmPredictionFragmentSchema = z.object({
   containsDrafted: z.boolean(),
   reasoningType: llmPredictionFragmentReasoningTypeSchema,
   isStructural: z.boolean(),
-  tokens: z.array(llmTokenSchema).default([]),
+  tokens: z.array(llmTokenSchema).optional(),
 });
 
 /**
@@ -150,10 +150,16 @@ export interface LLMPredictionFragmentInputOpts {
    * @experimental WIP - do not use yet.
    */
   isStructural?: boolean;
+  /**
+   * Tokens and their sampling metadata. Token-level logProbs are only populated when `logProbs` is
+   * requested in the prediction config.
+   */
+  tokens?: LLMToken[];
 }
 export const llmPredictionFragmentInputOptsSchema = z.object({
   tokenCount: z.number().int().optional(),
   containsDrafted: z.boolean().optional(),
   reasoningType: llmPredictionFragmentReasoningTypeSchema.optional(),
   isStructural: z.boolean().optional(),
+  tokens: z.array(llmTokenSchema).optional(),
 }) as ZodSchema<LLMPredictionFragmentInputOpts>;
