@@ -102,8 +102,8 @@ describe("LLM.complete", () => {
       stopStrings: [";"],
       onPromptProcessingProgress,
     });
-    expect(onPromptProcessingProgress).toHaveBeenCalledWith(0);
-    expect(onPromptProcessingProgress).toHaveBeenCalledWith(1);
+    expect(onPromptProcessingProgress).toHaveBeenCalledWith(0, undefined);
+    expect(onPromptProcessingProgress).toHaveBeenCalledWith(1, undefined);
   });
   it("should call onPredictionFragment", async () => {
     const onPredictionFragment = jest.fn();

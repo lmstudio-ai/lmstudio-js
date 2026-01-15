@@ -106,10 +106,10 @@ describe("LLM.act", () => {
     // Cannot assert on content due to non-determinism
     expect(onPredictionFragment).toHaveBeenCalled();
 
-    expect(onPromptProcessingProgress).toHaveBeenCalledWith(0, 0);
-    expect(onPromptProcessingProgress).toHaveBeenCalledWith(0, 1);
-    expect(onPromptProcessingProgress).toHaveBeenCalledWith(1, 0);
-    expect(onPromptProcessingProgress).toHaveBeenCalledWith(1, 1);
+    expect(onPromptProcessingProgress).toHaveBeenCalledWith(0, 0, undefined);
+    expect(onPromptProcessingProgress).toHaveBeenCalledWith(0, 1, undefined);
+    expect(onPromptProcessingProgress).toHaveBeenCalledWith(1, 0, undefined);
+    expect(onPromptProcessingProgress).toHaveBeenCalledWith(1, 1, undefined);
 
     expect(onRoundStart).toHaveBeenCalledTimes(2);
     expect(onRoundStart.mock.calls).toEqual([[0], [1]]);

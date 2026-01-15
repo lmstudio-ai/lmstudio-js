@@ -106,8 +106,8 @@ describe("LLM.respond", () => {
       maxTokens: 1,
       onPromptProcessingProgress,
     });
-    expect(onPromptProcessingProgress).toHaveBeenCalledWith(0);
-    expect(onPromptProcessingProgress).toHaveBeenCalledWith(1);
+    expect(onPromptProcessingProgress).toHaveBeenCalledWith(0, undefined);
+    expect(onPromptProcessingProgress).toHaveBeenCalledWith(1, undefined);
   });
   it("should call onPredictionFragment callback", async () => {
     const onPredictionFragment = jest.fn();

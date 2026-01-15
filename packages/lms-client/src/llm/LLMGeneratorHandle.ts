@@ -366,7 +366,7 @@ export class LLMGeneratorHandle {
                 break;
               }
               case "promptProcessingProgress": {
-                handlePromptProcessingProgress(message.progress);
+                handlePromptProcessingProgress(message.progress, message.details);
                 break;
               }
               case "toolCallGenerationStart": {
