@@ -122,7 +122,7 @@ export const llmPredictionFragmentSchema = z.object({
   containsDrafted: z.boolean(),
   reasoningType: llmPredictionFragmentReasoningTypeSchema,
   isStructural: z.boolean(),
-  tokens: z.array(llmTokenSchema),
+  tokens: z.array(llmTokenSchema).default([]),
 });
 
 /**
