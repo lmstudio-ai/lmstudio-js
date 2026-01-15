@@ -8,6 +8,7 @@ import {
   llmPredictionFragmentInputOptsSchema,
   llmPredictionFragmentSchema,
   llmToolSchema,
+  promptProcessingDetailsSchema,
   pluginConfigSpecifierSchema,
   pluginManifestSchema,
   processingRequestResponseSchema,
@@ -121,6 +122,7 @@ export function createPluginsBackendInterface() {
           z.object({
             type: z.literal("promptProcessingProgress"),
             progress: z.number(),
+            details: promptProcessingDetailsSchema.optional(),
           }),
           z.object({
             type: z.literal("toolCallGenerationStart"),
