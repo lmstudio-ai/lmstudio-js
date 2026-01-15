@@ -728,10 +728,7 @@ interface ActPredictionImplementationArgs<TEndPacket> {
   history: ChatHistoryData;
   signal: AbortSignal;
   handleFragment: (fragment: LLMPredictionFragment) => void;
-  handlePromptProcessingProgress: (
-    progress: number,
-    details: PromptProcessingDetails,
-  ) => void;
+  handlePromptProcessingProgress: (progress: number, details: PromptProcessingDetails) => void;
   handleToolCallGenerationStart: (toolCallId: string | undefined) => void;
   handleToolCallGenerationNameReceived: (name: string) => void;
   handleToolCallGenerationArgumentFragmentGenerated: (content: string) => void;

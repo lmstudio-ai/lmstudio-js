@@ -14,6 +14,7 @@ import {
   kvConfigSchema,
   type KVConfig,
   type LLMPredictionFragment,
+  type PromptProcessingDetails,
   type PluginConfigSpecifier,
 } from "@lmstudio/lms-shared-types";
 import { z } from "zod";
@@ -366,7 +367,13 @@ export class LLMGeneratorHandle {
                 break;
               }
               case "promptProcessingProgress": {
-                handlePromptProcessingProgress(message.progress, message.details);
+                const details: PromptProcessingDetails = message.details ?? {
+                  cachedTokenCount: 0,
+                  totalPromptTokenCount: 0,
+                  processedPromptTokenCount: 0,
+                  unprocessedPromptTokenCount: 0,
+                };
+                handlePromptProcessingProgress(message.progress, details);
                 break;
               }
               case "toolCallGenerationStart": {
