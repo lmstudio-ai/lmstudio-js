@@ -8,6 +8,7 @@ export type ModelCompatibilityType =
   | "safetensors"
   | "onnx"
   | "ggml"
+  | "pte"
   | "mlx_placeholder"
   | "torch_safetensors";
 export const modelCompatibilityTypeSchema = z.enum([
@@ -15,6 +16,7 @@ export const modelCompatibilityTypeSchema = z.enum([
   "safetensors",
   "onnx",
   "ggml",
+  "pte",
   "mlx_placeholder",
   "torch_safetensors",
 ]);
