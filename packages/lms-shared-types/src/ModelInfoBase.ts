@@ -40,7 +40,7 @@ export interface ModelInfoBase {
    * If this model is available via LM Link, this field contains the device identifier of the remote
    * device hosting this model.
    *
-   * If the model is available locally, this field is `null`.
+   * If the model is available locally, this field is `undefined`.
    */
   deviceIdentifier?: string;
   /**
