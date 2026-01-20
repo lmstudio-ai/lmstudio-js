@@ -204,11 +204,11 @@ export {
   LLMPredictionFragment,
   LLMPredictionFragmentInputOpts,
   llmPredictionFragmentInputOptsSchema,
-  LLMToken,
-  llmTokenSchema,
   LLMPredictionFragmentReasoningType,
   llmPredictionFragmentReasoningTypeSchema,
   llmPredictionFragmentSchema,
+  LLMToken,
+  llmTokenSchema,
 } from "./llm/LLMPredictionFragment.js";
 export {
   LLMGenInfo,
@@ -244,10 +244,6 @@ export {
   LLMToolUseSetting,
   llmToolUseSettingSchema,
 } from "./llm/LLMToolUseSetting.js";
-export {
-  PromptProcessingDetails,
-  promptProcessingDetailsSchema,
-} from "./llm/PromptProcessingDetails.js";
 export {
   PredictionLoopHandlerUpdate,
   predictionLoopHandlerUpdateSchema,
@@ -328,6 +324,10 @@ export {
   PromptPreprocessorUpdate,
   promptPreprocessorUpdateSchema,
 } from "./llm/processing/PromptPreprocessorUpdate.js";
+export {
+  PromptProcessingDetails,
+  promptProcessingDetailsSchema,
+} from "./llm/PromptProcessingDetails.js";
 export { TokenSourceIdentifier, tokenSourceIdentifierSchema } from "./llm/TokenSourceIdentifier.js";
 export { lmstudioAPITokenRegex } from "./lmstudioAPIToken.js";
 export { LogLevel, logLevelSchema } from "./LogLevel.js";
@@ -423,6 +423,16 @@ export {
   hubModelMetadataSchema,
   hubModelSchema,
 } from "./repository/HubArtifact.js";
+export {
+  LMLinkPeer,
+  lmLinkPeerSchema,
+  LMLinkStatus,
+  LMLinkStatusResult,
+  lmLinkStatusResultSchema,
+  lmLinkStatusSchema,
+  LMLinkUpResult,
+  lmLinkUpResultSchema,
+} from "./repository/LMLink.js";
 export {
   ModelSearchOpts,
   modelSearchOptsSchema,
