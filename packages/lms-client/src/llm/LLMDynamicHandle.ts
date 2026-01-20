@@ -444,9 +444,6 @@ export class LLMDynamicHandle extends DynamicHandle<
   private readonly internalKVConfigStack: KVConfigStack = { layers: [] };
 
   /** @internal */
-  private readonly internalIgnoreServerSessionConfig: boolean | undefined = undefined;
-
-  /** @internal */
   private readonly internalSessionId: string | undefined = undefined;
 
   /** @internal */
