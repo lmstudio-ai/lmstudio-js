@@ -8,6 +8,8 @@ import {
   jsonSerializableSchema,
   kebabCaseSchema,
   kebabCaseWithDotsSchema,
+  lmLinkStatusResultSchema,
+  lmLinkUpResultSchema,
   localArtifactFileListSchema,
   modelSearchOptsSchema,
   modelSearchResultDownloadOptionDataSchema,
@@ -249,6 +251,18 @@ export function createRepositoryBackendInterface() {
         returns: z.object({
           models: z.array(hubModelSchema),
         }),
+      })
+      .addRpcEndpoint("lmLinkUp", {
+        parameter: z.void(),
+        returns: lmLinkUpResultSchema,
+      })
+      .addRpcEndpoint("lmLinkStatus", {
+        parameter: z.void(),
+        returns: lmLinkStatusResultSchema,
+      })
+      .addRpcEndpoint("lmLinkDown", {
+        parameter: z.void(),
+        returns: z.void(),
       })
   );
 }

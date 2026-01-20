@@ -37,6 +37,13 @@ export interface ModelInfoBase {
    */
   sizeBytes: number;
   /**
+   * If this model is available via LM Link, this field contains the device identifier of the remote
+   * device hosting this model.
+   *
+   * If the model is available locally, this field is `null`.
+   */
+  deviceIdentifier?: string;
+  /**
    * A string that represents the number of params in the model. May not always be available.
    */
   paramsString?: string;
@@ -77,6 +84,7 @@ export const modelInfoBaseSchema = z.object({
   publisher: z.string(),
   path: z.string(),
   sizeBytes: z.number().int(),
+  deviceIdentifier: z.string().optional(),
   paramsString: z.string().optional(),
   architecture: z.string().optional(),
   quantization: quantizationSchema.optional(),

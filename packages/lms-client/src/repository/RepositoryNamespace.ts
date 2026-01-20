@@ -19,6 +19,7 @@ import {
 import { z, type ZodSchema } from "zod";
 import { ArtifactDownloadPlanner } from "./ArtifactDownloadPlanner.js";
 import { ModelSearchResultEntry } from "./ModelSearchResultEntry.js";
+import { RepositoryLMLinkNamespace } from "./RepositoryLMLinkNamespace.js";
 
 /**
  * Options to use with {@link RepositoryNamespace#downloadArtifact}
@@ -172,6 +173,11 @@ export class RepositoryNamespace {
   private readonly logger: SimpleLogger;
   /** @public */
   public readonly unstable: UnstableRepositoryNamespace;
+  /**
+   * @deprecated [DEP-HUB-API-ACCESS] LM Studio Hub API access is still in active development
+   * and will change. Not recommended for public adoption.
+   */
+  public readonly lmLink: RepositoryLMLinkNamespace;
   /** @internal */
   public constructor(
     private readonly repositoryPort: RepositoryPort,
@@ -180,6 +186,7 @@ export class RepositoryNamespace {
   ) {
     this.logger = new SimpleLogger("Repository", parentLogger);
     this.unstable = new UnstableRepositoryNamespace(repositoryPort, this.logger);
+    this.lmLink = new RepositoryLMLinkNamespace(repositoryPort, this.logger);
   }
 
   public async searchModels(opts: ModelSearchOpts): Promise<Array<ModelSearchResultEntry>> {
