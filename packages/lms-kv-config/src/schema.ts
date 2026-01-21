@@ -450,7 +450,15 @@ export const llmSharedLoadConfigSchematics = llmLoadSchematics.sliced(
 const llamaLoadConfigSchematics = globalConfigSchematics.sliced("llama.load.*", "load.*");
 
 export const llmLlamaLoadConfigSchematics = llmSharedLoadConfigSchematics
-  .union(llmLoadSchematics.sliced("llama.*", "load.*", "offloadKVCacheToGpu"))
+  .union(
+    llmLoadSchematics.sliced(
+      "llama.*",
+      "load.*",
+      "offloadKVCacheToGpu",
+      "numParallelSessions",
+      "useUnifiedKvCache",
+    ),
+  )
   .union(llamaLoadConfigSchematics);
 
 export const llmMlxLoadConfigSchematics = llmSharedLoadConfigSchematics.union(
