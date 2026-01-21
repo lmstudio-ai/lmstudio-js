@@ -370,7 +370,6 @@ export class ProcessingController extends BaseController {
         const model = await this.client.llm.model(tokenSourceIdentifier.identifier);
         type ModelInternals = {
           internalIgnoreServerSessionConfig?: boolean;
-          internalSessionId?: string;
           internalKVConfigStack?: KVConfigStack;
         };
 
@@ -378,7 +377,6 @@ export class ProcessingController extends BaseController {
 
         // Don't use the server session config for this model
         modelWithInternals.internalIgnoreServerSessionConfig = true;
-        modelWithInternals.internalSessionId = this.connector.processingContextIdentifier;
 
         // Inject the prediction config
         modelWithInternals.internalKVConfigStack = {

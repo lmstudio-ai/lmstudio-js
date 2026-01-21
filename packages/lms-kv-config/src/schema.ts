@@ -258,6 +258,8 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
         { machineDependent: true, isExperimental: true },
         "off",
       )
+      .field("numParallelSessions", "numeric", { min: 1, int: true, isExperimental: true }, 1)
+      .field("useUnifiedKvCache", "boolean", { isExperimental: true }, false)
       .scope("llama", builder =>
         builder
           .scope("acceleration", builder =>
@@ -270,8 +272,6 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
           )
           .field("cpuThreadPoolSize", "numeric", { min: 1, machineDependent: true }, 4)
           .field("evalBatchSize", "numeric", { min: 1, int: true }, 512)
-          .field("numParallelSessions", "numeric", { min: 1, int: true, isExperimental: true }, 1)
-          .field("useUnifiedKvCache", "boolean", { isExperimental: true }, false)
           .field("flashAttention", "boolean", {}, false)
           .field(
             "ropeFrequencyBase",

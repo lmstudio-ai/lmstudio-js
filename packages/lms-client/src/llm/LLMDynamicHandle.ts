@@ -444,9 +444,6 @@ export class LLMDynamicHandle extends DynamicHandle<
   private readonly internalKVConfigStack: KVConfigStack = { layers: [] };
 
   /** @internal */
-  private readonly internalSessionId: string | undefined = undefined;
-
-  /** @internal */
   private internalPredict(
     history: ChatHistoryData,
     predictionConfigStack: KVConfigStack,
@@ -473,7 +470,6 @@ export class LLMDynamicHandle extends DynamicHandle<
         history,
         predictionConfigStack,
         fuzzyPresetIdentifier: extraOpts.preset,
-        sessionId: this.internalSessionId,
         ignoreServerSessionConfig: this.internalIgnoreServerSessionConfig,
       },
       message => {
@@ -1013,7 +1009,6 @@ export class LLMDynamicHandle extends DynamicHandle<
             history,
             predictionConfigStack: allowTools ? configWithTools : configWithoutTools,
             fuzzyPresetIdentifier: preset,
-            sessionId: this.internalSessionId,
             ignoreServerSessionConfig: this.internalIgnoreServerSessionConfig,
           },
           message => {
