@@ -10,8 +10,8 @@ import {
   llmInstanceInfoSchema,
   llmPredictionFragmentSchema,
   llmPredictionStatsSchema,
-  promptProcessingDetailsSchema,
   modelSpecifierSchema,
+  promptProcessingDetailsSchema,
   serializedLMSExtendedErrorSchema,
   toolCallRequestSchema,
 } from "@lmstudio/lms-shared-types";
@@ -37,7 +37,6 @@ export function createLlmBackendInterface() {
            * Which preset to use. Supports limited fuzzy matching.
            */
           fuzzyPresetIdentifier: z.string().optional(),
-          sessionId: z.string().optional(),
           ignoreServerSessionConfig: z.boolean().optional(),
         }),
         toClientPacket: z.discriminatedUnion("type", [
