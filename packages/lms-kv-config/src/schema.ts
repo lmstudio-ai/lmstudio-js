@@ -258,6 +258,8 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
         { machineDependent: true, isExperimental: true },
         "off",
       )
+      .field("numParallelSessions", "numeric", { min: 1, int: true, isExperimental: true }, 4)
+      .field("useUnifiedKvCache", "boolean", { isExperimental: true }, true)
       .scope("llama", builder =>
         builder
           .scope("acceleration", builder =>
@@ -448,7 +450,15 @@ export const llmSharedLoadConfigSchematics = llmLoadSchematics.sliced(
 const llamaLoadConfigSchematics = globalConfigSchematics.sliced("llama.load.*", "load.*");
 
 export const llmLlamaLoadConfigSchematics = llmSharedLoadConfigSchematics
-  .union(llmLoadSchematics.sliced("llama.*", "load.*", "offloadKVCacheToGpu"))
+  .union(
+    llmLoadSchematics.sliced(
+      "llama.*",
+      "load.*",
+      "offloadKVCacheToGpu",
+      "numParallelSessions",
+      "useUnifiedKvCache",
+    ),
+  )
   .union(llamaLoadConfigSchematics);
 
 export const llmMlxLoadConfigSchematics = llmSharedLoadConfigSchematics.union(

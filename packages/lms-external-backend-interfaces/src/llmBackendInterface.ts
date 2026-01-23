@@ -10,8 +10,8 @@ import {
   llmInstanceInfoSchema,
   llmPredictionFragmentSchema,
   llmPredictionStatsSchema,
-  promptProcessingDetailsSchema,
   modelSpecifierSchema,
+  promptProcessingDetailsSchema,
   serializedLMSExtendedErrorSchema,
   toolCallRequestSchema,
 } from "@lmstudio/lms-shared-types";
