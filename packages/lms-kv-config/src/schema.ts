@@ -258,7 +258,12 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
         { machineDependent: true, isExperimental: true },
         "off",
       )
-      .field("numParallelSessions", "numeric", { min: 1, int: true, isExperimental: true }, 4)
+      .field(
+        "numParallelSessions",
+        "numeric",
+        { min: 1, max: 1023, int: true, isExperimental: true },
+        4,
+      )
       .field("useUnifiedKvCache", "boolean", { isExperimental: true }, true)
       .scope("llama", builder =>
         builder
