@@ -43,6 +43,7 @@ export const llmPredictionStopReasonSchema = z.enum([
 
 export const llmPredictionStatsSchema = z.object({
   stopReason: llmPredictionStopReasonSchema,
+  stopString: z.string().optional(),
   tokensPerSecond: z.number().optional(),
   numGpuLayers: z.number().optional(),
   timeToFirstTokenSec: z.number().optional(),
@@ -79,6 +80,11 @@ export interface LLMPredictionStats {
    *   the `contextOverflowPolicy` is set to `stopAtLimit`.
    */
   stopReason: LLMPredictionStopReason;
+  /**
+   * The stop string that ended the prediction when stopReason is stopStringFound.
+   * This will be undefined if stopReason is not stopStringFound.
+   */
+  stopString?: string;
   /**
    * The average number of tokens predicted per second.
    *
