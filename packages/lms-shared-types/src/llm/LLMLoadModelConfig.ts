@@ -136,6 +136,19 @@ export interface LLMLoadModelConfig {
   gpu?: GPUSetting;
 
   /**
+   * Maximum number of predictions the model can run at a given time. The speed of each individual
+   * prediction may decrease with concurrency, but each prediction will start faster and higher
+   * total throughput can be achieved.
+   */
+  maxParallelPredictions?: number;
+
+  /**
+   * Controls whether concurrent predictions share a single KV cache, saving memory. Disabling this
+   * ensures each prediction can utilize the full context length, at the cost of using more memory.
+   */
+  useUnifiedKvCache?: boolean;
+
+  /**
    * If set to true, detected system limits for VRAM will be strictly enforced. If a model + gpu
    * offload combination would exceed the detected available VRAM, model offload will be capped to
    * not exceed the available VRAM.
@@ -297,6 +310,8 @@ export interface LLMLoadModelConfig {
 }
 export const llmLoadModelConfigSchema = z.object({
   gpu: gpuSettingSchema.optional(),
+  maxParallelPredictions: z.number().int().min(1).optional(),
+  useUnifiedKvCache: z.boolean().optional(),
   gpuStrictVramCap: z.boolean().optional(),
   offloadKVCacheToGpu: z.boolean().optional(),
   contextLength: z.number().int().min(1).optional(),
