@@ -69,6 +69,16 @@ function kvConfigToLLMLlamaLoadModelConfig(
     result.gpu = gpuFields;
   }
 
+  const maxParallelPredictions = parsed.get("numParallelSessions");
+  if (maxParallelPredictions !== undefined) {
+    result.maxParallelPredictions = maxParallelPredictions;
+  }
+
+  const useUnifiedKvCache = parsed.get("useUnifiedKvCache");
+  if (useUnifiedKvCache !== undefined) {
+    result.useUnifiedKvCache = useUnifiedKvCache;
+  }
+
   const offloadKVCacheToGpu = parsed.get("offloadKVCacheToGpu");
   if (offloadKVCacheToGpu !== undefined) {
     result.offloadKVCacheToGpu = offloadKVCacheToGpu;
@@ -196,6 +206,8 @@ export function llmLoadModelConfigToKVConfig(config: LLMLoadModelConfig): KVConf
     "gpuStrictVramCap": config.gpuStrictVramCap,
     "llama.acceleration.offloadRatio": config.gpu?.ratio,
     "numCpuExpertLayersRatio": config.gpu?.numCpuExpertLayersRatio,
+    "numParallelSessions": config.maxParallelPredictions,
+    "useUnifiedKvCache": config.useUnifiedKvCache,
     "offloadKVCacheToGpu": config.offloadKVCacheToGpu,
     "contextLength": config.contextLength,
     "llama.ropeFrequencyBase": maybeFalseValueToCheckboxValue(config.ropeFrequencyBase, 0),
