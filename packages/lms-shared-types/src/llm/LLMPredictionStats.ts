@@ -82,6 +82,7 @@ export interface LLMPredictionStats {
   stopReason: LLMPredictionStopReason;
   /**
    * The stop string that ended the prediction when stopReason is stopStringFound.
+   * This will be undefined if stopReason is not stopStringFound.
    */
   stopString?: string;
   /**
