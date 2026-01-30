@@ -26,7 +26,7 @@
     "test-watch": "jest --watch --testMatch \"**/?(*.)+(test).ts\" --testMatch \"!**/?(*.)+(heavy).(test).ts\""
   },
   "engines": {
-    "node": "^20.12.2",
+    "node": "^22.21.1",
     "npm": ">=8"
   },
   "author": "",
