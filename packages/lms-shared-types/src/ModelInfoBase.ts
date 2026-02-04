@@ -37,6 +37,14 @@ export interface ModelInfoBase {
    */
   sizeBytes: number;
   /**
+   * A more stable identifier for the model that mostly consists of path to the model. Can be very
+   * long. Not suitable for displaying. Use `modelKey` for most purposes.
+   *
+   * @deprecated [DEP-LOW-LEVEL] This API is not guaranteed to not change nor to continue to exist
+   * in the future.
+   */
+  indexedModelIdentifier: string;
+  /**
    * If this model is available via LM Link, this field contains the device identifier of the remote
    * device hosting this model.
    *
@@ -84,6 +92,7 @@ export const modelInfoBaseSchema = z.object({
   publisher: z.string(),
   path: z.string(),
   sizeBytes: z.number().int(),
+  indexedModelIdentifier: z.string(),
   deviceIdentifier: z.string().optional(),
   paramsString: z.string().optional(),
   architecture: z.string().optional(),
