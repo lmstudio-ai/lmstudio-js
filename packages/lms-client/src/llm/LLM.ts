@@ -33,6 +33,21 @@ export class LLM
   public readonly sizeBytes: number;
   public readonly vision: boolean;
   public readonly trainedForToolUse: boolean;
+  /**
+   * Unique stable identifier for the model instance.
+   *
+   * @deprecated [DEP-LOW-LEVEL] This API is not guaranteed to not change nor to continue to exist
+   * in the future.
+   */
+  public readonly instanceReference: string;
+  /**
+   * A more stable identifier for the model that mostly consists of path to the model. Can be very
+   * long. Not suitable for displaying. Use `modelKey` for most purposes.
+   *
+   * @deprecated [DEP-LOW-LEVEL] This API is not guaranteed to not change nor to continue to exist
+   * in the future.
+   */
+  public readonly indexedModelIdentifier: string;
 
   /** @internal */
   public constructor(
@@ -54,6 +69,8 @@ export class LLM
     this.sizeBytes = info.sizeBytes;
     this.vision = info.vision;
     this.trainedForToolUse = info.trainedForToolUse;
+    this.instanceReference = info.instanceReference;
+    this.indexedModelIdentifier = info.indexedModelIdentifier;
   }
   public async unload() {
     const stack = getCurrentStack(1);

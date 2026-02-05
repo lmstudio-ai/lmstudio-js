@@ -480,6 +480,8 @@ export abstract class ModelNamespace<
    * Create a dynamic handle from the internal instance reference.
    *
    * @alpha
+   * @deprecated [DEP-LOW-LEVEL] This API is not guaranteed to not change nor to continue to exist
+   * in the future.
    */
   public createDynamicHandleFromInstanceReference(instanceReference: string): TDynamicHandle {
     const stack = getCurrentStack(1);
@@ -499,6 +501,41 @@ export abstract class ModelNamespace<
       },
       this.validator,
       new SimpleLogger("DynamicHandle", this.logger),
+    );
+  }
+
+  /**
+   * Create a domain specific model from the internal instance reference.
+   *
+   * @alpha
+   * @deprecated [DEP-LOW-LEVEL] This API is not guaranteed to not change nor to continue to exist
+   * in the future.
+   */
+  public async createDomainSpecificModelFromInstanceReference(
+    instanceReference: string,
+  ): Promise<TSpecificModel> {
+    const stack = getCurrentStack(1);
+    this.validator.validateMethodParamOrThrow(
+      `client.${this.namespace}`,
+      "createDomainSpecificModelFromInstanceReference",
+      "instanceReference",
+      z.string(),
+      instanceReference,
+      stack,
+    );
+    const info = await this.port.callRpc(
+      "getModelInfo",
+      { specifier: { type: "instanceReference", instanceReference }, throwIfNotFound: true },
+      { stack },
+    );
+    if (info === undefined) {
+      throw new Error("Backend should have thrown.");
+    }
+    return this.createDomainSpecificModel(
+      this.port,
+      info,
+      this.validator,
+      new SimpleLogger("DomainSpecificModel", this.logger),
     );
   }
 
