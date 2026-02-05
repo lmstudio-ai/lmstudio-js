@@ -261,7 +261,7 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
 
     return new LazySignal<TData | NotAvailable>(
       LazySignal.NOT_AVAILABLE,
-      setDownstream => {
+      (setDownstream, errorListener) => {
         let subscribed = true;
 
         const processPending = () => {
@@ -274,25 +274,40 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
           startDerive(sourceValues);
         };
 
+        const advanceQueue = () => {
+          if (pending !== null) {
+            if (throttleMs > 0) {
+              throttleTimeoutId = setTimeout(processPending, throttleMs);
+            } else {
+              processPending();
+            }
+          }
+        };
+
         const startDerive = (sourceValues: Array<unknown>) => {
           isRunning = true;
-          deriver(...(sourceValues as any)).then(result => {
-            if (!subscribed) {
-              return;
-            }
-            isRunning = false;
-            lastDeriveCompletedAt = Date.now();
-            if (isAvailable(result)) {
-              setDownstream(result);
-            }
-            if (pending !== null) {
-              if (throttleMs > 0) {
-                throttleTimeoutId = setTimeout(processPending, throttleMs);
-              } else {
-                processPending();
+          deriver(...(sourceValues as any)).then(
+            result => {
+              if (!subscribed) {
+                return;
               }
-            }
-          });
+              isRunning = false;
+              lastDeriveCompletedAt = Date.now();
+              if (isAvailable(result)) {
+                setDownstream(result);
+              }
+              advanceQueue();
+            },
+            error => {
+              if (!subscribed) {
+                return;
+              }
+              isRunning = false;
+              lastDeriveCompletedAt = Date.now();
+              errorListener(error);
+              advanceQueue();
+            },
+          );
         };
 
         const scheduleOrStartDerive = (sourceValues: Array<unknown>) => {

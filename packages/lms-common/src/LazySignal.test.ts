@@ -607,4 +607,29 @@ describe("blockingAsyncDeriveFromWithThrottling", () => {
     expect(invocations).toHaveLength(2);
     expect(invocations[1].args).toEqual(["B"]);
   });
+
+  it("should report error and continue processing when deriver rejects", async () => {
+    const [source, setSource] = Signal.create("A");
+    const { deriver, invocations } = createControllableDeriver<string>();
+
+    const derived = LazySignal.blockingAsyncDeriveFromWithThrottling(0, [source], deriver);
+    derived.subscribe(() => {});
+
+    // A starts
+    await Promise.resolve();
+    expect(invocations).toHaveLength(1);
+
+    // Queue B, then reject A
+    setSource("B");
+    invocations[0].reject(new Error("derive failed"));
+    await Promise.resolve();
+
+    // Error should be reported on errorSignal
+    expect(derived.errorSignal.get()).toBeInstanceOf(Error);
+    expect((derived.errorSignal.get() as Error).message).toBe("derive failed");
+
+    // Pipeline should NOT be stuck: B's derive should still start
+    expect(invocations).toHaveLength(2);
+    expect(invocations[1].args).toEqual(["B"]);
+  });
 });
