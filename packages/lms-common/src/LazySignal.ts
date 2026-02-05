@@ -289,29 +289,35 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
           }
         };
 
+        const onDeriveError = () => {
+          if (!subscribed) {
+            return;
+          }
+          isRunning = false;
+          lastDeriveCompletedAt = Date.now();
+          advanceQueue();
+        };
+
         const startDerive = (sourceValues: Array<unknown>) => {
           isRunning = true;
-          deriver(...(sourceValues as any)).then(
-            result => {
-              if (!subscribed) {
-                return;
-              }
-              isRunning = false;
-              lastDeriveCompletedAt = Date.now();
-              if (isAvailable(result)) {
-                setDownstream(result);
-              }
-              advanceQueue();
-            },
-            () => {
-              if (!subscribed) {
-                return;
-              }
-              isRunning = false;
-              lastDeriveCompletedAt = Date.now();
-              advanceQueue();
-            },
-          );
+          let promise: Promise<TData>;
+          try {
+            promise = deriver(...(sourceValues as any));
+          } catch {
+            onDeriveError();
+            return;
+          }
+          promise.then(result => {
+            if (!subscribed) {
+              return;
+            }
+            isRunning = false;
+            lastDeriveCompletedAt = Date.now();
+            if (isAvailable(result)) {
+              setDownstream(result);
+            }
+            advanceQueue();
+          }, onDeriveError);
         };
 
         const scheduleOrStartDerive = (sourceValues: Array<unknown>) => {

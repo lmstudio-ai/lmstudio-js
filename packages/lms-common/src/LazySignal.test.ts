@@ -636,4 +636,42 @@ describe("blockingAsyncDeriveFromWithThrottling", () => {
     await Promise.resolve();
     expect(derived.get()).toBe("result-B");
   });
+
+  it("should handle synchronous throws from the deriver without freezing", async () => {
+    const [source, setSource] = Signal.create("A");
+    let callCount = 0;
+    const { deriver, invocations } = createControllableDeriver<string>();
+
+    // Deriver that throws synchronously on first call, then delegates to controllable deriver
+    const throwOnceDeriver = (...args: Array<unknown>): Promise<string> => {
+      callCount++;
+      if (callCount === 1) {
+        throw new Error("sync explosion");
+      }
+      return deriver(...args);
+    };
+
+    const derived = LazySignal.blockingAsyncDeriveFromWithThrottling(
+      0,
+      [source],
+      throwOnceDeriver,
+    );
+    derived.subscribe(() => {});
+
+    // A's derive throws synchronously — should not crash or freeze
+    await Promise.resolve();
+    expect(callCount).toBe(1);
+
+    // Emit B — pipeline should not be stuck
+    setSource("B");
+    await Promise.resolve();
+    expect(callCount).toBe(2);
+    expect(invocations).toHaveLength(1);
+    expect(invocations[0].args).toEqual(["B"]);
+
+    // B completes normally
+    invocations[0].resolve("result-B");
+    await Promise.resolve();
+    expect(derived.get()).toBe("result-B");
+  });
 });
