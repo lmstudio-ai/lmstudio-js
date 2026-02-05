@@ -218,6 +218,125 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
     );
   }
 
+  /**
+   * Derives a value from source signals using an async function, with serial execution and
+   * throttling. Only one derive runs at a time. If source signals change while a derive is in
+   * progress, only the latest values are queued (intermediate changes are dropped). After a derive
+   * completes, the next derive will not start until `throttleMs` has elapsed.
+   *
+   * @param throttleMs - Minimum time in milliseconds between the completion of one derive and the
+   * start of the next. Set to 0 for no delay.
+   * @param sourceSignals - Signals to derive from. The deriver will be called whenever any of these
+   * change.
+   * @param deriver - Async function that computes the derived value from the source values.
+   * @param outputEqualsPredicate - Optional equality function. If the derived value is equal to the
+   * previous value, subscribers will not be notified.
+   */
+  public static blockingAsyncDeriveFromWithThrottling<TSource extends Array<unknown>, TData>(
+    throttleMs: number,
+    sourceSignals: { [TKey in keyof TSource]: SignalLike<TSource[TKey]> },
+    deriver: (
+      ...sourceValues: {
+        [TKey in keyof TSource]: StripNotAvailable<TSource[TKey]>;
+      }
+    ) => Promise<TData>,
+    outputEqualsPredicate?: (a: TData, b: TData) => boolean,
+  ): LazySignal<TData | NotAvailable> {
+    let fullEqualsPredicate:
+      | ((a: TData | NotAvailable, b: TData | NotAvailable) => boolean)
+      | undefined = undefined;
+    if (outputEqualsPredicate !== undefined) {
+      fullEqualsPredicate = (a, b) => {
+        if (a === LazySignal.NOT_AVAILABLE || b === LazySignal.NOT_AVAILABLE) {
+          return a === b;
+        }
+        return outputEqualsPredicate(a, b);
+      };
+    }
+
+    let isRunning = false;
+    let pending: Array<unknown> | null = null;
+    let throttleTimeoutId: ReturnType<typeof setTimeout> | null = null;
+    let lastDeriveCompletedAt: number | null = null;
+
+    return new LazySignal<TData | NotAvailable>(
+      LazySignal.NOT_AVAILABLE,
+      setDownstream => {
+        let subscribed = true;
+
+        const processPending = () => {
+          throttleTimeoutId = null;
+          if (!subscribed || pending === null) {
+            return;
+          }
+          const sourceValues = pending;
+          pending = null;
+          startDerive(sourceValues);
+        };
+
+        const startDerive = (sourceValues: Array<unknown>) => {
+          isRunning = true;
+          deriver(...(sourceValues as any)).then(result => {
+            if (!subscribed) {
+              return;
+            }
+            isRunning = false;
+            lastDeriveCompletedAt = Date.now();
+            if (isAvailable(result)) {
+              setDownstream(result);
+            }
+            if (pending !== null) {
+              if (throttleMs > 0) {
+                throttleTimeoutId = setTimeout(processPending, throttleMs);
+              } else {
+                processPending();
+              }
+            }
+          });
+        };
+
+        const scheduleOrStartDerive = (sourceValues: Array<unknown>) => {
+          if (throttleMs > 0 && lastDeriveCompletedAt !== null) {
+            const elapsed = Date.now() - lastDeriveCompletedAt;
+            const remaining = throttleMs - elapsed;
+            if (remaining > 0) {
+              pending = sourceValues;
+              throttleTimeoutId = setTimeout(processPending, remaining);
+              return;
+            }
+          }
+          startDerive(sourceValues);
+        };
+
+        const onSourceChange = () => {
+          const sourceValues = sourceSignals.map(signal => signal.get());
+          if (sourceValues.some(value => value === LazySignal.NOT_AVAILABLE)) {
+            return;
+          }
+          if (isRunning || throttleTimeoutId !== null) {
+            pending = sourceValues;
+          } else {
+            scheduleOrStartDerive(sourceValues);
+          }
+        };
+
+        const unsubscribers = sourceSignals.map(signal => signal.subscribe(onSourceChange));
+        onSourceChange();
+
+        return () => {
+          subscribed = false;
+          pending = null;
+          if (throttleTimeoutId !== null) {
+            clearTimeout(throttleTimeoutId);
+            throttleTimeoutId = null;
+          }
+          unsubscribers.forEach(unsubscribe => unsubscribe());
+        };
+      },
+      fullEqualsPredicate,
+    );
+  }
+
   protected constructor(
     initialValue: TData,
     private readonly subscribeUpstream: SubscribeUpstream<TData>,
