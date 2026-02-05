@@ -173,6 +173,10 @@ function kvConfigToLLMMlxLoadModelConfig(
   if (seed !== undefined) {
     result.seed = seed.checked ? seed.value : false;
   }
+  const maxParallelPredictions = parsed.get("numParallelSessions");
+  if (maxParallelPredictions !== undefined) {
+    result.maxParallelPredictions = maxParallelPredictions;
+  }
   const mlxKvCacheQuantization = parsed.get("mlx.kvCacheQuantization");
   if (mlxKvCacheQuantization !== undefined) {
     result.mlxKvCacheQuantization = mlxKvCacheQuantization.enabled ? mlxKvCacheQuantization : false;

@@ -467,7 +467,7 @@ export const llmLlamaLoadConfigSchematics = llmSharedLoadConfigSchematics
   .union(llamaLoadConfigSchematics);
 
 export const llmMlxLoadConfigSchematics = llmSharedLoadConfigSchematics.union(
-  llmLoadSchematics.sliced("mlx.*"),
+  llmLoadSchematics.sliced("mlx.*", "numParallelSessions"),
 );
 
 export const llmTransformersLoadConfigSchematics = llmSharedLoadConfigSchematics.union(
