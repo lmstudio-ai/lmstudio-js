@@ -325,7 +325,9 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
 
         return () => {
           subscribed = false;
+          isRunning = false;
           pending = null;
+          lastDeriveCompletedAt = null;
           if (throttleTimeoutId !== null) {
             clearTimeout(throttleTimeoutId);
             throttleTimeoutId = null;

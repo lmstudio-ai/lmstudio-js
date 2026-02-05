@@ -581,4 +581,30 @@ describe("blockingAsyncDeriveFromWithThrottling", () => {
     // B should never have started
     expect(invocations).toHaveLength(1);
   });
+
+  it("should work correctly after unsubscribe and resubscribe with in-flight derive", async () => {
+    const [source, setSource] = Signal.create("A");
+    const { deriver, invocations } = createControllableDeriver<string>();
+
+    const derived = LazySignal.blockingAsyncDeriveFromWithThrottling(0, [source], deriver);
+
+    // First subscription: derive A starts
+    const unsub1 = derived.subscribe(() => {});
+    await Promise.resolve();
+    expect(invocations).toHaveLength(1);
+
+    // Unsubscribe while A's derive is still in-flight
+    unsub1();
+
+    // A's derive completes after unsubscribe
+    invocations[0].resolve("result-A");
+    await Promise.resolve();
+
+    // Re-subscribe: should start a new derive for the current value
+    setSource("B");
+    derived.subscribe(() => {});
+    await Promise.resolve();
+    expect(invocations).toHaveLength(2);
+    expect(invocations[1].args).toEqual(["B"]);
+  });
 });
