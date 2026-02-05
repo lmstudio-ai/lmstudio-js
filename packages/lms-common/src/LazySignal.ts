@@ -224,6 +224,11 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
    * progress, only the latest values are queued (intermediate changes are dropped). After a derive
    * completes, the next derive will not start until `throttleMs` has elapsed.
    *
+   * If the deriver rejects, the error is silently ignored and the signal retains its last
+   * successfully derived value. The pipeline continues to process queued updates normally. This is
+   * intentional: deriver errors are treated as transient (e.g. a flaky API call), unlike upstream
+   * subscription errors which represent a broken connection.
+   *
    * @param throttleMs - Minimum time in milliseconds between the completion of one derive and the
    * start of the next. Set to 0 for no delay.
    * @param sourceSignals - Signals to derive from. The deriver will be called whenever any of these
@@ -261,7 +266,7 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
 
     return new LazySignal<TData | NotAvailable>(
       LazySignal.NOT_AVAILABLE,
-      (setDownstream, errorListener) => {
+      setDownstream => {
         let subscribed = true;
 
         const processPending = () => {
@@ -298,13 +303,12 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
               }
               advanceQueue();
             },
-            error => {
+            () => {
               if (!subscribed) {
                 return;
               }
               isRunning = false;
               lastDeriveCompletedAt = Date.now();
-              errorListener(error);
               advanceQueue();
             },
           );

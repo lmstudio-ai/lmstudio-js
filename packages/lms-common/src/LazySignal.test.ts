@@ -608,7 +608,7 @@ describe("blockingAsyncDeriveFromWithThrottling", () => {
     expect(invocations[1].args).toEqual(["B"]);
   });
 
-  it("should report error and continue processing when deriver rejects", async () => {
+  it("should silently ignore deriver rejection and continue processing", async () => {
     const [source, setSource] = Signal.create("A");
     const { deriver, invocations } = createControllableDeriver<string>();
 
@@ -624,12 +624,16 @@ describe("blockingAsyncDeriveFromWithThrottling", () => {
     invocations[0].reject(new Error("derive failed"));
     await Promise.resolve();
 
-    // Error should be reported on errorSignal
-    expect(derived.errorSignal.get()).toBeInstanceOf(Error);
-    expect((derived.errorSignal.get() as Error).message).toBe("derive failed");
+    // Error is not surfaced on errorSignal (deriver errors are transient)
+    expect(derived.errorSignal.get()).toBe(null);
 
-    // Pipeline should NOT be stuck: B's derive should still start
+    // Pipeline continues: B's derive starts
     expect(invocations).toHaveLength(2);
     expect(invocations[1].args).toEqual(["B"]);
+
+    // B succeeds — result is applied normally
+    invocations[1].resolve("result-B");
+    await Promise.resolve();
+    expect(derived.get()).toBe("result-B");
   });
 });
