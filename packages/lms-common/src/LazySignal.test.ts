@@ -1,5 +1,6 @@
 import { LazySignal } from "./LazySignal.js";
 import { type WriteTag } from "./makeSetter.js";
+import { Signal } from "./Signal.js";
 
 describe("LazySignal", () => {
   it("should not subscribe to the upstream until a subscriber is attached", () => {
@@ -376,5 +377,301 @@ describe("LazySignal", () => {
       // Now pull should resolve with the new value
       await expect(pullPromise).resolves.toBe("after-recovery");
     });
+  });
+});
+
+describe("blockingAsyncDeriveFromWithThrottling", () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  /**
+   * Helper to create a controllable async deriver.
+   * Returns the deriver function and a way to control/inspect its invocations.
+   */
+  function createControllableDeriver<T>() {
+    const invocations: Array<{
+      args: Array<unknown>;
+      resolve: (value: T) => void;
+      reject: (error: unknown) => void;
+    }> = [];
+
+    const deriver = (...args: Array<unknown>): Promise<T> => {
+      let resolve!: (value: T) => void;
+      let reject!: (error: unknown) => void;
+      const promise = new Promise<T>((res, rej) => {
+        resolve = res;
+        reject = rej;
+      });
+      invocations.push({ args, resolve, reject });
+      return promise;
+    };
+
+    return { deriver, invocations };
+  }
+
+  it("should run derives serially, not concurrently", async () => {
+    const [source, setSource] = Signal.create("A");
+    const { deriver, invocations } = createControllableDeriver<string>();
+
+    const derived = LazySignal.blockingAsyncDeriveFromWithThrottling(0, [source], deriver);
+    derived.subscribe(() => {});
+
+    // Initial derive starts immediately
+    await Promise.resolve();
+    expect(invocations).toHaveLength(1);
+    expect(invocations[0].args).toEqual(["A"]);
+
+    // Emit B while A is still deriving
+    setSource("B");
+    await Promise.resolve();
+
+    // B should NOT start yet (A is still running)
+    expect(invocations).toHaveLength(1);
+
+    // Complete A's derive
+    invocations[0].resolve("result-A");
+    await Promise.resolve();
+
+    // Now B's derive should start
+    expect(invocations).toHaveLength(2);
+    expect(invocations[1].args).toEqual(["B"]);
+  });
+
+  it("should coalesce queued events, keeping only the latest", async () => {
+    const [source, setSource] = Signal.create("A");
+    const { deriver, invocations } = createControllableDeriver<string>();
+
+    const derived = LazySignal.blockingAsyncDeriveFromWithThrottling(0, [source], deriver);
+    derived.subscribe(() => {});
+
+    // Initial derive starts
+    await Promise.resolve();
+    expect(invocations).toHaveLength(1);
+
+    // Rapidly emit B, C, D while A is deriving
+    setSource("B");
+    setSource("C");
+    setSource("D");
+    await Promise.resolve();
+
+    // Still only A running
+    expect(invocations).toHaveLength(1);
+
+    // Complete A
+    invocations[0].resolve("result-A");
+    await Promise.resolve();
+
+    // Only D should run (B and C were coalesced away)
+    expect(invocations).toHaveLength(2);
+    expect(invocations[1].args).toEqual(["D"]);
+  });
+
+  it("should insert throttle delay after derive completion", async () => {
+    const [source, setSource] = Signal.create("A");
+    const { deriver, invocations } = createControllableDeriver<string>();
+
+    const derived = LazySignal.blockingAsyncDeriveFromWithThrottling(100, [source], deriver);
+    derived.subscribe(() => {});
+
+    // T=0: A starts immediately
+    await Promise.resolve();
+    expect(invocations).toHaveLength(1);
+
+    // T=20: A completes
+    jest.advanceTimersByTime(20);
+    invocations[0].resolve("result-A");
+    await Promise.resolve();
+
+    // T=50: Emit B
+    jest.advanceTimersByTime(30);
+    setSource("B");
+    await Promise.resolve();
+
+    // B should NOT start yet (throttle not elapsed)
+    expect(invocations).toHaveLength(1);
+
+    // T=119: Still waiting
+    jest.advanceTimersByTime(69);
+    await Promise.resolve();
+    expect(invocations).toHaveLength(1);
+
+    // T=120: Throttle elapsed (100ms after A completed at T=20)
+    jest.advanceTimersByTime(1);
+    await Promise.resolve();
+    expect(invocations).toHaveLength(2);
+    expect(invocations[1].args).toEqual(["B"]);
+  });
+
+  it("should not add spurious delay when nothing is queued", async () => {
+    const [source, setSource] = Signal.create("A");
+    const { deriver, invocations } = createControllableDeriver<string>();
+
+    const derived = LazySignal.blockingAsyncDeriveFromWithThrottling(100, [source], deriver);
+    derived.subscribe(() => {});
+
+    // A starts and completes
+    await Promise.resolve();
+    invocations[0].resolve("result-A");
+    await Promise.resolve();
+
+    // Wait well past the throttle time
+    jest.advanceTimersByTime(200);
+    await Promise.resolve();
+
+    // Now emit B - should start immediately (no extra delay)
+    setSource("B");
+    await Promise.resolve();
+    expect(invocations).toHaveLength(2);
+    expect(invocations[1].args).toEqual(["B"]);
+  });
+
+  it("should work with throttleMs=0 as pure blocking (no delay)", async () => {
+    const [source, setSource] = Signal.create("A");
+    const { deriver, invocations } = createControllableDeriver<string>();
+
+    const derived = LazySignal.blockingAsyncDeriveFromWithThrottling(0, [source], deriver);
+    derived.subscribe(() => {});
+
+    await Promise.resolve();
+    expect(invocations).toHaveLength(1);
+
+    // Emit B while A is running
+    setSource("B");
+    await Promise.resolve();
+
+    // Complete A
+    invocations[0].resolve("result-A");
+    await Promise.resolve();
+
+    // B should start immediately (no setTimeout needed)
+    expect(invocations).toHaveLength(2);
+  });
+
+  it("should cancel pending events and timers on unsubscribe", async () => {
+    const [source, setSource] = Signal.create("A");
+    const { deriver, invocations } = createControllableDeriver<string>();
+
+    const derived = LazySignal.blockingAsyncDeriveFromWithThrottling(100, [source], deriver);
+    const unsubscribe = derived.subscribe(() => {});
+
+    // A starts
+    await Promise.resolve();
+    expect(invocations).toHaveLength(1);
+
+    // Queue B
+    setSource("B");
+    await Promise.resolve();
+
+    // Unsubscribe before A completes
+    unsubscribe();
+
+    // Complete A
+    invocations[0].resolve("result-A");
+    await Promise.resolve();
+
+    // Advance timers past throttle
+    jest.advanceTimersByTime(200);
+    await Promise.resolve();
+
+    // B should never have started
+    expect(invocations).toHaveLength(1);
+  });
+
+  it("should work correctly after unsubscribe and resubscribe with in-flight derive", async () => {
+    const [source, setSource] = Signal.create("A");
+    const { deriver, invocations } = createControllableDeriver<string>();
+
+    const derived = LazySignal.blockingAsyncDeriveFromWithThrottling(0, [source], deriver);
+
+    // First subscription: derive A starts
+    const unsub1 = derived.subscribe(() => {});
+    await Promise.resolve();
+    expect(invocations).toHaveLength(1);
+
+    // Unsubscribe while A's derive is still in-flight
+    unsub1();
+
+    // A's derive completes after unsubscribe
+    invocations[0].resolve("result-A");
+    await Promise.resolve();
+
+    // Re-subscribe: should start a new derive for the current value
+    setSource("B");
+    derived.subscribe(() => {});
+    await Promise.resolve();
+    expect(invocations).toHaveLength(2);
+    expect(invocations[1].args).toEqual(["B"]);
+  });
+
+  it("should silently ignore deriver rejection and continue processing", async () => {
+    const [source, setSource] = Signal.create("A");
+    const { deriver, invocations } = createControllableDeriver<string>();
+
+    const derived = LazySignal.blockingAsyncDeriveFromWithThrottling(0, [source], deriver);
+    derived.subscribe(() => {});
+
+    // A starts
+    await Promise.resolve();
+    expect(invocations).toHaveLength(1);
+
+    // Queue B, then reject A
+    setSource("B");
+    invocations[0].reject(new Error("derive failed"));
+    await Promise.resolve();
+
+    // Error is not surfaced on errorSignal (deriver errors are transient)
+    expect(derived.errorSignal.get()).toBe(null);
+
+    // Pipeline continues: B's derive starts
+    expect(invocations).toHaveLength(2);
+    expect(invocations[1].args).toEqual(["B"]);
+
+    // B succeeds — result is applied normally
+    invocations[1].resolve("result-B");
+    await Promise.resolve();
+    expect(derived.get()).toBe("result-B");
+  });
+
+  it("should handle synchronous throws from the deriver without freezing", async () => {
+    const [source, setSource] = Signal.create("A");
+    let callCount = 0;
+    const { deriver, invocations } = createControllableDeriver<string>();
+
+    // Deriver that throws synchronously on first call, then delegates to controllable deriver
+    const throwOnceDeriver = (...args: Array<unknown>): Promise<string> => {
+      callCount++;
+      if (callCount === 1) {
+        throw new Error("sync explosion");
+      }
+      return deriver(...args);
+    };
+
+    const derived = LazySignal.blockingAsyncDeriveFromWithThrottling(
+      0,
+      [source],
+      throwOnceDeriver,
+    );
+    derived.subscribe(() => {});
+
+    // A's derive throws synchronously — should not crash or freeze
+    await Promise.resolve();
+    expect(callCount).toBe(1);
+
+    // Emit B — pipeline should not be stuck
+    setSource("B");
+    await Promise.resolve();
+    expect(callCount).toBe(2);
+    expect(invocations).toHaveLength(1);
+    expect(invocations[0].args).toEqual(["B"]);
+
+    // B completes normally
+    invocations[0].resolve("result-B");
+    await Promise.resolve();
+    expect(derived.get()).toBe("result-B");
   });
 });
