@@ -43,19 +43,30 @@ export function text(strings: TemplateStringsArray, ...values: ReadonlyArray<Tex
 
   // We can modify the array in place because JavaScript is single-threaded and the array is not
   // being accessed by any other code.
-  for (let i = 0; i < values.length; i++) {
-    if (typeof values[i] === "object") {
-      if (typeof (values[i] as any).stack === "string") {
-        compiled[i * 2 + 1] = (values[i] as any).stack;
+  for (let index = 0; index < values.length; index++) {
+    const valueAtIndex = values[index];
+    if (valueAtIndex === null) {
+      const nullValueError = new Error("Null passed to text() template value.");
+      if (typeof nullValueError.stack === "string") {
+        console.error(nullValueError.stack);
+      } else {
+        console.error("Null passed to text() template value. Stack unavailable.");
+      }
+      compiled[index * 2 + 1] = "null";
+      continue;
+    }
+    if (typeof valueAtIndex === "object") {
+      if (typeof (valueAtIndex as any).stack === "string") {
+        compiled[index * 2 + 1] = (valueAtIndex as any).stack;
       } else {
         try {
-          compiled[i * 2 + 1] = JSON.stringify(values[i]);
+          compiled[index * 2 + 1] = JSON.stringify(valueAtIndex);
         } catch (error) {
-          compiled[i * 2 + 1] = "[Object failed to stringify]";
+          compiled[index * 2 + 1] = "[Object failed to stringify]";
         }
       }
     } else {
-      compiled[i * 2 + 1] = String(values[i]);
+      compiled[index * 2 + 1] = String(valueAtIndex);
     }
   }
 

@@ -11,7 +11,10 @@ export function getCurrentStack(goAbove = 0) {
   return lines.slice(2 + goAbove).join("\n");
 }
 
-export function changeErrorStackInPlace(error: Error, newStack: string) {
+export function changeErrorStackInPlace(error: Error | null | undefined, newStack: string) {
+  if (error === null || error === undefined) {
+    return;
+  }
   if (process.env.LMS_KEEP_INTERNAL_STACK) {
     return;
   }
