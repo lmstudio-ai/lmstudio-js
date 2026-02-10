@@ -1,6 +1,6 @@
 import { getCurrentStack, type LoggerInterface, SimpleLogger } from "@lmstudio/lms-common";
 import { type RepositoryPort } from "@lmstudio/lms-external-backend-interfaces";
-import { type LMLinkStatusResult, type LMLinkUpResult } from "@lmstudio/lms-shared-types";
+import { type LMLinkStatusResult } from "@lmstudio/lms-shared-types";
 
 /** @public */
 export class RepositoryLMLinkNamespace {
@@ -18,9 +18,9 @@ export class RepositoryLMLinkNamespace {
    * @deprecated [DEP-HUB-API-ACCESS] LM Studio Hub API access is still in active development
    * and will change. Not recommended for public adoption.
    */
-  public async up(): Promise<LMLinkUpResult> {
+  public async setDisabled(disabled: boolean): Promise<void> {
     const stack = getCurrentStack(1);
-    return await this.repositoryPort.callRpc("lmLinkUp", undefined, { stack });
+    return await this.repositoryPort.callRpc("lmLinkSetDisabled", { disabled }, { stack });
   }
 
   /**
@@ -36,21 +36,8 @@ export class RepositoryLMLinkNamespace {
    * @deprecated [DEP-HUB-API-ACCESS] LM Studio Hub API access is still in active development
    * and will change. Not recommended for public adoption.
    */
-  public async down(): Promise<void> {
-    const stack = getCurrentStack(1);
-    return await this.repositoryPort.callRpc("lmLinkDown", undefined, { stack });
-  }
-
-  /**
-   * @deprecated [DEP-HUB-API-ACCESS] LM Studio Hub API access is still in active development
-   * and will change. Not recommended for public adoption.
-   */
   public async updateDeviceName(deviceName: string): Promise<void> {
     const stack = getCurrentStack(1);
-    return await this.repositoryPort.callRpc(
-      "lmLinkUpdateDeviceName",
-      { deviceName },
-      { stack },
-    );
+    return await this.repositoryPort.callRpc("lmLinkUpdateDeviceName", { deviceName }, { stack });
   }
 }

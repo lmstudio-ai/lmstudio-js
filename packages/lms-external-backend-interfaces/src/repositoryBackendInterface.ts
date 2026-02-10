@@ -9,7 +9,6 @@ import {
   kebabCaseSchema,
   kebabCaseWithDotsSchema,
   lmLinkStatusResultSchema,
-  lmLinkUpResultSchema,
   localArtifactFileListSchema,
   modelSearchOptsSchema,
   modelSearchResultDownloadOptionDataSchema,
@@ -252,16 +251,14 @@ export function createRepositoryBackendInterface() {
           models: z.array(hubModelSchema),
         }),
       })
-      .addRpcEndpoint("lmLinkUp", {
-        parameter: z.void(),
-        returns: lmLinkUpResultSchema,
-      })
       .addRpcEndpoint("lmLinkStatus", {
         parameter: z.void(),
         returns: lmLinkStatusResultSchema,
       })
-      .addRpcEndpoint("lmLinkDown", {
-        parameter: z.void(),
+      .addRpcEndpoint("lmLinkSetDisabled", {
+        parameter: z.object({
+          disabled: z.boolean(),
+        }),
         returns: z.void(),
       })
       .addRpcEndpoint("lmLinkUpdateDeviceName", {

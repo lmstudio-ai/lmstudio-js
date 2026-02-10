@@ -424,14 +424,14 @@ export {
   hubModelSchema,
 } from "./repository/HubArtifact.js";
 export {
+  LMLinkIssue,
+  lmLinkIssueSchema,
   LMLinkPeer,
   lmLinkPeerSchema,
   LMLinkStatus,
   LMLinkStatusResult,
   lmLinkStatusResultSchema,
   lmLinkStatusSchema,
-  LMLinkUpResult,
-  lmLinkUpResultSchema,
 } from "./repository/LMLink.js";
 export {
   ModelSearchOpts,
