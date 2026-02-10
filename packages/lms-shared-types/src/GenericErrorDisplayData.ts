@@ -39,7 +39,7 @@ export type GenericErrorDisplayData =
       supportedVersion: string | null;
     }
   | {
-      code: "generic.manageRuntimes";
+      code: "generic.missingRuntimeExtension";
     }
   | {
       code: "generic.presetNotFound";
@@ -87,7 +87,7 @@ export const genericErrorDisplayDataSchema = [
     supportedVersion: z.string().nullable(),
   }),
   z.object({
-    code: z.literal("generic.manageRuntimes"),
+    code: z.literal("generic.missingRuntimeExtension"),
   }),
   z.object({
     code: z.literal("generic.presetNotFound"),
