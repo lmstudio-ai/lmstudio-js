@@ -39,6 +39,9 @@ export type GenericErrorDisplayData =
       supportedVersion: string | null;
     }
   | {
+      code: "generic.missingRuntimeExtension";
+    }
+  | {
       code: "generic.presetNotFound";
       specifiedFuzzyPresetIdentifier: string;
       availablePresetsSample: Array<{
@@ -82,6 +85,9 @@ export const genericErrorDisplayDataSchema = [
     engineType: z.string(),
     installedVersion: z.string(),
     supportedVersion: z.string().nullable(),
+  }),
+  z.object({
+    code: z.literal("generic.missingRuntimeExtension"),
   }),
   z.object({
     code: z.literal("generic.presetNotFound"),
