@@ -264,6 +264,12 @@ export function createRepositoryBackendInterface() {
         parameter: z.void(),
         returns: z.void(),
       })
+      .addRpcEndpoint("lmLinkUpdateDeviceName", {
+        parameter: z.object({
+          deviceName: z.string(),
+        }),
+        returns: z.void(),
+      })
   );
 }
 

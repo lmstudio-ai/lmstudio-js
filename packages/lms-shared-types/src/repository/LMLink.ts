@@ -51,9 +51,19 @@ export interface LMLinkStatusResult {
    * The currently connected peers.
    */
   peers: Array<LMLinkPeer>;
+  /**
+   * The local device identifier, if available.
+   */
+  deviceIdentifier: string | null;
+  /**
+   * The local device name.
+   */
+  deviceName: string;
 }
 export const lmLinkStatusResultSchema = z.object({
   enabled: z.boolean(),
   status: lmLinkStatusSchema,
   peers: z.array(lmLinkPeerSchema),
+  deviceIdentifier: z.string().nullable(),
+  deviceName: z.string(),
 });
