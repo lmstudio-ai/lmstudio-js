@@ -53,7 +53,7 @@ export interface BaseLoadModelOpts<TLoadModelConfig> {
    * - Use null to force local-only resolution.
    * - Omit to use the default cascading behavior.
    */
-  deviceIdentifier?: string;
+  deviceIdentifier?: string | null;
 
   /**
    * An `AbortSignal` to cancel the model loading. This is useful if you wish to add a functionality
@@ -115,7 +115,7 @@ function makeLoadModelOptsSchema<TLoadModelConfig>(
   return z.object({
     identifier: z.string().optional(),
     config: loadModelConfigSchema.optional(),
-    deviceIdentifier: z.string().optional(),
+    deviceIdentifier: z.string().nullable().optional(),
     signal: z.instanceof(AbortSignal).optional(),
     ttl: z.number().optional(),
     verbose: z.union([z.boolean(), logLevelSchema]).optional(),
@@ -710,7 +710,7 @@ export abstract class ModelNamespace<
   public async estimateResourcesUsage(
     modelKey: string,
     loadConfig: TLoadModelConfig,
-    opts?: { deviceIdentifier?: string },
+    opts?: { deviceIdentifier?: string | null },
   ): Promise<EstimatedResourcesUsage> {
     const stack = getCurrentStack(1);
     const [validatedModelKey, validatedLoadConfig, validatedOpts] =
@@ -723,7 +723,7 @@ export abstract class ModelNamespace<
           this.loadModelConfigSchema,
           z
             .object({
-              deviceIdentifier: z.string().optional(),
+              deviceIdentifier: z.string().nullable().optional(),
             })
             .optional(),
         ],
