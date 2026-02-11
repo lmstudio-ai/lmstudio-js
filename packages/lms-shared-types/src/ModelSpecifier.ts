@@ -13,6 +13,12 @@ export interface ModelQuery {
    */
   domain?: ModelDomainType;
   /**
+   * If provided, restricts query matching to a specific device.
+   *
+   * Use null to restrict to local-only.
+   */
+  deviceIdentifier?: string | null;
+  /**
    * If specified, the model must have exactly this identifier.
    *
    * Note: The identifier of a model is set when loading the model. It defaults to the filename of
@@ -70,6 +76,7 @@ export interface ModelQuery {
 }
 export const modelQuerySchema = z.object({
   domain: modelDomainTypeSchema.optional(),
+  deviceIdentifier: z.string().nullable().optional(),
   identifier: reasonableKeyStringSchema.optional(),
   path: reasonableKeyStringSchema.optional(),
   vision: z.boolean().optional(),

@@ -53,6 +53,10 @@ export interface LMLinkStatusResult {
    * The local device name.
    */
   deviceName: string;
+  /**
+   * The preferred device identifier, if available.
+   */
+  preferredDeviceIdentifier?: string;
 }
 export const lmLinkStatusResultSchema = z.object({
   status: lmLinkStatusSchema,
@@ -60,4 +64,5 @@ export const lmLinkStatusResultSchema = z.object({
   peers: z.array(lmLinkPeerSchema),
   deviceIdentifier: z.string().nullable(),
   deviceName: z.string(),
+  preferredDeviceIdentifier: z.string().optional(),
 });
