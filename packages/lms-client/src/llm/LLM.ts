@@ -33,6 +33,7 @@ export class LLM
   public readonly sizeBytes: number;
   public readonly vision: boolean;
   public readonly trainedForToolUse: boolean;
+  public readonly deviceIdentifier: string | null;
   /**
    * Unique stable identifier for the model instance.
    *
@@ -69,12 +70,20 @@ export class LLM
     this.sizeBytes = info.sizeBytes;
     this.vision = info.vision;
     this.trainedForToolUse = info.trainedForToolUse;
+    this.deviceIdentifier = info.deviceIdentifier ?? null;
     this.instanceReference = info.instanceReference;
     this.indexedModelIdentifier = info.indexedModelIdentifier;
   }
   public async unload() {
     const stack = getCurrentStack(1);
-    await this.port.callRpc("unloadModel", { identifier: this.identifier }, { stack });
+    await this.port.callRpc(
+      "unloadModel",
+      {
+        identifier: this.identifier,
+        deviceIdentifier: this.deviceIdentifier,
+      },
+      { stack },
+    );
   }
   public override async getModelInfo(): Promise<LLMInstanceInfo> {
     const info = await super.getModelInfo();

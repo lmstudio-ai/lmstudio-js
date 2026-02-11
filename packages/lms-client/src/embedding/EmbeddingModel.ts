@@ -31,6 +31,7 @@ export class EmbeddingModel
   public readonly format: ModelCompatibilityType;
   public readonly displayName: string;
   public readonly sizeBytes: number;
+  public readonly deviceIdentifier: string | null;
   /**
    * Unique stable identifier for the model instance.
    *
@@ -65,12 +66,20 @@ export class EmbeddingModel
     this.format = info.format;
     this.displayName = info.displayName;
     this.sizeBytes = info.sizeBytes;
+    this.deviceIdentifier = info.deviceIdentifier ?? null;
     this.instanceReference = info.instanceReference;
     this.indexedModelIdentifier = info.indexedModelIdentifier;
   }
   public async unload() {
     const stack = getCurrentStack(1);
-    await this.port.callRpc("unloadModel", { identifier: this.identifier }, { stack });
+    await this.port.callRpc(
+      "unloadModel",
+      {
+        identifier: this.identifier,
+        deviceIdentifier: this.deviceIdentifier,
+      },
+      { stack },
+    );
   }
   public override async getModelInfo(): Promise<EmbeddingModelInstanceInfo> {
     const info = await super.getModelInfo();

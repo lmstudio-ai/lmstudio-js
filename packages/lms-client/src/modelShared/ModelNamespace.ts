@@ -51,7 +51,8 @@ export interface BaseLoadModelOpts<TLoadModelConfig> {
    *
    * - Use a device identifier string to target a specific remote device.
    * - Use null to force local-only resolution.
-   * - Omit to use the default cascading behavior.
+   * - Omit to use the default cascading behavior, considering the preferred device, local device,
+   *   and remote devices in order.
    */
   deviceIdentifier?: string | null;
 
@@ -130,13 +131,30 @@ export interface EstimatedResourcesUsageOpts {
    *
    * - Use a device identifier string to target a specific remote device.
    * - Use null to force local-only estimation.
-   * - Omit to use the default cascading behavior.
+   * - Omit to use the default cascading behavior, considering the preferred device, local device,
+   *   and remote devices in order.
    */
   deviceIdentifier?: string | null;
 }
 const estimatedResourcesUsageOptsSchema = z.object({
   deviceIdentifier: z.string().nullable().optional(),
 }) as Zod.Schema<EstimatedResourcesUsageOpts>;
+
+/** @public */
+export interface ModelNamespaceUnloadOpts {
+  /**
+   * Restrict unloading to a specific device.
+   *
+   * - Use a device identifier string to target a specific remote device.
+   * - Use null to force local-only unloading.
+   * - Omit to use the default cascading behavior, considering the preferred device, local device,
+   *   and remote devices in order.
+   */
+  deviceIdentifier?: string | null;
+}
+const modelNamespaceUnloadOptsSchema = z.object({
+  deviceIdentifier: z.string().nullable().optional(),
+}) as Zod.Schema<ModelNamespaceUnloadOpts>;
 
 /**
  * Abstract namespace for namespaces that deal with models.
@@ -363,17 +381,25 @@ export abstract class ModelNamespace<
    *
    * @param identifier - The identifier of the model to unload.
    */
-  public unload(identifier: string) {
+  public unload(identifier: string, opts?: ModelNamespaceUnloadOpts) {
     const stack = getCurrentStack(1);
-    this.validator.validateMethodParamOrThrow(
+    const [validatedIdentifier, validatedOpts] = this.validator.validateMethodParamsOrThrow(
       `client.${this.namespace}`,
       "unload",
-      "identifier",
-      reasonableKeyStringSchema,
-      identifier,
+      ["identifier", "opts"],
+      [reasonableKeyStringSchema, modelNamespaceUnloadOptsSchema.optional()],
+      [identifier, opts],
       stack,
     );
-    return this.port.callRpc("unloadModel", { identifier }, { stack });
+    const resolvedOpts = validatedOpts ?? {};
+    return this.port.callRpc(
+      "unloadModel",
+      {
+        identifier: validatedIdentifier,
+        deviceIdentifier: resolvedOpts.deviceIdentifier,
+      },
+      { stack },
+    );
   }
 
   /**
