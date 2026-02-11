@@ -17,18 +17,6 @@ export const lmLinkPeerSchema = z.object({
 });
 
 /**
- * Represents the result of turning on LM Link.
- *
- * @public
- */
-export interface LMLinkUpResult {
-  peers: Array<LMLinkPeer>;
-}
-export const lmLinkUpResultSchema = z.object({
-  peers: z.array(lmLinkPeerSchema),
-});
-
-/**
  * Represents the status of LM Link.
  *
  * @public
@@ -36,17 +24,23 @@ export const lmLinkUpResultSchema = z.object({
 export type LMLinkStatus = "offline" | "starting" | "online" | "stopping";
 export const lmLinkStatusSchema = z.enum(["offline", "starting", "online", "stopping"]);
 
+/**
+ * Represents any issue that will prevent LM Link from starting.
+ *
+ * @public
+ */
+export type LMLinkIssue = "deviceDisabled" | "notLoggedIn" | "noAccess";
+export const lmLinkIssueSchema = z.enum(["deviceDisabled", "notLoggedIn", "noAccess"]);
+
 export interface LMLinkStatusResult {
-  /**
-   * Whether LM Link is enabled. Being enabled does not mean it is currently online.
-   *
-   * When LM Link is enabled, LM Studio/llmster will attempt to connect to LM Link on startup.
-   */
-  enabled: boolean;
   /**
    * The current status of LM Link.
    */
   status: LMLinkStatus;
+  /**
+   * Issues that will prevent LM Link from starting.
+   */
+  issues: Array<LMLinkIssue>;
   /**
    * The currently connected peers.
    */
@@ -61,8 +55,8 @@ export interface LMLinkStatusResult {
   deviceName: string;
 }
 export const lmLinkStatusResultSchema = z.object({
-  enabled: z.boolean(),
   status: lmLinkStatusSchema,
+  issues: z.array(lmLinkIssueSchema),
   peers: z.array(lmLinkPeerSchema),
   deviceIdentifier: z.string().nullable(),
   deviceName: z.string(),
