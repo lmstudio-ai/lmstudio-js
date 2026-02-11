@@ -40,4 +40,17 @@ export class RepositoryLMLinkNamespace {
     const stack = getCurrentStack(1);
     return await this.repositoryPort.callRpc("lmLinkUpdateDeviceName", { deviceName }, { stack });
   }
+
+  /**
+   * @deprecated [DEP-HUB-API-ACCESS] LM Studio Hub API access is still in active development
+   * and will change. Not recommended for public adoption.
+   */
+  public async setPreferredDevice(deviceIdentifier: string): Promise<void> {
+    const stack = getCurrentStack(1);
+    return await this.repositoryPort.callRpc(
+      "lmLinkSetPreferredDevice",
+      { deviceIdentifier },
+      { stack },
+    );
+  }
 }

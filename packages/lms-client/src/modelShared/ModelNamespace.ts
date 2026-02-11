@@ -123,6 +123,21 @@ function makeLoadModelOptsSchema<TLoadModelConfig>(
   });
 }
 
+/** @public */
+export interface EstimatedResourcesUsageOpts {
+  /**
+   * Restrict the estimation to a specific device.
+   *
+   * - Use a device identifier string to target a specific remote device.
+   * - Use null to force local-only estimation.
+   * - Omit to use the default cascading behavior.
+   */
+  deviceIdentifier?: string | null;
+}
+const estimatedResourcesUsageOptsSchema = z.object({
+  deviceIdentifier: z.string().nullable().optional(),
+}) as Zod.Schema<EstimatedResourcesUsageOpts>;
+
 /**
  * Abstract namespace for namespaces that deal with models.
  *
@@ -718,15 +733,7 @@ export abstract class ModelNamespace<
         `client.${this.namespace}`,
         "estimateUsage",
         ["modelKey", "loadConfig", "opts"],
-        [
-          reasonableKeyStringSchema,
-          this.loadModelConfigSchema,
-          z
-            .object({
-              deviceIdentifier: z.string().nullable().optional(),
-            })
-            .optional(),
-        ],
+        [reasonableKeyStringSchema, this.loadModelConfigSchema, estimatedResourcesUsageOptsSchema],
         [modelKey, loadConfig, opts],
         stack,
       );

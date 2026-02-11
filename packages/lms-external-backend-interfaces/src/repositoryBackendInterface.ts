@@ -267,6 +267,12 @@ export function createRepositoryBackendInterface() {
         }),
         returns: z.void(),
       })
+      .addRpcEndpoint("lmLinkSetPreferredDevice", {
+        parameter: z.object({
+          deviceIdentifier: z.string(),
+        }),
+        returns: z.void(),
+      })
   );
 }
 
