@@ -733,7 +733,11 @@ export abstract class ModelNamespace<
         `client.${this.namespace}`,
         "estimateUsage",
         ["modelKey", "loadConfig", "opts"],
-        [reasonableKeyStringSchema, this.loadModelConfigSchema, estimatedResourcesUsageOptsSchema],
+        [
+          reasonableKeyStringSchema,
+          this.loadModelConfigSchema,
+          estimatedResourcesUsageOptsSchema.optional(),
+        ],
         [modelKey, loadConfig, opts],
         stack,
       );
