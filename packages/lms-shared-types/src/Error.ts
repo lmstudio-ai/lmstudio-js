@@ -19,6 +19,15 @@ function failOk<T>(schema: ZodSchema<T>): ZodSchema<T | undefined> {
   return z.any().transform(val => (schema.safeParse(val).success ? val : undefined));
 }
 
+export interface SerializedLMSExtendedError {
+  title: string;
+  cause?: string;
+  suggestion?: string;
+  errorData?: Record<string, unknown>;
+  displayData?: ErrorDisplayData;
+  stack?: string;
+  rootTitle?: string;
+}
 export const serializedLMSExtendedErrorSchema = z.object({
   title: failOk(z.string()).default("Unknown error"),
   cause: failOk(z.string()).optional(),
@@ -27,8 +36,7 @@ export const serializedLMSExtendedErrorSchema = z.object({
   displayData: failOk(errorDisplayDataSchema).optional(),
   stack: failOk(z.string()).optional(),
   rootTitle: failOk(z.string()).optional(),
-});
-export type SerializedLMSExtendedError = z.infer<typeof serializedLMSExtendedErrorSchema>;
+}) as ZodSchema<SerializedLMSExtendedError>;
 export function serializeError(error: any): SerializedLMSExtendedError {
   if (typeof error === "object") {
     const title = error.title ?? error.lmstudioRawError ?? error.message ?? "Unknown error";
