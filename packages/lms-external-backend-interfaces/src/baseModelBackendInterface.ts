@@ -73,6 +73,7 @@ export function createBaseModelBackendInterface<
     .addRpcEndpoint("unloadModel", {
       parameter: z.object({
         identifier: z.string(),
+        deviceIdentifier: z.string().nullable().optional(),
       }),
       returns: z.void(),
     })

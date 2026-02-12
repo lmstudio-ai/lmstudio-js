@@ -70,7 +70,13 @@ export class EmbeddingModel
   }
   public async unload() {
     const stack = getCurrentStack(1);
-    await this.port.callRpc("unloadModel", { identifier: this.identifier }, { stack });
+    const modelInfo = await this.getModelInfo();
+    const deviceIdentifier = modelInfo.deviceIdentifier ?? null;
+    await this.port.callRpc(
+      "unloadModel",
+      { identifier: this.identifier, deviceIdentifier },
+      { stack },
+    );
   }
   public override async getModelInfo(): Promise<EmbeddingModelInstanceInfo> {
     const info = await super.getModelInfo();
