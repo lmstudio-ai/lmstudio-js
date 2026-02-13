@@ -426,6 +426,8 @@ export {
 export {
   LMLinkIssue,
   lmLinkIssueSchema,
+  LMLinkLastError,
+  lmLinkLastErrorSchema,
   LMLinkPeer,
   lmLinkPeerSchema,
   LMLinkStatus,
