@@ -1,6 +1,5 @@
 {
-  "main": "./dist/index.js",
-  "output": "./temp/sea-prep.blob",
-  "disableExperimentalSEAWarning": true,
+  "main": "./dist/index.mjs",
+  "output": "./dist/lms",
   "useCodeCache": true
 }

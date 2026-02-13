@@ -1,18 +1,87 @@
-import { nodeResolve } from "@rollup/plugin-node-resolve";
 import commonjs from "@rollup/plugin-commonjs";
 import json from "@rollup/plugin-json";
-import banner from "rollup-plugin-banner2";
+import { nodeResolve } from "@rollup/plugin-node-resolve";
+import swc from "@rollup/plugin-swc";
+import { builtinModules } from "node:module";
 import { dirname, join, resolve as resolvePath } from "node:path";
 import { fileURLToPath } from "node:url";
-import { createRequire } from "node:module";
-import swc from "@rollup/plugin-swc";
+import banner from "rollup-plugin-banner2";
 
-const requireForConfig = createRequire(import.meta.url);
 const currentFilePath = fileURLToPath(import.meta.url);
 const currentDirectoryPath = dirname(currentFilePath);
+const lmsCliEntryPath = resolvePath(
+  join(currentDirectoryPath, "..", "..", "packages", "lms-cli", "src", "index.ts")
+);
+const builtinModuleSpecifiers = new Set(
+  builtinModules.map((moduleName) => {
+    if (moduleName.startsWith("node:")) {
+      return moduleName.slice("node:".length);
+    }
+
+    return moduleName;
+  })
+);
+
+function normalizeBuiltinSpecifier(source) {
+  let normalizedSource = source;
+  while (normalizedSource.endsWith("/")) {
+    normalizedSource = normalizedSource.slice(0, -1);
+  }
+
+  return normalizedSource;
+}
+
+function nodeBuiltinPrefixPlugin() {
+  return {
+    name: "node-builtin-prefix",
+    resolveId(source) {
+      if (typeof source !== "string") {
+        return null;
+      }
+
+      if (source.startsWith("node:")) {
+        return null;
+      }
+
+      if (source.startsWith("\0")) {
+        return null;
+      }
+
+      if (
+        source.startsWith(".") ||
+        source.startsWith("/") ||
+        source.startsWith("http://") ||
+        source.startsWith("https://") ||
+        source.startsWith("data:")
+      ) {
+        return null;
+      }
+
+      const normalizedSource = normalizeBuiltinSpecifier(source);
+      if (normalizedSource.length === 0) {
+        return null;
+      }
+
+      const sourceSegments = normalizedSource.split("/");
+      const rootSpecifier = sourceSegments[0];
+
+      if (
+        builtinModuleSpecifiers.has(normalizedSource) ||
+        builtinModuleSpecifiers.has(rootSpecifier)
+      ) {
+        return {
+          id: `node:${normalizedSource}`,
+          external: true,
+        };
+      }
+
+      return null;
+    },
+  };
+}
 
 export default {
-  input: resolvePath(requireForConfig.resolve("@lmstudio/lms-cli")),
+  input: lmsCliEntryPath,
   output: [
     {
       file: join(currentDirectoryPath, "dist", "index.js"),
@@ -21,13 +90,10 @@ export default {
     },
   ],
   context: "globalThis",
-  // Keep core runtime dependencies external so:
-  // - Rollup still emits a single CLI entry that resolves these from node_modules at runtime.
-  // - The rollup JS bundle stays small and does not inline react/ink.
-  // - When we later run `bun build --compile`, Bun still sees `ws` as a normal import and can
-  //   integrate it with its own HTTP/WebSocket implementation instead of a fully inlined shim.
-  external: ["ink", "react", "react/jsx-runtime", "ws", /^node:/],
+  external: moduleId =>
+    typeof moduleId === "string" && moduleId.startsWith("node:"),
   plugins: [
+    nodeBuiltinPrefixPlugin(),
     // Json should be before swc to handle imports correctly
     // or else swc might throw errors on json imports
     json(),
