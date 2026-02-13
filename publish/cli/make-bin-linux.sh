@@ -14,7 +14,7 @@ fi
 rm "${DIST_DIR}/${EXE_NAME}" 2> /dev/null || true
 
 if [ ! -f "${DENO_BINARY_PATH}" ]; then
-  bash ../../../electron/build-scripts/deno-runtime/download-deno-runtime.sh
+  bash ./download-deno-runtime.sh
 fi
 
 chmod +x "${DENO_BINARY_PATH}"
