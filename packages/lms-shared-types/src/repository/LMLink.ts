@@ -29,8 +29,13 @@ export const lmLinkStatusSchema = z.enum(["offline", "starting", "online", "stop
  *
  * @public
  */
-export type LMLinkIssue = "deviceDisabled" | "notLoggedIn" | "noAccess";
-export const lmLinkIssueSchema = z.enum(["deviceDisabled", "notLoggedIn", "noAccess"]);
+export type LMLinkIssue = "deviceDisabled" | "notLoggedIn" | "noAccess" | "badVersion";
+export const lmLinkIssueSchema = z.enum([
+  "deviceDisabled",
+  "notLoggedIn",
+  "noAccess",
+  "badVersion",
+]);
 
 export interface LMLinkStatusResult {
   /**
