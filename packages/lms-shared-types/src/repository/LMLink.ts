@@ -17,6 +17,20 @@ export const lmLinkPeerSchema = z.object({
 });
 
 /**
+ * Represents the most recent LM Link error.
+ *
+ * @public
+ */
+export interface LMLinkLastError {
+  message: string;
+  timestamp: number;
+}
+export const lmLinkLastErrorSchema = z.object({
+  message: z.string(),
+  timestamp: z.number().int().nonnegative(),
+});
+
+/**
  * Represents the status of LM Link.
  *
  * @public
@@ -62,6 +76,14 @@ export interface LMLinkStatusResult {
    * The preferred device identifier, if available.
    */
   preferredDeviceIdentifier?: string;
+  /**
+   * The number of seconds until the next reconnect attempt, if known.
+   */
+  reconnectInSeconds?: number | null;
+  /**
+   * The most recent LM Link error, if any.
+   */
+  lastError?: LMLinkLastError | null;
 }
 export const lmLinkStatusResultSchema = z.object({
   status: lmLinkStatusSchema,
@@ -70,4 +92,6 @@ export const lmLinkStatusResultSchema = z.object({
   deviceIdentifier: z.string().nullable(),
   deviceName: z.string(),
   preferredDeviceIdentifier: z.string().optional(),
+  reconnectInSeconds: z.number().int().nonnegative().nullable().optional(),
+  lastError: lmLinkLastErrorSchema.nullable().optional(),
 });
