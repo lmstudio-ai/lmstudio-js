@@ -79,11 +79,11 @@ export interface LMLinkStatusResult {
   /**
    * The number of seconds until the next reconnect attempt, if known.
    */
-  reconnectInSeconds?: number | null;
+  reconnectInSeconds?: number;
   /**
    * The most recent LM Link error, if any.
    */
-  lastError?: LMLinkLastError | null;
+  lastError?: LMLinkLastError;
 }
 export const lmLinkStatusResultSchema = z.object({
   status: lmLinkStatusSchema,
@@ -92,6 +92,6 @@ export const lmLinkStatusResultSchema = z.object({
   deviceIdentifier: z.string().nullable(),
   deviceName: z.string(),
   preferredDeviceIdentifier: z.string().optional(),
-  reconnectInSeconds: z.number().int().nonnegative().nullable().optional(),
-  lastError: lmLinkLastErrorSchema.nullable().optional(),
+  reconnectInSeconds: z.number().int().nonnegative().optional(),
+  lastError: lmLinkLastErrorSchema.optional(),
 });
