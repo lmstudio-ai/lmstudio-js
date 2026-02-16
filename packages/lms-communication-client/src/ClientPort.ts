@@ -569,7 +569,6 @@ export class ClientPort<
     } catch (error) {
       this.ongoingRpcs.delete(callId);
       this.updateOpenCommunicationsCount();
-      this.logger.error("Error sending client message:", "rpcCall", error);
       throw error;
     }
 
@@ -596,17 +595,12 @@ export class ClientPort<
     const channelId = this.nextChannelId;
     this.nextChannelId++;
 
-    try {
-      this.transport.send({
-        type: "channelCreate",
-        endpoint: endpointName,
-        channelId,
-        creationParameter: serializedCreationParameter,
-      });
-    } catch (error) {
-      this.logger.error("Error sending client message:", "channelCreate", error);
-      throw error;
-    }
+    this.transport.send({
+      type: "channelCreate",
+      endpoint: endpointName,
+      channelId,
+      creationParameter: serializedCreationParameter,
+    });
 
     stack = stack ?? getCurrentStack(1);
 
