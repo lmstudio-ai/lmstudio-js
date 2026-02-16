@@ -188,20 +188,22 @@ export class ServerPort<
           `);
           return;
         }
+        let serializedMessage;
         try {
-          const serializedMessage = serialize(endpoint.serialization, result.data);
-          this.safeSend(
-            {
-              type: "channelSend",
-              channelId,
-              message: serializedMessage,
-              ackId: ackId,
-            },
-            "channelSend",
-          );
+          serializedMessage = serialize(endpoint.serialization, result.data);
         } catch (error) {
           this.logger.error("Error serializing channel message:", error);
+          return;
         }
+        this.safeSend(
+          {
+            type: "channelSend",
+            channelId,
+            message: serializedMessage,
+            ackId: ackId,
+          },
+          "channelSend",
+        );
       }),
     };
     this.openChannels.set(channelId, openChannel);
@@ -313,17 +315,9 @@ export class ServerPort<
       .then(() => endpoint.handler!(context, parseResult.data))
       .then(
         value => {
+          let serializedResult;
           try {
-            const serializedResult = serialize(endpoint.serialization, value);
-            this.safeSend(
-              {
-                type: "rpcResult",
-                callId: message.callId,
-                result: serializedResult,
-              },
-              "rpcResult",
-              context.logger,
-            );
+            serializedResult = serialize(endpoint.serialization, value);
           } catch (error) {
             this.safeSend(
               {
@@ -335,7 +329,17 @@ export class ServerPort<
               context.logger,
             );
             context.logger.error("Error serializing RPC result:", error);
+            return;
           }
+          this.safeSend(
+            {
+              type: "rpcResult",
+              callId: message.callId,
+              result: serializedResult,
+            },
+            "rpcResult",
+            context.logger,
+          );
         },
         error => {
           this.safeSend(
@@ -405,39 +409,49 @@ export class ServerPort<
               if (!isAvailable(value)) {
                 return;
               }
-              try {
-                if (initialized) {
-                  this.safeSend(
-                    {
-                      type: "signalUpdate",
-                      subscribeId: message.subscribeId,
-                      patches: patches.map(patch => serialize(endpoint.serialization, patch)),
-                      tags,
-                    },
-                    "signalUpdate",
-                    context.logger,
+              if (initialized) {
+                let serializedPatches;
+                try {
+                  serializedPatches = patches.map(patch =>
+                    serialize(endpoint.serialization, patch),
                   );
-                } else {
-                  this.safeSend(
-                    {
-                      type: "signalUpdate",
-                      subscribeId: message.subscribeId,
-                      patches: [
-                        serialize(endpoint.serialization, {
-                          op: "replace",
-                          path: [],
-                          value,
-                        }),
-                      ],
-                      tags,
-                    },
-                    "signalUpdate",
-                    context.logger,
-                  );
-                  initialized = true;
+                } catch (error) {
+                  context.logger.error("Error serializing signal update:", error);
+                  return;
                 }
-              } catch (error) {
-                context.logger.error("Error serializing signal update:", error);
+                this.safeSend(
+                  {
+                    type: "signalUpdate",
+                    subscribeId: message.subscribeId,
+                    patches: serializedPatches,
+                    tags,
+                  },
+                  "signalUpdate",
+                  context.logger,
+                );
+              } else {
+                let initialPatch;
+                try {
+                  initialPatch = serialize(endpoint.serialization, {
+                    op: "replace",
+                    path: [],
+                    value,
+                  });
+                } catch (error) {
+                  context.logger.error("Error serializing signal update:", error);
+                  return;
+                }
+                this.safeSend(
+                  {
+                    type: "signalUpdate",
+                    subscribeId: message.subscribeId,
+                    patches: [initialPatch],
+                    tags,
+                  },
+                  "signalUpdate",
+                  context.logger,
+                );
+                initialized = true;
               }
             }),
           };
@@ -448,27 +462,28 @@ export class ServerPort<
             this.openSignalSubscriptions.set(message.subscribeId, openSignalSubscription);
             const currentValue = signal.get();
             if (isAvailable(currentValue)) {
+              let initialPatch;
               try {
-                this.safeSend(
-                  {
-                    type: "signalUpdate",
-                    subscribeId: message.subscribeId,
-                    patches: [
-                      serialize(endpoint.serialization, {
-                        op: "replace",
-                        path: [],
-                        value: signal.get(),
-                      }),
-                    ],
-                    tags: [],
-                  },
-                  "signalUpdate",
-                  context.logger,
-                );
-                initialized = true;
+                initialPatch = serialize(endpoint.serialization, {
+                  op: "replace",
+                  path: [],
+                  value: signal.get(),
+                });
               } catch (error) {
                 context.logger.error("Error serializing signal initial update:", error);
+                return;
               }
+              this.safeSend(
+                {
+                  type: "signalUpdate",
+                  subscribeId: message.subscribeId,
+                  patches: [initialPatch],
+                  tags: [],
+                },
+                "signalUpdate",
+                context.logger,
+              );
+              initialized = true;
             }
           }
         },
@@ -554,39 +569,49 @@ export class ServerPort<
               if (!isAvailable(value)) {
                 return;
               }
-              try {
-                if (initialized) {
-                  this.safeSend(
-                    {
-                      type: "writableSignalUpdate",
-                      subscribeId: message.subscribeId,
-                      patches: patches.map(patch => serialize(endpoint.serialization, patch)),
-                      tags,
-                    },
-                    "writableSignalUpdate",
-                    context.logger,
+              if (initialized) {
+                let serializedPatches;
+                try {
+                  serializedPatches = patches.map(patch =>
+                    serialize(endpoint.serialization, patch),
                   );
-                } else {
-                  this.safeSend(
-                    {
-                      type: "writableSignalUpdate",
-                      subscribeId: message.subscribeId,
-                      patches: [
-                        serialize(endpoint.serialization, {
-                          op: "replace",
-                          path: [],
-                          value,
-                        }),
-                      ],
-                      tags,
-                    },
-                    "writableSignalUpdate",
-                    context.logger,
-                  );
-                  initialized = true;
+                } catch (error) {
+                  context.logger.error("Error serializing writable signal update:", error);
+                  return;
                 }
-              } catch (error) {
-                context.logger.error("Error serializing writable signal update:", error);
+                this.safeSend(
+                  {
+                    type: "writableSignalUpdate",
+                    subscribeId: message.subscribeId,
+                    patches: serializedPatches,
+                    tags,
+                  },
+                  "writableSignalUpdate",
+                  context.logger,
+                );
+              } else {
+                let initialPatch;
+                try {
+                  initialPatch = serialize(endpoint.serialization, {
+                    op: "replace",
+                    path: [],
+                    value,
+                  });
+                } catch (error) {
+                  context.logger.error("Error serializing writable signal update:", error);
+                  return;
+                }
+                this.safeSend(
+                  {
+                    type: "writableSignalUpdate",
+                    subscribeId: message.subscribeId,
+                    patches: [initialPatch],
+                    tags,
+                  },
+                  "writableSignalUpdate",
+                  context.logger,
+                );
+                initialized = true;
               }
             }),
             receivedPatches: (patches, tags) => {
@@ -640,27 +665,28 @@ export class ServerPort<
             );
             const currentValue = signal.get();
             if (isAvailable(currentValue)) {
+              let initialPatch;
               try {
-                this.safeSend(
-                  {
-                    type: "writableSignalUpdate",
-                    subscribeId: message.subscribeId,
-                    patches: [
-                      serialize(endpoint.serialization, {
-                        op: "replace",
-                        path: [],
-                        value: signal.get(),
-                      }),
-                    ],
-                    tags: [],
-                  },
-                  "writableSignalUpdate",
-                  context.logger,
-                );
-                initialized = true;
+                initialPatch = serialize(endpoint.serialization, {
+                  op: "replace",
+                  path: [],
+                  value: signal.get(),
+                });
               } catch (error) {
                 context.logger.error("Error serializing writable signal initial update:", error);
+                return;
               }
+              this.safeSend(
+                {
+                  type: "writableSignalUpdate",
+                  subscribeId: message.subscribeId,
+                  patches: [initialPatch],
+                  tags: [],
+                },
+                "writableSignalUpdate",
+                context.logger,
+              );
+              initialized = true;
             }
           }
         },
