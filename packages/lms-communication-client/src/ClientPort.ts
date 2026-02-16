@@ -19,6 +19,7 @@ import {
   type BackendInterface,
   type ChannelEndpoint,
   type ChannelEndpointsSpecBase,
+  type ClientToServerMessage,
   type ClientTransport,
   type ClientTransportFactory,
   type RpcEndpoint,
@@ -143,15 +144,30 @@ export class ClientPort<
       This is usually caused by communication protocol incompatibility. Please make sure you are
       using the up-to-date versions of the SDK and LM Studio.
     `;
-    this.transport.send({
-      type: "communicationWarning",
-      warning,
-    });
+    this.safeSend(
+      {
+        type: "communicationWarning",
+        warning,
+      },
+      "communicationWarning",
+    );
     this.producedCommunicationWarningsCount++;
     if (this.producedCommunicationWarningsCount >= 5) {
       this.logger.errorText`
         5 communication warnings have been produced. Further warnings will not be printed.
       `;
+    }
+  }
+
+  private safeSend(message: ClientToServerMessage, reason?: string): void {
+    try {
+      this.transport.send(message);
+    } catch (error) {
+      if (reason === undefined) {
+        this.logger.error("Error sending client message:", error);
+      } else {
+        this.logger.error("Error sending client message:", reason, error);
+      }
     }
   }
 
@@ -543,12 +559,15 @@ export class ClientPort<
       reject,
     });
 
-    this.transport.send({
-      type: "rpcCall",
-      endpoint: endpointName,
-      callId,
-      parameter: serializedParameter,
-    });
+    this.safeSend(
+      {
+        type: "rpcCall",
+        endpoint: endpointName,
+        callId,
+        parameter: serializedParameter,
+      },
+      "rpcCall",
+    );
 
     this.updateOpenCommunicationsCount();
 
@@ -573,12 +592,15 @@ export class ClientPort<
     const channelId = this.nextChannelId;
     this.nextChannelId++;
 
-    this.transport.send({
-      type: "channelCreate",
-      endpoint: endpointName,
-      channelId,
-      creationParameter: serializedCreationParameter,
-    });
+    this.safeSend(
+      {
+        type: "channelCreate",
+        endpoint: endpointName,
+        channelId,
+        creationParameter: serializedCreationParameter,
+      },
+      "channelCreate",
+    );
 
     stack = stack ?? getCurrentStack(1);
 
@@ -588,11 +610,14 @@ export class ClientPort<
       ...Channel.create(packet => {
         const parsed = channelEndpoint.toServerPacket.parse(packet);
         const serializedMessage = serialize(channelEndpoint.serialization, parsed);
-        this.transport.send({
-          type: "channelSend",
-          channelId,
-          message: serializedMessage,
-        });
+        this.safeSend(
+          {
+            type: "channelSend",
+            channelId,
+            message: serializedMessage,
+          },
+          "channelSend",
+        );
       }),
     };
 
@@ -624,12 +649,15 @@ export class ClientPort<
     const signal = LazySignal.createWithoutInitialValue((setDownstream, errorListener) => {
       const subscribeId = this.nextSubscribeId;
       this.nextSubscribeId++;
-      this.transport.send({
-        type: "signalSubscribe",
-        endpoint: endpointName,
-        subscribeId,
-        creationParameter: serializedCreationParameter,
-      });
+      this.safeSend(
+        {
+          type: "signalSubscribe",
+          endpoint: endpointName,
+          subscribeId,
+          creationParameter: serializedCreationParameter,
+        },
+        "signalSubscribe",
+      );
       this.openSignalSubscriptions.set(subscribeId, {
         endpoint: signalEndpoint,
         getValue: () => signal.get(),
@@ -640,10 +668,13 @@ export class ClientPort<
       });
       this.updateOpenCommunicationsCount();
       return () => {
-        this.transport.send({
-          type: "signalUnsubscribe",
-          subscribeId,
-        });
+        this.safeSend(
+          {
+            type: "signalUnsubscribe",
+            subscribeId,
+          },
+          "signalUnsubscribe",
+        );
         this.openSignalSubscriptions.delete(subscribeId);
         // Remove from recoverable set if present (signal unsubscribed before recovery)
         this.recoverableSignals.delete(signal);
@@ -681,12 +712,15 @@ export class ClientPort<
         console.warn("writeUpstream called before the first update is received");
         return false;
       }
-      this.transport.send({
-        type: "writableSignalUpdate",
-        subscribeId: currentSubscribeId as any,
-        patches: patches.map(patch => serialize(signalEndpoint.serialization, patch)),
-        tags,
-      });
+      this.safeSend(
+        {
+          type: "writableSignalUpdate",
+          subscribeId: currentSubscribeId as any,
+          patches: patches.map(patch => serialize(signalEndpoint.serialization, patch)),
+          tags,
+        },
+        "writableSignalUpdate",
+      );
       return true;
     };
 
@@ -694,12 +728,15 @@ export class ClientPort<
       const subscribeId = this.nextWritableSubscribeId;
       currentSubscribeId = subscribeId;
       this.nextWritableSubscribeId++;
-      this.transport.send({
-        type: "writableSignalSubscribe",
-        endpoint: endpointName,
-        subscribeId,
-        creationParameter: serializedCreationParameter,
-      });
+      this.safeSend(
+        {
+          type: "writableSignalSubscribe",
+          endpoint: endpointName,
+          subscribeId,
+          creationParameter: serializedCreationParameter,
+        },
+        "writableSignalSubscribe",
+      );
       this.openWritableSignalSubscriptions.set(subscribeId, {
         endpoint: signalEndpoint,
         getValue: () => signal.getPessimistic(),
@@ -712,10 +749,13 @@ export class ClientPort<
       this.updateOpenCommunicationsCount();
       return () => {
         currentSubscribeId = null;
-        this.transport.send({
-          type: "writableSignalUnsubscribe",
-          subscribeId,
-        });
+        this.safeSend(
+          {
+            type: "writableSignalUnsubscribe",
+            subscribeId,
+          },
+          "writableSignalUnsubscribe",
+        );
         this.openWritableSignalSubscriptions.delete(subscribeId);
         // Remove from recoverable set if present (signal unsubscribed before recovery)
         this.recoverableWritableSignals.delete(signal);

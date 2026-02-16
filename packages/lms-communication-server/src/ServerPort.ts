@@ -18,6 +18,7 @@ import {
   type ChannelEndpointsSpecBase,
   type ClientToServerMessage,
   type RpcEndpointsSpecBase,
+  type ServerToClientMessage,
   type ServerTransport,
   type ServerTransportFactory,
   type SignalEndpoint,
@@ -97,6 +98,22 @@ export class ServerPort<
     this.transport = factory(this.receivedMessage, this.errored, this.logger);
   }
 
+  private safeSend(
+    message: ServerToClientMessage,
+    reason?: string,
+    logger: LoggerInterface = this.logger,
+  ): void {
+    try {
+      this.transport.send(message);
+    } catch (error) {
+      if (reason === undefined) {
+        logger.error("Error sending server message:", error);
+      } else {
+        logger.error("Error sending server message:", reason, error);
+      }
+    }
+  }
+
   private communicationWarning(warning: string) {
     if (this.producedCommunicationWarningsCount >= 5) {
       return;
@@ -107,10 +124,13 @@ export class ServerPort<
       This is usually caused by communication protocol incompatibility. Please make sure you are
       using the up-to-date versions of the SDK and LM Studio.
     `;
-    this.transport.send({
-      type: "communicationWarning",
-      warning,
-    });
+    this.safeSend(
+      {
+        type: "communicationWarning",
+        warning,
+      },
+      "communicationWarning",
+    );
     this.producedCommunicationWarningsCount++;
     if (this.producedCommunicationWarningsCount >= 5) {
       this.logger.errorText`
@@ -168,13 +188,20 @@ export class ServerPort<
           `);
           return;
         }
-        const serializedMessage = serialize(endpoint.serialization, result.data);
-        this.transport.send({
-          type: "channelSend",
-          channelId,
-          message: serializedMessage,
-          ackId: ackId,
-        });
+        try {
+          const serializedMessage = serialize(endpoint.serialization, result.data);
+          this.safeSend(
+            {
+              type: "channelSend",
+              channelId,
+              message: serializedMessage,
+              ackId: ackId,
+            },
+            "channelSend",
+          );
+        } catch (error) {
+          this.logger.error("Error serializing channel message:", error);
+        }
       }),
     };
     this.openChannels.set(channelId, openChannel);
@@ -187,22 +214,33 @@ export class ServerPort<
       .then(() => endpoint.handler!(context, parseResult.data, openChannel.channel))
       .then(
         () => {
-          this.transport.send({
-            type: "channelClose",
-            channelId: channelId,
-          });
+          this.safeSend(
+            {
+              type: "channelClose",
+              channelId: channelId,
+            },
+            "channelClose",
+            context.logger,
+          );
           openChannel.closed();
         },
         error => {
-          this.transport.send({
-            type: "channelError",
-            channelId: channelId,
-            error: serializeError(error),
-          });
+          this.safeSend(
+            {
+              type: "channelError",
+              channelId: channelId,
+              error: serializeError(error),
+            },
+            "channelError",
+            context.logger,
+          );
           openChannel.errored(error);
           context.logger.error("Error in channel handler:", error);
         },
       )
+      .catch(error => {
+        context.logger.error("Unhandled error in channel handling:", error);
+      })
       .finally(() => {
         this.openChannels.delete(channelId);
       });
@@ -275,21 +313,46 @@ export class ServerPort<
       .then(() => endpoint.handler!(context, parseResult.data))
       .then(
         value => {
-          this.transport.send({
-            type: "rpcResult",
-            callId: message.callId,
-            result: serialize(endpoint.serialization, value),
-          });
+          try {
+            const serializedResult = serialize(endpoint.serialization, value);
+            this.safeSend(
+              {
+                type: "rpcResult",
+                callId: message.callId,
+                result: serializedResult,
+              },
+              "rpcResult",
+              context.logger,
+            );
+          } catch (error) {
+            this.safeSend(
+              {
+                type: "rpcError",
+                callId: message.callId,
+                error: serializeError(error),
+              },
+              "rpcError",
+              context.logger,
+            );
+            context.logger.error("Error serializing RPC result:", error);
+          }
         },
         error => {
-          this.transport.send({
-            type: "rpcError",
-            callId: message.callId,
-            error: serializeError(error),
-          });
+          this.safeSend(
+            {
+              type: "rpcError",
+              callId: message.callId,
+              error: serializeError(error),
+            },
+            "rpcError",
+            context.logger,
+          );
           context.logger.error("Error in RPC handler:", error);
         },
-      );
+      )
+      .catch(error => {
+        context.logger.error("Unhandled error in RPC handling:", error);
+      });
   }
 
   private receivedSignalSubscribe(message: ClientToServerMessage & { type: "signalSubscribe" }) {
@@ -342,27 +405,39 @@ export class ServerPort<
               if (!isAvailable(value)) {
                 return;
               }
-              if (initialized) {
-                this.transport.send({
-                  type: "signalUpdate",
-                  subscribeId: message.subscribeId,
-                  patches: patches.map(patch => serialize(endpoint.serialization, patch)),
-                  tags,
-                });
-              } else {
-                this.transport.send({
-                  type: "signalUpdate",
-                  subscribeId: message.subscribeId,
-                  patches: [
-                    serialize(endpoint.serialization, {
-                      op: "replace",
-                      path: [],
-                      value,
-                    }),
-                  ],
-                  tags,
-                });
-                initialized = true;
+              try {
+                if (initialized) {
+                  this.safeSend(
+                    {
+                      type: "signalUpdate",
+                      subscribeId: message.subscribeId,
+                      patches: patches.map(patch => serialize(endpoint.serialization, patch)),
+                      tags,
+                    },
+                    "signalUpdate",
+                    context.logger,
+                  );
+                } else {
+                  this.safeSend(
+                    {
+                      type: "signalUpdate",
+                      subscribeId: message.subscribeId,
+                      patches: [
+                        serialize(endpoint.serialization, {
+                          op: "replace",
+                          path: [],
+                          value,
+                        }),
+                      ],
+                      tags,
+                    },
+                    "signalUpdate",
+                    context.logger,
+                  );
+                  initialized = true;
+                }
+              } catch (error) {
+                context.logger.error("Error serializing signal update:", error);
               }
             }),
           };
@@ -373,31 +448,46 @@ export class ServerPort<
             this.openSignalSubscriptions.set(message.subscribeId, openSignalSubscription);
             const currentValue = signal.get();
             if (isAvailable(currentValue)) {
-              this.transport.send({
-                type: "signalUpdate",
-                subscribeId: message.subscribeId,
-                patches: [
-                  serialize(endpoint.serialization, {
-                    op: "replace",
-                    path: [],
-                    value: signal.get(),
-                  }),
-                ],
-                tags: [],
-              });
-              initialized = true;
+              try {
+                this.safeSend(
+                  {
+                    type: "signalUpdate",
+                    subscribeId: message.subscribeId,
+                    patches: [
+                      serialize(endpoint.serialization, {
+                        op: "replace",
+                        path: [],
+                        value: signal.get(),
+                      }),
+                    ],
+                    tags: [],
+                  },
+                  "signalUpdate",
+                  context.logger,
+                );
+                initialized = true;
+              } catch (error) {
+                context.logger.error("Error serializing signal initial update:", error);
+              }
             }
           }
         },
         error => {
-          this.transport.send({
-            type: "signalError",
-            subscribeId: message.subscribeId,
-            error: serializeError(error),
-          });
+          this.safeSend(
+            {
+              type: "signalError",
+              subscribeId: message.subscribeId,
+              error: serializeError(error),
+            },
+            "signalError",
+            context.logger,
+          );
           context.logger.error("Error in signal handler:", error);
         },
-      );
+      )
+      .catch(error => {
+        context.logger.error("Unhandled error in signal handling:", error);
+      });
   }
 
   private receivedSignalUnsubscribe(
@@ -464,27 +554,39 @@ export class ServerPort<
               if (!isAvailable(value)) {
                 return;
               }
-              if (initialized) {
-                this.transport.send({
-                  type: "writableSignalUpdate",
-                  subscribeId: message.subscribeId,
-                  patches: patches.map(patch => serialize(endpoint.serialization, patch)),
-                  tags,
-                });
-              } else {
-                this.transport.send({
-                  type: "writableSignalUpdate",
-                  subscribeId: message.subscribeId,
-                  patches: [
-                    serialize(endpoint.serialization, {
-                      op: "replace",
-                      path: [],
-                      value,
-                    }),
-                  ],
-                  tags,
-                });
-                initialized = true;
+              try {
+                if (initialized) {
+                  this.safeSend(
+                    {
+                      type: "writableSignalUpdate",
+                      subscribeId: message.subscribeId,
+                      patches: patches.map(patch => serialize(endpoint.serialization, patch)),
+                      tags,
+                    },
+                    "writableSignalUpdate",
+                    context.logger,
+                  );
+                } else {
+                  this.safeSend(
+                    {
+                      type: "writableSignalUpdate",
+                      subscribeId: message.subscribeId,
+                      patches: [
+                        serialize(endpoint.serialization, {
+                          op: "replace",
+                          path: [],
+                          value,
+                        }),
+                      ],
+                      tags,
+                    },
+                    "writableSignalUpdate",
+                    context.logger,
+                  );
+                  initialized = true;
+                }
+              } catch (error) {
+                context.logger.error("Error serializing writable signal update:", error);
               }
             }),
             receivedPatches: (patches, tags) => {
@@ -493,12 +595,16 @@ export class ServerPort<
                 if (!isAvailable(data)) {
                   // Backend is not ready, ignore the update and tell the frontend that the
                   // optimistic update is completed.
-                  this.transport.send({
-                    type: "writableSignalUpdate",
-                    subscribeId: message.subscribeId,
-                    patches: [],
-                    tags, // Here is where we send the tags back to the client.
-                  });
+                  this.safeSend(
+                    {
+                      type: "writableSignalUpdate",
+                      subscribeId: message.subscribeId,
+                      patches: [],
+                      tags, // Here is where we send the tags back to the client.
+                    },
+                    "writableSignalUpdate",
+                    context.logger,
+                  );
                   return;
                 }
                 const deserializedPatches = patches.map(patch =>
@@ -534,31 +640,46 @@ export class ServerPort<
             );
             const currentValue = signal.get();
             if (isAvailable(currentValue)) {
-              this.transport.send({
-                type: "writableSignalUpdate",
-                subscribeId: message.subscribeId,
-                patches: [
-                  serialize(endpoint.serialization, {
-                    op: "replace",
-                    path: [],
-                    value: signal.get(),
-                  }),
-                ],
-                tags: [],
-              });
-              initialized = true;
+              try {
+                this.safeSend(
+                  {
+                    type: "writableSignalUpdate",
+                    subscribeId: message.subscribeId,
+                    patches: [
+                      serialize(endpoint.serialization, {
+                        op: "replace",
+                        path: [],
+                        value: signal.get(),
+                      }),
+                    ],
+                    tags: [],
+                  },
+                  "writableSignalUpdate",
+                  context.logger,
+                );
+                initialized = true;
+              } catch (error) {
+                context.logger.error("Error serializing writable signal initial update:", error);
+              }
             }
           }
         },
         error => {
-          this.transport.send({
-            type: "writableSignalError",
-            subscribeId: message.subscribeId,
-            error: serializeError(error),
-          });
+          this.safeSend(
+            {
+              type: "writableSignalError",
+              subscribeId: message.subscribeId,
+              error: serializeError(error),
+            },
+            "writableSignalError",
+            context.logger,
+          );
           context.logger.error("Error in writable signal handler:", error);
         },
-      );
+      )
+      .catch(error => {
+        context.logger.error("Unhandled error in writable signal handling:", error);
+      });
   }
 
   private receivedWritableSignalUnsubscribe(
@@ -604,9 +725,12 @@ export class ServerPort<
   }
 
   private receivedKeepAlive(_message: ClientToServerMessage & { type: "keepAlive" }) {
-    this.transport.send({
-      type: "keepAliveAck",
-    });
+    this.safeSend(
+      {
+        type: "keepAliveAck",
+      },
+      "keepAliveAck",
+    );
   }
 
   private receivedMessage = (message: ClientToServerMessage) => {
