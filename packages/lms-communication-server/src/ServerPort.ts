@@ -183,7 +183,8 @@ export class ServerPort<
       endpointName: endpoint.name,
     });
 
-    Promise.resolve(endpoint.handler(context, parseResult.data, openChannel.channel))
+    Promise.resolve()
+      .then(() => endpoint.handler!(context, parseResult.data, openChannel.channel))
       .then(
         () => {
           this.transport.send({
@@ -269,23 +270,26 @@ export class ServerPort<
       type: "rpc",
       endpointName: endpoint.name,
     });
-    const result = endpoint.handler(context, parseResult.data);
-    Promise.resolve(result)
-      .then(value => {
-        this.transport.send({
-          type: "rpcResult",
-          callId: message.callId,
-          result: serialize(endpoint.serialization, value),
-        });
-      })
-      .catch(error => {
-        this.transport.send({
-          type: "rpcError",
-          callId: message.callId,
-          error: serializeError(error),
-        });
-        context.logger.error("Error in RPC handler:", error);
-      });
+
+    Promise.resolve()
+      .then(() => endpoint.handler!(context, parseResult.data))
+      .then(
+        value => {
+          this.transport.send({
+            type: "rpcResult",
+            callId: message.callId,
+            result: serialize(endpoint.serialization, value),
+          });
+        },
+        error => {
+          this.transport.send({
+            type: "rpcError",
+            callId: message.callId,
+            error: serializeError(error),
+          });
+          context.logger.error("Error in RPC handler:", error);
+        },
+      );
   }
 
   private receivedSignalSubscribe(message: ClientToServerMessage & { type: "signalSubscribe" }) {
@@ -328,22 +332,47 @@ export class ServerPort<
       endpointName: endpoint.name,
     });
     let initialized = false;
-    Promise.resolve(endpoint.handler(context, parseResult.data))
-      .then((signal: SignalLike<any>) => {
-        const openSignalSubscription: OpenSignalSubscription = {
-          endpoint,
-          unsubscribe: signal.subscribeFull((value, patches, tags) => {
-            if (!isAvailable(value)) {
-              return;
-            }
-            if (initialized) {
-              this.transport.send({
-                type: "signalUpdate",
-                subscribeId: message.subscribeId,
-                patches: patches.map(patch => serialize(endpoint.serialization, patch)),
-                tags,
-              });
-            } else {
+    Promise.resolve()
+      .then(() => endpoint.handler!(context, parseResult.data))
+      .then(
+        (signal: SignalLike<any>) => {
+          const openSignalSubscription: OpenSignalSubscription = {
+            endpoint,
+            unsubscribe: signal.subscribeFull((value, patches, tags) => {
+              if (!isAvailable(value)) {
+                return;
+              }
+              if (initialized) {
+                this.transport.send({
+                  type: "signalUpdate",
+                  subscribeId: message.subscribeId,
+                  patches: patches.map(patch => serialize(endpoint.serialization, patch)),
+                  tags,
+                });
+              } else {
+                this.transport.send({
+                  type: "signalUpdate",
+                  subscribeId: message.subscribeId,
+                  patches: [
+                    serialize(endpoint.serialization, {
+                      op: "replace",
+                      path: [],
+                      value,
+                    }),
+                  ],
+                  tags,
+                });
+                initialized = true;
+              }
+            }),
+          };
+          if (this.signalSubscriptionsToClose.has(message.subscribeId)) {
+            this.signalSubscriptionsToClose.delete(message.subscribeId);
+            openSignalSubscription.unsubscribe();
+          } else {
+            this.openSignalSubscriptions.set(message.subscribeId, openSignalSubscription);
+            const currentValue = signal.get();
+            if (isAvailable(currentValue)) {
               this.transport.send({
                 type: "signalUpdate",
                 subscribeId: message.subscribeId,
@@ -351,46 +380,24 @@ export class ServerPort<
                   serialize(endpoint.serialization, {
                     op: "replace",
                     path: [],
-                    value,
+                    value: signal.get(),
                   }),
                 ],
-                tags,
+                tags: [],
               });
               initialized = true;
             }
-          }),
-        };
-        if (this.signalSubscriptionsToClose.has(message.subscribeId)) {
-          this.signalSubscriptionsToClose.delete(message.subscribeId);
-          openSignalSubscription.unsubscribe();
-        } else {
-          this.openSignalSubscriptions.set(message.subscribeId, openSignalSubscription);
-          const currentValue = signal.get();
-          if (isAvailable(currentValue)) {
-            this.transport.send({
-              type: "signalUpdate",
-              subscribeId: message.subscribeId,
-              patches: [
-                serialize(endpoint.serialization, {
-                  op: "replace",
-                  path: [],
-                  value: signal.get(),
-                }),
-              ],
-              tags: [],
-            });
-            initialized = true;
           }
-        }
-      })
-      .catch(error => {
-        this.transport.send({
-          type: "signalError",
-          subscribeId: message.subscribeId,
-          error: serializeError(error),
-        });
-        context.logger.error("Error in signal handler:", error);
-      });
+        },
+        error => {
+          this.transport.send({
+            type: "signalError",
+            subscribeId: message.subscribeId,
+            error: serializeError(error),
+          });
+          context.logger.error("Error in signal handler:", error);
+        },
+      );
   }
 
   private receivedSignalUnsubscribe(
@@ -447,22 +454,86 @@ export class ServerPort<
       endpointName: endpoint.name,
     });
     let initialized = false;
-    Promise.resolve(endpoint.handler(context, parseResult.data))
-      .then(([signal, setter]) => {
-        const openWritableSignalSubscription: OpenWritableSignalSubscription = {
-          endpoint,
-          unsubscribe: signal.subscribeFull((value, patches, tags) => {
-            if (!isAvailable(value)) {
-              return;
-            }
-            if (initialized) {
-              this.transport.send({
-                type: "writableSignalUpdate",
-                subscribeId: message.subscribeId,
-                patches: patches.map(patch => serialize(endpoint.serialization, patch)),
-                tags,
-              });
-            } else {
+    Promise.resolve()
+      .then(() => endpoint.handler!(context, parseResult.data))
+      .then(
+        ([signal, setter]) => {
+          const openWritableSignalSubscription: OpenWritableSignalSubscription = {
+            endpoint,
+            unsubscribe: signal.subscribeFull((value, patches, tags) => {
+              if (!isAvailable(value)) {
+                return;
+              }
+              if (initialized) {
+                this.transport.send({
+                  type: "writableSignalUpdate",
+                  subscribeId: message.subscribeId,
+                  patches: patches.map(patch => serialize(endpoint.serialization, patch)),
+                  tags,
+                });
+              } else {
+                this.transport.send({
+                  type: "writableSignalUpdate",
+                  subscribeId: message.subscribeId,
+                  patches: [
+                    serialize(endpoint.serialization, {
+                      op: "replace",
+                      path: [],
+                      value,
+                    }),
+                  ],
+                  tags,
+                });
+                initialized = true;
+              }
+            }),
+            receivedPatches: (patches, tags) => {
+              try {
+                const data = signal.get();
+                if (!isAvailable(data)) {
+                  // Backend is not ready, ignore the update and tell the frontend that the
+                  // optimistic update is completed.
+                  this.transport.send({
+                    type: "writableSignalUpdate",
+                    subscribeId: message.subscribeId,
+                    patches: [],
+                    tags, // Here is where we send the tags back to the client.
+                  });
+                  return;
+                }
+                const deserializedPatches = patches.map(patch =>
+                  deserialize(endpoint.serialization, patch),
+                ) as any;
+                const result = applyPatches(data, deserializedPatches);
+                const parseResult = endpoint.signalData.safeParse(result);
+                if (!parseResult.success) {
+                  this.communicationWarning(text`
+                    Received invalid data for writable signal, endpointName = ${endpoint.name},
+                    data = ${result}. Zod error:
+
+                    ${Validator.prettyPrintZod("data", parseResult.error)}
+                  `);
+                  return;
+                }
+                setter.withValueAndPatches(parseResult.data, deserializedPatches, tags);
+              } catch (error: any) {
+                this.communicationWarning(text`
+                  Error in receivedPatches for writable signal, endpointName = ${endpoint.name},
+                  error = ${error.message}
+                `);
+              }
+            },
+          };
+          if (this.writableSignalSubscriptionsToClose.has(message.subscribeId)) {
+            this.writableSignalSubscriptionsToClose.delete(message.subscribeId);
+            openWritableSignalSubscription.unsubscribe();
+          } else {
+            this.openWritableSignalSubscriptions.set(
+              message.subscribeId,
+              openWritableSignalSubscription,
+            );
+            const currentValue = signal.get();
+            if (isAvailable(currentValue)) {
               this.transport.send({
                 type: "writableSignalUpdate",
                 subscribeId: message.subscribeId,
@@ -470,85 +541,24 @@ export class ServerPort<
                   serialize(endpoint.serialization, {
                     op: "replace",
                     path: [],
-                    value,
+                    value: signal.get(),
                   }),
                 ],
-                tags,
+                tags: [],
               });
               initialized = true;
             }
-          }),
-          receivedPatches: (patches, tags) => {
-            try {
-              const data = signal.get();
-              if (!isAvailable(data)) {
-                // Backend is not ready, ignore the update and tell the frontend that the
-                // optimistic update is completed.
-                this.transport.send({
-                  type: "writableSignalUpdate",
-                  subscribeId: message.subscribeId,
-                  patches: [],
-                  tags, // Here is where we send the tags back to the client.
-                });
-                return;
-              }
-              const deserializedPatches = patches.map(patch =>
-                deserialize(endpoint.serialization, patch),
-              ) as any;
-              const result = applyPatches(data, deserializedPatches);
-              const parseResult = endpoint.signalData.safeParse(result);
-              if (!parseResult.success) {
-                this.communicationWarning(text`
-                  Received invalid data for writable signal, endpointName = ${endpoint.name},
-                  data = ${result}. Zod error:
-
-                  ${Validator.prettyPrintZod("data", parseResult.error)}
-                `);
-                return;
-              }
-              setter.withValueAndPatches(parseResult.data, deserializedPatches, tags);
-            } catch (error: any) {
-              this.communicationWarning(text`
-                Error in receivedPatches for writable signal, endpointName = ${endpoint.name},
-                error = ${error.message}
-              `);
-            }
-          },
-        };
-        if (this.writableSignalSubscriptionsToClose.has(message.subscribeId)) {
-          this.writableSignalSubscriptionsToClose.delete(message.subscribeId);
-          openWritableSignalSubscription.unsubscribe();
-        } else {
-          this.openWritableSignalSubscriptions.set(
-            message.subscribeId,
-            openWritableSignalSubscription,
-          );
-          const currentValue = signal.get();
-          if (isAvailable(currentValue)) {
-            this.transport.send({
-              type: "writableSignalUpdate",
-              subscribeId: message.subscribeId,
-              patches: [
-                serialize(endpoint.serialization, {
-                  op: "replace",
-                  path: [],
-                  value: signal.get(),
-                }),
-              ],
-              tags: [],
-            });
-            initialized = true;
           }
-        }
-      })
-      .catch(error => {
-        this.transport.send({
-          type: "writableSignalError",
-          subscribeId: message.subscribeId,
-          error: serializeError(error),
-        });
-        context.logger.error("Error in writable signal handler:", error);
-      });
+        },
+        error => {
+          this.transport.send({
+            type: "writableSignalError",
+            subscribeId: message.subscribeId,
+            error: serializeError(error),
+          });
+          context.logger.error("Error in writable signal handler:", error);
+        },
+      );
   }
 
   private receivedWritableSignalUnsubscribe(
