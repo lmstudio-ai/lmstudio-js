@@ -610,14 +610,11 @@ export class ClientPort<
       ...Channel.create(packet => {
         const parsed = channelEndpoint.toServerPacket.parse(packet);
         const serializedMessage = serialize(channelEndpoint.serialization, parsed);
-        this.safeSend(
-          {
-            type: "channelSend",
-            channelId,
-            message: serializedMessage,
-          },
-          "channelSend",
-        );
+        this.transport.send({
+          type: "channelSend",
+          channelId,
+          message: serializedMessage,
+        });
       }),
     };
 

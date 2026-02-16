@@ -195,15 +195,12 @@ export class ServerPort<
           this.logger.error("Error serializing channel message:", error);
           return;
         }
-        this.safeSend(
-          {
-            type: "channelSend",
-            channelId,
-            message: serializedMessage,
-            ackId: ackId,
-          },
-          "channelSend",
-        );
+        this.transport.send({
+          type: "channelSend",
+          channelId,
+          message: serializedMessage,
+          ackId: ackId,
+        });
       }),
     };
     this.openChannels.set(channelId, openChannel);
