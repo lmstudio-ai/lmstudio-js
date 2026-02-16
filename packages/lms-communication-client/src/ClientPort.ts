@@ -709,16 +709,18 @@ export class ClientPort<
         console.warn("writeUpstream called before the first update is received");
         return false;
       }
-      this.safeSend(
-        {
+      try {
+        this.transport.send({
           type: "writableSignalUpdate",
           subscribeId: currentSubscribeId as any,
           patches: patches.map(patch => serialize(signalEndpoint.serialization, patch)),
           tags,
-        },
-        "writableSignalUpdate",
-      );
-      return true;
+        });
+        return true;
+      } catch (error) {
+        this.logger.error("Error sending writable signal update:", error);
+        return false;
+      }
     };
 
     const [signal, setter] = OWLSignal.createWithoutInitialValue((setDownstream, errorListener) => {
