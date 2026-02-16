@@ -680,7 +680,15 @@ export class ServerPort<
                   value: signal.get(),
                 });
               } catch (error) {
-                context.logger.error("Error serializing writable signal initial update:", error);
+                this.safeSend(
+                  {
+                    type: "writableSignalError",
+                    subscribeId: message.subscribeId,
+                    error: serializeError(error),
+                  },
+                  "writableSignalError",
+                  context.logger,
+                );
                 return;
               }
               this.safeSend(
