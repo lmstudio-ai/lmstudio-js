@@ -84,10 +84,9 @@ describe("Transport send error handling", () => {
   });
 
   it("ClientPort.safeSend swallows transport send errors", () => {
-    const backendInterface = new BackendInterface().addChannelEndpoint("testChannel", {
+    const backendInterface = new BackendInterface().addSignalEndpoint("testSignal", {
       creationParameter: z.object({ id: z.string() }),
-      toServerPacket: z.object({ message: z.string() }),
-      toClientPacket: z.object({ message: z.string() }),
+      signalData: z.object({ value: z.number() }),
     });
 
     const parentLogger: LoggerInterface = {
@@ -104,8 +103,9 @@ describe("Transport send error handling", () => {
       parentLogger,
     });
 
+    const signal = clientPort.createSignal("testSignal", { id: "signal-1" });
     expect(() => {
-      clientPort.createChannel("testChannel", { id: "channel-1" });
+      signal.subscribe(() => {});
     }).not.toThrow();
 
     expect(parentLogger.error).toHaveBeenCalled();
