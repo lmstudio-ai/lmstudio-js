@@ -188,13 +188,7 @@ export class ServerPort<
           `);
           return;
         }
-        let serializedMessage;
-        try {
-          serializedMessage = serialize(endpoint.serialization, result.data);
-        } catch (error) {
-          this.logger.error("Error serializing channel message:", error);
-          return;
-        }
+        const serializedMessage = serialize(endpoint.serialization, result.data);
         this.transport.send({
           type: "channelSend",
           channelId,
@@ -467,7 +461,15 @@ export class ServerPort<
                   value: signal.get(),
                 });
               } catch (error) {
-                context.logger.error("Error serializing signal initial update:", error);
+                this.safeSend(
+                  {
+                    type: "signalError",
+                    subscribeId: message.subscribeId,
+                    error: serializeError(error),
+                  },
+                  "signalError",
+                  context.logger,
+                );
                 return;
               }
               this.safeSend(
@@ -595,7 +597,15 @@ export class ServerPort<
                     value,
                   });
                 } catch (error) {
-                  context.logger.error("Error serializing writable signal update:", error);
+                  this.safeSend(
+                    {
+                      type: "writableSignalError",
+                      subscribeId: message.subscribeId,
+                      error: serializeError(error),
+                    },
+                    "writableSignalError",
+                    context.logger,
+                  );
                   return;
                 }
                 this.safeSend(
