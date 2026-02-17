@@ -5,7 +5,11 @@ import { z } from "zod";
 
 export function createDiagnosticsBackendInterface() {
   return new BackendInterface().addChannelEndpoint("streamLogs", {
-    creationParameter: z.void(),
+    creationParameter: z
+      .object({
+        originDeviceIdentifier: z.string().optional(),
+      })
+      .optional(),
     toServerPacket: z.discriminatedUnion("type", [
       z.object({
         type: z.literal("stop"),

@@ -8,6 +8,10 @@ import { type DiagnosticsPort } from "@lmstudio/lms-external-backend-interfaces"
 import { type DiagnosticsLogEvent } from "@lmstudio/lms-shared-types";
 import { z } from "zod";
 
+interface DiagnosticsStreamLogsOpts {
+  originDeviceIdentifier?: string;
+}
+
 /** @public */
 export class DiagnosticsNamespace {
   /** @internal */
@@ -27,7 +31,10 @@ export class DiagnosticsNamespace {
    * This method is in alpha. Do not use this method in production yet.
    * @alpha
    */
-  public unstable_streamLogs(listener: (logEvent: DiagnosticsLogEvent) => void): () => void {
+  public unstable_streamLogs(
+    listener: (logEvent: DiagnosticsLogEvent) => void,
+    opts?: DiagnosticsStreamLogsOpts,
+  ): () => void {
     const stack = getCurrentStack(1);
     this.validator.validateMethodParamOrThrow(
       "client.diagnostics",
@@ -37,9 +44,14 @@ export class DiagnosticsNamespace {
       listener,
       stack,
     );
-    const channel = this.diagnosticsPort.createChannel("streamLogs", undefined, undefined, {
-      stack,
-    });
+    const channel = this.diagnosticsPort.createChannel(
+      "streamLogs",
+      opts,
+      undefined,
+      {
+        stack,
+      },
+    );
     const unsubscribe = channel.onMessage.subscribe(message => {
       if (message.type === "log") {
         listener(message.log);

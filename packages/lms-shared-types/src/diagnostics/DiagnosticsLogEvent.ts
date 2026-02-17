@@ -97,6 +97,9 @@ export type DiagnosticsLogEventData =
 export const diagnosticsLogEventSchema = z.object({
   timestamp: z.number(),
   data: diagnosticsLogEventDataSchema,
+  deviceIdentifier: z.string().optional(),
+  deviceName: z.string().optional(),
+  originDeviceIdentifier: z.string().optional(),
 });
 
 /**
@@ -105,4 +108,7 @@ export const diagnosticsLogEventSchema = z.object({
 export type DiagnosticsLogEvent = {
   timestamp: number;
   data: DiagnosticsLogEventData;
+  deviceIdentifier?: string;
+  deviceName?: string;
+  originDeviceIdentifier?: string;
 };
