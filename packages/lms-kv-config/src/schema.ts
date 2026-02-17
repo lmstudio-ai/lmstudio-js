@@ -470,6 +470,10 @@ export const llmMlxLoadConfigSchematics = llmSharedLoadConfigSchematics.union(
   llmLoadSchematics.sliced("mlx.*", "numParallelSessions"),
 );
 
+export const llmVllmLoadConfigSchematics = llmSharedLoadConfigSchematics.union(
+  llmLoadSchematics.sliced("numParallelSessions"),
+);
+
 export const llmTransformersLoadConfigSchematics = llmSharedLoadConfigSchematics.union(
   llmLoadSchematics.sliced("transformers.*"),
 );

@@ -74,6 +74,7 @@ export {
   llmSharedPredictionConfigSchematics,
   llmTransformersLoadConfigSchematics,
   llmTransformersPredictionConfigSchematics,
+  llmVllmLoadConfigSchematics,
   retrievalSchematics,
   TypedConfigFieldFilter,
   TypedConfigSchematics,
