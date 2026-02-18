@@ -48,4 +48,26 @@ export class EmbeddingNamespace extends ModelNamespace<
   ): EmbeddingDynamicHandle {
     return new EmbeddingDynamicHandle(port, specifier, validator, logger);
   }
+
+  /**
+   * List all available (downloaded) embedding models.
+   *
+   * This is a convenience method that returns all downloaded embedding models. It's equivalent to
+   * calling `client.system.listDownloadedModels("embedding")`.
+   *
+   * @example
+   * ```ts
+   * const availableModels = await client.embedding.listAvailable();
+   * console.log(`Found ${availableModels.length} available embedding models`);
+   * for (const model of availableModels) {
+   *   console.log(`- ${model.displayName} (${model.modelKey})`);
+   * }
+   * ```
+   *
+   * @returns A promise that resolves to an array of available embedding model information
+   * @public
+   */
+  public async listAvailable(): Promise<Array<EmbeddingModelInfo>> {
+    return await this.client.system.listDownloadedModels("embedding");
+  }
 }
