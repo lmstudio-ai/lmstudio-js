@@ -273,6 +273,42 @@ describe("OWLSignal Write Loop Error Recovery", () => {
 
       expect(signal.get()).toEqual({ count: 4 });
     });
+
+    it("should flush pending write tags to full subscribers on transport error", async () => {
+      const mock = createMockUpstream<{ count: number }>();
+      const [signal, setter] = OWLSignal.create(
+        { count: 5 },
+        mock.subscribeUpstream,
+        mock.writeUpstream,
+      );
+
+      const seenTags: WriteTag[] = [];
+      signal.subscribeFull((_value, _patches, tags) => {
+        if (tags.length > 0) {
+          seenTags.push(...tags);
+        }
+      });
+
+      signal.subscribe(() => {});
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      mock.simulateUpdate({ count: 5 }, []);
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      const tag = "pending-write-tag";
+      setter({ count: 10 }, [tag]);
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(seenTags).not.toContain(tag);
+      expect(mock.getWrites().length).toBeGreaterThanOrEqual(1);
+
+      mock.simulateError(new Error("Transport disconnected"));
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(signal.hasError()).toBe(true);
+      expect(seenTags).toContain(tag);
+    });
   });
 
   describe("Error During Write Loop Pull", () => {
