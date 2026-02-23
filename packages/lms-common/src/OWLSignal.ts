@@ -244,6 +244,14 @@ export class OWLSignal<TData> extends Subscribable<TData> implements SignalLike<
             unsubscribeArray.forEach(unsubscribe => unsubscribe());
             nextStep();
           };
+          const flushQueuedTags = () => {
+            if (queuedUpdateTags.length > 0) {
+              this.setOuterSignal(
+                this.outerSignal.get() as StripNotAvailable<TData>,
+                queuedUpdateTags,
+              );
+            }
+          };
           unsubscribeArray.push(
             this.innerSignal.subscribeFull((_data, _patches, tags) => {
               if (!this.isSubscriptionHandledByWriteLoop) {
@@ -269,6 +277,7 @@ export class OWLSignal<TData> extends Subscribable<TData> implements SignalLike<
                 return;
               }
               if (tags.includes(tag)) {
+                flushQueuedTags();
                 settle();
                 reject(error);
                 this.queuedUpdates.splice(0, numQueuedUpdatesToHandle);
@@ -282,6 +291,7 @@ export class OWLSignal<TData> extends Subscribable<TData> implements SignalLike<
             this.innerSignal.errorSignal.subscribe(error => {
               // Only act if we're still waiting (not settled yet) and an error occurred
               if (error !== null && !settled && this.isSubscriptionHandledByWriteLoop) {
+                flushQueuedTags();
                 settle();
                 reject(error);
                 this.queuedUpdates.splice(0, numQueuedUpdatesToHandle);
