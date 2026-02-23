@@ -244,6 +244,60 @@ describe("Writable Signal Recovery", () => {
       expect(isAvailable(clientSignal.get())).toBe(true);
     });
 
+    it("should ignore writes while in error but still emit tags to full subscribers", async () => {
+      const [serverSignal, serverSetter] = Signal.create({ value: 0 });
+
+      const backendInterface = new BackendInterface().addWritableSignalEndpoint(
+        "testWritableSignal",
+        {
+          creationParameter: z.object({ id: z.string() }),
+          signalData: z.object({ value: z.number() }),
+        },
+      );
+
+      backendInterface.handleWritableSignalEndpoint("testWritableSignal", () => {
+        return [serverSignal, serverSetter] as const;
+      });
+
+      const { clientPort, simulateDisconnect } = createControllableMockedPorts(
+        backendInterface,
+        createTestContextCreator(),
+      );
+
+      const [clientSignal, clientSetter] = clientPort.createWritableSignal("testWritableSignal", {
+        id: "test-1",
+      });
+
+      const tagsSeen: string[] = [];
+      clientSignal.subscribeFull((_value, _patches, tags) => {
+        if (tags.length > 0) {
+          tagsSeen.push(...tags);
+        }
+      });
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      const initialValue = clientSignal.get();
+      if (!isAvailable(initialValue)) {
+        throw new Error("Expected initial value to be available");
+      }
+
+      // Disconnect to put the signal into error state
+      simulateDisconnect();
+      expect(clientSignal.hasError()).toBe(true);
+
+      // Attempt to write while in error
+      const tag = "write-while-error";
+      clientSetter({ value: 999 }, [tag]);
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      // Value should remain unchanged while in error
+      expect(clientSignal.get()).toEqual(initialValue);
+      // But tags should still be emitted for full subscribers
+      expect(tagsSeen).toContain(tag);
+    });
+
     it("should clear in-flight writes when disconnect happens before confirmation", async () => {
       const [serverSignal, serverSetter] = Signal.create({ value: 0 });
       const serverValues: number[] = [];

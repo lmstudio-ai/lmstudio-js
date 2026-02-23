@@ -169,6 +169,12 @@ export class OWLSignal<TData> extends Subscribable<TData> implements SignalLike<
     ) => readonly [StripNotAvailable<TData>, Array<Patch>],
     tags?: Array<WriteTag>,
   ) {
+    if (this.hasError()) {
+      if (tags !== undefined && tags.length > 0) {
+        this.setOuterSignal(this.outerSignal.get() as StripNotAvailable<TData>, tags);
+      }
+      return Promise.resolve();
+    }
     const { promise, reject, resolve } = makePromise<void>();
     this.queuedUpdates.push({
       updater,
