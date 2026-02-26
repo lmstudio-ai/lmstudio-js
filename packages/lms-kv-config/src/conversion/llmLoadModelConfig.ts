@@ -129,6 +129,11 @@ function kvConfigToLLMLlamaLoadModelConfig(
     result.tryMmap = tryMmap;
   }
 
+  const tryDirectIO = parsed.get("llama.tryDirectIO");
+  if (tryDirectIO !== undefined) {
+    result.tryDirectIO = tryDirectIO;
+  }
+
   const numExperts = parsed.get("numExperts");
   if (numExperts !== undefined) {
     result.numExperts = numExperts;
@@ -222,6 +227,7 @@ export function llmLoadModelConfigToKVConfig(config: LLMLoadModelConfig): KVConf
     "seed": maybeFalseValueToCheckboxValue(config.seed, 0),
     "llama.useFp16ForKVCache": config.useFp16ForKVCache,
     "llama.tryMmap": config.tryMmap,
+    "llama.tryDirectIO": config.tryDirectIO,
     "numExperts": config.numExperts,
     "llama.kCacheQuantizationType": maybeFalseValueToCheckboxValue(
       config.llamaKCacheQuantizationType,
