@@ -293,6 +293,7 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
           .field("keepModelInMemory", "boolean", {}, true)
           .field("useFp16ForKVCache", "boolean", {}, true)
           .field("tryMmap", "boolean", {}, true)
+          .field("tryDirectIO", "boolean", {}, false)
           .field(
             "kCacheQuantizationType",
             "llamaCacheQuantizationType",
