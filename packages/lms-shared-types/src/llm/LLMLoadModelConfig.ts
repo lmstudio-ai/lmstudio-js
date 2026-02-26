@@ -258,7 +258,8 @@ export interface LLMLoadModelConfig {
    * Attempts to use direct I/O (O_DIRECT) to read model files, bypassing the OS page cache.
    *
    * Direct I/O transfers data straight between disk and application memory without copying through
-   * the kernel's page cache. This may improve load performance on certain hardware devices.
+   * the kernel's page cache. This may improve load performance on certain hardware devices. Even
+   * when enabled, direct I/O may not be used if the platform or OS does not support it.
    */
   tryDirectIO?: boolean;
 
