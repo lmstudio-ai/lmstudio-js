@@ -50,6 +50,12 @@ describe("KVConfig helper functions", () => {
     ]);
   });
 
+  it("singleLayerKVConfigStackOf collapses to the same config", () => {
+    const config = makeKVConfigFromFields([kvConfigField("a", 1)]);
+    const stack = singleLayerKVConfigStackOf("instance", config);
+    expect(collapseKVStack(stack)).toEqual(config);
+  });
+
   it("collapseKVStack applies layers in order", () => {
     const stack = {
       layers: [

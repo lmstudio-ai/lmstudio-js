@@ -144,6 +144,14 @@ describe("KVConfigSchematics core behavior", () => {
     expect(schematics.parsePartial(config).get("num")).toBeUndefined();
   });
 
+  it("PartialParsedKVConfig.has reflects presence of fields", () => {
+    const { schematics } = createSchematics();
+    const config = makeKVConfigFromFields([kvConfigField("num", 1)]);
+    const partial = schematics.parsePartial(config);
+    expect(partial.has("num")).toBe(true);
+    expect(partial.has("name")).toBe(false);
+  });
+
   it("parse vs parsePartial: same config yields defaults only in parse", () => {
     const { schematics } = createSchematics();
     const config = makeKVConfigFromFields([kvConfigField("num", 5)]);
@@ -159,6 +167,27 @@ describe("KVConfigSchematics core behavior", () => {
     expect(schematics.access(config, "num")).toBe(4);
     expect(schematics.accessPartial(config, "name")).toBeUndefined();
     expect(schematics.accessByFullKey(config, "num")).toBe(4);
+  });
+
+  it("getFieldsMap uses full keys", () => {
+    const { schematics } = createSchematics();
+    const fields = schematics.getFieldsMap();
+    expect(fields.has("num")).toBe(true);
+    expect(fields.has("group.a")).toBe(true);
+    expect(fields.has("a")).toBe(false);
+  });
+
+  it("obtainField and obtainFieldByFullKey return matching full keys", () => {
+    const { schematics } = createSchematics();
+    expect(schematics.obtainField("num").fullKey).toBe("num");
+    expect(schematics.obtainFieldByFullKey("group.a").fullKey).toBe("group.a");
+  });
+
+  it("getSchemaForKey returns a schema that enforces parameters", () => {
+    const { schematics } = createSchematics();
+    const schema = schematics.getSchemaForKey("num");
+    expect(schema.safeParse(1).success).toBe(true);
+    expect(schema.safeParse(-1).success).toBe(false);
   });
 
   it("parseToMap variants use short or full keys", () => {
@@ -184,6 +213,22 @@ describe("KVConfigSchematics core behavior", () => {
     const partialMap = kvConfigToMap(partial);
     expect(partialMap.get("num")).toBe(7);
     expect(partialMap.has("name")).toBe(false);
+  });
+
+  it("createBuildPartialConfigInput produces a usable input object", () => {
+    const { schematics } = createSchematics();
+    const input = schematics.createBuildPartialConfigInput();
+    input.num = 3;
+    const config = schematics.buildPartialConfig(input);
+    expect(kvConfigToMap(config).get("num")).toBe(3);
+  });
+
+  it("withTypeParamOverride changes schema without affecting original", () => {
+    const { schematics } = createSchematics();
+    const updated = schematics.withTypeParamOverride("num", param => ({ ...param, min: 5 }));
+    expect(schematics.getSchemaForKey("num").safeParse(1).success).toBe(true);
+    expect(updated.getSchemaForKey("num").safeParse(1).success).toBe(false);
+    expect(updated.getSchemaForKey("num").safeParse(6).success).toBe(true);
   });
 
   it("buildFullConfig vs buildPartialConfig: defaults present only in full config", () => {
@@ -316,6 +361,12 @@ describe("KVConfigSchematics core behavior", () => {
     expect(diff.inBothButDifferent).toEqual(["flag"]);
   });
 
+  it("fieldEffectiveEqualsWithFullKey compares values by full key", () => {
+    const { schematics } = createSchematics();
+    expect(schematics.fieldEffectiveEqualsWithFullKey("num", 1, 1)).toBe(true);
+    expect(schematics.fieldEffectiveEqualsWithFullKey("num", 1, 2)).toBe(false);
+  });
+
   it("configEffectiveEquals respects effectiveEquals result", () => {
     const { schematics } = createSchematics();
     const a = makeKVConfigFromFields([kvConfigField("flag", "a")]);
@@ -374,6 +425,19 @@ describe("KVConfigSchematics core behavior", () => {
     const raw = collapseKVStackRaw([base, patch]);
     expect(kvConfigToMap(applied).get("unknown")).toBe(1);
     expect(kvConfigToMap(raw).get("unknown")).toBe(2);
+  });
+
+  it("lenient schema retains valid fields when no duplicates or unknowns", () => {
+    const { schematics } = createSchematics();
+    const config = makeKVConfigFromFields([
+      kvConfigField("num", 1),
+      kvConfigField("name", "ok"),
+    ]);
+    const parsed = schematics.getLenientZodSchema().parse(config);
+    expect(parsed.fields).toEqual([
+      { key: "num", value: 1 },
+      { key: "name", value: "ok" },
+    ]);
   });
 
   it("buildPartialConfig respects validation", () => {
