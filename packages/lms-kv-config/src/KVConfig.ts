@@ -276,7 +276,7 @@ export class KVConfigSchematicsBuilder<
    * visible). However, if a key starts with a prefix that is specified here, it will not be removed
    * when going through the lenient zod schema.
    */
-  private readonly extensionPrefixes: Array<string> = [];
+  private readonly extensionPrefixes: Set<string> = new Set();
 
   public constructor(
     private readonly valueTypeLibrary: KVFieldValueTypeLibrary<TKVFieldValueTypeLibraryMap>,
@@ -330,7 +330,7 @@ export class KVConfigSchematicsBuilder<
    * any extension fields will still not be accessible via this schematics.
    */
   public extension(prefix: string) {
-    this.extensionPrefixes.push(`${prefix}.`);
+    this.extensionPrefixes.add(`${prefix}.`);
     return this;
   }
 
@@ -389,9 +389,9 @@ export class KVConfigSchematicsBuilder<
         defaultValue,
       });
     }
-    this.extensionPrefixes.push(
-      ...innerBuilder.extensionPrefixes.map(prefix => `${scopeKey}.${prefix}`),
-    );
+    for (const prefix of innerBuilder.extensionPrefixes) {
+      this.extensionPrefixes.add(`${scopeKey}.${prefix}`);
+    }
     return this as any;
   }
 
@@ -409,7 +409,7 @@ export class KVConfigSchematics<
   public constructor(
     private readonly valueTypeLibrary: KVFieldValueTypeLibrary<TKVFieldValueTypeLibraryMap>,
     private readonly fields: Map<string, KVConcreteFieldSchema>,
-    private readonly extensionPrefixes: Array<string>,
+    private readonly extensionPrefixes: Set<string>,
   ) {}
 
   public getFieldsMap(): ReadonlyMap<string, KVConcreteFieldSchema> {
@@ -607,10 +607,11 @@ export class KVConfigSchematics<
       }
       newFields.set(key, field);
     }
-    return new KVConfigSchematics(this.valueTypeLibrary, newFields, [
-      ...this.extensionPrefixes,
-      ...other.extensionPrefixes,
-    ]);
+    return new KVConfigSchematics(
+      this.valueTypeLibrary,
+      newFields,
+      new Set([...this.extensionPrefixes, ...other.extensionPrefixes]),
+    );
   }
 
   /**
@@ -717,7 +718,7 @@ export class KVConfigSchematics<
     return new KVConfigSchematics(
       this.valueTypeLibrary,
       new Map(this.fields),
-      this.extensionPrefixes,
+      new Set(this.extensionPrefixes),
     );
   }
 
@@ -756,13 +757,22 @@ export class KVConfigSchematics<
    */
   private lenientZodSchema: ZodSchema<KVConfig> | undefined = undefined;
 
+  private hasExtensionPrefix(key: string): boolean {
+    for (const prefix of this.extensionPrefixes) {
+      if (key.startsWith(prefix)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   private makeLenientZodSchema(): ZodSchema<KVConfig> {
     const fullKeyMap = this.getFullKeyMap();
     return kvConfigSchema.transform(value => {
       const seenKeys = new Set<string>();
       return {
         fields: value.fields.filter(field => {
-          if (this.extensionPrefixes.some(prefix => field.key.startsWith(prefix))) {
+          if (this.hasExtensionPrefix(field.key)) {
             // If we matched an extension prefix, we don't care about the key or value type. Just
             // allow it.
             return true;
@@ -1140,7 +1150,7 @@ export class KVConfigSchematics<
         typeParams: field.valueTypeParams,
         defaultValue: field.defaultValue!,
       })),
-      extensionPrefixes: this.extensionPrefixes,
+      extensionPrefixes: Array.from(this.extensionPrefixes),
     };
   }
 
@@ -1176,7 +1186,11 @@ export class KVConfigSchematics<
         ];
       }),
     );
-    return new KVConfigSchematics(valueTypeLibrary, fields, serialized.extensionPrefixes ?? []);
+    return new KVConfigSchematics(
+      valueTypeLibrary,
+      fields,
+      new Set(serialized.extensionPrefixes ?? []),
+    );
   }
   public static tryDeserialize(
     valueTypeLibrary: KVFieldValueTypeLibrary<any>,
@@ -1209,7 +1223,7 @@ export class KVConfigSchematics<
       schematics: new KVConfigSchematics(
         valueTypeLibrary,
         fields,
-        serialized.extensionPrefixes ?? [],
+        new Set(serialized.extensionPrefixes ?? []),
       ),
       errors,
     };
@@ -1253,7 +1267,7 @@ export function stripBaseKeyFromKVConfig(baseKey: string, config: KVConfig): KVC
 export class KVConfigBuilder<TKVConfigSchema extends KVVirtualConfigSchema> {
   public constructor(
     private readonly fieldDefs: Map<string, KVConcreteFieldSchema>,
-    private readonly extensionPrefixes: Array<string>,
+    private readonly extensionPrefixes: Set<string>,
   ) {}
   private readonly fields: Map<string, any> = new Map();
   public with<TKey extends keyof TKVConfigSchema & string>(
@@ -1274,7 +1288,14 @@ export class KVConfigBuilder<TKVConfigSchema extends KVVirtualConfigSchema> {
    * Example: Virtual model custom fields
    */
   public withExtensionField(key: string, value: any) {
-    if (!this.extensionPrefixes.some(prefix => key.startsWith(prefix))) {
+    let matched = false;
+    for (const prefix of this.extensionPrefixes) {
+      if (key.startsWith(prefix)) {
+        matched = true;
+        break;
+      }
+    }
+    if (!matched) {
       throw new Error(
         `Key ${key} does not start with any registered extension prefixes in the schematics`,
       );
