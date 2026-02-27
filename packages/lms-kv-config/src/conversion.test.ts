@@ -39,6 +39,12 @@ describe("conversion helpers", () => {
     expect(result.temperature).toBe(0.8);
   });
 
+  it("kvConfigToLLMPredictionConfig without defaults leaves missing fields undefined", () => {
+    const config = makeKVConfigFromFields([]);
+    const result = kvConfigToLLMPredictionConfig(config, { useDefaultsForMissingKeys: false });
+    expect(result.temperature).toBeUndefined();
+  });
+
   it("kvConfigToLLMLoadModelConfig parses gguf fields", () => {
     const config = llmLlamaMoeLoadConfigSchematics.buildPartialConfig({
       "numParallelSessions": 5,
@@ -66,6 +72,26 @@ describe("conversion helpers", () => {
     const result = kvConfigToLLMLoadModelConfig(config, { modelFormat: "safetensors" });
     expect(result.maxParallelPredictions).toBe(3);
     expect(result.mlxKvCacheQuantization).toBe(false);
+  });
+
+  it("gguf vs safetensors: gguf ignores mlx-only fields", () => {
+    const config = llmMlxLoadConfigSchematics.buildPartialConfig({
+      "mlx.kvCacheQuantization": {
+        enabled: true,
+        bits: 4,
+        groupSize: 32,
+        quantizedStart: 1000,
+      },
+    });
+    const gguf = kvConfigToLLMLoadModelConfig(config, { modelFormat: "gguf" });
+    const mlx = kvConfigToLLMLoadModelConfig(config, { modelFormat: "safetensors" });
+    expect(gguf.mlxKvCacheQuantization).toBeUndefined();
+    expect(mlx.mlxKvCacheQuantization).toEqual({
+      enabled: true,
+      bits: 4,
+      groupSize: 32,
+      quantizedStart: 1000,
+    });
   });
 
   it("llmLoadModelConfigToKVConfig maps mlx kv cache quantization", () => {

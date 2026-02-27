@@ -144,6 +144,15 @@ describe("KVConfigSchematics core behavior", () => {
     expect(schematics.parsePartial(config).get("num")).toBeUndefined();
   });
 
+  it("parse vs parsePartial: same config yields defaults only in parse", () => {
+    const { schematics } = createSchematics();
+    const config = makeKVConfigFromFields([kvConfigField("num", 5)]);
+    const parsed = schematics.parse(config);
+    const partial = schematics.parsePartial(config);
+    expect(parsed.get("name")).toBe("default");
+    expect(partial.get("name")).toBeUndefined();
+  });
+
   it("access/accessPartial/accessByFullKey behave as expected", () => {
     const { schematics } = createSchematics();
     const config = makeKVConfigFromFields([kvConfigField("num", 4)]);
@@ -175,6 +184,14 @@ describe("KVConfigSchematics core behavior", () => {
     const partialMap = kvConfigToMap(partial);
     expect(partialMap.get("num")).toBe(7);
     expect(partialMap.has("name")).toBe(false);
+  });
+
+  it("buildFullConfig vs buildPartialConfig: defaults present only in full config", () => {
+    const { schematics } = createSchematics();
+    const full = schematics.buildFullConfig({ num: 2 });
+    const partial = schematics.buildPartialConfig({ num: 2 });
+    expect(kvConfigToMap(full).has("name")).toBe(true);
+    expect(kvConfigToMap(partial).has("name")).toBe(false);
   });
 
   it("configBuilder supports extension fields and validates extension prefixes", () => {
@@ -241,6 +258,18 @@ describe("KVConfigSchematics core behavior", () => {
     expect(excluded.fields).toEqual([{ key: "name", value: "n" }]);
   });
 
+  it("filterConfig with and without additionalFilter changes output", () => {
+    const { schematics } = createSchematics();
+    const config = makeKVConfigFromFields([
+      kvConfigField("num", 1),
+      kvConfigField("name", "n"),
+    ]);
+    const withoutFilter = schematics.filterConfig(config);
+    const withFilter = schematics.filterConfig(config, fullKey => fullKey === "num");
+    expect(withoutFilter.fields.length).toBe(2);
+    expect(withFilter.fields).toEqual([{ key: "num", value: 1 }]);
+  });
+
   it("stringifyField uses translation fallback when not provided", () => {
     const { schematics } = createSchematics();
     expect(schematics.stringifyField("name", "hi")).toBe("STR:hi");
@@ -249,6 +278,16 @@ describe("KVConfigSchematics core behavior", () => {
         t: key => (key === "test:str" ? "OK" : "NO"),
       }),
     ).toBe("OK:hi");
+  });
+
+  it("stringifyField with translator differs from default fallback", () => {
+    const { schematics } = createSchematics();
+    const defaultOut = schematics.stringifyField("name", "hi");
+    const translated = schematics.stringifyField("name", "hi", {
+      t: (_key, fallback) => fallback.replace("STR", "X"),
+    });
+    expect(defaultOut).toBe("STR:hi");
+    expect(translated).toBe("X:hi");
   });
 
   it("tryStringifyFieldWithFullKey returns null for unknown keys", () => {
@@ -327,6 +366,16 @@ describe("KVConfigSchematics core behavior", () => {
     expect(kvConfigToMap(unapplied).get("num")).toBeUndefined();
   });
 
+  it("apply vs raw collapse: schematics filters unknown fields", () => {
+    const { schematics } = createSchematics();
+    const base = makeKVConfigFromFields([kvConfigField("unknown", 1)]);
+    const patch = makeKVConfigFromFields([kvConfigField("unknown", 2)]);
+    const applied = schematics.apply(base, patch);
+    const raw = collapseKVStackRaw([base, patch]);
+    expect(kvConfigToMap(applied).get("unknown")).toBe(1);
+    expect(kvConfigToMap(raw).get("unknown")).toBe(2);
+  });
+
   it("buildPartialConfig respects validation", () => {
     const { schematics } = createSchematics();
     expect(() => schematics.buildPartialConfig({ num: -1 })).toThrow();
@@ -344,6 +393,14 @@ describe("KVConfigSchematics core behavior", () => {
     const built = schematics.configBuilder().with("group.a", 9).build();
     const map = kvConfigToMap(built);
     expect(map.has("group.a")).toBe(true);
+  });
+
+  it("scoped vs non-scoped access yields same value with different key forms", () => {
+    const { schematics } = createSchematics();
+    const config = makeKVConfigFromFields([kvConfigField("group.a", 6)]);
+    const scoped = schematics.scoped("group");
+    expect(schematics.access(config, "group.a")).toBe(6);
+    expect(scoped.access(config, "a")).toBe(6);
   });
 
   it("accessByFullKey throws for missing keys", () => {

@@ -89,6 +89,38 @@ describe("KVConfig helper functions", () => {
     expect(combined.layers.length).toBe(3);
   });
 
+  it("addKVConfigToStack vs addKVConfigToBaseOfStack affects precedence", () => {
+    const base = singleLayerKVConfigStackOf(
+      "instance",
+      makeKVConfigFromFields([kvConfigField("a", 1)]),
+    );
+    const top = addKVConfigToStack(
+      base,
+      "apiOverride",
+      makeKVConfigFromFields([kvConfigField("a", 2)]),
+    );
+    const bottom = addKVConfigToBaseOfStack(
+      base,
+      "hardware",
+      makeKVConfigFromFields([kvConfigField("a", 3)]),
+    );
+    expect(kvConfigToMap(collapseKVStack(top)).get("a")).toBe(2);
+    expect(kvConfigToMap(collapseKVStack(bottom)).get("a")).toBe(1);
+  });
+
+  it("combineKVStack preserves layer order when collapsed", () => {
+    const first = singleLayerKVConfigStackOf(
+      "instance",
+      makeKVConfigFromFields([kvConfigField("a", 1)]),
+    );
+    const second = singleLayerKVConfigStackOf(
+      "apiOverride",
+      makeKVConfigFromFields([kvConfigField("a", 2)]),
+    );
+    const combined = combineKVStack([first, second]);
+    expect(kvConfigToMap(collapseKVStack(combined)).get("a")).toBe(2);
+  });
+
   it("filterKVConfig filters by predicate", () => {
     const config = makeKVConfigFromFields([kvConfigField("a", 1), kvConfigField("b", 2)]);
     const filtered = filterKVConfig(config, key => key === "a");
