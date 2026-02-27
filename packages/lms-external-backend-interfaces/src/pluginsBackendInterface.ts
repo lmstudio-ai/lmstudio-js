@@ -1,6 +1,7 @@
 import { BackendInterface } from "@lmstudio/lms-communication";
 import { type InferClientPort } from "@lmstudio/lms-communication-client";
 import {
+  availablePluginInfoSchema,
   chatHistoryDataSchema,
   chatMessageDataSchema,
   jsonSerializableSchema,
@@ -8,13 +9,12 @@ import {
   llmPredictionFragmentInputOptsSchema,
   llmPredictionFragmentSchema,
   llmToolSchema,
-  promptProcessingDetailsSchema,
   pluginConfigSpecifierSchema,
   pluginManifestSchema,
   processingRequestResponseSchema,
   processingRequestSchema,
   processingUpdateSchema,
-  remotePluginInfoSchema,
+  promptProcessingDetailsSchema,
   serializedKVConfigSchematicsSchema,
   serializedLMSExtendedErrorSchema,
   tokenSourceIdentifierSchema,
@@ -218,7 +218,7 @@ export function createPluginsBackendInterface() {
             /**
              * An array of all the plugins that are enabled for this prediction.
              */
-            enabledPluginInfos: z.array(remotePluginInfoSchema),
+            enabledPluginInfos: z.array(availablePluginInfoSchema),
             /** Processing Context Identifier */
             pci: z.string(),
             token: z.string(),
@@ -258,7 +258,7 @@ export function createPluginsBackendInterface() {
             /**
              * An array of all the plugins that are enabled for this prediction.
              */
-            enabledPluginInfos: z.array(remotePluginInfoSchema),
+            enabledPluginInfos: z.array(availablePluginInfoSchema),
             /** Processing Context Identifier */
             pci: z.string(),
             token: z.string(),
