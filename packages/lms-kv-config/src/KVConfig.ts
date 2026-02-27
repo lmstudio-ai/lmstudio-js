@@ -770,28 +770,31 @@ export class KVConfigSchematics<
     const fullKeyMap = this.getFullKeyMap();
     return kvConfigSchema.transform(value => {
       const seenKeys = new Set<string>();
-      return {
-        fields: value.fields.filter(field => {
-          if (this.hasExtensionPrefix(field.key)) {
-            // If we matched an extension prefix, we don't care about the key or value type. Just
-            // allow it.
-            return true;
-          }
-          if (seenKeys.has(field.key)) {
-            return false;
-          }
-          const fieldDef = fullKeyMap.get(field.key);
-          if (fieldDef === undefined) {
-            return false;
-          }
-          const parsed = fieldDef.schema.safeParse(field.value);
-          if (!parsed.success) {
-            return false;
-          }
-          seenKeys.add(field.key);
-          return true;
-        }),
-      };
+      const filtered: Array<KVConfig["fields"][number]> = [];
+      for (let i = value.fields.length - 1; i >= 0; i--) {
+        const field = value.fields[i];
+        if (this.hasExtensionPrefix(field.key)) {
+          // If we matched an extension prefix, we don't care about the key or value type. Just
+          // allow it.
+          filtered.push(field);
+          continue;
+        }
+        if (seenKeys.has(field.key)) {
+          continue;
+        }
+        const fieldDef = fullKeyMap.get(field.key);
+        if (fieldDef === undefined) {
+          continue;
+        }
+        const parsed = fieldDef.schema.safeParse(field.value);
+        if (!parsed.success) {
+          continue;
+        }
+        seenKeys.add(field.key);
+        filtered.push(field);
+      }
+      filtered.reverse();
+      return { fields: filtered };
     });
   }
 
@@ -937,12 +940,16 @@ export class KVConfigSchematics<
           return false;
         }
       }
-      this.valueTypeLibrary.effectiveEquals(
-        field.valueTypeKey,
-        field.valueTypeParams,
-        aValue,
-        bValue,
-      );
+      if (
+        !this.valueTypeLibrary.effectiveEquals(
+          field.valueTypeKey,
+          field.valueTypeParams,
+          aValue,
+          bValue,
+        )
+      ) {
+        return false;
+      }
     }
 
     return true;
