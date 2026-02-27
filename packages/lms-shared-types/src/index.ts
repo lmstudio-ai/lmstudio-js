@@ -27,6 +27,10 @@ export {
   ArtifactModelDependency,
   artifactModelDependencySchema,
 } from "./ArtifactManifestBase.js";
+export {
+  AvailablePluginInfo as AvailablePluginInfo,
+  availablePluginInfoSchema,
+} from "./AvailablePluginInfo.js";
 export { BackendNotification, backendNotificationSchema } from "./BackendNotification.js";
 export {
   ChatHistoryData,
@@ -390,7 +394,6 @@ export {
 } from "./ProjectYaml.js";
 export { Quantization, quantizationSchema } from "./Quantization.js";
 export { reasonableKeyStringSchema } from "./reasonable.js";
-export { RemotePluginInfo, remotePluginInfoSchema } from "./RemotePluginInfo.js";
 export {
   ArtifactDownloadPlan,
   ArtifactDownloadPlanModelInfo,

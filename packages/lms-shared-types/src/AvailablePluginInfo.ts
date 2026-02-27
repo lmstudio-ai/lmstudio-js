@@ -8,7 +8,7 @@ import { z, type ZodSchema } from "zod";
  *
  * @public
  */
-export interface RemotePluginInfo {
+export interface AvailablePluginInfo {
   /**
    * The identifier of the plugin. For non-dev plugins, this is the same as the artifact identifier
    * when uploaded to LM Studio Hub. For example, `lmstudio/dice`.
@@ -44,7 +44,7 @@ export interface RemotePluginInfo {
    */
   hasGenerator: boolean;
 }
-export const remotePluginInfoSchema = z.object({
+export const availablePluginInfoSchema = z.object({
   identifier: z.string(),
   isDev: z.boolean(),
   isTrusted: z.boolean(),
@@ -52,4 +52,4 @@ export const remotePluginInfoSchema = z.object({
   hasPredictionLoopHandler: z.boolean(),
   hasToolsProvider: z.boolean(),
   hasGenerator: z.boolean(),
-}) as ZodSchema<RemotePluginInfo>;
+}) as ZodSchema<AvailablePluginInfo>;
