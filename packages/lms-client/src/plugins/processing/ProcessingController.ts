@@ -1,6 +1,7 @@
 import { Cleaner, raceWithAbortSignal, type SimpleLogger } from "@lmstudio/lms-common";
 import { type PluginsPort } from "@lmstudio/lms-external-backend-interfaces";
 import {
+  type AvailablePluginInfo,
   type ChatMessageRoleData,
   type ContentBlockStyle,
   type KVConfig,
@@ -9,7 +10,6 @@ import {
   type ProcessingRequest,
   type ProcessingRequestResponse,
   type ProcessingUpdate,
-  type RemotePluginInfo,
   type StatusStepState,
   type TokenSourceIdentifier,
   type ToolStatusStepStateStatus,
@@ -204,7 +204,7 @@ export class ProcessingController extends BaseController {
     pluginConfig: KVConfig,
     globalPluginConfig: KVConfig,
     workingDirectoryPath: string | null,
-    private readonly enabledPluginInfos: Array<RemotePluginInfo>,
+    private readonly enabledPluginInfos: Array<AvailablePluginInfo>,
     /** @internal */
     private readonly connector: ProcessingConnector,
     /** @internal */
