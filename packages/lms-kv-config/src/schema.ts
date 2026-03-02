@@ -205,7 +205,7 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
           .field(
             "presencePenalty",
             "checkboxNumeric",
-            { precision: 2 },
+            { step: 0.01, precision: 2 },
             { checked: false, value: 0.0 },
           )
           .field(
