@@ -75,6 +75,11 @@ export function kvConfigToLLMPredictionConfig(
     result.repeatPenalty = repeatPenalty.checked ? repeatPenalty.value : false;
   }
 
+  const presencePenalty = parsed.get("llama.presencePenalty");
+  if (presencePenalty !== undefined) {
+    result.presencePenalty = presencePenalty.checked ? presencePenalty.value : false;
+  }
+
   const minPSampling = parsed.get("minPSampling");
   if (minPSampling !== undefined) {
     result.minPSampling = minPSampling.checked ? minPSampling.value : false;
@@ -173,6 +178,7 @@ export function llmPredictionConfigToKVConfig(config: LLMPredictionConfig): KVCo
     "toolNaming": config.toolNaming,
     "topKSampling": config.topKSampling,
     "repeatPenalty": maybeFalseValueToCheckboxValue(config.repeatPenalty, 1.1),
+    "llama.presencePenalty": maybeFalseValueToCheckboxValue(config.presencePenalty, 0),
     "minPSampling": maybeFalseValueToCheckboxValue(config.minPSampling, 0.05),
     "topPSampling": maybeFalseValueToCheckboxValue(config.topPSampling, 0.95),
     "llama.xtcProbability": maybeFalseValueToCheckboxValue(config.xtcProbability, 0),
