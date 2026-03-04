@@ -11,7 +11,7 @@ const compiledTemplatesCache = new WeakMap<TemplateStringsArray, Array<string>>(
  *
  * @public
  */
-export type TextAllowedTypes = string | number | object;
+export type TextAllowedTypes = string | number | object | null;
 
 /**
  * A string literal tag function that does the following:
@@ -45,6 +45,10 @@ export function text(strings: TemplateStringsArray, ...values: ReadonlyArray<Tex
   // being accessed by any other code.
   for (let i = 0; i < values.length; i++) {
     if (typeof values[i] === "object") {
+      if (values[i] === null) {
+        compiled[i * 2 + 1] = "null";
+        continue;
+      }
       if (typeof (values[i] as any).stack === "string") {
         compiled[i * 2 + 1] = (values[i] as any).stack;
       } else {
