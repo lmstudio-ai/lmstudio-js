@@ -231,14 +231,46 @@ type GuardToolCallResult =
  * change in the future.
  */
 export class GuardToolCallController {
+  private readonly resultContainer: [
+    result:
+      | {
+          type: "allow";
+        }
+      | {
+          type: "allowAndOverrideParameters";
+          parameters: Record<string, any>;
+        }
+      | {
+          type: "deny";
+          reason?: string;
+        }
+      | null,
+  ];
+
   /**
    * Don't construct this object yourself.
    */
   public constructor(
     public readonly toolCallRequest: ToolCallRequest,
     public readonly tool: Tool,
-    public readonly resultContainer: [result: GuardToolCallResult | null],
-  ) {}
+    resultContainer: [
+      result:
+        | {
+            type: "allow";
+          }
+        | {
+            type: "allowAndOverrideParameters";
+            parameters: Record<string, any>;
+          }
+        | {
+            type: "deny";
+            reason?: string;
+          }
+        | null,
+    ],
+  ) {
+    this.resultContainer = resultContainer as [result: GuardToolCallResult | null];
+  }
 
   private assertNoResultYet(calledMethodName: string, stack?: string): void {
     if (this.resultContainer[0] === null) {

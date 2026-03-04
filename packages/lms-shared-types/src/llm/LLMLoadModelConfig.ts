@@ -96,6 +96,11 @@ export const llmLlamaCacheQuantizationTypeSchema = z.enum(llmLlamaCacheQuantizat
 
 // MLX KV cache quantization
 export const llmMlxKvCacheBitsTypes = [8, 6, 4, 3, 2] as const;
+/**
+ * Allowed bit widths for MLX KV cache quantization.
+ *
+ * @public
+ */
 export type LLMMlxKvCacheBitsType = (typeof llmMlxKvCacheBitsTypes)[number];
 export const llmMlxKvCacheBitsTypeSchema = z.union([
   z.literal(8),
@@ -105,6 +110,11 @@ export const llmMlxKvCacheBitsTypeSchema = z.union([
   z.literal(2),
 ]);
 export const llmMlxKvCacheGroupSizeTypes = [32, 64, 128] as const;
+/**
+ * Allowed group sizes for MLX KV cache quantization.
+ *
+ * @public
+ */
 export type LLMMlxKvCacheGroupSizeType = (typeof llmMlxKvCacheGroupSizeTypes)[number];
 export const llmMlxKvCacheGroupSizeTypesSchema = z.union([
   z.literal(32),
@@ -118,8 +128,8 @@ export const llmMlxKvCacheGroupSizeTypesSchema = z.union([
  */
 export type LLMMlxKvCacheQuantization = {
   enabled: boolean;
-  bits: 8 | 6 | 4 | 3 | 2;
-  groupSize: 32 | 64 | 128;
+  bits: LLMMlxKvCacheBitsType;
+  groupSize: LLMMlxKvCacheGroupSizeType;
   quantizedStart: number;
 };
 export const llmMlxKvCacheQuantizationSchema = z.object({

@@ -92,8 +92,7 @@ class GeneratorConnectorImpl implements GeneratorConnector {
 }
 
 /**
- * @deprecated This class is used internally by a plugin to register hooks. Do not use directly.
- * @public
+ * @internal Used by plugins to register hooks with the host runtime.
  */
 export class PluginSelfRegistrationHost {
   public constructor(

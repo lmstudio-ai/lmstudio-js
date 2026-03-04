@@ -2,6 +2,13 @@ import { z, type ZodSchema } from "zod";
 import { modelFormatNameSchema, type ModelFormatName } from "./RuntimeCommon.js";
 import { runtimeEngineSpecifierSchema, type RuntimeEngineSpecifier } from "./RuntimeEngine.js";
 
+/**
+ * Controls which engines are included in a hardware survey.
+ *
+ * @public
+ * @experimental [EXP-RUNTIME-EXTENSION] Runtime extensions related APIs are experimental and may
+ * change in the future.
+ */
 export type RuntimeHardwareSurveyScope =
   | { type: "selected" }
   | { type: "all" }
@@ -70,6 +77,13 @@ export const runtimeHardwareSurveyCompatibilitySchema = z.object({
   message: z.string().optional(),
 }) as ZodSchema<RuntimeHardwareSurveyCompatibility>;
 
+/**
+ * High-level result codes for a hardware survey step.
+ *
+ * @public
+ * @experimental [EXP-RUNTIME-EXTENSION] Runtime extensions related APIs are experimental and may
+ * change in the future.
+ */
 export type RuntimeHardwareSurveyResultCode =
   | "Unset"
   | "Success"
@@ -127,6 +141,13 @@ export const runtimeHardwareCpuSurveyResultSchema = z.object({
   cpuInfo: runtimeHardwareCpuInfoSchema.optional(),
 }) as ZodSchema<RuntimeHardwareCpuSurveyResult>;
 
+/**
+ * The platform used to detect GPUs.
+ *
+ * @public
+ * @experimental [EXP-RUNTIME-EXTENSION] Runtime extensions related APIs are experimental and may
+ * change in the future.
+ */
 export type RuntimeHardwareGpuDetectionPlatform =
   | "Unknown"
   | "Shell"
@@ -145,6 +166,13 @@ export const runtimeHardwareGpuDetectionPlatformSchema = z.enum([
   "Vulkan",
 ]) as ZodSchema<RuntimeHardwareGpuDetectionPlatform>;
 
+/**
+ * GPU integration class for detected devices.
+ *
+ * @public
+ * @experimental [EXP-RUNTIME-EXTENSION] Runtime extensions related APIs are experimental and may
+ * change in the future.
+ */
 export type RuntimeHardwareGpuIntegrationType = "Unknown" | "Integrated" | "Discrete";
 export const runtimeHardwareGpuIntegrationTypeSchema = z.enum([
   "Unknown",
@@ -152,6 +180,13 @@ export const runtimeHardwareGpuIntegrationTypeSchema = z.enum([
   "Discrete",
 ]) as ZodSchema<RuntimeHardwareGpuIntegrationType>;
 
+/**
+ * Details for a detected GPU device.
+ *
+ * @public
+ * @experimental [EXP-RUNTIME-EXTENSION] Runtime extensions related APIs are experimental and may
+ * change in the future.
+ */
 export interface RuntimeHardwareGpuInfo {
   name: string;
   deviceId: number;
@@ -211,6 +246,13 @@ export const runtimeHardwareSurveyVisibleDevicesConfigSchema = z.object({
   changesOrder: z.boolean(),
 }) as ZodSchema<RuntimeHardwareSurveyVisibleDevicesConfig>;
 
+/**
+ * Survey results for a single runtime engine.
+ *
+ * @public
+ * @experimental [EXP-RUNTIME-EXTENSION] Runtime extensions related APIs are experimental and may
+ * change in the future.
+ */
 export interface RuntimeHardwareSurveyEngine {
   name: string;
   version: string;
@@ -234,6 +276,13 @@ export const runtimeHardwareSurveyEngineSchema = z.object({
   visibleDevicesConfig: runtimeHardwareSurveyVisibleDevicesConfigSchema.optional(),
 }) as ZodSchema<RuntimeHardwareSurveyEngine>;
 
+/**
+ * Top-level hardware survey result.
+ *
+ * @public
+ * @experimental [EXP-RUNTIME-EXTENSION] Runtime extensions related APIs are experimental and may
+ * change in the future.
+ */
 export interface RuntimeHardwareSurveyResult {
   status: RuntimeHardwareSurveyStatus;
   engines: RuntimeHardwareSurveyEngine[];
