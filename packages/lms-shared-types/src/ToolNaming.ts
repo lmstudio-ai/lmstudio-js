@@ -9,6 +9,8 @@ import { z } from "zod";
  *   underscores.
  * - `snakeCase`: The tool name is transformed to snake_case.
  * - `camelCase`: The tool name is transformed to camelCase.
+ *
+ * @public
  */
 export type ToolNaming = "passThrough" | "removeSpecial" | "snakeCase" | "camelCase";
 export const toolNamingSchema = z.enum(["passThrough", "removeSpecial", "snakeCase", "camelCase"]);

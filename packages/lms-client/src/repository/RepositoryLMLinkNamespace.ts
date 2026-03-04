@@ -2,7 +2,13 @@ import { getCurrentStack, type LoggerInterface, SimpleLogger } from "@lmstudio/l
 import { type RepositoryPort } from "@lmstudio/lms-external-backend-interfaces";
 import { type LMLinkStatusResult } from "@lmstudio/lms-shared-types";
 
-/** @public */
+/**
+ * LM Link management APIs.
+ *
+ * @public
+ * @deprecated [DEP-HUB-API-ACCESS] LM Studio Hub API access is still in active development
+ * and will change. Not recommended for public adoption.
+ */
 export class RepositoryLMLinkNamespace {
   /** @internal */
   private readonly logger: SimpleLogger;

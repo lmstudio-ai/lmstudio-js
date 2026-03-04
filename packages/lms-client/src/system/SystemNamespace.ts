@@ -35,7 +35,19 @@ const startHttpServerOptsSchema = z.object({
     .optional(),
 });
 
-type StartHttpServerOpts = z.infer<typeof startHttpServerOptsSchema>;
+/**
+ * Options for starting the local HTTP server.
+ *
+ * @public
+ * @experimental
+ */
+export type StartHttpServerOpts = z.infer<typeof startHttpServerOptsSchema>;
+
+/**
+ * Basic information about the LM Studio service process.
+ *
+ * @public
+ */
 export interface ServiceInfo {
   pid: number;
   isDaemon: boolean;

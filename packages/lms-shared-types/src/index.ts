@@ -57,6 +57,9 @@ export { ColorPalette, colorPalette, colorPaletteSchema } from "./ColorPalette.j
 export {
   DiagnosticsLogEvent,
   DiagnosticsLogEventData,
+  DiagnosticsLogInputEventData,
+  DiagnosticsLogOutputEventData,
+  DiagnosticsLogServerEventData,
   diagnosticsLogEventDataSchema,
   diagnosticsLogEventSchema,
   DiagnosticsLogRuntimeEventData,
@@ -139,7 +142,11 @@ export {
   kvConfigStackLayerSchema,
   kvConfigStackSchema,
 } from "./KVConfig.js";
-export { ContentBlockStyle, contentBlockStyleSchema } from "./llm/ContentBlockStyle.js";
+export {
+  ContentBlockStyle,
+  ContentBlockStyleBase,
+  contentBlockStyleSchema,
+} from "./llm/ContentBlockStyle.js";
 export {
   LLMApplyPromptTemplateOpts,
   llmApplyPromptTemplateOptsSchema,
@@ -168,6 +175,7 @@ export {
   LLMMlxKvCacheGroupSizeType,
   llmMlxKvCacheGroupSizeTypes,
   llmMlxKvCacheGroupSizeTypesSchema,
+  LLMMlxKvCacheQuantization,
   llmMlxKvCacheQuantizationSchema,
   LLMSplitStrategy,
   llmSplitStrategySchema,
@@ -352,7 +360,11 @@ export {
   modelInstanceInfoBaseSchema,
 } from "./ModelInfoBase.js";
 export { ModelManifest, modelManifestSchema } from "./ModelManifest.js";
-export { ModelProcessingState, modelProcessingStateSchema } from "./ModelProcessingStatus.js";
+export {
+  ModelProcessingState,
+  modelProcessingStateSchema,
+  ModelProcessingStatus,
+} from "./ModelProcessingStatus.js";
 export {
   ModelQuery,
   modelQuerySchema,

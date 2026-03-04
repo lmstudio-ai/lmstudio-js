@@ -111,10 +111,15 @@ export const llmMlxKvCacheGroupSizeTypesSchema = z.union([
   z.literal(64),
   z.literal(128),
 ]);
+/**
+ * Quantization settings for MLX KV cache.
+ *
+ * @public
+ */
 export type LLMMlxKvCacheQuantization = {
   enabled: boolean;
-  bits: LLMMlxKvCacheBitsType;
-  groupSize: LLMMlxKvCacheGroupSizeType;
+  bits: 8 | 6 | 4 | 3 | 2;
+  groupSize: 32 | 64 | 128;
   quantizedStart: number;
 };
 export const llmMlxKvCacheQuantizationSchema = z.object({
