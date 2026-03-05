@@ -15,7 +15,7 @@ if [ ! -f "${ENTRY_JS}" ]; then
 fi
 
 if [ "${ARCH}" = "aarch64" ] || [ "${ARCH}" = "arm64" ]; then
-  # Use Deno on linux arm64 (bun does not support linux arm64)
+  # Use Deno on linux arm64 (bun does not support 64k page sizes on linux arm)
   DENO_BINARY_PATH="${DIST_DIR}/deno"
 
   if [ ! -f "${DENO_BINARY_PATH}" ]; then
