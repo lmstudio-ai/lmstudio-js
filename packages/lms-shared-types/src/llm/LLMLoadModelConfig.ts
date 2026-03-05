@@ -101,7 +101,7 @@ export const llmMlxKvCacheBitsTypes = [8, 6, 4, 3, 2] as const;
  *
  * @public
  */
-export type LLMMlxKvCacheBitsType = (typeof llmMlxKvCacheBitsTypes)[number];
+export type LLMMlxKvCacheBitsType = 8 | 6 | 4 | 3 | 2;
 export const llmMlxKvCacheBitsTypeSchema = z.union([
   z.literal(8),
   z.literal(6),
@@ -115,7 +115,7 @@ export const llmMlxKvCacheGroupSizeTypes = [32, 64, 128] as const;
  *
  * @public
  */
-export type LLMMlxKvCacheGroupSizeType = (typeof llmMlxKvCacheGroupSizeTypes)[number];
+export type LLMMlxKvCacheGroupSizeType = 32 | 64 | 128;
 export const llmMlxKvCacheGroupSizeTypesSchema = z.union([
   z.literal(32),
   z.literal(64),

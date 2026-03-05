@@ -531,6 +531,8 @@ export {
   RuntimeHardwareSurveyEngine,
   runtimeHardwareSurveyEngineSchema,
   RuntimeHardwareSurveyResult,
+  RuntimeHardwareSurveyStatus,
+  runtimeHardwareSurveyStatusSchema,
   RuntimeHardwareSurveyResultCode,
   runtimeHardwareSurveyResultCodeSchema,
   runtimeHardwareSurveyResultSchema,

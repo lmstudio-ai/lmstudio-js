@@ -22,6 +22,13 @@ export const runtimeHardwareSurveyScopeSchema = z.discriminatedUnion("type", [
   }),
 ]) as ZodSchema<RuntimeHardwareSurveyScope>;
 
+/**
+ * Overall status for a hardware survey.
+ *
+ * @public
+ * @experimental [EXP-RUNTIME-EXTENSION] Runtime extensions related APIs are experimental and may
+ * change in the future.
+ */
 export type RuntimeHardwareSurveyStatus = "OK" | "NoCompatibleBackends";
 export const runtimeHardwareSurveyStatusSchema = z.enum([
   "OK",
