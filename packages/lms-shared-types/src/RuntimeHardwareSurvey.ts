@@ -29,10 +29,10 @@ export const runtimeHardwareSurveyScopeSchema = z.discriminatedUnion("type", [
  * @experimental [EXP-RUNTIME-EXTENSION] Runtime extensions related APIs are experimental and may
  * change in the future.
  */
-export type RuntimeHardwareSurveyStatus = "OK" | "NoCompatibleBackends";
+export type RuntimeHardwareSurveyStatus = "ok" | "noCompatibleBackends";
 export const runtimeHardwareSurveyStatusSchema = z.enum([
-  "OK",
-  "NoCompatibleBackends",
+  "ok",
+  "noCompatibleBackends",
 ]) as ZodSchema<RuntimeHardwareSurveyStatus>;
 
 /**
@@ -43,43 +43,43 @@ export const runtimeHardwareSurveyStatusSchema = z.enum([
  * change in the future.
  */
 export type RuntimeHardwareSurveyCompatibilityStatus =
-  | "Compatible"
-  | "Incompatible app version"
-  | "Incompatible backend version"
-  | "Invalid CPU architecture"
-  | "Invalid CPU instruction set extensions"
-  | "CPU survey unsuccessful"
-  | "GPU survey unsuccessful"
-  | "GPU required but none found"
-  | "GPU targets required but none specified"
-  | "GPU driver unsupported"
-  | "No supported GPUs"
-  | "Incompatible platform"
-  | "Library outdated"
-  | "Invalid library version format"
-  | "Missing libraries"
-  | "Error surveying hardware"
-  | "Error checking compatibility"
-  | "Unknown";
+  | "compatible"
+  | "incompatibleAppVersion"
+  | "incompatibleBackendVersion"
+  | "invalidCpuArchitecture"
+  | "invalidCpuInstructionSetExtensions"
+  | "cpuSurveyUnsuccessful"
+  | "gpuSurveyUnsuccessful"
+  | "gpuRequiredButNoneFound"
+  | "gpuTargetsRequiredButNoneSpecified"
+  | "gpuDriverUnsupported"
+  | "noSupportedGpus"
+  | "incompatiblePlatform"
+  | "libraryOutdated"
+  | "invalidLibraryVersionFormat"
+  | "missingLibraries"
+  | "errorSurveyingHardware"
+  | "errorCheckingCompatibility"
+  | "unknown";
 export const runtimeHardwareSurveyCompatibilityStatusSchema = z.enum([
-  "Compatible",
-  "Incompatible app version",
-  "Incompatible backend version",
-  "Invalid CPU architecture",
-  "Invalid CPU instruction set extensions",
-  "CPU survey unsuccessful",
-  "GPU survey unsuccessful",
-  "GPU required but none found",
-  "GPU targets required but none specified",
-  "GPU driver unsupported",
-  "No supported GPUs",
-  "Incompatible platform",
-  "Library outdated",
-  "Invalid library version format",
-  "Missing libraries",
-  "Error surveying hardware",
-  "Error checking compatibility",
-  "Unknown",
+  "compatible",
+  "incompatibleAppVersion",
+  "incompatibleBackendVersion",
+  "invalidCpuArchitecture",
+  "invalidCpuInstructionSetExtensions",
+  "cpuSurveyUnsuccessful",
+  "gpuSurveyUnsuccessful",
+  "gpuRequiredButNoneFound",
+  "gpuTargetsRequiredButNoneSpecified",
+  "gpuDriverUnsupported",
+  "noSupportedGpus",
+  "incompatiblePlatform",
+  "libraryOutdated",
+  "invalidLibraryVersionFormat",
+  "missingLibraries",
+  "errorSurveyingHardware",
+  "errorCheckingCompatibility",
+  "unknown",
 ]) as ZodSchema<RuntimeHardwareSurveyCompatibilityStatus>;
 
 /**
@@ -106,17 +106,17 @@ export const runtimeHardwareSurveyCompatibilitySchema = z.object({
  * change in the future.
  */
 export type RuntimeHardwareSurveyResultCode =
-  | "Unset"
-  | "Success"
-  | "Error"
-  | "NoDevicesFound"
-  | "InvalidDevice";
+  | "unset"
+  | "success"
+  | "error"
+  | "noDevicesFound"
+  | "invalidDevice";
 export const runtimeHardwareSurveyResultCodeSchema = z.enum([
-  "Unset",
-  "Success",
-  "Error",
-  "NoDevicesFound",
-  "InvalidDevice",
+  "unset",
+  "success",
+  "error",
+  "noDevicesFound",
+  "invalidDevice",
 ]) as ZodSchema<RuntimeHardwareSurveyResultCode>;
 
 /**
@@ -142,11 +142,11 @@ export const runtimeHardwareSurveyResultInfoSchema = z.object({
  * @experimental [EXP-RUNTIME-EXTENSION] Runtime extensions related APIs are experimental and may
  * change in the future.
  */
-export type RuntimeHardwareCpuArchitecture = "x86_64" | "ARM64" | "Unknown";
+export type RuntimeHardwareCpuArchitecture = "x86_64" | "ARM64" | "unknown";
 export const runtimeHardwareCpuArchitectureSchema = z.enum([
   "x86_64",
   "ARM64",
-  "Unknown",
+  "unknown",
 ]) as ZodSchema<RuntimeHardwareCpuArchitecture>;
 
 /**
@@ -205,16 +205,16 @@ export const runtimeHardwareCpuSurveyResultSchema = z.object({
  * change in the future.
  */
 export type RuntimeHardwareGpuDetectionPlatform =
-  | "Unknown"
-  | "Shell"
+  | "unknown"
+  | "shell"
   | "ROCm"
   | "CUDA"
   | "OpenCl"
   | "Metal"
   | "Vulkan";
 export const runtimeHardwareGpuDetectionPlatformSchema = z.enum([
-  "Unknown",
-  "Shell",
+  "unknown",
+  "shell",
   "ROCm",
   "CUDA",
   "OpenCl",
@@ -229,11 +229,11 @@ export const runtimeHardwareGpuDetectionPlatformSchema = z.enum([
  * @experimental [EXP-RUNTIME-EXTENSION] Runtime extensions related APIs are experimental and may
  * change in the future.
  */
-export type RuntimeHardwareGpuIntegrationType = "Unknown" | "Integrated" | "Discrete";
+export type RuntimeHardwareGpuIntegrationType = "unknown" | "integrated" | "discrete";
 export const runtimeHardwareGpuIntegrationTypeSchema = z.enum([
-  "Unknown",
-  "Integrated",
-  "Discrete",
+  "unknown",
+  "integrated",
+  "discrete",
 ]) as ZodSchema<RuntimeHardwareGpuIntegrationType>;
 
 /**
