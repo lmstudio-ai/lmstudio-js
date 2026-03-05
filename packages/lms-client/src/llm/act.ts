@@ -210,7 +210,14 @@ class FIFOQueue implements QueueInterface {
   }
 }
 
-type GuardToolCallResult =
+/**
+ * Result returned by a `guardToolCall` handler.
+ *
+ * @public
+ * @experimental [EXP-GRANULAR-ACT] More granular .act status reporting is experimental and may
+ * change in the future.
+ */
+export type GuardToolCallResult =
   | {
       type: "allow";
     }
@@ -231,21 +238,7 @@ type GuardToolCallResult =
  * change in the future.
  */
 export class GuardToolCallController {
-  private readonly resultContainer: [
-    result:
-      | {
-          type: "allow";
-        }
-      | {
-          type: "allowAndOverrideParameters";
-          parameters: Record<string, any>;
-        }
-      | {
-          type: "deny";
-          reason?: string;
-        }
-      | null,
-  ];
+  private readonly resultContainer: [result: GuardToolCallResult | null];
 
   /**
    * Don't construct this object yourself.
@@ -253,23 +246,9 @@ export class GuardToolCallController {
   public constructor(
     public readonly toolCallRequest: ToolCallRequest,
     public readonly tool: Tool,
-    resultContainer: [
-      result:
-        | {
-            type: "allow";
-          }
-        | {
-            type: "allowAndOverrideParameters";
-            parameters: Record<string, any>;
-          }
-        | {
-            type: "deny";
-            reason?: string;
-          }
-        | null,
-    ],
+    resultContainer: [result: GuardToolCallResult | null],
   ) {
-    this.resultContainer = resultContainer as [result: GuardToolCallResult | null];
+    this.resultContainer = resultContainer;
   }
 
   private assertNoResultYet(calledMethodName: string, stack?: string): void {

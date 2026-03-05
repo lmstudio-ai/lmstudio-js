@@ -29,6 +29,7 @@ export type {
   FilesNamespace,
   FunctionTool,
   GuardToolCallController,
+  GuardToolCallResult,
   Generator,
   GeneratorController,
   GeneratorPredictionResult,
