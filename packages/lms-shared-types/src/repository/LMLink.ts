@@ -1,9 +1,11 @@
 import { z } from "zod";
 
 /**
- * Represents a peer reachable via LM Link.
+ * A peer reachable via LM Link.
  *
  * @public
+ * @deprecated [DEP-HUB-API-ACCESS] LM Studio Hub API access is still in active development
+ * and will change. Not recommended for public adoption.
  */
 export interface LMLinkPeer {
   deviceIdentifier: string;
@@ -17,9 +19,11 @@ export const lmLinkPeerSchema = z.object({
 });
 
 /**
- * Represents the most recent LM Link error.
+ * The most recent LM Link error, if any.
  *
  * @public
+ * @deprecated [DEP-HUB-API-ACCESS] LM Studio Hub API access is still in active development
+ * and will change. Not recommended for public adoption.
  */
 export interface LMLinkLastError {
   message: string;
@@ -31,17 +35,21 @@ export const lmLinkLastErrorSchema = z.object({
 });
 
 /**
- * Represents the status of LM Link.
+ * The current LM Link status.
  *
  * @public
+ * @deprecated [DEP-HUB-API-ACCESS] LM Studio Hub API access is still in active development
+ * and will change. Not recommended for public adoption.
  */
 export type LMLinkStatus = "offline" | "starting" | "online" | "stopping";
 export const lmLinkStatusSchema = z.enum(["offline", "starting", "online", "stopping"]);
 
 /**
- * Represents any issue that will prevent LM Link from starting.
+ * Issues that can prevent LM Link from starting.
  *
  * @public
+ * @deprecated [DEP-HUB-API-ACCESS] LM Studio Hub API access is still in active development
+ * and will change. Not recommended for public adoption.
  */
 export type LMLinkIssue = "deviceDisabled" | "notLoggedIn" | "noAccess" | "badVersion";
 export const lmLinkIssueSchema = z.enum([
@@ -51,6 +59,13 @@ export const lmLinkIssueSchema = z.enum([
   "badVersion",
 ]);
 
+/**
+ * Status payload returned by LM Link.
+ *
+ * @public
+ * @deprecated [DEP-HUB-API-ACCESS] LM Studio Hub API access is still in active development
+ * and will change. Not recommended for public adoption.
+ */
 export interface LMLinkStatusResult {
   /**
    * The current status of LM Link.

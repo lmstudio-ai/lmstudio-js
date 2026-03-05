@@ -210,7 +210,14 @@ class FIFOQueue implements QueueInterface {
   }
 }
 
-type GuardToolCallResult =
+/**
+ * Result returned by a `guardToolCall` handler.
+ *
+ * @public
+ * @experimental [EXP-GRANULAR-ACT] More granular .act status reporting is experimental and may
+ * change in the future.
+ */
+export type GuardToolCallResult =
   | {
       type: "allow";
     }
@@ -224,17 +231,25 @@ type GuardToolCallResult =
     };
 
 /**
- * Controller object used to allow/modify/deny a tool call.
+ * Controller passed to `guardToolCall` for allowing, denying, or modifying a tool call.
+ *
+ * @public
+ * @experimental [EXP-GRANULAR-ACT] More granular .act status reporting is experimental and may
+ * change in the future.
  */
-class GuardToolCallController {
+export class GuardToolCallController {
+  private readonly resultContainer: [result: GuardToolCallResult | null];
+
   /**
    * Don't construct this object yourself.
    */
   public constructor(
     public readonly toolCallRequest: ToolCallRequest,
     public readonly tool: Tool,
-    public readonly resultContainer: [result: GuardToolCallResult | null],
-  ) {}
+    resultContainer: [result: GuardToolCallResult | null],
+  ) {
+    this.resultContainer = resultContainer;
+  }
 
   private assertNoResultYet(calledMethodName: string, stack?: string): void {
     if (this.resultContainer[0] === null) {
@@ -523,12 +538,13 @@ export interface LLMActBaseOpts<TPredictionResult> {
   /**
    * A callback invoked when a tool call succeeds and its result is available.
    *
-   * This differs from {@link onToolCallResult} in that it is called only when the tool call
+   * This differs from {@link LLMActBaseOpts.onToolCallResult} in that it is called only when the
+   * tool call
    * succeeds. There are cases where a tool call fails (e.g., an invalid tool name), but
    * the conversation can continue by providing the model with an error message in the form of a
    * tool call result. In those cases, this callback is not invoked.
    *
-   * If you are managing your own context, use {@link onToolCallResult} instead, as it
+   * If you are managing your own context, use {@link LLMActBaseOpts.onToolCallResult} instead, as it
    * covers all cases where a tool call result should be added to the context. See its documentation
    * for more details.
    *

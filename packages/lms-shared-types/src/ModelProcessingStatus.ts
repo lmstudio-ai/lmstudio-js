@@ -5,7 +5,11 @@ import { z, type ZodSchema } from "zod";
  * @experimental [EXP-MODEL-PROCESSING-STATE] Getting the processing state of a model instance is
  * experimental and may change in the future.
  */
-type ModelProcessingStatus = "idle" | "processingPrompt" | "generating" | "computingEmbedding";
+export type ModelProcessingStatus =
+  | "idle"
+  | "processingPrompt"
+  | "generating"
+  | "computingEmbedding";
 
 const modelProcessingStatusSchema = z.enum([
   "idle",

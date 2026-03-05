@@ -19,6 +19,7 @@ import { z, type ZodSchema } from "zod";
 /**
  * Options to use with {@link RuntimeExtensionsNamespace.search}.
  *
+ * @public
  * @experimental [EXP-RUNTIME-EXTENSION] Runtime extensions related APIs are experimental and may
  * change in the future.
  */
@@ -34,6 +35,7 @@ const runtimeExtensionsSearchOptsSchema = z.object({
 /**
  * Options to use with {@link RuntimeExtensionsNamespace.download}.
  *
+ * @public
  * @experimental [EXP-RUNTIME-EXTENSION] Runtime extensions related APIs are experimental and may
  * change in the future.
  */
@@ -59,6 +61,13 @@ const downloadOptsSchema = z.object({
   updateSelections: z.boolean().optional(),
 }) as ZodSchema<DownloadRuntimeExtensionOpts>;
 
+/**
+ * Runtime extension management APIs.
+ *
+ * @public
+ * @experimental [EXP-RUNTIME-EXTENSION] Runtime extensions related APIs are experimental and may
+ * change in the future.
+ */
 export class RuntimeExtensionsNamespace {
   private readonly logger: SimpleLogger;
 

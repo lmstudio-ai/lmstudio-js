@@ -13,6 +13,10 @@ import { internalCreateRemoteTool, type RemoteTool } from "../llm/tool";
 
 /**
  * Represents a session for using remote tools.
+ *
+ * @public
+ * @experimental [EXP-USE-USE-PLUGIN-TOOLS] Using tools from other applications is still in
+ * development. This may change in the future without warning.
  */
 export interface RemoteToolUseSession extends Disposable {
   tools: Array<RemoteTool>;

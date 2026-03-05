@@ -6,19 +6,24 @@ import {
 } from "@lmstudio/lms-common";
 import { type RuntimePort } from "@lmstudio/lms-external-backend-interfaces";
 import {
+  runtimeHardwareSurveyScopeSchema,
   type ModelFormatName,
   type RuntimeEngineInfo,
   type RuntimeEngineSpecifier,
-  type SelectedRuntimeEngineMap,
-} from "@lmstudio/lms-shared-types";
-import {
-  runtimeHardwareSurveyScopeSchema,
   type RuntimeHardwareSurveyResult,
   type RuntimeHardwareSurveyScope,
+  type SelectedRuntimeEngineMap,
 } from "@lmstudio/lms-shared-types";
+
 import { RuntimeExtensionsNamespace } from "./RuntimeExtensionsNamespace";
 
-/** @public */
+/**
+ * @public
+ * @deprecated [DEP-LEGACY-RUNTIME-ENGINE] This API is part of the legacy runtime engine API that
+ * was never stablized, but used in the lms-cli. This API will be removed as we move the
+ * functionality into `client.runtime.extensions`. You may use this API but expect breakage even
+ * during minor updates.
+ */
 export class RuntimeEngineNamespace {
   /** @internal */
   private readonly logger: SimpleLogger;
@@ -35,8 +40,10 @@ export class RuntimeEngineNamespace {
   /**
    * List all available runtime engines.
    *
-   * @experimental [EXP-RUNTIME-EXTENSION] Runtime extensions related APIs are experimental and may
-   * change in the future.
+   * @deprecated [DEP-LEGACY-RUNTIME-ENGINE] This API is part of the legacy runtime engine API that
+   * was never stablized, but used in the lms-cli. This API will be removed as we move the
+   * functionality into `client.runtime.extensions`. You may use this API but expect breakage even
+   * during minor updates.
    */
   public async list(): Promise<Array<RuntimeEngineInfo>> {
     const stack = getCurrentStack(1);
@@ -46,8 +53,10 @@ export class RuntimeEngineNamespace {
   /**
    * Get all runtime engine selections.
    *
-   * @experimental [EXP-RUNTIME-EXTENSION] Runtime extensions related APIs are experimental and may
-   * change in the future.
+   * @deprecated [DEP-LEGACY-RUNTIME-ENGINE] This API is part of the legacy runtime engine API that
+   * was never stablized, but used in the lms-cli. This API will be removed as we move the
+   * functionality into `client.runtime.extensions`. You may use this API but expect breakage even
+   * during minor updates.
    */
   public async getSelections(): Promise<SelectedRuntimeEngineMap> {
     const stack = getCurrentStack(1);
@@ -57,8 +66,10 @@ export class RuntimeEngineNamespace {
   /**
    * Select a runtime engine for a specific model format.
    *
-   * @experimental [EXP-RUNTIME-EXTENSION] Runtime extensions related APIs are experimental and may
-   * change in the future.
+   * @deprecated [DEP-LEGACY-RUNTIME-ENGINE] This API is part of the legacy runtime engine API that
+   * was never stablized, but used in the lms-cli. This API will be removed as we move the
+   * functionality into `client.runtime.extensions`. You may use this API but expect breakage even
+   * during minor updates.
    */
   public async select(
     engine: RuntimeEngineSpecifier,
@@ -71,8 +82,10 @@ export class RuntimeEngineNamespace {
   /**
    * Remove a runtime engine.
    *
-   * @experimental [EXP-RUNTIME-EXTENSION] Runtime extensions related APIs are experimental and may
-   * change in the future.
+   * @deprecated [DEP-LEGACY-RUNTIME-ENGINE] This API is part of the legacy runtime engine API that
+   * was never stablized, but used in the lms-cli. This API will be removed as we move the
+   * functionality into `client.runtime.extensions`. You may use this API but expect breakage even
+   * during minor updates.
    */
   public async remove(engine: RuntimeEngineSpecifier): Promise<void> {
     const stack = getCurrentStack(1);
@@ -88,8 +101,10 @@ export class RuntimeNamespace {
   /**
    * @public
    *
-   * @experimental [EXP-RUNTIME-EXTENSION] Runtime extensions related APIs are experimental and may
-   * change in the future.
+   * @deprecated [DEP-LEGACY-RUNTIME-ENGINE] This API is part of the legacy runtime engine API that
+   * was never stablized, but used in the lms-cli. This API will be removed as we move the
+   * functionality into `client.runtime.extensions`. You may use this API but expect breakage even
+   * during minor updates.
    */
   public readonly engine: RuntimeEngineNamespace;
 

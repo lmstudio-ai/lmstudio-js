@@ -777,6 +777,11 @@ export type KVValueTypeDef = InferKVValueTypeDef<typeof kvValueTypesLibrary>;
  * @public
  */
 export type GlobalKVValueTypesLibrary = typeof kvValueTypesLibrary;
+/**
+ * The basic KV value types library type, exposed to plugins.
+ *
+ * @public
+ */
 export type BasicKVValueTypesLibrary = typeof basicKVValueTypesLibrary;
 /**
  * @public

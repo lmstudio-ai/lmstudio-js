@@ -92,14 +92,23 @@ class GeneratorConnectorImpl implements GeneratorConnector {
 }
 
 /**
- * @deprecated This class is used internally by a plugin to register hooks. Do not use directly.
+ * @deprecated Used by plugins to register hooks with the host runtime. Do not use directly.
  * @public
  */
 export class PluginSelfRegistrationHost {
+  /**
+   * @internal Don't construct this yourself.
+   */
   public constructor(
+    /**
+     * @internal
+     */
     private readonly port: PluginsPort,
     private readonly client: LMStudioClient,
     private readonly rootLogger: LoggerInterface,
+    /**
+     * @internal
+     */
     private readonly validator: Validator,
   ) {}
 

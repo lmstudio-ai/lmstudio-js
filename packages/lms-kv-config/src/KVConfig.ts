@@ -241,15 +241,30 @@ export type InferKVValueTypeDef<TLibrary extends KVFieldValueTypeLibrary<any>> =
       }[keyof RMap]
     : never;
 
+/**
+ * Shape for a single field in a virtual config schema.
+ *
+ * @public
+ */
 export type KVVirtualFieldSchema = {
   key: string;
   type: any;
   valueTypeKey: string;
 };
+/**
+ * Map of field keys to their virtual schema entries.
+ *
+ * @public
+ */
 export type KVVirtualConfigSchema = {
   [key: string]: KVVirtualFieldSchema;
 };
 
+/**
+ * Fully resolved field schema used internally by schematics.
+ *
+ * @public
+ */
 export interface KVConcreteFieldSchema {
   valueTypeKey: string;
   valueTypeParams: any;
@@ -1264,6 +1279,11 @@ export function stripBaseKeyFromKVConfig(baseKey: string, config: KVConfig): KVC
   };
 }
 
+/**
+ * Builder for creating KV configs that conform to a schematics definition.
+ *
+ * @public
+ */
 export class KVConfigBuilder<TKVConfigSchema extends KVVirtualConfigSchema> {
   public constructor(
     private readonly fieldDefs: Map<string, KVConcreteFieldSchema>,
