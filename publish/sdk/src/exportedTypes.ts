@@ -56,6 +56,7 @@ export type {
   ParseDocumentOpts,
   ParseDocumentResult,
   PluginContext,
+  PluginSelfRegistrationHost,
   PluginsNamespace,
   PluginToolsOpts,
   PredictionLoopHandler,
