@@ -119,6 +119,13 @@ export const runtimeHardwareSurveyResultCodeSchema = z.enum([
   "InvalidDevice",
 ]) as ZodSchema<RuntimeHardwareSurveyResultCode>;
 
+/**
+ * Result code and message for a single survey step.
+ *
+ * @public
+ * @experimental [EXP-RUNTIME-EXTENSION] Runtime extensions related APIs are experimental and may
+ * change in the future.
+ */
 export interface RuntimeHardwareSurveyResultInfo {
   code: RuntimeHardwareSurveyResultCode;
   message: string;
@@ -128,6 +135,13 @@ export const runtimeHardwareSurveyResultInfoSchema = z.object({
   message: z.string(),
 }) as ZodSchema<RuntimeHardwareSurveyResultInfo>;
 
+/**
+ * CPU architecture reported by the survey.
+ *
+ * @public
+ * @experimental [EXP-RUNTIME-EXTENSION] Runtime extensions related APIs are experimental and may
+ * change in the future.
+ */
 export type RuntimeHardwareCpuArchitecture = "x86_64" | "ARM64" | "Unknown";
 export const runtimeHardwareCpuArchitectureSchema = z.enum([
   "x86_64",
@@ -135,6 +149,13 @@ export const runtimeHardwareCpuArchitectureSchema = z.enum([
   "Unknown",
 ]) as ZodSchema<RuntimeHardwareCpuArchitecture>;
 
+/**
+ * CPU instruction set extensions reported by the survey.
+ *
+ * @public
+ * @experimental [EXP-RUNTIME-EXTENSION] Runtime extensions related APIs are experimental and may
+ * change in the future.
+ */
 export type RuntimeHardwareCpuInstructionSetExtension = "AVX2" | "AdvSIMD" | "AVX";
 export const runtimeHardwareCpuInstructionSetExtensionSchema = z.enum([
   "AVX2",
@@ -142,6 +163,13 @@ export const runtimeHardwareCpuInstructionSetExtensionSchema = z.enum([
   "AVX",
 ]) as ZodSchema<RuntimeHardwareCpuInstructionSetExtension>;
 
+/**
+ * CPU details gathered during the survey.
+ *
+ * @public
+ * @experimental [EXP-RUNTIME-EXTENSION] Runtime extensions related APIs are experimental and may
+ * change in the future.
+ */
 export interface RuntimeHardwareCpuInfo {
   name?: string;
   architecture: RuntimeHardwareCpuArchitecture;

@@ -522,6 +522,12 @@ export {
   runtimeFrameworkExtensionInfoSchema,
 } from "./RuntimeExtension.js";
 export {
+  RuntimeHardwareCpuArchitecture,
+  runtimeHardwareCpuArchitectureSchema,
+  RuntimeHardwareCpuInfo,
+  runtimeHardwareCpuInfoSchema,
+  RuntimeHardwareCpuInstructionSetExtension,
+  runtimeHardwareCpuInstructionSetExtensionSchema,
   RuntimeHardwareCpuSurveyResult,
   runtimeHardwareCpuSurveyResultSchema,
   RuntimeHardwareGpuDetectionPlatform,
@@ -545,6 +551,8 @@ export {
   RuntimeHardwareSurveyResult,
   RuntimeHardwareSurveyResultCode,
   runtimeHardwareSurveyResultCodeSchema,
+  RuntimeHardwareSurveyResultInfo,
+  runtimeHardwareSurveyResultInfoSchema,
   runtimeHardwareSurveyResultSchema,
   RuntimeHardwareSurveyScope,
   runtimeHardwareSurveyScopeSchema,
