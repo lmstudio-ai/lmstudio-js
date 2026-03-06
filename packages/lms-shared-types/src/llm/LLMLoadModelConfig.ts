@@ -7,11 +7,12 @@ import { z } from "zod";
  *
  * @public
  */
-export type LLMLlamaAccelerationOffloadRatio = number | "max" | "off";
+export type LLMLlamaAccelerationOffloadRatio = number | "max" | "off" | "auto";
 export const llmLlamaAccelerationOffloadRatioSchema = z.union([
   z.number().min(0).max(1),
   z.literal("max"),
   z.literal("off"),
+  z.literal("auto"),
 ]);
 
 /**

@@ -265,6 +265,12 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
         4,
       )
       .field("useUnifiedKvCache", "boolean", { isExperimental: true }, true)
+      .field(
+        "fitMinContext",
+        "checkboxNumeric",
+        { min: 1, int: true, uncheckedHint: "config:fitMinContextUncheckedHint" },
+        { checked: false, value: 4096 },
+      )
       .scope("llama", builder =>
         builder
           .scope("acceleration", builder =>
@@ -272,7 +278,7 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
               "offloadRatio",
               "llamaAccelerationOffloadRatio",
               { machineDependent: true },
-              "max",
+              "auto",
             ),
           )
           .field("cpuThreadPoolSize", "numeric", { min: 1, machineDependent: true }, 4)
@@ -463,6 +469,7 @@ export const llmLlamaLoadConfigSchematics = llmSharedLoadConfigSchematics
       "offloadKVCacheToGpu",
       "numParallelSessions",
       "useUnifiedKvCache",
+      "fitMinContext",
     ),
   )
   .union(llamaLoadConfigSchematics);
