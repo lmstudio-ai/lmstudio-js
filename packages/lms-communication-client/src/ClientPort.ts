@@ -149,12 +149,14 @@ export class ClientPort<
     if (this.producedCommunicationWarningsCount >= 5) {
       return;
     }
-    this.logger.warnText`
-      Produced communication warning: ${warning}
-      
-      This is usually caused by communication protocol incompatibility. Please make sure you are
-      using the up-to-date versions of the SDK and LM Studio.
-    `;
+    if (this.onCommunicationWarning === undefined) {
+      this.logger.warnText`
+        Produced communication warning: ${warning}
+        
+        This is usually caused by communication protocol incompatibility. Please make sure you are
+        using the up-to-date versions of the SDK and LM Studio.
+      `;
+    }
     this.safeSend(
       {
         type: "communicationWarning",
@@ -167,7 +169,7 @@ export class ClientPort<
       warning,
     });
     this.producedCommunicationWarningsCount++;
-    if (this.producedCommunicationWarningsCount >= 5) {
+    if (this.onCommunicationWarning === undefined && this.producedCommunicationWarningsCount >= 5) {
       this.logger.errorText`
         5 communication warnings have been produced. Further warnings will not be printed.
       `;
@@ -446,14 +448,16 @@ export class ClientPort<
   private receivedCommunicationWarning(
     message: ServerToClientMessage & { type: "communicationWarning" },
   ) {
-    this.logger.warnText`
-      Received communication warning from the server: ${message.warning}
-      
-      This is usually caused by communication protocol incompatibility. Please make sure you are
-      using the up-to-date versions of the SDK and LM Studio.
+    if (this.onCommunicationWarning === undefined) {
+      this.logger.warnText`
+        Received communication warning from the server: ${message.warning}
+        
+        This is usually caused by communication protocol incompatibility. Please make sure you are
+        using the up-to-date versions of the SDK and LM Studio.
 
-      Note: This warning was received from the server and is printed on the client for convenience.
-    `;
+        Note: This warning was received from the server and is printed on the client for convenience.
+      `;
+    }
     this.reportCommunicationWarning({
       direction: "received",
       warning: message.warning,
