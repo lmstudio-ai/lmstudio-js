@@ -76,6 +76,11 @@ function defaultErrorDeserializer(
   return fromSerializedError(serialized, directCause, stack);
 }
 
+export interface ClientPortCommunicationWarning {
+  direction: "produced" | "received";
+  warning: string;
+}
+
 export class ClientPort<
   TRpcEndpoints extends RpcEndpointsSpecBase,
   TChannelEndpoints extends ChannelEndpointsSpecBase,
@@ -104,6 +109,9 @@ export class ClientPort<
     stack?: string,
   ) => Error;
   private verboseErrorMessage: boolean;
+  private readonly onCommunicationWarning?: (
+    communicationWarning: ClientPortCommunicationWarning,
+  ) => void;
 
   public constructor(
     public readonly backendInterface: BackendInterface<
@@ -118,6 +126,7 @@ export class ClientPort<
       parentLogger,
       errorDeserializer,
       verboseErrorMessage,
+      onCommunicationWarning,
     }: {
       parentLogger?: LoggerInterface;
       errorDeserializer?: (
@@ -126,11 +135,13 @@ export class ClientPort<
         stack?: string,
       ) => Error;
       verboseErrorMessage?: boolean;
+      onCommunicationWarning?: (communicationWarning: ClientPortCommunicationWarning) => void;
     } = {},
   ) {
     this.logger = new SimpleLogger("ClientPort", parentLogger);
     this.errorDeserializer = errorDeserializer ?? defaultErrorDeserializer;
     this.verboseErrorMessage = verboseErrorMessage ?? true;
+    this.onCommunicationWarning = onCommunicationWarning;
     this.transport = factory(this.receivedMessage, this.onConnected, this.errored, this.logger);
   }
 
@@ -151,6 +162,10 @@ export class ClientPort<
       },
       "communicationWarning",
     );
+    this.reportCommunicationWarning({
+      direction: "produced",
+      warning,
+    });
     this.producedCommunicationWarningsCount++;
     if (this.producedCommunicationWarningsCount >= 5) {
       this.logger.errorText`
@@ -439,6 +454,21 @@ export class ClientPort<
 
       Note: This warning was received from the server and is printed on the client for convenience.
     `;
+    this.reportCommunicationWarning({
+      direction: "received",
+      warning: message.warning,
+    });
+  }
+
+  private reportCommunicationWarning(communicationWarning: ClientPortCommunicationWarning): void {
+    if (this.onCommunicationWarning === undefined) {
+      return;
+    }
+    try {
+      this.onCommunicationWarning(communicationWarning);
+    } catch (error) {
+      this.logger.error("Error in onCommunicationWarning callback:", error);
+    }
   }
 
   private receivedKeepAliveAck(_message: ServerToClientMessage & { type: "keepAliveAck" }) {
