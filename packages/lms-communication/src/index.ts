@@ -24,6 +24,11 @@ export {
   InferServerChannelType,
 } from "./Channel.js";
 export {
+  communicationWarningKinds,
+  normalizeCommunicationWarningKind,
+  type CommunicationWarningKind,
+} from "./CommunicationWarning.js";
+export {
   deserialize,
   SerializationType,
   serialize,
