@@ -14,6 +14,7 @@ import {
 } from "@lmstudio/lms-common";
 import {
   Channel,
+  normalizeCommunicationWarningKind,
   deserialize,
   serialize,
   type BackendInterface,
@@ -27,6 +28,7 @@ import {
   type ServerToClientMessage,
   type SignalEndpoint,
   type SignalEndpointsSpecBase,
+  type CommunicationWarningKind,
   type WritableSignalEndpoint,
   type WritableSignalEndpointsSpecBase,
 } from "@lmstudio/lms-communication";
@@ -78,6 +80,7 @@ function defaultErrorDeserializer(
 
 export interface ClientPortCommunicationWarning {
   direction: "produced" | "received";
+  kind: CommunicationWarningKind;
   warning: string;
 }
 
@@ -145,7 +148,7 @@ export class ClientPort<
     this.transport = factory(this.receivedMessage, this.onConnected, this.errored, this.logger);
   }
 
-  private communicationWarning(warning: string) {
+  private communicationWarning(warning: string, kind: CommunicationWarningKind = "unknown") {
     if (this.producedCommunicationWarningsCount >= 5) {
       return;
     }
@@ -161,11 +164,13 @@ export class ClientPort<
       {
         type: "communicationWarning",
         warning,
+        kind,
       },
       "communicationWarning",
     );
     this.reportCommunicationWarning({
       direction: "produced",
+      kind,
       warning,
     });
     this.producedCommunicationWarningsCount++;
@@ -207,6 +212,7 @@ export class ClientPort<
     if (openChannel === undefined) {
       this.communicationWarning(
         `Received channelSend for unknown channel, channelId = ${message.channelId}`,
+        "channelUnknown",
       );
       return;
     }
@@ -218,7 +224,7 @@ export class ClientPort<
         ${deserializedMessage}. Zod error:
 
         ${Validator.prettyPrintZod("message", parsed.error)}
-      `);
+      `, "channelMessageTypeError");
       return;
     }
     openChannel.receivedMessage(parsed.data);
@@ -229,6 +235,7 @@ export class ClientPort<
     if (openChannel === undefined) {
       this.communicationWarning(
         `Received channelAck for unknown channel, channelId = ${message.channelId}`,
+        "channelUnknown",
       );
       return;
     }
@@ -240,6 +247,7 @@ export class ClientPort<
     if (openChannel === undefined) {
       this.communicationWarning(
         `Received channelClose for unknown channel, channelId = ${message.channelId}`,
+        "channelUnknown",
       );
       return;
     }
@@ -253,6 +261,7 @@ export class ClientPort<
     if (openChannel === undefined) {
       this.communicationWarning(
         `Received channelError for unknown channel, channelId = ${message.channelId}`,
+        "channelUnknown",
       );
       return;
     }
@@ -269,7 +278,10 @@ export class ClientPort<
   private receivedRpcResult(message: ServerToClientMessage & { type: "rpcResult" }) {
     const ongoingRpc = this.ongoingRpcs.get(message.callId);
     if (ongoingRpc === undefined) {
-      this.communicationWarning(`Received rpcResult for unknown rpc, callId = ${message.callId}`);
+      this.communicationWarning(
+        `Received rpcResult for unknown rpc, callId = ${message.callId}`,
+        "rpcUnknown",
+      );
       return;
     }
     const deserializedResult = deserialize(ongoingRpc.endpoint.serialization, message.result);
@@ -280,7 +292,7 @@ export class ClientPort<
         ${deserializedResult}. Zod error:
 
         ${Validator.prettyPrintZod("result", parsed.error)}
-      `);
+      `, "rpcResultTypeError");
       return;
     }
     ongoingRpc.resolve(parsed.data);
@@ -291,7 +303,10 @@ export class ClientPort<
   private receivedRpcError(message: ServerToClientMessage & { type: "rpcError" }) {
     const ongoingRpc = this.ongoingRpcs.get(message.callId);
     if (ongoingRpc === undefined) {
-      this.communicationWarning(`Received rpcError for unknown rpc, callId = ${message.callId}`);
+      this.communicationWarning(
+        `Received rpcError for unknown rpc, callId = ${message.callId}`,
+        "rpcUnknown",
+      );
       return;
     }
     const error = this.errorDeserializer(
@@ -330,7 +345,7 @@ export class ClientPort<
         patches = ${JSON.stringify(patches, null, 2)}.
 
         Error: ${String(error)}
-      `);
+      `, "signalUpdatePatchApplyError");
       return;
     }
     const parseResult = openSignalSubscription.endpoint.signalData.safeParse(afterValue);
@@ -347,7 +362,7 @@ export class ClientPort<
         Zod error:
 
         ${Validator.prettyPrintZod("value", parseResult.error)}
-      `);
+      `, "signalPatchTypeError");
       return;
     }
     // Don't use the parsed value, as it loses the substructure identities
@@ -359,6 +374,7 @@ export class ClientPort<
     if (openSignalSubscription === undefined) {
       this.communicationWarning(
         `Received signalError for unknown signal, subscribeId = ${message.subscribeId}`,
+        "signalUnknown",
       );
       return;
     }
@@ -401,7 +417,7 @@ export class ClientPort<
         patches = ${JSON.stringify(patches, null, 2)}.
 
         Error: ${String(error)}
-      `);
+      `, "writableSignalPatchApplyError");
     }
     const parseResult = openSignalSubscription.endpoint.signalData.safeParse(afterValue);
     if (!parseResult.success) {
@@ -417,7 +433,7 @@ export class ClientPort<
         Zod error:
 
         ${Validator.prettyPrintZod("value", parseResult.error)}
-      `);
+      `, "writableSignalPatchTypeError");
       return;
     }
     // Don't use the parsed value, as it loses the substructure identities
@@ -432,6 +448,7 @@ export class ClientPort<
     if (openSignalSubscription === undefined) {
       this.communicationWarning(
         `Received writableSignalError for unknown signal, subscribeId = ${message.subscribeId}`,
+        "writableSignalUnknown",
       );
       return;
     }
@@ -448,9 +465,10 @@ export class ClientPort<
   private receivedCommunicationWarning(
     message: ServerToClientMessage & { type: "communicationWarning" },
   ) {
+    const kind = normalizeCommunicationWarningKind(message.kind);
     if (this.onCommunicationWarning === undefined) {
       this.logger.warnText`
-        Received communication warning from the server: ${message.warning}
+        Received communication warning from the server (${kind}): ${message.warning}
         
         This is usually caused by communication protocol incompatibility. Please make sure you are
         using the up-to-date versions of the SDK and LM Studio.
@@ -460,6 +478,7 @@ export class ClientPort<
     }
     this.reportCommunicationWarning({
       direction: "received",
+      kind,
       warning: message.warning,
     });
   }

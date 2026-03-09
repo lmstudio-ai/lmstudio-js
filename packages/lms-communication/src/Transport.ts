@@ -8,6 +8,7 @@ const clientToServerMessageSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("communicationWarning"),
     warning: z.string(),
+    kind: z.string().optional(),
   }),
   z.object({
     type: z.literal("keepAlive"),
@@ -78,6 +79,7 @@ const serverToClientMessageSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("communicationWarning"),
     warning: z.string(),
+    kind: z.string().optional(),
   }),
   z.object({
     type: z.literal("keepAliveAck"),
