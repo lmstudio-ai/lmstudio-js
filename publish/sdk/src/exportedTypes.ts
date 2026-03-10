@@ -158,6 +158,7 @@ export type {
   LLMInstanceInfo,
   LLMJinjaPromptTemplate,
   LLMLlamaAccelerationOffloadRatio,
+  LLMLlamaLayerRatio,
   LLMLlamaCacheQuantizationType,
   LLMLoadModelConfig,
   LLMManualPromptTemplate,

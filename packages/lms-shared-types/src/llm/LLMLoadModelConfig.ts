@@ -16,6 +16,16 @@ export const llmLlamaAccelerationOffloadRatioSchema = z.union([
 ]);
 
 /**
+ * A plain layer ratio without the `"auto"` option.
+ */
+export type LLMLlamaLayerRatio = Exclude<LLMLlamaAccelerationOffloadRatio, "auto">;
+export const llmLlamaLayerRatioSchema = z.union([
+  z.number().min(0).max(1),
+  z.literal("max"),
+  z.literal("off"),
+]);
+
+/**
  * How to split the model across GPUs.
  * - "evenly": Splits model evenly across GPUs
  * - "favorMainGpu": Fill the main GPU first, then fill the rest of the GPUs evenly
@@ -46,8 +56,11 @@ export type GPUSetting = {
    * forced into CPU memory, where 1 means all expert layers will be in CPU memory regardless of
    * GPU offload configuration and 0 means the expert offload will be determined by GPU offload.
    * Can also specify the string "off" to mean 0 and the string "max" to mean 1.
+   *
+   * Note: `"auto"` is not a valid value for this field. When `ratio` is set to `"auto"` (fit
+   * mode), this field is ignored — the fit algorithm handles all layer placement automatically.
    */
-  numCpuExpertLayersRatio?: LLMLlamaAccelerationOffloadRatio;
+  numCpuExpertLayersRatio?: LLMLlamaLayerRatio;
   /**
    * The index of the GPU to use as the main GPU.
    */
@@ -63,7 +76,7 @@ export type GPUSetting = {
 };
 export const gpuSettingSchema = z.object({
   ratio: llmLlamaAccelerationOffloadRatioSchema.optional(),
-  numCpuExpertLayersRatio: llmLlamaAccelerationOffloadRatioSchema.optional(),
+  numCpuExpertLayersRatio: llmLlamaLayerRatioSchema.optional(),
   mainGpu: z.number().int().optional(),
   splitStrategy: llmSplitStrategySchema.optional(),
   disabledGpus: z.array(z.number().int()).optional(),

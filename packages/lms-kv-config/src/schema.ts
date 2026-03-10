@@ -254,7 +254,7 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
       .field("offloadKVCacheToGpu", "boolean", {}, true)
       .field(
         "numCpuExpertLayersRatio",
-        "llamaAccelerationOffloadRatio",
+        "llamaLayerRatio",
         { machineDependent: true, isExperimental: true },
         "off",
       )
