@@ -1,5 +1,12 @@
 import { z, type ZodSchema } from "zod";
 
+/**
+ * Confidence level for an estimated memory usage report.
+ *
+ * @public
+ * @experimental [EXP-MODEL-USAGE-ESTIMATION] Estimating model usage is experimental and may change
+ * in the future.
+ */
 export type EstimatedModelMemoryUsageConfidence = "high" | "low";
 export const estimatedModelMemoryUsageConfidenceSchema = z.enum([
   "high",
@@ -7,8 +14,9 @@ export const estimatedModelMemoryUsageConfidenceSchema = z.enum([
 ]) as ZodSchema<EstimatedModelMemoryUsageConfidence>;
 
 /**
- * Represents the estimate memory usage of a model.
+ * Represents the estimated memory usage of a model.
  *
+ * @public
  * @experimental [EXP-MODEL-USAGE-ESTIMATION] Estimating model usage is experimental and may change
  * in the future.
  */
@@ -65,6 +73,7 @@ export const estimatedModelMemoryUsageSchema: ZodSchema<EstimatedModelMemoryUsag
 /**
  * Represents the estimated resource usage of a model.
  *
+ * @public
  * @experimental [EXP-MODEL-USAGE-ESTIMATION] Estimating model usage is experimental and may change
  * in the future.
  */

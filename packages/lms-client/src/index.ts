@@ -1,8 +1,9 @@
-
+export type { BasicKVFieldValueTypeLibraryMap } from "@lmstudio/lms-kv-config";
 export type {
   DiagnosticsLogEvent,
   DiagnosticsLogEventData,
-  DiagnosticsLogRuntimeEventData
+  DiagnosticsLogRuntimeEventData,
+  PromptProcessingDetails,
 } from "@lmstudio/lms-shared-types";
 export { Chat, ChatMessage } from "./Chat.js";
 export type { ChatAppendOpts, ChatLike, ChatMessageLike } from "./Chat.js";
@@ -16,7 +17,7 @@ export {
   ParsedConfig,
   parsedConfigBrand,
   VirtualConfigSchematics,
-  type InferParsedConfig
+  type InferParsedConfig,
 } from "./customConfig.js";
 export type { DiagnosticsNamespace } from "./diagnostics/DiagnosticsNamespace.js";
 export type { EmbeddingDynamicHandle } from "./embedding/EmbeddingDynamicHandle.js";
@@ -28,7 +29,7 @@ export type { ParseDocumentOpts } from "./files/ParseDocumentOpts.js";
 export type { ParseDocumentResult } from "./files/ParseDocumentResult.js";
 export type { RetrievalCallbacks, RetrievalOpts } from "./files/RetrievalOpts.js";
 export type { RetrievalResult, RetrievalResultEntry } from "./files/RetrievalResult.js";
-export type { LLMActBaseOpts } from "./llm/act.js";
+export type { GuardToolCallController, GuardToolCallResult, LLMActBaseOpts } from "./llm/act.js";
 export type { ActResult } from "./llm/ActResult.js";
 export type { GeneratorPredictionResult } from "./llm/GeneratorPredictionResult.js";
 export type { LLM } from "./llm/LLM.js";
@@ -37,12 +38,12 @@ export type {
   LLMDynamicHandle,
   LLMPredictionFragmentWithRoundIndex,
   LLMPredictionOpts,
-  LLMRespondOpts
+  LLMRespondOpts,
 } from "./llm/LLMDynamicHandle.js";
 export type {
   LLMGeneratorActOpts,
   LLMGeneratorHandle,
-  LLMGeneratorPredictionOpts
+  LLMGeneratorPredictionOpts,
 } from "./llm/LLMGeneratorHandle.js";
 export type { LLMNamespace } from "./llm/LLMNamespace.js";
 export type { OngoingGeneratorPrediction } from "./llm/OngoingGeneratorPrediction.js";
@@ -50,7 +51,7 @@ export type { OngoingPrediction } from "./llm/OngoingPrediction.js";
 export type {
   BasePredictionResult,
   PredictionResult,
-  StructuredPredictionResult
+  StructuredPredictionResult,
 } from "./llm/PredictionResult.js";
 export { rawFunctionTool, tool, unimplementedRawFunctionTool } from "./llm/tool.js";
 export type {
@@ -59,24 +60,31 @@ export type {
   RemoteTool,
   Tool,
   ToolBase,
-  ToolCallContext
+  ToolCallContext,
+  UnimplementedRawFunctionTool,
 } from "./llm/tool.js";
 export {
   ToolCallRequestError,
   ToolCallRequestInvalidArgumentsError,
   ToolCallRequestInvalidFormatError,
-  ToolCallRequestInvalidNameError
+  ToolCallRequestInvalidNameError,
 } from "./llm/ToolCallRequestError.js";
 export { LMStudioClient } from "./LMStudioClient.js";
 export type { LMStudioClientConstructorOpts } from "./LMStudioClient.js";
 export type { DynamicHandle } from "./modelShared/DynamicHandle.js";
-export type { BaseLoadModelOpts, ModelNamespace } from "./modelShared/ModelNamespace.js";
+export type {
+  BaseLoadModelOpts,
+  ModelNamespace,
+  ModelNamespaceUnloadOpts,
+} from "./modelShared/ModelNamespace.js";
 export type { SpecificModel } from "./modelShared/SpecificModel.js";
 export type { PluginContext } from "./PluginContext.js";
+export type { PluginSelfRegistrationHost } from "./plugins/PluginSelfRegistrationHost.js";
 export type {
   PluginsNamespace,
+  PluginToolsOpts,
   RegisterDevelopmentPluginOpts,
-  RegisterDevelopmentPluginResult
+  RegisterDevelopmentPluginResult,
 } from "./plugins/PluginsNamespace.js";
 export type { BaseController } from "./plugins/processing/BaseController.js";
 export type { Generator } from "./plugins/processing/Generator.js";
@@ -98,7 +106,7 @@ export type {
   ProcessingController,
   PromptPreprocessorController,
   RequestConfirmToolCallOpts,
-  RequestConfirmToolCallResult
+  RequestConfirmToolCallResult,
 } from "./plugins/processing/ProcessingController.js";
 export type { PromptPreprocessor } from "./plugins/processing/PromptPreprocessor.js";
 export type { ToolsProvider } from "./plugins/processing/ToolsProvider.js";
@@ -106,13 +114,14 @@ export type { ToolsProviderController } from "./plugins/processing/ToolsProvider
 export type { RemoteToolUseSession } from "./plugins/ToolUseSession.js";
 export type {
   ArtifactDownloadPlanner,
-  ArtifactDownloadPlannerDownloadOpts
+  ArtifactDownloadPlannerDownloadOpts,
 } from "./repository/ArtifactDownloadPlanner.js";
 export type {
   DownloadOpts,
-  ModelSearchResultDownloadOption
+  ModelSearchResultDownloadOption,
 } from "./repository/ModelSearchResultDownloadOption.js";
 export type { ModelSearchResultEntry } from "./repository/ModelSearchResultEntry.js";
+export type { RepositoryLMLinkNamespace } from "./repository/RepositoryLMLinkNamespace.js";
 export type {
   CreateArtifactDownloadPlannerOpts,
   DownloadArtifactOpts,
@@ -121,7 +130,17 @@ export type {
   LoginWithPreAuthenticatedKeysOpts,
   LoginWithPreAuthenticatedKeysResult,
   PushArtifactOpts,
-  RepositoryNamespace
+  RepositoryNamespace,
+  UnstableRepositoryNamespace,
 } from "./repository/RepositoryNamespace.js";
-export type { ServiceInfo, SystemNamespace } from "./system/SystemNamespace.js";
-
+export type {
+  DownloadRuntimeExtensionOpts,
+  RuntimeExtensionsNamespace,
+  RuntimeExtensionsSearchOpts,
+} from "./runtime/RuntimeExtensionsNamespace.js";
+export type { RuntimeEngineNamespace, RuntimeNamespace } from "./runtime/RuntimeNamespace.js";
+export type {
+  ServiceInfo,
+  StartHttpServerOpts,
+  SystemNamespace,
+} from "./system/SystemNamespace.js";

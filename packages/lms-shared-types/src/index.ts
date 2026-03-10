@@ -27,6 +27,10 @@ export {
   ArtifactModelDependency,
   artifactModelDependencySchema,
 } from "./ArtifactManifestBase.js";
+export {
+  AvailablePluginInfo as AvailablePluginInfo,
+  availablePluginInfoSchema,
+} from "./AvailablePluginInfo.js";
 export { BackendNotification, backendNotificationSchema } from "./BackendNotification.js";
 export {
   ChatHistoryData,
@@ -59,8 +63,11 @@ export {
   DiagnosticsLogEventData,
   diagnosticsLogEventDataSchema,
   diagnosticsLogEventSchema,
+  DiagnosticsLogInputEventData,
+  DiagnosticsLogOutputEventData,
   DiagnosticsLogRuntimeEventData,
   diagnosticsLogRuntimeEventDataSchema,
+  DiagnosticsLogServerEventData,
 } from "./diagnostics/DiagnosticsLogEvent.js";
 export {
   EmbeddingLoadModelConfig,
@@ -139,7 +146,11 @@ export {
   kvConfigStackLayerSchema,
   kvConfigStackSchema,
 } from "./KVConfig.js";
-export { ContentBlockStyle, contentBlockStyleSchema } from "./llm/ContentBlockStyle.js";
+export {
+  ContentBlockStyle,
+  ContentBlockStyleBase,
+  contentBlockStyleSchema,
+} from "./llm/ContentBlockStyle.js";
 export {
   LLMApplyPromptTemplateOpts,
   llmApplyPromptTemplateOptsSchema,
@@ -170,6 +181,7 @@ export {
   LLMMlxKvCacheGroupSizeType,
   llmMlxKvCacheGroupSizeTypes,
   llmMlxKvCacheGroupSizeTypesSchema,
+  LLMMlxKvCacheQuantization,
   llmMlxKvCacheQuantizationSchema,
   LLMSplitStrategy,
   llmSplitStrategySchema,
@@ -354,7 +366,11 @@ export {
   modelInstanceInfoBaseSchema,
 } from "./ModelInfoBase.js";
 export { ModelManifest, modelManifestSchema } from "./ModelManifest.js";
-export { ModelProcessingState, modelProcessingStateSchema } from "./ModelProcessingStatus.js";
+export {
+  ModelProcessingState,
+  modelProcessingStateSchema,
+  ModelProcessingStatus,
+} from "./ModelProcessingStatus.js";
 export {
   ModelQuery,
   modelQuerySchema,
@@ -392,7 +408,6 @@ export {
 } from "./ProjectYaml.js";
 export { Quantization, quantizationSchema } from "./Quantization.js";
 export { reasonableKeyStringSchema } from "./reasonable.js";
-export { RemotePluginInfo, remotePluginInfoSchema } from "./RemotePluginInfo.js";
 export {
   ArtifactDownloadPlan,
   ArtifactDownloadPlanModelInfo,
@@ -512,20 +527,44 @@ export {
   runtimeFrameworkExtensionInfoSchema,
 } from "./RuntimeExtension.js";
 export {
+  RuntimeHardwareCpuArchitecture,
+  runtimeHardwareCpuArchitectureSchema,
+  RuntimeHardwareCpuInfo,
+  runtimeHardwareCpuInfoSchema,
+  RuntimeHardwareCpuInstructionSetExtension,
+  runtimeHardwareCpuInstructionSetExtensionSchema,
+  RuntimeHardwareCpuSurveyResult,
+  runtimeHardwareCpuSurveyResultSchema,
   RuntimeHardwareGpuDetectionPlatform,
   runtimeHardwareGpuDetectionPlatformSchema,
   RuntimeHardwareGpuInfo,
   runtimeHardwareGpuInfoSchema,
   RuntimeHardwareGpuIntegrationType,
   runtimeHardwareGpuIntegrationTypeSchema,
+  RuntimeHardwareGpuSurveyResult,
+  runtimeHardwareGpuSurveyResultSchema,
+  RuntimeHardwareSurveyCompatibility,
+  runtimeHardwareSurveyCompatibilitySchema,
+  RuntimeHardwareSurveyCompatibilityStatus,
+  runtimeHardwareSurveyCompatibilityStatusSchema,
   RuntimeHardwareSurveyEngine,
   runtimeHardwareSurveyEngineSchema,
+  RuntimeHardwareSurveyHardware,
+  runtimeHardwareSurveyHardwareSchema,
+  RuntimeHardwareSurveyMemoryInfo,
+  runtimeHardwareSurveyMemoryInfoSchema,
   RuntimeHardwareSurveyResult,
   RuntimeHardwareSurveyResultCode,
   runtimeHardwareSurveyResultCodeSchema,
+  RuntimeHardwareSurveyResultInfo,
+  runtimeHardwareSurveyResultInfoSchema,
   runtimeHardwareSurveyResultSchema,
   RuntimeHardwareSurveyScope,
   runtimeHardwareSurveyScopeSchema,
+  RuntimeHardwareSurveyStatus,
+  runtimeHardwareSurveyStatusSchema,
+  RuntimeHardwareSurveyVisibleDevicesConfig,
+  runtimeHardwareSurveyVisibleDevicesConfigSchema,
 } from "./RuntimeHardwareSurvey.js";
 export {
   KVConfigSchematicsDeserializationError,

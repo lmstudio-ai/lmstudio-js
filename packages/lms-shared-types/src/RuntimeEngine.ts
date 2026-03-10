@@ -11,9 +11,13 @@ import {
 } from "./RuntimeCommon.js";
 
 /**
- * Uniquely specifies a Runtime Engine
+ * Uniquely specifies a runtime engine.
  *
  * @public
+ * @deprecated [DEP-LEGACY-RUNTIME-ENGINE] This API is part of the legacy runtime engine API that
+ * was never stablized, but used in the lms-cli. This API will be removed as we move the
+ * functionality into `client.runtime.extensions`. You may use this API but expect breakage even
+ * during minor updates.
  */
 export interface RuntimeEngineSpecifier extends BaseSpecifier {}
 
@@ -25,9 +29,13 @@ export const runtimeEngineSpecifierSchema =
   runtimeEngineSpecifierSchemaBase as ZodSchema<RuntimeEngineSpecifier>;
 
 /**
- * Information about a Runtime Engine
+ * Information about a runtime engine.
  *
  * @public
+ * @deprecated [DEP-LEGACY-RUNTIME-ENGINE] This API is part of the legacy runtime engine API that
+ * was never stablized, but used in the lms-cli. This API will be removed as we move the
+ * functionality into `client.runtime.extensions`. You may use this API but expect breakage even
+ * during minor updates.
  */
 export interface RuntimeEngineInfo extends RuntimeEngineSpecifier {
   engine: string;
@@ -45,9 +53,13 @@ export const runtimeEngineInfoSchema = runtimeEngineSpecifierSchemaBase.extend({
 }) as ZodSchema<RuntimeEngineInfo>;
 
 /**
- * Map of a ModelFormatName to a RuntimeEngineSpecifier
+ * Map of a model format to a selected runtime engine.
  *
  * @public
+ * @deprecated [DEP-LEGACY-RUNTIME-ENGINE] This API is part of the legacy runtime engine API that
+ * was never stablized, but used in the lms-cli. This API will be removed as we move the
+ * functionality into `client.runtime.extensions`. You may use this API but expect breakage even
+ * during minor updates.
  */
 export type SelectedRuntimeEngineMap = Map<ModelFormatName, RuntimeEngineSpecifier>;
 export const selectedRuntimeEngineMapSchema = z.map(

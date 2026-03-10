@@ -1,7 +1,9 @@
 import { z, type ZodSchema } from "zod";
 
 /**
- * Detailed prompt processing counts for Prompt Processing events.
+ * Token counts reported during prompt processing.
+ *
+ * @public
  */
 export interface PromptProcessingDetails {
   /**

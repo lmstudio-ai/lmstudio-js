@@ -314,7 +314,7 @@ export interface LLMPredictionConfigInput<TStructuredOutputType = unknown> {
   userMaxImageDimensionPixels?: number | false;
   /**
    * Whether to respect the model's preferred max image dimension when resizing images. See
-   * {@link userMaxImageDimensionPixels} for more info.
+   * {@link LLMPredictionConfigInput.userMaxImageDimensionPixels} for more info.
    *
    * @experimental [EXP-IMAGE-RESIZE] Image resize settings are experimental and may change in the
    * future.

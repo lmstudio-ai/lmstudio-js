@@ -1,6 +1,11 @@
 import { z } from "zod";
 import { colorPaletteSchema, type ColorPalette } from "../ColorPalette.js";
 
+/**
+ * Shared styling flags for content blocks.
+ *
+ * @public
+ */
 export interface ContentBlockStyleBase {
   forceRenderAsPlainText?: boolean;
 }

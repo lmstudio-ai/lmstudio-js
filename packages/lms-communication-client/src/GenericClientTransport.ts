@@ -11,7 +11,7 @@ export class GenericClientTransport extends ClientTransport {
   private closed = false;
   public constructor(
     onMessage: BufferedEvent<ServerToClientMessage>,
-    onClose: BufferedEvent<void>,
+    onClose: BufferedEvent<void | (() => Error)>,
     private readonly sendMessage: (message: ClientToServerMessage) => void,
     private readonly receivedMessage: (message: ServerToClientMessage) => void,
     connected: () => void,
@@ -30,19 +30,19 @@ export class GenericClientTransport extends ClientTransport {
       }
       this.receivedMessage(parsed);
     });
-    onClose.subscribeOnce(() => {
+    onClose.subscribeOnce(errorFactory => {
       if (this.closed) {
         return;
       }
       this.closed = true;
-      this.errored(new Error("Server closed the connection"));
+      this.errored(errorFactory ? errorFactory() : new Error("Server closed the connection"));
     });
     // GenericClientTransport is always "connected" - call immediately
     connected();
   }
   public static createFactory(
     onMessage: BufferedEvent<ServerToClientMessage>,
-    onClose: BufferedEvent<void>,
+    onClose: BufferedEvent<void | (() => Error)>,
     sendMessage: (message: ClientToServerMessage) => void,
   ): ClientTransportFactory {
     return (receivedMessage, connected, errored, parentLogger) =>

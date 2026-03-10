@@ -86,7 +86,7 @@ export interface LMStudioClientConstructorOpts {
    */
   apiToken?: string;
   /**
-   * @deprecated Please use {@link apiToken} instead.
+   * @deprecated Please use `apiToken` instead.
    *
    * Changes the client identifier used to authenticate with LM Studio. By default, it uses a
    * randomly generated string.
@@ -96,7 +96,7 @@ export interface LMStudioClientConstructorOpts {
    */
   clientIdentifier?: string;
   /**
-   * @deprecated Please use {@link apiToken} instead.
+   * @deprecated Please use `apiToken` instead.
    *
    * Changes the client passkey used to authenticate with LM Studio. By default, it uses a randomly
    * generated string.

@@ -14,6 +14,7 @@ import {
 } from "@lmstudio/lms-common";
 import {
   Channel,
+  normalizeCommunicationWarningKind,
   deserialize,
   serialize,
   type BackendInterface,
@@ -27,6 +28,7 @@ import {
   type ServerToClientMessage,
   type SignalEndpoint,
   type SignalEndpointsSpecBase,
+  type CommunicationWarningKind,
   type WritableSignalEndpoint,
   type WritableSignalEndpointsSpecBase,
 } from "@lmstudio/lms-communication";
@@ -76,6 +78,12 @@ function defaultErrorDeserializer(
   return fromSerializedError(serialized, directCause, stack);
 }
 
+export interface ClientPortCommunicationWarning {
+  direction: "produced" | "received";
+  kind: CommunicationWarningKind;
+  warning: string;
+}
+
 export class ClientPort<
   TRpcEndpoints extends RpcEndpointsSpecBase,
   TChannelEndpoints extends ChannelEndpointsSpecBase,
@@ -104,6 +112,9 @@ export class ClientPort<
     stack?: string,
   ) => Error;
   private verboseErrorMessage: boolean;
+  private readonly onCommunicationWarning?: (
+    communicationWarning: ClientPortCommunicationWarning,
+  ) => void;
 
   public constructor(
     public readonly backendInterface: BackendInterface<
@@ -118,6 +129,7 @@ export class ClientPort<
       parentLogger,
       errorDeserializer,
       verboseErrorMessage,
+      onCommunicationWarning,
     }: {
       parentLogger?: LoggerInterface;
       errorDeserializer?: (
@@ -126,33 +138,43 @@ export class ClientPort<
         stack?: string,
       ) => Error;
       verboseErrorMessage?: boolean;
+      onCommunicationWarning?: (communicationWarning: ClientPortCommunicationWarning) => void;
     } = {},
   ) {
     this.logger = new SimpleLogger("ClientPort", parentLogger);
     this.errorDeserializer = errorDeserializer ?? defaultErrorDeserializer;
     this.verboseErrorMessage = verboseErrorMessage ?? true;
+    this.onCommunicationWarning = onCommunicationWarning;
     this.transport = factory(this.receivedMessage, this.onConnected, this.errored, this.logger);
   }
 
-  private communicationWarning(warning: string) {
+  private communicationWarning(warning: string, kind: CommunicationWarningKind = "unknown") {
     if (this.producedCommunicationWarningsCount >= 5) {
       return;
     }
-    this.logger.warnText`
-      Produced communication warning: ${warning}
-      
-      This is usually caused by communication protocol incompatibility. Please make sure you are
-      using the up-to-date versions of the SDK and LM Studio.
-    `;
+    if (this.onCommunicationWarning === undefined) {
+      this.logger.warnText`
+        Produced communication warning: ${warning}
+        
+        This is usually caused by communication protocol incompatibility. Please make sure you are
+        using the up-to-date versions of the SDK and LM Studio.
+      `;
+    }
     this.safeSend(
       {
         type: "communicationWarning",
         warning,
+        kind,
       },
       "communicationWarning",
     );
+    this.reportCommunicationWarning({
+      direction: "produced",
+      kind,
+      warning,
+    });
     this.producedCommunicationWarningsCount++;
-    if (this.producedCommunicationWarningsCount >= 5) {
+    if (this.onCommunicationWarning === undefined && this.producedCommunicationWarningsCount >= 5) {
       this.logger.errorText`
         5 communication warnings have been produced. Further warnings will not be printed.
       `;
@@ -190,6 +212,7 @@ export class ClientPort<
     if (openChannel === undefined) {
       this.communicationWarning(
         `Received channelSend for unknown channel, channelId = ${message.channelId}`,
+        "channelUnknown",
       );
       return;
     }
@@ -201,7 +224,7 @@ export class ClientPort<
         ${deserializedMessage}. Zod error:
 
         ${Validator.prettyPrintZod("message", parsed.error)}
-      `);
+      `, "channelMessageTypeError");
       return;
     }
     openChannel.receivedMessage(parsed.data);
@@ -212,6 +235,7 @@ export class ClientPort<
     if (openChannel === undefined) {
       this.communicationWarning(
         `Received channelAck for unknown channel, channelId = ${message.channelId}`,
+        "channelUnknown",
       );
       return;
     }
@@ -223,6 +247,7 @@ export class ClientPort<
     if (openChannel === undefined) {
       this.communicationWarning(
         `Received channelClose for unknown channel, channelId = ${message.channelId}`,
+        "channelUnknown",
       );
       return;
     }
@@ -236,6 +261,7 @@ export class ClientPort<
     if (openChannel === undefined) {
       this.communicationWarning(
         `Received channelError for unknown channel, channelId = ${message.channelId}`,
+        "channelUnknown",
       );
       return;
     }
@@ -252,7 +278,10 @@ export class ClientPort<
   private receivedRpcResult(message: ServerToClientMessage & { type: "rpcResult" }) {
     const ongoingRpc = this.ongoingRpcs.get(message.callId);
     if (ongoingRpc === undefined) {
-      this.communicationWarning(`Received rpcResult for unknown rpc, callId = ${message.callId}`);
+      this.communicationWarning(
+        `Received rpcResult for unknown rpc, callId = ${message.callId}`,
+        "rpcUnknown",
+      );
       return;
     }
     const deserializedResult = deserialize(ongoingRpc.endpoint.serialization, message.result);
@@ -263,7 +292,7 @@ export class ClientPort<
         ${deserializedResult}. Zod error:
 
         ${Validator.prettyPrintZod("result", parsed.error)}
-      `);
+      `, "rpcResultTypeError");
       return;
     }
     ongoingRpc.resolve(parsed.data);
@@ -274,7 +303,10 @@ export class ClientPort<
   private receivedRpcError(message: ServerToClientMessage & { type: "rpcError" }) {
     const ongoingRpc = this.ongoingRpcs.get(message.callId);
     if (ongoingRpc === undefined) {
-      this.communicationWarning(`Received rpcError for unknown rpc, callId = ${message.callId}`);
+      this.communicationWarning(
+        `Received rpcError for unknown rpc, callId = ${message.callId}`,
+        "rpcUnknown",
+      );
       return;
     }
     const error = this.errorDeserializer(
@@ -313,7 +345,7 @@ export class ClientPort<
         patches = ${JSON.stringify(patches, null, 2)}.
 
         Error: ${String(error)}
-      `);
+      `, "signalUpdatePatchApplyError");
       return;
     }
     const parseResult = openSignalSubscription.endpoint.signalData.safeParse(afterValue);
@@ -330,7 +362,7 @@ export class ClientPort<
         Zod error:
 
         ${Validator.prettyPrintZod("value", parseResult.error)}
-      `);
+      `, "signalPatchTypeError");
       return;
     }
     // Don't use the parsed value, as it loses the substructure identities
@@ -342,6 +374,7 @@ export class ClientPort<
     if (openSignalSubscription === undefined) {
       this.communicationWarning(
         `Received signalError for unknown signal, subscribeId = ${message.subscribeId}`,
+        "signalUnknown",
       );
       return;
     }
@@ -384,7 +417,7 @@ export class ClientPort<
         patches = ${JSON.stringify(patches, null, 2)}.
 
         Error: ${String(error)}
-      `);
+      `, "writableSignalPatchApplyError");
     }
     const parseResult = openSignalSubscription.endpoint.signalData.safeParse(afterValue);
     if (!parseResult.success) {
@@ -400,7 +433,7 @@ export class ClientPort<
         Zod error:
 
         ${Validator.prettyPrintZod("value", parseResult.error)}
-      `);
+      `, "writableSignalPatchTypeError");
       return;
     }
     // Don't use the parsed value, as it loses the substructure identities
@@ -415,6 +448,7 @@ export class ClientPort<
     if (openSignalSubscription === undefined) {
       this.communicationWarning(
         `Received writableSignalError for unknown signal, subscribeId = ${message.subscribeId}`,
+        "writableSignalUnknown",
       );
       return;
     }
@@ -431,14 +465,33 @@ export class ClientPort<
   private receivedCommunicationWarning(
     message: ServerToClientMessage & { type: "communicationWarning" },
   ) {
-    this.logger.warnText`
-      Received communication warning from the server: ${message.warning}
-      
-      This is usually caused by communication protocol incompatibility. Please make sure you are
-      using the up-to-date versions of the SDK and LM Studio.
+    const kind = normalizeCommunicationWarningKind(message.kind);
+    if (this.onCommunicationWarning === undefined) {
+      this.logger.warnText`
+        Received communication warning from the server (${kind}): ${message.warning}
+        
+        This is usually caused by communication protocol incompatibility. Please make sure you are
+        using the up-to-date versions of the SDK and LM Studio.
 
-      Note: This warning was received from the server and is printed on the client for convenience.
-    `;
+        Note: This warning was received from the server and is printed on the client for convenience.
+      `;
+    }
+    this.reportCommunicationWarning({
+      direction: "received",
+      kind,
+      warning: message.warning,
+    });
+  }
+
+  private reportCommunicationWarning(communicationWarning: ClientPortCommunicationWarning): void {
+    if (this.onCommunicationWarning === undefined) {
+      return;
+    }
+    try {
+      this.onCommunicationWarning(communicationWarning);
+    } catch (error) {
+      this.logger.error("Error in onCommunicationWarning callback:", error);
+    }
   }
 
   private receivedKeepAliveAck(_message: ServerToClientMessage & { type: "keepAliveAck" }) {

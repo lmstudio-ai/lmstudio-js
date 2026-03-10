@@ -120,6 +120,12 @@ export const rawFunctionToolSchema = toolBaseSchema.extend({
   implementation: z.function(),
 });
 
+/**
+ * A raw function tool placeholder that intentionally has no implementation.
+ *
+ * @public
+ * @experimental Not stable, will likely change in the future.
+ */
 export interface UnimplementedRawFunctionTool extends ToolBase {
   type: "unimplementedRawFunction";
   parametersJsonSchema: any;

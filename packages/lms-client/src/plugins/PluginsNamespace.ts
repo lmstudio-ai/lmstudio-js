@@ -33,7 +33,7 @@ import {
  *
  * @public
  */
-interface PluginToolsOpts {
+export interface PluginToolsOpts {
   /**
    * @deprecated [DEP-PLUGIN-RAW-CONFIG] Plugin config access API is still in active development.
    * Stay tuned for updates.
@@ -179,7 +179,8 @@ export class PluginsNamespace {
    * If this client is currently running as a plugin, get the self registration host which can be
    * used to register hooks.
    *
-   * @deprecated This method is used by plugins internally to register hooks. Do not use directly.
+   * @deprecated This method is used by plugins internally to register hooks.
+   * @public
    */
   public getSelfRegistrationHost() {
     return new PluginSelfRegistrationHost(this.port, this.client, this.rootLogger, this.validator);

@@ -11,6 +11,7 @@ import {
 } from "@lmstudio/lms-common";
 import {
   Channel,
+  normalizeCommunicationWarningKind,
   deserialize,
   serialize,
   type BackendInterface,
@@ -23,6 +24,7 @@ import {
   type ServerTransportFactory,
   type SignalEndpoint,
   type SignalEndpointsSpecBase,
+  type CommunicationWarningKind,
   type WritableSignalEndpoint,
   type WritableSignalEndpointsSpecBase,
 } from "@lmstudio/lms-communication";
@@ -114,7 +116,7 @@ export class ServerPort<
     }
   }
 
-  private communicationWarning(warning: string) {
+  private communicationWarning(warning: string, kind: CommunicationWarningKind = "unknown") {
     if (this.producedCommunicationWarningsCount >= 5) {
       return;
     }
@@ -128,6 +130,7 @@ export class ServerPort<
       {
         type: "communicationWarning",
         warning,
+        kind,
       },
       "communicationWarning",
     );
@@ -144,18 +147,21 @@ export class ServerPort<
     if (endpoint === undefined) {
       this.communicationWarning(
         `Received channelCreate for unknown endpoint, endpoint = ${message.endpoint}`,
+        "channelEndpointUnknown",
       );
       return;
     }
     if (endpoint.handler === null) {
       this.communicationWarning(
         `Received channelCreate for unhandled endpoint, endpoint = ${message.endpoint}`,
+        "channelEndpointUnhandled",
       );
       return;
     }
     if (this.openChannels.has(message.channelId)) {
       this.communicationWarning(
         `Received channelCreate for already open channel, channelId = ${message.channelId}`,
+        "channelAlreadyOpen",
       );
       return;
     }
@@ -170,7 +176,7 @@ export class ServerPort<
         creationParameter = ${deserializedCreationParameter}. Zod error:
 
         ${Validator.prettyPrintZod("creationParameter", parseResult.error)}
-      `);
+      `, "channelCreationParameterTypeError");
 
       return;
     }
@@ -185,7 +191,7 @@ export class ServerPort<
             message = ${message as object}. Zod error:
 
             ${Validator.prettyPrintZod("message", result.error)}
-          `);
+          `, "channelMessageTypeError");
           return;
         }
         const serializedMessage = serialize(endpoint.serialization, result.data);
@@ -244,6 +250,7 @@ export class ServerPort<
     if (openChannel === undefined) {
       this.communicationWarning(
         `Received channelSend for unknown channel, channelId = ${message.channelId}`,
+        "channelUnknown",
       );
       return;
     }
@@ -255,7 +262,7 @@ export class ServerPort<
         message = ${message.message}. Zod error:
 
         ${Validator.prettyPrintZod("message", parsed.error)}
-      `);
+      `, "channelMessageTypeError");
       return;
     }
     openChannel.receivedMessage(parsed.data);
@@ -266,6 +273,7 @@ export class ServerPort<
     if (openChannel === undefined) {
       this.communicationWarning(
         `Received channelAck for unknown channel, channelId = ${message.channelId}`,
+        "channelUnknown",
       );
       return;
     }
@@ -277,12 +285,14 @@ export class ServerPort<
     if (endpoint === undefined) {
       this.communicationWarning(
         `Received rpcCall for unknown endpoint, endpoint = ${message.endpoint}`,
+        "rpcEndpointUnknown",
       );
       return;
     }
     if (endpoint.handler === null) {
       this.communicationWarning(
         `Received rpcCall for unhandled endpoint, endpoint = ${message.endpoint}`,
+        "rpcEndpointUnhandled",
       );
       return;
     }
@@ -294,7 +304,7 @@ export class ServerPort<
         parameter = ${message.parameter}. Zod error:
 
         ${Validator.prettyPrintZod("parameter", parseResult.error)}
-      `);
+      `, "rpcParameterTypeError");
       return;
     }
     const context = this.contextCreator({
@@ -355,12 +365,14 @@ export class ServerPort<
     if (endpoint === undefined) {
       this.communicationWarning(
         `Received signalSubscribe for unknown endpoint, endpoint = ${message.endpoint}`,
+        "signalEndpointUnknown",
       );
       return;
     }
     if (endpoint.handler === null) {
       this.communicationWarning(
         `Received signalSubscribe for unhandled endpoint, endpoint = ${message.endpoint}`,
+        "signalEndpointUnhandled",
       );
       return;
     }
@@ -368,7 +380,7 @@ export class ServerPort<
       this.communicationWarning(text`
         Received signalSubscribe for already open subscription, subscribeId =
         ${message.subscribeId}
-      `);
+      `, "signalAlreadyOpen");
       return;
     }
     const deserializedCreationParameter = deserialize(
@@ -382,7 +394,7 @@ export class ServerPort<
         creationParameter = ${deserializedCreationParameter}. Zod error:
 
         ${Validator.prettyPrintZod("creationParameter", parseResult.error)}
-      `);
+      `, "signalCreationParameterTypeError");
       return;
     }
     const context = this.contextCreator({
@@ -523,12 +535,14 @@ export class ServerPort<
     if (endpoint === undefined) {
       this.communicationWarning(
         `Received writableSignalSubscribe for unknown endpoint, endpoint = ${message.endpoint}`,
+        "writableSignalEndpointUnknown",
       );
       return;
     }
     if (endpoint.handler === null) {
       this.communicationWarning(
         `Received writableSignalSubscribe for unhandled endpoint, endpoint = ${message.endpoint}`,
+        "writableSignalEndpointUnhandled",
       );
       return;
     }
@@ -536,7 +550,7 @@ export class ServerPort<
       this.communicationWarning(text`
         Received writableSignalSubscribe for already open subscription, subscribeId =
         ${message.subscribeId}
-      `);
+      `, "writableSignalAlreadyOpen");
       return;
     }
     const deserializedCreationParameter = deserialize(
@@ -550,7 +564,7 @@ export class ServerPort<
         creationParameter = ${deserializedCreationParameter}. Zod error:
 
         ${Validator.prettyPrintZod("creationParameter", parseResult.error)}
-      `);
+      `, "writableSignalCreationParameterTypeError");
       return;
     }
     const context = this.contextCreator({
@@ -650,7 +664,7 @@ export class ServerPort<
                     data = ${result}. Zod error:
 
                     ${Validator.prettyPrintZod("data", parseResult.error)}
-                  `);
+                  `, "writableSignalDataTypeError");
                   return;
                 }
                 setter.withValueAndPatches(parseResult.data, deserializedPatches, tags);
@@ -658,7 +672,7 @@ export class ServerPort<
                 this.communicationWarning(text`
                   Error in receivedPatches for writable signal, endpointName = ${endpoint.name},
                   error = ${error.message}
-                `);
+                `, "writableSignalPatchApplyError");
               }
             },
           };
@@ -746,6 +760,7 @@ export class ServerPort<
     if (openWritableSignalSubscription === undefined) {
       this.communicationWarning(
         `Received writableSignalUpdate for unknown subscription, subscribeId = ${message.subscribeId}`,
+        "writableSignalUnknown",
       );
       return;
     }
@@ -755,8 +770,9 @@ export class ServerPort<
   private receivedCommunicationWarning(
     message: ClientToServerMessage & { type: "communicationWarning" },
   ) {
+    const kind = normalizeCommunicationWarningKind(message.kind);
     this.logger.warnText`
-      Received communication warning from the client: ${message.warning}
+      Received communication warning from the client (${kind}): ${message.warning}
       
       This is usually caused by communication protocol incompatibility. Please make sure you are
       using the up-to-date versions of the SDK and LM Studio.

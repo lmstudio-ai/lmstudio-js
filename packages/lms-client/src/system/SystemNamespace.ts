@@ -35,7 +35,33 @@ const startHttpServerOptsSchema = z.object({
     .optional(),
 });
 
-type StartHttpServerOpts = z.infer<typeof startHttpServerOptsSchema>;
+/**
+ * Options for starting the local HTTP server.
+ *
+ * @public
+ * @experimental
+ */
+export interface StartHttpServerOpts {
+  /**
+   * Port to run the API server on. Must be between 1 and 65535.
+   */
+  port?: number;
+  /**
+   * Enable CORS on the API server. Allows any website to access the server.
+   */
+  cors?: boolean;
+  /**
+   * Network interface to bind the server to. Use "0.0.0.0" to accept connections from all network
+   * interfaces, or "127.0.0.1" (default) for localhost only.
+   */
+  networkInterface?: string;
+}
+
+/**
+ * Basic information about the LM Studio service process.
+ *
+ * @public
+ */
 export interface ServiceInfo {
   pid: number;
   isDaemon: boolean;

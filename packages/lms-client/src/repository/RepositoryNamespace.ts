@@ -171,7 +171,10 @@ const installLocalPluginOptsSchema = z.object({
 export class RepositoryNamespace {
   /** @internal */
   private readonly logger: SimpleLogger;
-  /** @public */
+  /**
+   * @deprecated [DEP-HUB-API-ACCESS] LM Studio Hub API access is still in active development
+   * and will change. Not recommended for public adoption.
+   */
   public readonly unstable: UnstableRepositoryNamespace;
   /**
    * @deprecated [DEP-HUB-API-ACCESS] LM Studio Hub API access is still in active development
@@ -509,7 +512,13 @@ export class RepositoryNamespace {
   }
 }
 
-/** @public */
+/**
+ * Access to LM Studio Hub APIs that are still in flux.
+ *
+ * @public
+ * @deprecated [DEP-HUB-API-ACCESS] LM Studio Hub API access is still in active development
+ * and will change. Not recommended for public adoption.
+ */
 export class UnstableRepositoryNamespace {
   /** @internal */
   private readonly logger: SimpleLogger;
