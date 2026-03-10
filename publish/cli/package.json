@@ -27,7 +27,6 @@
   "devDependencies": {
     "@rollup/plugin-swc": "^0.4.0",
     "postject": "^1.0.0-alpha.6",
-    "react-devtools-core": "^7.0.1",
     "run-script-os": "^1.1.6"
   },
   "gitHead": "d95ce2feb067b4eec446c673155631ee1734e982"
