@@ -335,7 +335,7 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
           .scope("acceleration", builder =>
             builder.field(
               "offloadRatio",
-              "llamaAccelerationOffloadRatio",
+              "llamaLayerRatio",
               { machineDependent: true },
               "max",
             ),
