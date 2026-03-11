@@ -645,17 +645,11 @@ export const kvValueTypesLibrary = baseKVValueTypesLibraryBuilder
       return llmLlamaAccelerationOffloadRatioSchema;
     },
     effectiveEquals: (a, b) => {
-      if (a === "unknown" || b === "unknown") {
-        return a === b;
-      }
       const ratioA = a === "max" ? 1 : a === "off" ? 0 : a;
       const ratioB = b === "max" ? 1 : b === "off" ? 0 : b;
       return ratioA === ratioB;
     },
     stringify: (value, { numLayers }, { t }) => {
-      if (value === "unknown") {
-        return t("config:customInputs.llamaAccelerationOffloadRatio.unknown", "UNKNOWN");
-      }
       if (value === "max" || value === 1) {
         const label = t("config:customInputs.llamaAccelerationOffloadRatio.max", "MAX");
         if (numLayers !== 0) {

@@ -5,17 +5,13 @@ import { z } from "zod";
  * A value of 0 means that no layers are offloaded to the GPU, while a value of 1 means that all
  * layers (that can be offloaded) are offloaded to the GPU.
  *
- * `"unknown"` is output-only: it is returned by `getLoadConfig` when `fit` is true, indicating
- * that the fit algorithm determined GPU allocation and the ratio is not known ahead of time.
- *
  * @public
  */
-export type LLMLlamaAccelerationOffloadRatio = number | "max" | "off" | "unknown";
+export type LLMLlamaAccelerationOffloadRatio = number | "max" | "off";
 export const llmLlamaAccelerationOffloadRatioSchema = z.union([
   z.number().min(0).max(1),
   z.literal("max"),
   z.literal("off"),
-  z.literal("unknown"),
 ]);
 
 /**
@@ -42,8 +38,7 @@ export type GPUSetting = {
    * When true, enables a fit algorithm that determines optimal layer placement across available
    * GPUs automatically.
    *
-   * When `fit` is true, `ratio` and `numCpuExpertLayersRatio` are ignored.
-   * After loading, `ratio` will report `"unknown"` via `getLoadConfig`.
+   * * When `fit` is true, `ratio` and `numCpuExpertLayersRatio` are ignored.
    *
    * Defaults to true.
    */
