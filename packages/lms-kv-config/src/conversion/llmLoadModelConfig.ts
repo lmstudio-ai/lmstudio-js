@@ -219,10 +219,21 @@ export function kvConfigToLLMLoadModelConfig(
 }
 
 export function llmLoadModelConfigToKVConfig(config: LLMLoadModelConfig): KVConfig {
+  // If the caller explicitly set any GPU param that fit mode would ignore (ratio, MoE expert
+  // offload, mainGpu, splitStrategy) but didn't set fit, infer fit=false so the modelDefault
+  // layer's fit=true doesn't silently override their intent. disabledGpus is excluded because
+  // fit still respects it.
+  const hasGpuParamIgnoredByFit =
+    config.gpu?.ratio !== undefined
+    || config.gpu?.numCpuExpertLayersRatio !== undefined
+    || config.gpu?.mainGpu !== undefined
+    || config.gpu?.splitStrategy !== undefined;
+  const inferredFit = config.gpu?.fit ?? (hasGpuParamIgnoredByFit ? false : undefined);
+
   const top = llmLoadSchematics.buildPartialConfig({
     "gpuSplitConfig": convertGPUSettingToGPUSplitConfig(config.gpu),
     "gpuStrictVramCap": config.gpuStrictVramCap,
-    "llama.acceleration.fit": config.gpu?.fit,
+    "llama.acceleration.fit": inferredFit,
     "llama.acceleration.offloadRatio": config.gpu?.ratio,
     "numCpuExpertLayersRatio": config.gpu?.numCpuExpertLayersRatio,
     "numParallelSessions": config.maxParallelPredictions,
