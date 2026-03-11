@@ -38,9 +38,10 @@ export type GPUSetting = {
    * When true, enables a fit algorithm that determines optimal layer placement across available
    * GPUs automatically.
    *
-   * When `fit` is true, `ratio` and `numCpuExpertLayersRatio` are ignored.
+   * When `fit` is true, `ratio`, `numCpuExpertLayersRatio`, `mainGpu`, and `splitStrategy` are
+   * ignored.
    *
-   * Defaults to true.
+   * Defaults to true when loaded through the app or CLI.
    */
   fit?: boolean;
   /**
@@ -62,10 +63,14 @@ export type GPUSetting = {
   numCpuExpertLayersRatio?: LLMLlamaAccelerationOffloadRatio;
   /**
    * The index of the GPU to use as the main GPU.
+   *
+   * When `fit` is true, this field is ignored.
    */
   mainGpu?: number;
   /**
    * How to split computation across multiple GPUs.
+   *
+   * When `fit` is true, this field is ignored.
    */
   splitStrategy?: LLMSplitStrategy;
   /**
