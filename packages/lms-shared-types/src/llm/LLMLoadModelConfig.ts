@@ -38,7 +38,7 @@ export type GPUSetting = {
    * When true, enables a fit algorithm that determines optimal layer placement across available
    * GPUs automatically.
    *
-   * * When `fit` is true, `ratio` and `numCpuExpertLayersRatio` are ignored.
+   * When `fit` is true, `ratio` and `numCpuExpertLayersRatio` are ignored.
    *
    * Defaults to true.
    */
