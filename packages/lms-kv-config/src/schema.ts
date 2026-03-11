@@ -269,7 +269,7 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
         builder
           .scope("acceleration", builder =>
             builder
-              .field("fit", "boolean", { machineDependent: true }, true)
+              .field("fit", "boolean", { machineDependent: true }, false)
               .field(
                 "offloadRatio",
                 "llamaAccelerationOffloadRatio",
