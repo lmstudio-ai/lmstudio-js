@@ -168,8 +168,6 @@ export {
   gpuSettingSchema,
   LLMLlamaAccelerationOffloadRatio,
   llmLlamaAccelerationOffloadRatioSchema,
-  LLMLlamaLayerRatio,
-  llmLlamaLayerRatioSchema,
   LLMLlamaCacheQuantizationType,
   llmLlamaCacheQuantizationTypes,
   llmLlamaCacheQuantizationTypeSchema,

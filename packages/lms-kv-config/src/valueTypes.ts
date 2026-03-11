@@ -5,7 +5,6 @@ import {
   llmContextOverflowPolicySchema,
   llmContextReferenceSchema,
   llmLlamaAccelerationOffloadRatioSchema,
-  llmLlamaLayerRatioSchema,
   llmLlamaCacheQuantizationTypeSchema,
   llmLlamaLogitBiasConfigSchema,
   llmLlamaMirostatSamplingConfigSchema,
@@ -646,7 +645,7 @@ export const kvValueTypesLibrary = baseKVValueTypesLibraryBuilder
       return llmLlamaAccelerationOffloadRatioSchema;
     },
     effectiveEquals: (a, b) => {
-      if (a === "auto" || b === "auto") {
+      if (a === "unknown" || b === "unknown") {
         return a === b;
       }
       const ratioA = a === "max" ? 1 : a === "off" ? 0 : a;
@@ -654,38 +653,9 @@ export const kvValueTypesLibrary = baseKVValueTypesLibraryBuilder
       return ratioA === ratioB;
     },
     stringify: (value, { numLayers }, { t }) => {
-      if (value === "auto") {
-        return t("config:customInputs.llamaAccelerationOffloadRatio.auto", "AUTO");
+      if (value === "unknown") {
+        return t("config:customInputs.llamaAccelerationOffloadRatio.unknown", "UNKNOWN");
       }
-      if (value === "max" || value === 1) {
-        const label = t("config:customInputs.llamaAccelerationOffloadRatio.max", "MAX");
-        if (numLayers !== 0) {
-          return `${label} (${numLayers})`;
-        }
-        return label;
-      }
-      if (value === "off" || value === 0) {
-        return t("config:customInputs.llamaAccelerationOffloadRatio.off", "OFF");
-      }
-      if (numLayers !== undefined) {
-        return String(Math.round(numLayers * value));
-      }
-      return (value * 100).toFixed(0) + "%";
-    },
-  })
-  .valueType("llamaLayerRatio", {
-    paramType: {
-      numLayers: z.number().optional(),
-    },
-    schemaMaker: () => {
-      return llmLlamaLayerRatioSchema;
-    },
-    effectiveEquals: (a, b) => {
-      const ratioA = a === "max" ? 1 : a === "off" ? 0 : a;
-      const ratioB = b === "max" ? 1 : b === "off" ? 0 : b;
-      return ratioA === ratioB;
-    },
-    stringify: (value, { numLayers }, { t }) => {
       if (value === "max" || value === 1) {
         const label = t("config:customInputs.llamaAccelerationOffloadRatio.max", "MAX");
         if (numLayers !== 0) {

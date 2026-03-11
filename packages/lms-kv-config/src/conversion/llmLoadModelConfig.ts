@@ -51,6 +51,15 @@ function kvConfigToLLMLlamaLoadModelConfig(
     result.gpuStrictVramCap = gpuStrictVramCap;
   }
 
+  const llamaAccelerationFit = parsed.get("llama.acceleration.fit");
+  if (llamaAccelerationFit !== undefined) {
+    gpuFields = {
+      ...gpuFields,
+      fit: llamaAccelerationFit,
+    };
+    result.gpu = gpuFields;
+  }
+
   const llamaAccelerationOffloadRatio = parsed.get("llama.acceleration.offloadRatio");
   if (llamaAccelerationOffloadRatio !== undefined) {
     gpuFields = {
@@ -213,6 +222,7 @@ export function llmLoadModelConfigToKVConfig(config: LLMLoadModelConfig): KVConf
   const top = llmLoadSchematics.buildPartialConfig({
     "gpuSplitConfig": convertGPUSettingToGPUSplitConfig(config.gpu),
     "gpuStrictVramCap": config.gpuStrictVramCap,
+    "llama.acceleration.fit": config.gpu?.fit,
     "llama.acceleration.offloadRatio": config.gpu?.ratio,
     "numCpuExpertLayersRatio": config.gpu?.numCpuExpertLayersRatio,
     "numParallelSessions": config.maxParallelPredictions,

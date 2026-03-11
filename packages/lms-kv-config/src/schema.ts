@@ -254,7 +254,7 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
       .field("offloadKVCacheToGpu", "boolean", {}, true)
       .field(
         "numCpuExpertLayersRatio",
-        "llamaLayerRatio",
+        "llamaAccelerationOffloadRatio",
         { machineDependent: true, isExperimental: true },
         "off",
       )
@@ -268,12 +268,14 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
       .scope("llama", builder =>
         builder
           .scope("acceleration", builder =>
-            builder.field(
-              "offloadRatio",
-              "llamaAccelerationOffloadRatio",
-              { machineDependent: true },
-              "auto",
-            ),
+            builder
+              .field("fit", "boolean", { machineDependent: true }, true)
+              .field(
+                "offloadRatio",
+                "llamaAccelerationOffloadRatio",
+                { machineDependent: true },
+                "max",
+              ),
           )
           .field("cpuThreadPoolSize", "numeric", { min: 1, machineDependent: true }, 4)
           .field("evalBatchSize", "numeric", { min: 1, int: true }, 512)
@@ -335,7 +337,7 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
           .scope("acceleration", builder =>
             builder.field(
               "offloadRatio",
-              "llamaLayerRatio",
+              "llamaAccelerationOffloadRatio",
               { machineDependent: true },
               "max",
             ),

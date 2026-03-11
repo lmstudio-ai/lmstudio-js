@@ -5,24 +5,17 @@ import { z } from "zod";
  * A value of 0 means that no layers are offloaded to the GPU, while a value of 1 means that all
  * layers (that can be offloaded) are offloaded to the GPU.
  *
+ * `"unknown"` is output-only: it is returned by `getLoadConfig` when `fit` is true, indicating
+ * that the fit algorithm determined GPU allocation and the ratio is not known ahead of time.
+ *
  * @public
  */
-export type LLMLlamaAccelerationOffloadRatio = number | "max" | "off" | "auto";
+export type LLMLlamaAccelerationOffloadRatio = number | "max" | "off" | "unknown";
 export const llmLlamaAccelerationOffloadRatioSchema = z.union([
   z.number().min(0).max(1),
   z.literal("max"),
   z.literal("off"),
-  z.literal("auto"),
-]);
-
-/**
- * A plain layer ratio without the `"auto"` option.
- */
-export type LLMLlamaLayerRatio = Exclude<LLMLlamaAccelerationOffloadRatio, "auto">;
-export const llmLlamaLayerRatioSchema = z.union([
-  z.number().min(0).max(1),
-  z.literal("max"),
-  z.literal("off"),
+  z.literal("unknown"),
 ]);
 
 /**
@@ -46,9 +39,21 @@ export const llmSplitStrategySchema = z.enum(["evenly", "favorMainGpu"]);
  */
 export type GPUSetting = {
   /**
+   * When true, enables a fit algorithm that determines optimal layer placement across available
+   * GPUs automatically.
+   *
+   * When `fit` is true, `ratio` and `numCpuExpertLayersRatio` are ignored.
+   * After loading, `ratio` will report `"unknown"` via `getLoadConfig`.
+   *
+   * Defaults to true.
+   */
+  fit?: boolean;
+  /**
    * A number between 0 to 1 representing the ratio of the work should be distributed to the GPU,
    * where 0 means no work is distributed and 1 means all work is distributed. Can also specify the
    * string "off" to mean 0 and the string "max" to mean 1.
+   *
+   * When `fit` is true, this field is ignored.
    */
   ratio?: LLMLlamaAccelerationOffloadRatio;
   /**
@@ -57,10 +62,9 @@ export type GPUSetting = {
    * GPU offload configuration and 0 means the expert offload will be determined by GPU offload.
    * Can also specify the string "off" to mean 0 and the string "max" to mean 1.
    *
-   * Note: `"auto"` is not a valid value for this field. When `ratio` is set to `"auto"` (fit
-   * mode), this field is ignored — the fit algorithm handles all layer placement automatically.
+   * When `fit` is true, this field is ignored.
    */
-  numCpuExpertLayersRatio?: LLMLlamaLayerRatio;
+  numCpuExpertLayersRatio?: LLMLlamaAccelerationOffloadRatio;
   /**
    * The index of the GPU to use as the main GPU.
    */
@@ -75,8 +79,9 @@ export type GPUSetting = {
   disabledGpus?: number[];
 };
 export const gpuSettingSchema = z.object({
+  fit: z.boolean().optional(),
   ratio: llmLlamaAccelerationOffloadRatioSchema.optional(),
-  numCpuExpertLayersRatio: llmLlamaLayerRatioSchema.optional(),
+  numCpuExpertLayersRatio: llmLlamaAccelerationOffloadRatioSchema.optional(),
   mainGpu: z.number().int().optional(),
   splitStrategy: llmSplitStrategySchema.optional(),
   disabledGpus: z.array(z.number().int()).optional(),
