@@ -40,8 +40,6 @@ export type GPUSetting = {
    *
    * When `fit` is true, `ratio`, `numCpuExpertLayersRatio`, `mainGpu`, and `splitStrategy` are
    * ignored.
-   *
-   * Defaults to true when loaded through the app or CLI.
    */
   fit?: boolean;
   /**
