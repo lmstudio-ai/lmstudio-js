@@ -13,7 +13,7 @@ describe("LLM", () => {
   beforeAll(async () => {
     client = new LMStudioClient();
     await ensureHeavyTestsEnvironment(client);
-  });
+  }, 60_000);
   beforeEach(async () => {
     model = await client.llm.model(llmTestingQwen05B, {
       verbose: false,
@@ -54,6 +54,30 @@ describe("LLM", () => {
     const count = await model.countTokens("Chaos is a ladder.");
     expect(count).toMatchInlineSnapshot(`6`);
   });
+  it("preserves fit=true through getLoadConfig() to load() round-trip", async () => {
+    const firstLoadConfig = await model.getLoadConfig();
+
+    expect(firstLoadConfig.gpu?.fit).toBe(true);
+    expect(firstLoadConfig.gpu?.splitStrategy).toBe("evenly");
+
+    let roundTripModel: LLM | undefined;
+    try {
+      roundTripModel = await client.llm.load(llmTestingQwen05B, {
+        identifier: `fit-roundtrip-${Date.now()}-${Math.round(Math.random() * 1_000_000)}`,
+        verbose: false,
+        config: firstLoadConfig,
+      });
+
+      const secondLoadConfig = await roundTripModel.getLoadConfig();
+
+      expect(secondLoadConfig.gpu?.fit).toBe(true);
+      expect(secondLoadConfig.gpu?.splitStrategy).toBe("evenly");
+    } finally {
+      if (roundTripModel !== undefined) {
+        await roundTripModel.unload();
+      }
+    }
+  }, 60_000);
   it("Has correct properties", async () => {
     expect(model.displayName).toMatchInlineSnapshot(`"Qwen2.5 0.5B Instruct"`);
     expect(model.format).toMatchInlineSnapshot(`"gguf"`);
