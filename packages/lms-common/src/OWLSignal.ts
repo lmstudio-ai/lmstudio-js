@@ -81,6 +81,7 @@ export class OWLSignal<TData> extends Subscribable<TData> implements SignalLike<
   }> = [];
   private writeErrorEvent: Event<WriteError>;
   private emitWriteErrorEvent: (writeError: WriteError) => void;
+  private pendingOptimisticPullPromise: Promise<StripNotAvailable<TData>> | null = null;
 
   private applyOptimisticUpdates(data: StripNotAvailable<TData>) {
     for (const update of this.queuedUpdates) {
@@ -396,12 +397,24 @@ export class OWLSignal<TData> extends Subscribable<TData> implements SignalLike<
    * You must also provide an `optimistic` flag. If `optimistic` is true, the pending optimistic
    * updates will be applied to the value before returning it.
    */
-  public async pull({ optimistic = true }: { optimistic?: boolean } = {}) {
-    if (optimistic) {
-      return this.applyOptimisticUpdates(await this.innerSignal.pull());
-    } else {
-      return this.innerSignal.pull();
+  public pull({
+    optimistic = true,
+  }: { optimistic?: boolean } = {}): Promise<StripNotAvailable<TData>> | StripNotAvailable<TData> {
+    const pulledValue = this.innerSignal.pull();
+    if (!optimistic) {
+      return pulledValue;
     }
+    if (!(pulledValue instanceof Promise)) {
+      return this.applyOptimisticUpdates(pulledValue);
+    }
+    if (this.pendingOptimisticPullPromise === null) {
+      this.pendingOptimisticPullPromise = pulledValue
+        .then(innerValue => this.applyOptimisticUpdates(innerValue))
+        .finally(() => {
+          this.pendingOptimisticPullPromise = null;
+        });
+    }
+    return this.pendingOptimisticPullPromise;
   }
 
   private currentEnsureAvailablePromise: Promise<OWLSignal<StripNotAvailable<TData>>> | null = null;

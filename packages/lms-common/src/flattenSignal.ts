@@ -71,7 +71,7 @@ export function flattenSignalOfWritableSignal<TInner>(
       // Otherwise, queue the update. Pull the signal to apply the update. (Application of queued
       // updates is done in the inner subscription)
       queuedUpdates.push({ updater, tags });
-      signal.pull().catch(console.error);
+      Promise.resolve(signal.pull()).catch(console.error);
     }
   });
   signal = LazySignal.createWithoutInitialValue<TInner>(setDownstream => {

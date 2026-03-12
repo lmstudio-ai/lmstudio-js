@@ -70,6 +70,7 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
   private readonly updateReceivedEvent: SyncEvent<void>;
   private readonly emitUpdateReceivedEvent: () => void;
   private readonly updateReceivedSynchronousCallbacks = new Set<() => void>();
+  private pendingPullPromise: Promise<StripNotAvailable<TData>> | null = null;
 
   public static create<TData>(
     initialValue: TData,
@@ -509,20 +510,24 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
    * Pulls the current value of the signal. If the value is stale, it will subscribe and wait for
    * the next value from the upstream and return it.
    */
-  public async pull(): Promise<StripNotAvailable<TData>> {
-    const { promise, resolve } = makePromise<StripNotAvailable<TData>>();
+  public pull(): Promise<StripNotAvailable<TData>> | StripNotAvailable<TData> {
     if (!this.isStale()) {
       // If not stale, definitely not "NOT_AVAILABLE"
-      resolve(this.get() as StripNotAvailable<TData>);
-    } else {
-      // Register event listener BEFORE subscribe() because subscribe() may trigger
-      // subscribeToUpstream() which can emit the event synchronously
-      this.updateReceivedEvent.subscribeOnce(() => {
-        resolve(this.get() as StripNotAvailable<TData>);
-      });
-      const unsubscribe = this.subscribe(() => {});
-      promise.then(unsubscribe);
+      return this.get() as StripNotAvailable<TData>;
     }
+    if (this.pendingPullPromise !== null) {
+      return this.pendingPullPromise;
+    }
+    const { promise, resolve } = makePromise<StripNotAvailable<TData>>();
+    this.pendingPullPromise = promise;
+    // Register event listener BEFORE subscribe() because subscribe() may trigger
+    // subscribeToUpstream() which can emit the event synchronously
+    this.updateReceivedEvent.subscribeOnce(() => {
+      this.pendingPullPromise = null;
+      resolve(this.get() as StripNotAvailable<TData>);
+    });
+    const unsubscribe = this.subscribe(() => {});
+    promise.then(unsubscribe);
     return promise;
   }
 

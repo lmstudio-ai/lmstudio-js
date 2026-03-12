@@ -358,7 +358,7 @@ describe("LazySignal", () => {
 
       // Verify pull hasn't resolved yet
       let resolved = false;
-      pullPromise.then(() => {
+      Promise.resolve(pullPromise).then(() => {
         resolved = true;
       });
       await Promise.resolve(); // Let any pending microtasks run

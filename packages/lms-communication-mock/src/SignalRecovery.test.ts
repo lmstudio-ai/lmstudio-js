@@ -448,7 +448,7 @@ describe("Signal Recovery", () => {
       // Start a pull - it should hang while disconnected
       let pullResolved = false;
       let pullResult: { value: number } | undefined;
-      const pullPromise = clientSignal.pull().then(result => {
+      const pullPromise = Promise.resolve(clientSignal.pull()).then(result => {
         pullResolved = true;
         pullResult = result;
         return result;

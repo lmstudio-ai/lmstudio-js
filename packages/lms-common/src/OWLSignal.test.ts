@@ -579,4 +579,43 @@ describe("OWLSignal Write Loop Error Recovery", () => {
       expect(signal.hasError()).toBe(true);
     });
   });
+
+  describe("pull()", () => {
+    it("should return value immediately when fresh", async () => {
+      const mock = createMockUpstream<{ count: number }>();
+      const [signal] = OWLSignal.create({ count: 0 }, mock.subscribeUpstream, mock.writeUpstream);
+      signal.subscribe(() => {});
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      mock.simulateUpdate({ count: 7 }, []);
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      const optimisticValue = signal.pull();
+      const pessimisticValue = signal.pull({ optimistic: false });
+
+      expect(optimisticValue).not.toBeInstanceOf(Promise);
+      expect(pessimisticValue).not.toBeInstanceOf(Promise);
+      expect(optimisticValue).toEqual({ count: 7 });
+      expect(pessimisticValue).toEqual({ count: 7 });
+    });
+
+    it("should return a stable promise while waiting for fresh data", async () => {
+      const mock = createMockUpstream<{ count: number }>();
+      const [signal] = OWLSignal.create({ count: 0 }, mock.subscribeUpstream, mock.writeUpstream);
+
+      const firstPull = signal.pull();
+      const secondPull = signal.pull();
+      const firstPessimisticPull = signal.pull({ optimistic: false });
+      const secondPessimisticPull = signal.pull({ optimistic: false });
+
+      expect(firstPull).toBeInstanceOf(Promise);
+      expect(secondPull).toBe(firstPull);
+      expect(firstPessimisticPull).toBeInstanceOf(Promise);
+      expect(secondPessimisticPull).toBe(firstPessimisticPull);
+
+      mock.simulateUpdate({ count: 3 }, []);
+      await expect(firstPull).resolves.toEqual({ count: 3 });
+      await expect(firstPessimisticPull).resolves.toEqual({ count: 3 });
+    });
+  });
 });
