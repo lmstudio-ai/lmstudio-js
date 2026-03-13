@@ -267,15 +267,14 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
       .field("useUnifiedKvCache", "boolean", { isExperimental: true }, true)
       .scope("llama", builder =>
         builder
+          .field("fit", "boolean", { machineDependent: true }, false)
           .scope("acceleration", builder =>
-            builder
-              .field("fit", "boolean", { machineDependent: true }, false)
-              .field(
-                "offloadRatio",
-                "llamaAccelerationOffloadRatio",
-                { machineDependent: true },
-                "max",
-              ),
+            builder.field(
+              "offloadRatio",
+              "llamaAccelerationOffloadRatio",
+              { machineDependent: true },
+              "max",
+            ),
           )
           .field("cpuThreadPoolSize", "numeric", { min: 1, machineDependent: true }, 4)
           .field("evalBatchSize", "numeric", { min: 1, int: true }, 512)

@@ -7,13 +7,13 @@ import {
 } from "./llmLoadModelConfig.js";
 
 /**
- * Helper: convert an LLMLoadModelConfig to KVConfig, then parse back the `llama.acceleration.fit`
+ * Helper: convert an LLMLoadModelConfig to KVConfig, then parse back the `llama.fit`
  * field. Returns `undefined` when the field is absent from the produced KVConfig.
  */
 function fitFieldAfterConversion(config: LLMLoadModelConfig): boolean | undefined {
   const kvConfig = llmLoadModelConfigToKVConfig(config);
   const parsed = llmLlamaMoeLoadConfigSchematics.parsePartial(kvConfig);
-  return parsed.get("llama.acceleration.fit");
+  return parsed.get("llama.fit");
 }
 
 describe("llmLoadModelConfigToKVConfig — fit inference", () => {
@@ -63,17 +63,13 @@ describe("kvConfigToLLMLoadModelConfig — fit field read-back", () => {
   // KVConfig field keys use the full global path (llm.load.* prefix) because
   // the schematics preserve the original fullKey even after scoping.
   it("reads fit=true from KVConfig", () => {
-    const kvConfig = makeKVConfigFromFields([
-      kvConfigField("llm.load.llama.acceleration.fit", true),
-    ]);
+    const kvConfig = makeKVConfigFromFields([kvConfigField("llm.load.llama.fit", true)]);
     const result = kvConfigToLLMLoadModelConfig(kvConfig);
     expect(result.fit).toBe(true);
   });
 
   it("reads fit=false from KVConfig", () => {
-    const kvConfig = makeKVConfigFromFields([
-      kvConfigField("llm.load.llama.acceleration.fit", false),
-    ]);
+    const kvConfig = makeKVConfigFromFields([kvConfigField("llm.load.llama.fit", false)]);
     const result = kvConfigToLLMLoadModelConfig(kvConfig);
     expect(result.fit).toBe(false);
   });
