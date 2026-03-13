@@ -13,7 +13,7 @@ describe("LLM", () => {
   beforeAll(async () => {
     client = new LMStudioClient();
     await ensureHeavyTestsEnvironment(client);
-  }, 60_000);
+  });
   beforeEach(async () => {
     model = await client.llm.model(llmTestingQwen05B, {
       verbose: false,
