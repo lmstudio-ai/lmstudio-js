@@ -1,7 +1,10 @@
 import { type LLMLoadModelConfig } from "@lmstudio/lms-shared-types";
 import { kvConfigField, makeKVConfigFromFields } from "../KVConfig.js";
 import { llmLlamaMoeLoadConfigSchematics } from "../schema.js";
-import { kvConfigToLLMLoadModelConfig, llmLoadModelConfigToKVConfig } from "./llmLoadModelConfig.js";
+import {
+  kvConfigToLLMLoadModelConfig,
+  llmLoadModelConfigToKVConfig,
+} from "./llmLoadModelConfig.js";
 
 /**
  * Helper: convert an LLMLoadModelConfig to KVConfig, then parse back the `llama.acceleration.fit`
@@ -15,11 +18,11 @@ function fitFieldAfterConversion(config: LLMLoadModelConfig): boolean | undefine
 
 describe("llmLoadModelConfigToKVConfig — fit inference", () => {
   it("preserves explicit fit: true", () => {
-    expect(fitFieldAfterConversion({ gpu: { fit: true } })).toBe(true);
+    expect(fitFieldAfterConversion({ fit: true })).toBe(true);
   });
 
   it("preserves explicit fit: false", () => {
-    expect(fitFieldAfterConversion({ gpu: { fit: false } })).toBe(false);
+    expect(fitFieldAfterConversion({ fit: false })).toBe(false);
   });
 
   it("infers fit=false when ratio is set without fit", () => {
@@ -48,11 +51,11 @@ describe("llmLoadModelConfigToKVConfig — fit inference", () => {
   });
 
   it("explicit fit: true wins even when ratio is also set", () => {
-    expect(fitFieldAfterConversion({ gpu: { fit: true, ratio: 0.5 } })).toBe(true);
+    expect(fitFieldAfterConversion({ fit: true, gpu: { ratio: 0.5 } })).toBe(true);
   });
 
   it("explicit fit: false is preserved even with no other GPU params", () => {
-    expect(fitFieldAfterConversion({ gpu: { fit: false } })).toBe(false);
+    expect(fitFieldAfterConversion({ fit: false })).toBe(false);
   });
 });
 
@@ -64,7 +67,7 @@ describe("kvConfigToLLMLoadModelConfig — fit field read-back", () => {
       kvConfigField("llm.load.llama.acceleration.fit", true),
     ]);
     const result = kvConfigToLLMLoadModelConfig(kvConfig);
-    expect(result.gpu?.fit).toBe(true);
+    expect(result.fit).toBe(true);
   });
 
   it("reads fit=false from KVConfig", () => {
@@ -72,22 +75,22 @@ describe("kvConfigToLLMLoadModelConfig — fit field read-back", () => {
       kvConfigField("llm.load.llama.acceleration.fit", false),
     ]);
     const result = kvConfigToLLMLoadModelConfig(kvConfig);
-    expect(result.gpu?.fit).toBe(false);
+    expect(result.fit).toBe(false);
   });
 
   it("fit is undefined when absent from KVConfig", () => {
     const kvConfig = makeKVConfigFromFields([]);
     const result = kvConfigToLLMLoadModelConfig(kvConfig);
-    expect(result.gpu?.fit).toBeUndefined();
+    expect(result.fit).toBeUndefined();
   });
 });
 
 describe("round-trip", () => {
   it("preserves fit and ratio through config → KVConfig → config", () => {
-    const original: LLMLoadModelConfig = { gpu: { fit: true, ratio: 0.5 } };
+    const original: LLMLoadModelConfig = { fit: true, gpu: { ratio: 0.5 } };
     const kvConfig = llmLoadModelConfigToKVConfig(original);
     const result = kvConfigToLLMLoadModelConfig(kvConfig);
-    expect(result.gpu?.fit).toBe(true);
+    expect(result.fit).toBe(true);
     expect(result.gpu?.ratio).toBe(0.5);
   });
 
@@ -95,7 +98,7 @@ describe("round-trip", () => {
     const original: LLMLoadModelConfig = { gpu: { ratio: 0.75 } };
     const kvConfig = llmLoadModelConfigToKVConfig(original);
     const result = kvConfigToLLMLoadModelConfig(kvConfig);
-    expect(result.gpu?.fit).toBe(false);
+    expect(result.fit).toBe(false);
     expect(result.gpu?.ratio).toBe(0.75);
   });
 });

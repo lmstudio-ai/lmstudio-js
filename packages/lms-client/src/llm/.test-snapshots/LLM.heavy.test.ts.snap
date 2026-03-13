@@ -69,3 +69,78 @@ exports[`LLM can get model info 1`] = `
   "vision": false,
 }
 `;
+
+exports[`LLM with default model fixture Can tokenize correctly 1`] = `
+[
+  1143,
+  64866,
+  374,
+  264,
+  35765,
+  13,
+]
+`;
+
+exports[`LLM with default model fixture Can tokenize multiple strings correctly 1`] = `
+[
+  [
+    34,
+    261,
+    72768,
+    30769,
+    279,
+    15917,
+    315,
+    1059,
+    19265,
+  ],
+  [
+    437,
+    1340,
+    374,
+    27211,
+    13657,
+  ],
+]
+`;
+
+exports[`LLM with default model fixture can apply prompt template to a regular chat 1`] = `
+"<|im_start|>system
+This is the system prompt.<|im_end|>
+<|im_start|>user
+User message 1<|im_end|>
+<|im_start|>assistant
+Assistant message 1<|im_end|>
+<|im_start|>user
+User message 2<|im_end|>
+<|im_start|>assistant
+"
+`;
+
+exports[`LLM with default model fixture can get model info 1`] = `
+{
+  "architecture": "qwen2",
+  "contextLength": 4096,
+  "deviceIdentifier": null,
+  "displayName": "Qwen2.5 0.5B Instruct",
+  "format": "gguf",
+  "identifier": Any<String>,
+  "indexedModelIdentifier": "lmstudio-community/Qwen2.5-0.5B-Instruct-GGUF/Qwen2.5-0.5B-Instruct-Q4_K_M.gguf",
+  "instanceReference": Any<String>,
+  "lastUsedTime": 1773374807159,
+  "maxContextLength": 32768,
+  "modelKey": Any<String>,
+  "paramsString": "0.5B",
+  "path": "lmstudio-community/Qwen2.5-0.5B-Instruct-GGUF/Qwen2.5-0.5B-Instruct-Q4_K_M.gguf",
+  "publisher": "lmstudio-community",
+  "quantization": {
+    "bits": 4,
+    "name": "Q4_K_M",
+  },
+  "sizeBytes": 397807936,
+  "trainedForToolUse": true,
+  "ttlMs": 3600000,
+  "type": "llm",
+  "vision": false,
+}
+`;

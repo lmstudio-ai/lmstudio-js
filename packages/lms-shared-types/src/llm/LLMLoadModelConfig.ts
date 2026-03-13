@@ -35,19 +35,11 @@ export const llmSplitStrategySchema = z.enum(["evenly", "favorMainGpu"]);
  */
 export type GPUSetting = {
   /**
-   * When true, enables a fit algorithm that determines optimal layer placement across available
-   * GPUs automatically.
-   *
-   * When `fit` is true, `ratio`, `numCpuExpertLayersRatio`, `mainGpu`, and `splitStrategy` are
-   * ignored.
-   */
-  fit?: boolean;
-  /**
    * A number between 0 to 1 representing the ratio of the work should be distributed to the GPU,
    * where 0 means no work is distributed and 1 means all work is distributed. Can also specify the
    * string "off" to mean 0 and the string "max" to mean 1.
    *
-   * When `fit` is true, this field is ignored.
+   * When the root-level `fit` setting is true, this field is ignored.
    */
   ratio?: LLMLlamaAccelerationOffloadRatio;
   /**
@@ -56,19 +48,19 @@ export type GPUSetting = {
    * GPU offload configuration and 0 means the expert offload will be determined by GPU offload.
    * Can also specify the string "off" to mean 0 and the string "max" to mean 1.
    *
-   * When `fit` is true, this field is ignored.
+   * When the root-level `fit` setting is true, this field is ignored.
    */
   numCpuExpertLayersRatio?: LLMLlamaAccelerationOffloadRatio;
   /**
    * The index of the GPU to use as the main GPU.
    *
-   * When `fit` is true, this field is ignored.
+   * When the root-level `fit` setting is true, this field is ignored.
    */
   mainGpu?: number;
   /**
    * How to split computation across multiple GPUs.
    *
-   * When `fit` is true, this field is ignored.
+   * When the root-level `fit` setting is true, this field is ignored.
    */
   splitStrategy?: LLMSplitStrategy;
   /**
@@ -77,7 +69,6 @@ export type GPUSetting = {
   disabledGpus?: number[];
 };
 export const gpuSettingSchema = z.object({
-  fit: z.boolean().optional(),
   ratio: llmLlamaAccelerationOffloadRatioSchema.optional(),
   numCpuExpertLayersRatio: llmLlamaAccelerationOffloadRatioSchema.optional(),
   mainGpu: z.number().int().optional(),
@@ -158,6 +149,15 @@ export const llmMlxKvCacheQuantizationSchema = z.object({
 
 /** @public */
 export interface LLMLoadModelConfig {
+  /**
+   * When true, enables a fit algorithm that determines optimal layer placement across available
+   * GPUs automatically.
+   *
+   * When `fit` is true, manual GPU placement settings under `gpu` are ignored, except
+   * `disabledGpus`.
+   */
+  fit?: boolean;
+
   /**
    * How to distribute the work to your GPUs. See {@link GPUSetting} for more information.
    *
@@ -350,6 +350,7 @@ export interface LLMLoadModelConfig {
   mlxKvCacheQuantization?: LLMMlxKvCacheQuantization | false;
 }
 export const llmLoadModelConfigSchema = z.object({
+  fit: z.boolean().optional(),
   gpu: gpuSettingSchema.optional(),
   maxParallelPredictions: z.number().int().min(1).optional(),
   useUnifiedKvCache: z.boolean().optional(),
