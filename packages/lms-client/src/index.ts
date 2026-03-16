@@ -32,7 +32,7 @@ export type { RetrievalResult, RetrievalResultEntry } from "./files/RetrievalRes
 export type { GuardToolCallController, GuardToolCallResult, LLMActBaseOpts } from "./llm/act.js";
 export type { ActResult } from "./llm/ActResult.js";
 export type { GeneratorPredictionResult } from "./llm/GeneratorPredictionResult.js";
-export type { LLM } from "./llm/LLM.js";
+export { LLM } from "./llm/LLM.js";
 export type {
   LLMActionOpts,
   LLMDynamicHandle,
