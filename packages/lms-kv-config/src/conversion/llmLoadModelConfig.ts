@@ -22,6 +22,37 @@ interface KvConfigToLLMLoadModelConfigOpts {
   modelFormat?: ModelCompatibilityType;
 }
 
+function getFitAwareReadBackGPUFields(
+  config: Pick<LLMLoadModelConfig, "fit" | "gpu">,
+): GPUSetting | undefined {
+  // getLoadConfig() should return a reusable effective config. When fit is enabled, the only GPU
+  // setting that still matters is disabledGpus.
+  if (config.fit !== true) {
+    return config.gpu;
+  }
+
+  const disabledGpus = config.gpu?.disabledGpus;
+  if (disabledGpus === undefined || disabledGpus.length === 0) {
+    return undefined;
+  }
+
+  return { disabledGpus };
+}
+
+function resolveLlamaFit(config: Pick<LLMLoadModelConfig, "fit" | "gpu">): boolean | undefined {
+  // If the caller explicitly set any GPU param that fit mode would ignore (ratio, MoE expert
+  // offload, mainGpu, splitStrategy) but didn't set root-level fit, infer fit=false so the
+  // modelDefault layer's fit=true doesn't silently override their intent. disabledGpus is excluded
+  // because fit still respects it.
+  const hasGpuParamIgnoredByFit =
+    config.gpu?.ratio !== undefined
+    || config.gpu?.numCpuExpertLayersRatio !== undefined
+    || config.gpu?.mainGpu !== undefined
+    || config.gpu?.splitStrategy !== undefined;
+
+  return config.fit ?? (hasGpuParamIgnoredByFit ? false : undefined);
+}
+
 function kvConfigToLLMLlamaLoadModelConfig(
   config: KVConfig,
   { useDefaultsForMissingKeys }: Omit<KvConfigToLLMLoadModelConfigOpts, "modelFormat"> = {},
@@ -49,6 +80,11 @@ function kvConfigToLLMLlamaLoadModelConfig(
   const gpuStrictVramCap = parsed.get("load.gpuStrictVramCap");
   if (gpuStrictVramCap !== undefined) {
     result.gpuStrictVramCap = gpuStrictVramCap;
+  }
+
+  const llamaFit = parsed.get("llama.fit");
+  if (llamaFit !== undefined) {
+    result.fit = llamaFit;
   }
 
   const llamaAccelerationOffloadRatio = parsed.get("llama.acceleration.offloadRatio");
@@ -153,6 +189,13 @@ function kvConfigToLLMLlamaLoadModelConfig(
       : false;
   }
 
+  const fitAwareGpuFields = getFitAwareReadBackGPUFields(result);
+  if (fitAwareGpuFields === undefined) {
+    delete result.gpu;
+  } else {
+    result.gpu = fitAwareGpuFields;
+  }
+
   return result;
 }
 
@@ -213,6 +256,7 @@ export function llmLoadModelConfigToKVConfig(config: LLMLoadModelConfig): KVConf
   const top = llmLoadSchematics.buildPartialConfig({
     "gpuSplitConfig": convertGPUSettingToGPUSplitConfig(config.gpu),
     "gpuStrictVramCap": config.gpuStrictVramCap,
+    "llama.fit": resolveLlamaFit(config),
     "llama.acceleration.offloadRatio": config.gpu?.ratio,
     "numCpuExpertLayersRatio": config.gpu?.numCpuExpertLayersRatio,
     "numParallelSessions": config.maxParallelPredictions,
