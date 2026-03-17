@@ -23,7 +23,7 @@ if [ "${ARCH}" = "aarch64" ] || [ "${ARCH}" = "arm64" ]; then
   fi
 
   chmod +x "${DENO_BINARY_PATH}"
-  "${DENO_BINARY_PATH}" compile --allow-all --output "${DIST_DIR}/${EXE_NAME}" "${ENTRY_JS}"
+  "${DENO_BINARY_PATH}" compile --unstable-node-globals --allow-all --output "${DIST_DIR}/${EXE_NAME}" "${ENTRY_JS}"
 elif [ "${ARCH}" = "x86_64" ]; then
   BUN_PLATFORM="bun-linux-x64"
   LOCAL_BUN_DIR="./temp/${BUN_TAG}"
