@@ -1,6 +1,6 @@
 #!/bin/bash
 
-DENO_VERSION="v2.3.6"
+DENO_VERSION="v2.7.5"
 TEMP_DIR="./temp"
 DIST_DIR="./dist"
 
