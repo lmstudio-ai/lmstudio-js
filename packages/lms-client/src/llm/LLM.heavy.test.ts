@@ -69,6 +69,28 @@ describe("LLM", () => {
   });
 
   describe("load config round-trips", () => {
+    it("does not surface fit-ignored GPU defaults from getLoadConfig()", async () => {
+      let fitEnabledModel: LLM | undefined;
+      try {
+        fitEnabledModel = await client.llm.model(llmTestingQwen05B, {
+          verbose: false,
+          config: defaultLoadConfig,
+        });
+
+        const fitEnabledLoadConfig = await fitEnabledModel.getLoadConfig();
+
+        expect(fitEnabledLoadConfig.fit).toBe(true);
+        expect(fitEnabledLoadConfig.gpu?.ratio).toBeUndefined();
+        expect(fitEnabledLoadConfig.gpu?.numCpuExpertLayersRatio).toBeUndefined();
+        expect(fitEnabledLoadConfig.gpu?.mainGpu).toBeUndefined();
+        expect(fitEnabledLoadConfig.gpu?.splitStrategy).toBeUndefined();
+        expect(fitEnabledLoadConfig.gpu?.disabledGpus).toBeUndefined();
+      } finally {
+        if (fitEnabledModel !== undefined) {
+          await fitEnabledModel.unload();
+        }
+      }
+    }, 60_000);
     it("preserves fit=true through getLoadConfig() to load() round-trip", async () => {
       let firstModel: LLM | undefined;
       let roundTripModel: LLM | undefined;
