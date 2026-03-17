@@ -22,6 +22,23 @@ interface KvConfigToLLMLoadModelConfigOpts {
   modelFormat?: ModelCompatibilityType;
 }
 
+function getFitAwareReadBackGPUFields(
+  config: Pick<LLMLoadModelConfig, "fit" | "gpu">,
+): GPUSetting | undefined {
+  // getLoadConfig() should return a reusable effective config. When fit is enabled, the only GPU
+  // setting that still matters is disabledGpus.
+  if (config.fit !== true) {
+    return config.gpu;
+  }
+
+  const disabledGpus = config.gpu?.disabledGpus;
+  if (disabledGpus === undefined || disabledGpus.length === 0) {
+    return undefined;
+  }
+
+  return { disabledGpus };
+}
+
 function resolveLlamaFit(config: Pick<LLMLoadModelConfig, "fit" | "gpu">): boolean | undefined {
   // If the caller explicitly set any GPU param that fit mode would ignore (ratio, MoE expert
   // offload, mainGpu, splitStrategy) but didn't set root-level fit, infer fit=false so the
@@ -170,6 +187,13 @@ function kvConfigToLLMLlamaLoadModelConfig(
     result.llamaVCacheQuantizationType = llamaVCacheQuantizationType.checked
       ? llamaVCacheQuantizationType.value
       : false;
+  }
+
+  const fitAwareGpuFields = getFitAwareReadBackGPUFields(result);
+  if (fitAwareGpuFields === undefined) {
+    delete result.gpu;
+  } else {
+    result.gpu = fitAwareGpuFields;
   }
 
   return result;

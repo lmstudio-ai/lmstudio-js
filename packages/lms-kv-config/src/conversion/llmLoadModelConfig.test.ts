@@ -79,15 +79,55 @@ describe("kvConfigToLLMLoadModelConfig — fit field read-back", () => {
     const result = kvConfigToLLMLoadModelConfig(kvConfig);
     expect(result.fit).toBeUndefined();
   });
+
+  it("does not surface fit-ignored GPU defaults when fit=true and defaults are requested", () => {
+    const fitEnabledKVConfig = makeKVConfigFromFields([kvConfigField("llm.load.llama.fit", true)]);
+    const result = kvConfigToLLMLoadModelConfig(fitEnabledKVConfig, {
+      useDefaultsForMissingKeys: true,
+    });
+
+    expect(result.fit).toBe(true);
+    expect(result.gpu).toBeUndefined();
+  });
+
+  it("preserves only disabledGpus when fit=true", () => {
+    const fitEnabledKVConfig = makeKVConfigFromFields([
+      kvConfigField("llm.load.llama.fit", true),
+      kvConfigField("load.gpuSplitConfig", {
+        strategy: "priorityOrder",
+        disabledGpus: [1],
+        priority: [2],
+        customRatio: [],
+      }),
+      kvConfigField("llm.load.llama.acceleration.offloadRatio", 0.25),
+    ]);
+
+    const result = kvConfigToLLMLoadModelConfig(fitEnabledKVConfig, {
+      useDefaultsForMissingKeys: true,
+    });
+
+    expect(result.fit).toBe(true);
+    expect(result.gpu).toEqual({ disabledGpus: [1] });
+  });
 });
 
 describe("round-trip", () => {
-  it("preserves fit and ratio through config → KVConfig → config", () => {
-    const original: LLMLoadModelConfig = { fit: true, gpu: { ratio: 0.5 } };
+  it("strips fit-ignored GPU fields through config → KVConfig → config when fit=true", () => {
+    const original: LLMLoadModelConfig = {
+      fit: true,
+      gpu: {
+        ratio: 0.5,
+        disabledGpus: [1],
+        mainGpu: 0,
+        splitStrategy: "favorMainGpu",
+      },
+    };
     const kvConfig = llmLoadModelConfigToKVConfig(original);
     const result = kvConfigToLLMLoadModelConfig(kvConfig);
-    expect(result.fit).toBe(true);
-    expect(result.gpu?.ratio).toBe(0.5);
+    expect(result).toEqual({
+      fit: true,
+      gpu: { disabledGpus: [1] },
+    });
   });
 
   it("preserves inferred fit=false through round-trip when ratio is set", () => {

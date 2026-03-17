@@ -80,11 +80,7 @@ describe("LLM", () => {
         const fitEnabledLoadConfig = await fitEnabledModel.getLoadConfig();
 
         expect(fitEnabledLoadConfig.fit).toBe(true);
-        expect(fitEnabledLoadConfig.gpu?.ratio).toBeUndefined();
-        expect(fitEnabledLoadConfig.gpu?.numCpuExpertLayersRatio).toBeUndefined();
-        expect(fitEnabledLoadConfig.gpu?.mainGpu).toBeUndefined();
-        expect(fitEnabledLoadConfig.gpu?.splitStrategy).toBeUndefined();
-        expect(fitEnabledLoadConfig.gpu?.disabledGpus).toBeUndefined();
+        expect(fitEnabledLoadConfig.gpu).toBeUndefined();
       } finally {
         if (fitEnabledModel !== undefined) {
           await fitEnabledModel.unload();
@@ -103,7 +99,7 @@ describe("LLM", () => {
         const firstLoadConfig = await firstModel.getLoadConfig();
 
         expect(firstLoadConfig.fit).toBe(true);
-        expect(firstLoadConfig.gpu?.splitStrategy).toBe("evenly");
+        expect(firstLoadConfig.gpu).toBeUndefined();
 
         roundTripModel = await client.llm.load(llmTestingQwen05B, {
           identifier: `fit-roundtrip-${Date.now()}-${Math.round(Math.random() * 1_000_000)}`,
@@ -114,7 +110,7 @@ describe("LLM", () => {
         const secondLoadConfig = await roundTripModel.getLoadConfig();
 
         expect(secondLoadConfig.fit).toBe(true);
-        expect(secondLoadConfig.gpu?.splitStrategy).toBe("evenly");
+        expect(secondLoadConfig.gpu).toBeUndefined();
       } finally {
         if (roundTripModel !== undefined) {
           await roundTripModel.unload();
