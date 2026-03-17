@@ -18,6 +18,7 @@ const builtinModuleNameSet = new Set(builtinModuleNames);
 const jsdocImportTypePattern =
   /^\s*\*\s*@\w+\s+\{[^\n}]*import\((?:'|")[^'"]+(?:'|")\)[^\n}]*\}[^\n]*\n/gm;
 
+// Ensure bare Node.js built-in imports (e.g. "fs") are rewritten to "node:fs" so Deno can resolve them.
 function getNodePrefixedBuiltin(moduleName) {
   if (moduleName.startsWith("node:")) {
     return moduleName;
@@ -30,6 +31,9 @@ function getNodePrefixedBuiltin(moduleName) {
   return null;
 }
 
+// Remove JSDoc `@typedef { import("./foo.js") }` lines from bundled output. These relative
+// imports are invalid after Rollup inlines everything into a single file, and Deno's type
+// checker will error on them during `deno compile`.
 function stripJsdocImportTypes(code) {
   return code.replace(jsdocImportTypePattern, "");
 }
