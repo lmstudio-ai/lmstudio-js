@@ -1,15 +1,42 @@
-import { nodeResolve } from "@rollup/plugin-node-resolve";
 import commonjs from "@rollup/plugin-commonjs";
 import json from "@rollup/plugin-json";
-import banner from "rollup-plugin-banner2";
+import { nodeResolve } from "@rollup/plugin-node-resolve";
+import swc from "@rollup/plugin-swc";
+import { builtinModules, createRequire } from "node:module";
 import { dirname, join, resolve as resolvePath } from "node:path";
 import { fileURLToPath } from "node:url";
-import { createRequire } from "node:module";
-import swc from "@rollup/plugin-swc";
+import banner from "rollup-plugin-banner2";
 
 const requireForConfig = createRequire(import.meta.url);
 const currentFilePath = fileURLToPath(import.meta.url);
 const currentDirectoryPath = dirname(currentFilePath);
+
+const builtinModuleNames = builtinModules.map((moduleName) =>
+  moduleName.startsWith("node:") ? moduleName.slice("node:".length) : moduleName,
+);
+const builtinModuleNameSet = new Set(builtinModuleNames);
+const jsdocImportTypePattern =
+  /^\s*\*\s*@\w+\s+\{[^\n}]*import\((?:'|")[^'"]+(?:'|")\)[^\n}]*\}[^\n]*\n/gm;
+
+// Ensure bare Node.js built-in imports (e.g. "fs") are rewritten to "node:fs" so Deno can resolve them.
+function getNodePrefixedBuiltin(moduleName) {
+  if (moduleName.startsWith("node:")) {
+    return moduleName;
+  }
+
+  if (builtinModuleNameSet.has(moduleName) === true) {
+    return `node:${moduleName}`;
+  }
+
+  return null;
+}
+
+// Remove JSDoc `@typedef { import("./foo.js") }` lines from bundled output. These relative
+// imports are invalid after Rollup inlines everything into a single file, and Deno's type
+// checker will error on them during `deno compile`.
+function stripJsdocImportTypes(code) {
+  return code.replace(jsdocImportTypePattern, "");
+}
 
 export default {
   input: resolvePath(requireForConfig.resolve("@lmstudio/lms-cli")),
@@ -28,6 +55,17 @@ export default {
   //   integrate it with its own HTTP/WebSocket implementation instead of a fully inlined shim.
   external: ["ink", "react", "react/jsx-runtime", "ws", /^node:/],
   plugins: [
+    {
+      name: "node-builtin-prefixed",
+      resolveId(source) {
+        const nodeBuiltinId = getNodePrefixedBuiltin(source);
+        if (nodeBuiltinId !== null) {
+          return { id: nodeBuiltinId, external: true };
+        }
+
+        return null;
+      },
+    },
     // Json should be before swc to handle imports correctly
     // or else swc might throw errors on json imports
     json(),
@@ -50,6 +88,13 @@ export default {
       extensions: [".ts", ".tsx", ".js", ".jsx"],
     }),
     commonjs(),
+    {
+      name: "strip-jsdoc-import-types",
+      renderChunk(code) {
+        const updatedCode = stripJsdocImportTypes(code);
+        return { code: updatedCode, map: null };
+      },
+    },
     banner(() => "#!/usr/bin/env node\n"),
   ],
 };
