@@ -16,6 +16,22 @@ const builtinModuleNames = builtinModules.map((moduleName) =>
 );
 const builtinModuleNameSet = new Set(builtinModuleNames);
 
+// Strip JSDoc comments containing import() types from bundled output. After Rollup inlines
+// everything into a single file, relative import() paths in JSDoc become invalid and Deno's
+// type checker will error on them during `deno compile`.
+//
+// Matches two forms:
+//   1. Multi-line JSDoc lines:  ` * @typedef { import("./foo.js") } Foo`
+//   2. Inline JSDoc comments:   `/** @type {typeof import('color-convert')} */`
+const multiLineJsdocImportPattern =
+  /^\s*\*\s*@\w+\s+\{[^\n}]*import\((?:'|")[^'"]+(?:'|")\)[^\n}]*\}[^\n]*\n/gm;
+const inlineJsdocImportPattern =
+  /\/\*\*\s*@\w+\s+\{[^}]*import\((?:'|")[^'"]+(?:'|")\)[^}]*\}\s*\*\//g;
+
+function stripJsdocImportTypes(code) {
+  return code.replace(multiLineJsdocImportPattern, "").replace(inlineJsdocImportPattern, "");
+}
+
 // Ensure bare Node.js built-in imports (e.g. "fs") are rewritten to "node:fs" so Deno can resolve them.
 function getNodePrefixedBuiltin(moduleName) {
   if (moduleName.startsWith("node:")) {
@@ -79,6 +95,13 @@ export default {
       extensions: [".ts", ".tsx", ".js", ".jsx"],
     }),
     commonjs(),
+    {
+      name: "strip-jsdoc-import-types",
+      renderChunk(code) {
+        const updatedCode = stripJsdocImportTypes(code);
+        return { code: updatedCode, map: null };
+      },
+    },
     banner(() => "#!/usr/bin/env node\n"),
   ],
 };

@@ -23,9 +23,7 @@ if [ "${ARCH}" = "aarch64" ] || [ "${ARCH}" = "arm64" ]; then
   fi
 
   chmod +x "${DENO_BINARY_PATH}"
-  # --no-check: skip Deno's type checker on the Rollup bundle. Third-party libraries embed JSDoc
-  # import() types that become invalid after inlining, and we already type-check at the source level.
-  "${DENO_BINARY_PATH}" compile --no-check --unstable-node-globals --allow-all --output "${DIST_DIR}/${EXE_NAME}" "${ENTRY_JS}"
+  "${DENO_BINARY_PATH}" compile --unstable-node-globals --allow-all --output "${DIST_DIR}/${EXE_NAME}" "${ENTRY_JS}"
 elif [ "${ARCH}" = "x86_64" ]; then
   BUN_PLATFORM="bun-linux-x64"
   LOCAL_BUN_DIR="./temp/${BUN_TAG}"
