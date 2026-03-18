@@ -200,9 +200,19 @@ export class ClientPort<
       this.ongoingRpcs.size +
       this.openSignalSubscriptions.size +
       this.openWritableSignalSubscriptions.size;
+    // Debug logging for diagnosing Deno process-exit hang
+    if (this.openCommunicationsCount !== previousCount) {
+      console.error(
+        "[ref-debug] updateOpenCommunicationsCount:",
+        previousCount, "->", this.openCommunicationsCount,
+        `(channels=${this.openChannels.size} rpcs=${this.ongoingRpcs.size} signals=${this.openSignalSubscriptions.size} writableSignals=${this.openWritableSignalSubscriptions.size})`,
+      );
+    }
     if (this.openCommunicationsCount === 0 && previousCount > 0) {
+      console.error("[ref-debug] updateOpenCommunicationsCount: calling onHavingNoOpenCommunication()");
       this.transport.onHavingNoOpenCommunication();
     } else if (this.openCommunicationsCount === 1 && previousCount === 0) {
+      console.error("[ref-debug] updateOpenCommunicationsCount: calling onHavingOneOrMoreOpenCommunication()");
       this.transport.onHavingOneOrMoreOpenCommunication();
     }
   }
