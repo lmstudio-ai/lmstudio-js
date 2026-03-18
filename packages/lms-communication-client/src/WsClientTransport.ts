@@ -108,6 +108,7 @@ export class WsClientTransport extends ClientTransport {
     this.status = WsClientTransportStatus.Connected;
     this.queuedMessages.forEach(message => this.sendViaTransport(message));
     this.queuedMessages = [];
+    WsClientTransport.logRefingInfo(this.logger);
     this.updateShouldRef(this.shouldRef);
     // this.setupWebsocketKeepAlive(this.ws!, this.onWsTimeout.bind(this));
     this.connected();
@@ -203,18 +204,26 @@ export class WsClientTransport extends ClientTransport {
   }
   private updateShouldRef(shouldRef: boolean) {
     this.shouldRef = shouldRef;
+    this.logger.debug(
+      `updateShouldRef: shouldRef=${shouldRef}, supportsRefing=${WsClientTransport.supportsRefing()}`,
+    );
     if (!WsClientTransport.supportsRefing()) {
+      this.logger.debug("updateShouldRef: refing not supported, skipping");
       return;
     }
     if (this.ws === null) {
+      this.logger.debug("updateShouldRef: ws is null, skipping");
       return;
     }
     if (!(this.ws as any)._socket) {
+      this.logger.debug("updateShouldRef: ws._socket not present, skipping");
       return;
     }
     if (shouldRef) {
+      this.logger.debug("updateShouldRef: calling ref()");
       (this.ws as any)._socket.ref();
     } else {
+      this.logger.debug("updateShouldRef: calling unref()");
       (this.ws as any)._socket.unref();
     }
   }
@@ -228,7 +237,17 @@ export class WsClientTransport extends ClientTransport {
     if (!("node" in process.versions)) {
       return false;
     }
+    // Deno exposes process.versions.node for compat but ref/unref doesn't reliably keep
+    // the event loop alive, so treat it like Bun and close immediately.
+    if (typeof (globalThis as any).Deno !== "undefined") {
+      return false;
+    }
     return !("bun" in process.versions);
+  }
+  private static logRefingInfo(logger: SimpleLogger) {
+    logger.debug(
+      `supportsRefing check — process defined: ${typeof process !== "undefined"}, versions: ${JSON.stringify(typeof process !== "undefined" ? process.versions : null)}, Deno: ${typeof (globalThis as any).Deno !== "undefined"}, result: ${WsClientTransport.supportsRefing()}`,
+    );
   }
   public override sendViaTransport(message: ClientToServerMessage) {
     if (this.status === WsClientTransportStatus.Connected) {
@@ -242,13 +261,21 @@ export class WsClientTransport extends ClientTransport {
   }
   public override async [Symbol.asyncDispose]() {
     await super[Symbol.asyncDispose]();
+    WsClientTransport.logRefingInfo(this.logger);
+    this.logger.debug(
+      `asyncDispose: shouldRef=${this.shouldRef}, supportsRefing=${WsClientTransport.supportsRefing()}`,
+    );
     // Only wait for communications to close in Node where ref/unref is supported
     // In Bun, we close immediately since we can't keep the socket alive without blocking
     if (this.shouldRef && WsClientTransport.supportsRefing()) {
+      this.logger.debug("asyncDispose: waiting for disposedPromise");
       // If the connection needs to held up, wait until all communications are terminates
       const { promise: disposedPromise, resolve: resolveDisposed } = makePromise<void>();
       this.resolveDisposed = resolveDisposed;
       await disposedPromise;
+      this.logger.debug("asyncDispose: disposedPromise resolved");
+    } else {
+      this.logger.debug("asyncDispose: skipping wait, closing immediately");
     }
 
     if (this.ws !== null) {
