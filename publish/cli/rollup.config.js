@@ -11,7 +11,7 @@ const requireForConfig = createRequire(import.meta.url);
 const currentFilePath = fileURLToPath(import.meta.url);
 const currentDirectoryPath = dirname(currentFilePath);
 
-const builtinModuleNames = builtinModules.map((moduleName) =>
+const builtinModuleNames = builtinModules.map(moduleName =>
   moduleName.startsWith("node:") ? moduleName.slice("node:".length) : moduleName,
 );
 const builtinModuleNameSet = new Set(builtinModuleNames);
@@ -53,11 +53,15 @@ export default {
   // - The rollup JS bundle stays small and does not inline react/ink.
   // - When we later run `bun build --compile`, Bun still sees `ws` as a normal import and can
   //   integrate it with its own HTTP/WebSocket implementation instead of a fully inlined shim.
-  external: ["ink", "react", "react/jsx-runtime", "ws", /^node:/],
+  external: ["ink", "react", "react/jsx-runtime", "npm:ws", /^node:/],
   plugins: [
     {
       name: "node-builtin-prefixed",
       resolveId(source) {
+        if (source === "ws") {
+          return { id: "npm:ws", external: true };
+        }
+
         const nodeBuiltinId = getNodePrefixedBuiltin(source);
         if (nodeBuiltinId !== null) {
           return { id: nodeBuiltinId, external: true };
@@ -66,6 +70,7 @@ export default {
         return null;
       },
     },
+
     // Json should be before swc to handle imports correctly
     // or else swc might throw errors on json imports
     json(),
