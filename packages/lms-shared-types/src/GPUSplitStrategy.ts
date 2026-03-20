@@ -62,7 +62,7 @@ export function convertGPUSettingToGPUSplitConfig(
         ? "priorityOrder"
         : gpuSetting?.splitStrategy ?? "evenly",
     disabledGpus: gpuSetting?.disabledGpus ?? [],
-    priority: gpuSetting?.mainGpu ? [gpuSetting.mainGpu] : [],
+    priority: gpuSetting?.mainGpu !== undefined ? [gpuSetting.mainGpu] : [],
     customRatio: [],
   };
 }
