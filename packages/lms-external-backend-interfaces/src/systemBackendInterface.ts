@@ -44,6 +44,10 @@ export function createSystemBackendInterface() {
           build: z.number(),
         }),
       })
+      .addRpcEndpoint("openExternalURL", {
+        parameter: z.string(),
+        returns: z.void(),
+      })
       .addRpcEndpoint("setExperimentFlag", {
         parameter: z.object({
           code: z.string(),
