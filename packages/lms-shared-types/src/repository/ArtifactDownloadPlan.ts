@@ -5,6 +5,10 @@ import {
   modelCompatibilityTypeSchema,
   type ModelCompatibilityType,
 } from "../ModelCompatibilityType.js";
+import {
+  modelSearchResultDownloadOptionFitEstimationSchema,
+  type ModelSearchResultDownloadOptionFitEstimation,
+} from "./ModelSearch.js";
 
 /**
  * Represents information about a model in an artifact download plan.
@@ -25,6 +29,31 @@ export const artifactDownloadPlanModelInfoSchema: ZodSchema<ArtifactDownloadPlan
     sizeBytes: z.number(),
     quantName: z.string().optional(),
     compatibilityType: modelCompatibilityTypeSchema,
+  });
+
+/**
+ * Represents a selectable download option for a concrete model in an artifact download plan.
+ *
+ * @deprecated [DEP-HUB-API-ACCESS] LM Studio Hub API access is still in active development. Stay
+ * tuned for updates.
+ * @public
+ */
+export type ArtifactDownloadPlanDownloadOptionInfo = {
+  displayName: string;
+  sizeBytes: number;
+  quantName?: string;
+  compatibilityType: ModelCompatibilityType;
+  fitEstimation: ModelSearchResultDownloadOptionFitEstimation;
+  recommended?: boolean;
+};
+export const artifactDownloadPlanDownloadOptionInfoSchema: ZodSchema<ArtifactDownloadPlanDownloadOptionInfo> =
+  z.object({
+    displayName: z.string(),
+    sizeBytes: z.number(),
+    quantName: z.string().optional(),
+    compatibilityType: modelCompatibilityTypeSchema,
+    fitEstimation: modelSearchResultDownloadOptionFitEstimationSchema,
+    recommended: z.boolean().optional(),
   });
 
 /**
@@ -59,10 +88,14 @@ export type ArtifactDownloadPlanNode =
   | {
       type: "model";
       state: ArtifactDownloadPlanNodeState;
+      dependencyLabel: string;
       resolvedSources?: number;
       totalSources?: number;
       alreadyOwned?: ArtifactDownloadPlanModelInfo;
       selected?: ArtifactDownloadPlanModelInfo;
+      downloadOptions?: Array<ArtifactDownloadPlanDownloadOptionInfo>;
+      selectedDownloadOptionIndex?: number | null;
+      recommendedDownloadOptionIndex?: number | null;
     };
 export const artifactDownloadPlanNodeSchema = z.discriminatedUnion("type", [
   z.object({
@@ -77,10 +110,14 @@ export const artifactDownloadPlanNodeSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("model"),
     state: artifactDownloadPlanNodeStateSchema,
+    dependencyLabel: z.string(),
     resolvedSources: z.number().int().optional(),
     totalSources: z.number().int().optional(),
     alreadyOwned: artifactDownloadPlanModelInfoSchema.optional(),
     selected: artifactDownloadPlanModelInfoSchema.optional(),
+    downloadOptions: z.array(artifactDownloadPlanDownloadOptionInfoSchema).optional(),
+    selectedDownloadOptionIndex: z.number().int().nullable().optional(),
+    recommendedDownloadOptionIndex: z.number().int().nullable().optional(),
   }),
 ]);
 

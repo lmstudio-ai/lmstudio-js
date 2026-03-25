@@ -202,6 +202,14 @@ export function createRepositoryBackendInterface() {
             type: z.literal("cancelDownload"),
           }),
           /**
+           * Updates the selected concrete model download option for a resolved model node.
+           */
+          z.object({
+            type: z.literal("setSelectedDownloadOptionIndex"),
+            nodeIndex: z.number().int(),
+            selectedDownloadOptionIndex: z.number().int().nullable(),
+          }),
+          /**
            * Can only be called after plan ready. Once called, starts the plan.
            */
           z.object({

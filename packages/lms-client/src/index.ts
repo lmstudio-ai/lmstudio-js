@@ -115,6 +115,8 @@ export type { RemoteToolUseSession } from "./plugins/ToolUseSession.js";
 export type {
   ArtifactDownloadPlanner,
   ArtifactDownloadPlannerDownloadOpts,
+  ArtifactDownloadPlannerSelectAlreadyOwnedModelOpts,
+  ArtifactDownloadPlannerSelectModelDownloadOptionOpts,
 } from "./repository/ArtifactDownloadPlanner.js";
 export type {
   DownloadOpts,

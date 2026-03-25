@@ -408,6 +408,8 @@ export { Quantization, quantizationSchema } from "./Quantization.js";
 export { reasonableKeyStringSchema } from "./reasonable.js";
 export {
   ArtifactDownloadPlan,
+  ArtifactDownloadPlanDownloadOptionInfo,
+  artifactDownloadPlanDownloadOptionInfoSchema,
   ArtifactDownloadPlanModelInfo,
   artifactDownloadPlanModelInfoSchema,
   ArtifactDownloadPlanNode,

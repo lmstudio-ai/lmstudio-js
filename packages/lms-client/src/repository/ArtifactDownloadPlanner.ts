@@ -7,7 +7,11 @@ import {
 } from "@lmstudio/lms-common";
 import { type InferClientChannelType } from "@lmstudio/lms-communication";
 import { type RepositoryBackendInterface } from "@lmstudio/lms-external-backend-interfaces";
-import { type ArtifactDownloadPlan, type DownloadProgressUpdate } from "@lmstudio/lms-shared-types";
+import {
+  type ArtifactDownloadPlan,
+  type ArtifactDownloadPlanNode,
+  type DownloadProgressUpdate,
+} from "@lmstudio/lms-shared-types";
 import { z } from "zod";
 
 interface ArtifactDownloadPlannerCurrentDownload {
@@ -16,6 +20,12 @@ interface ArtifactDownloadPlannerCurrentDownload {
   startFinalizing: () => void;
   progressUpdate: (update: DownloadProgressUpdate) => void;
   downloadFailed: (error: unknown) => void;
+}
+
+interface PendingPlanWaiter {
+  predicate: (plan: ArtifactDownloadPlan) => boolean;
+  reject: (error: unknown) => void;
+  resolve: () => void;
 }
 
 /**
@@ -39,6 +49,41 @@ const artifactDownloadPlannerDownloadOptsSchema = z.object({
 });
 
 /**
+ * Options for {@link ArtifactDownloadPlanner#selectModelDownloadOption}.
+ *
+ * @deprecated [DEP-HUB-API-ACCESS] LM Studio Hub API access is still in active development. Stay
+ * tuned for updates.
+ * @public
+ */
+export interface ArtifactDownloadPlannerSelectModelDownloadOptionOpts {
+  nodeIndex: number;
+  downloadOptionIndex: number;
+}
+const artifactDownloadPlannerSelectModelDownloadOptionOptsSchema = z.object({
+  nodeIndex: z.number().int().min(0),
+  downloadOptionIndex: z.number().int().min(0),
+});
+
+/**
+ * Options for {@link ArtifactDownloadPlanner#selectAlreadyOwnedModel}.
+ *
+ * @deprecated [DEP-HUB-API-ACCESS] LM Studio Hub API access is still in active development. Stay
+ * tuned for updates.
+ * @public
+ */
+export interface ArtifactDownloadPlannerSelectAlreadyOwnedModelOpts {
+  nodeIndex: number;
+}
+const artifactDownloadPlannerSelectAlreadyOwnedModelOptsSchema = z.object({
+  nodeIndex: z.number().int().min(0),
+});
+
+interface ArtifactDownloadPlannerSetSelectedDownloadOptionIndexOpts {
+  nodeIndex: number;
+  selectedDownloadOptionIndex: number | null;
+}
+
+/**
  * Represents a planner to download an artifact. The plan is not guaranteed to be ready until you
  * await on the method "untilReady".
  *
@@ -54,6 +99,7 @@ export class ArtifactDownloadPlanner {
   private isErrored: boolean = false;
   private planValue: ArtifactDownloadPlan;
   private currentDownload: ArtifactDownloadPlannerCurrentDownload | null = null;
+  private readonly pendingPlanWaiters = new Set<PendingPlanWaiter>();
   /**
    * If we received an error after the download starts, we will just raise the error in the download
    * promise.
@@ -99,19 +145,23 @@ export class ArtifactDownloadPlanner {
       const messageType = message.type;
       switch (messageType) {
         case "planReady": {
-          this.isReadyBoolean = true;
-          this.readyDeferredPromise.resolve();
           this.planValue = message.plan;
+          this.isReadyBoolean = true;
+          this.processPendingPlanWaiters();
+          this.readyDeferredPromise.resolve();
           break;
         }
         case "planUpdated": {
           this.planValue = message.plan;
+          this.processPendingPlanWaiters();
           safeCallCallback(this.logger, "onPlanUpdated", this.onPlanUpdated, [message.plan]);
           break;
         }
         case "downloadJobIdentifier": {
           if (this.currentDownload === null) {
-            throw new Error("Unexpected: received downloadJobIdentifier message without a download.");
+            throw new Error(
+              "Unexpected: received downloadJobIdentifier message without a download.",
+            );
           }
           this.currentDownload.downloadJobIdentifierReceived(message.downloadJobIdentifier);
           break;
@@ -142,6 +192,7 @@ export class ArtifactDownloadPlanner {
     this.channel.onError.subscribeOnce(error => {
       if (this.currentDownload === null) {
         this.errorReceivedBeforeDownloadStart = error;
+        this.rejectPendingPlanWaiters(error);
         this.readyDeferredPromise.reject(error);
       } else {
         this.currentDownload.downloadFailed(error);
@@ -162,10 +213,92 @@ export class ArtifactDownloadPlanner {
   public [Symbol.dispose]() {
     // If the channel is still open, we need to cancel the plan. This ensures we don't cancel the
     // download even if the download planner goes out of scope.
-    if (this.isPlanCommited === false && this.isErrored == false) {
+    if (this.isPlanCommited === false && this.isErrored === false) {
       this.channel.send({ type: "cancelPlan" });
     }
+    this.rejectPendingPlanWaiters(new Error("Artifact download planner disposed."));
     this.onDisposed();
+  }
+
+  private processPendingPlanWaiters() {
+    for (const pendingPlanWaiter of [...this.pendingPlanWaiters]) {
+      if (pendingPlanWaiter.predicate(this.planValue)) {
+        this.pendingPlanWaiters.delete(pendingPlanWaiter);
+        pendingPlanWaiter.resolve();
+      }
+    }
+  }
+
+  private rejectPendingPlanWaiters(error: unknown) {
+    for (const pendingPlanWaiter of this.pendingPlanWaiters) {
+      pendingPlanWaiter.reject(error);
+    }
+    this.pendingPlanWaiters.clear();
+  }
+
+  private waitForPlanCondition(predicate: (plan: ArtifactDownloadPlan) => boolean) {
+    if (predicate(this.planValue)) {
+      return Promise.resolve();
+    }
+    if (this.errorReceivedBeforeDownloadStart !== null) {
+      return Promise.reject(this.errorReceivedBeforeDownloadStart);
+    }
+    const { promise, resolve, reject } = makePromise<void>();
+    this.pendingPlanWaiters.add({
+      predicate,
+      reject,
+      resolve,
+    });
+    return promise;
+  }
+
+  private assertCanChangeSelection() {
+    if (this.isReadyBoolean === false) {
+      throw new Error("Cannot change selection before the plan is ready.");
+    }
+    if (this.isPlanCommited === true) {
+      throw new Error("Cannot change selection after the download has started.");
+    }
+    if (this.isErrored === true) {
+      throw new Error("Cannot change selection because the planner is in an error state.");
+    }
+  }
+
+  private getModelPlanNodeOrThrow(
+    nodeIndex: number,
+  ): Extract<ArtifactDownloadPlanNode, { type: "model" }> {
+    const planNode = this.planValue.nodes[nodeIndex];
+    if (planNode === undefined) {
+      throw new Error(`Artifact download plan node ${nodeIndex} does not exist.`);
+    }
+    if (planNode.type !== "model") {
+      throw new Error(`Artifact download plan node ${nodeIndex} is not a model node.`);
+    }
+    return planNode;
+  }
+
+  private async setSelectedDownloadOptionIndex({
+    nodeIndex,
+    selectedDownloadOptionIndex,
+  }: ArtifactDownloadPlannerSetSelectedDownloadOptionIndexOpts) {
+    this.assertCanChangeSelection();
+    const planNode = this.getModelPlanNodeOrThrow(nodeIndex);
+    if (planNode.selectedDownloadOptionIndex === selectedDownloadOptionIndex) {
+      return;
+    }
+    this.channel.send({
+      type: "setSelectedDownloadOptionIndex",
+      nodeIndex,
+      selectedDownloadOptionIndex,
+    });
+    await this.waitForPlanCondition(plan => {
+      const nextPlanNode = plan.nodes[nodeIndex];
+      return (
+        nextPlanNode !== undefined &&
+        nextPlanNode.type === "model" &&
+        nextPlanNode.selectedDownloadOptionIndex === selectedDownloadOptionIndex
+      );
+    });
   }
 
   public isReady() {
@@ -177,6 +310,55 @@ export class ArtifactDownloadPlanner {
   public getPlan() {
     return this.planValue;
   }
+
+  public async selectModelDownloadOption(
+    opts: ArtifactDownloadPlannerSelectModelDownloadOptionOpts,
+  ) {
+    const stack = getCurrentStack(1);
+    const { downloadOptionIndex, nodeIndex } = this.validator.validateMethodParamOrThrow(
+      "ArtifactDownloadPlanner",
+      "selectModelDownloadOption",
+      "opts",
+      artifactDownloadPlannerSelectModelDownloadOptionOptsSchema,
+      opts,
+      stack,
+    );
+    const planNode = this.getModelPlanNodeOrThrow(nodeIndex);
+    const downloadOptions = planNode.downloadOptions;
+    if (downloadOptions === undefined) {
+      throw new Error(`Model node ${nodeIndex} does not have resolved download options.`);
+    }
+    if (downloadOptionIndex >= downloadOptions.length) {
+      throw new Error(
+        `Model node ${nodeIndex} does not have download option ${downloadOptionIndex}.`,
+      );
+    }
+    await this.setSelectedDownloadOptionIndex({
+      nodeIndex,
+      selectedDownloadOptionIndex: downloadOptionIndex,
+    });
+  }
+
+  public async selectAlreadyOwnedModel(opts: ArtifactDownloadPlannerSelectAlreadyOwnedModelOpts) {
+    const stack = getCurrentStack(1);
+    const { nodeIndex } = this.validator.validateMethodParamOrThrow(
+      "ArtifactDownloadPlanner",
+      "selectAlreadyOwnedModel",
+      "opts",
+      artifactDownloadPlannerSelectAlreadyOwnedModelOptsSchema,
+      opts,
+      stack,
+    );
+    const planNode = this.getModelPlanNodeOrThrow(nodeIndex);
+    if (planNode.alreadyOwned === undefined) {
+      throw new Error(`Model node ${nodeIndex} does not have an already owned selection.`);
+    }
+    await this.setSelectedDownloadOptionIndex({
+      nodeIndex,
+      selectedDownloadOptionIndex: null,
+    });
+  }
+
   /**
    * Download this artifact. `download` can only be called once.
    */
