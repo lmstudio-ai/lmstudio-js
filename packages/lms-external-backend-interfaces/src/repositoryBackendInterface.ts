@@ -208,6 +208,7 @@ export function createRepositoryBackendInterface() {
             type: z.literal("setSelectedDownloadOptionIndex"),
             nodeIndex: z.number().int(),
             selectedDownloadOptionIndex: z.number().int().nullable(),
+            requestedPlanVersion: z.number().int(),
           }),
           /**
            * Can only be called after plan ready. Once called, starts the plan.

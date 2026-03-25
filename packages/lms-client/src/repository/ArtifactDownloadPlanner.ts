@@ -23,7 +23,7 @@ interface ArtifactDownloadPlannerCurrentDownload {
 }
 
 interface PendingPlanWaiter {
-  predicate: (plan: ArtifactDownloadPlan) => boolean;
+  minimumVersion: number;
   reject: (error: unknown) => void;
   resolve: () => void;
 }
@@ -97,6 +97,7 @@ export class ArtifactDownloadPlanner {
   private isReadyBoolean = false;
   private isPlanCommited: boolean = false;
   private isErrored: boolean = false;
+  private nextRequestedPlanVersion = 1;
   private planValue: ArtifactDownloadPlan;
   private currentDownload: ArtifactDownloadPlannerCurrentDownload | null = null;
   private readonly pendingPlanWaiters = new Set<PendingPlanWaiter>();
@@ -140,12 +141,17 @@ export class ArtifactDownloadPlanner {
         },
       ],
       downloadSizeBytes: 0,
+      version: 0,
     };
     this.channel.onMessage.subscribe(message => {
       const messageType = message.type;
       switch (messageType) {
         case "planReady": {
           this.planValue = message.plan;
+          this.nextRequestedPlanVersion = Math.max(
+            this.nextRequestedPlanVersion,
+            message.plan.version + 1,
+          );
           this.isReadyBoolean = true;
           this.processPendingPlanWaiters();
           this.readyDeferredPromise.resolve();
@@ -153,6 +159,10 @@ export class ArtifactDownloadPlanner {
         }
         case "planUpdated": {
           this.planValue = message.plan;
+          this.nextRequestedPlanVersion = Math.max(
+            this.nextRequestedPlanVersion,
+            message.plan.version + 1,
+          );
           this.processPendingPlanWaiters();
           safeCallCallback(this.logger, "onPlanUpdated", this.onPlanUpdated, [message.plan]);
           break;
@@ -222,7 +232,7 @@ export class ArtifactDownloadPlanner {
 
   private processPendingPlanWaiters() {
     for (const pendingPlanWaiter of [...this.pendingPlanWaiters]) {
-      if (pendingPlanWaiter.predicate(this.planValue)) {
+      if (this.planValue.version >= pendingPlanWaiter.minimumVersion) {
         this.pendingPlanWaiters.delete(pendingPlanWaiter);
         pendingPlanWaiter.resolve();
       }
@@ -236,8 +246,8 @@ export class ArtifactDownloadPlanner {
     this.pendingPlanWaiters.clear();
   }
 
-  private waitForPlanCondition(predicate: (plan: ArtifactDownloadPlan) => boolean) {
-    if (predicate(this.planValue)) {
+  private waitForPlanVersionAtLeast(minimumVersion: number) {
+    if (this.planValue.version >= minimumVersion) {
       return Promise.resolve();
     }
     if (this.errorReceivedBeforeDownloadStart !== null) {
@@ -245,7 +255,7 @@ export class ArtifactDownloadPlanner {
     }
     const { promise, resolve, reject } = makePromise<void>();
     this.pendingPlanWaiters.add({
-      predicate,
+      minimumVersion,
       reject,
       resolve,
     });
@@ -286,19 +296,15 @@ export class ArtifactDownloadPlanner {
     if (planNode.selectedDownloadOptionIndex === selectedDownloadOptionIndex) {
       return;
     }
+    const requestedPlanVersion = this.nextRequestedPlanVersion;
+    this.nextRequestedPlanVersion++;
     this.channel.send({
       type: "setSelectedDownloadOptionIndex",
       nodeIndex,
       selectedDownloadOptionIndex,
+      requestedPlanVersion,
     });
-    await this.waitForPlanCondition(plan => {
-      const nextPlanNode = plan.nodes[nodeIndex];
-      return (
-        nextPlanNode !== undefined &&
-        nextPlanNode.type === "model" &&
-        nextPlanNode.selectedDownloadOptionIndex === selectedDownloadOptionIndex
-      );
-    });
+    await this.waitForPlanVersionAtLeast(requestedPlanVersion);
   }
 
   public isReady() {

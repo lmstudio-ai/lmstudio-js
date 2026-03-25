@@ -129,6 +129,7 @@ export type {
   ArtifactDependencyBase,
   ArtifactDependencyPurpose,
   ArtifactDownloadPlan,
+  ArtifactDownloadPlanDownloadOptionAvailability,
   ArtifactDownloadPlanDownloadOptionInfo,
   ArtifactDownloadPlanModelInfo,
   ArtifactDownloadPlanNode,

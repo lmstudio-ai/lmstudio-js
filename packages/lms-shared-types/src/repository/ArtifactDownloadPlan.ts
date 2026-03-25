@@ -32,6 +32,20 @@ export const artifactDownloadPlanModelInfoSchema: ZodSchema<ArtifactDownloadPlan
   });
 
 /**
+ * Represents the availability of a selectable concrete model download option.
+ *
+ * @deprecated [DEP-HUB-API-ACCESS] LM Studio Hub API access is still in active development. Stay
+ * tuned for updates.
+ * @public
+ */
+export type ArtifactDownloadPlanDownloadOptionAvailability =
+  | "notDownloaded"
+  | "downloading"
+  | "downloaded";
+export const artifactDownloadPlanDownloadOptionAvailabilitySchema: ZodSchema<ArtifactDownloadPlanDownloadOptionAvailability> =
+  z.enum(["notDownloaded", "downloading", "downloaded"]);
+
+/**
  * Represents a selectable download option for a concrete model in an artifact download plan.
  *
  * @deprecated [DEP-HUB-API-ACCESS] LM Studio Hub API access is still in active development. Stay
@@ -44,6 +58,7 @@ export type ArtifactDownloadPlanDownloadOptionInfo = {
   quantName?: string;
   compatibilityType: ModelCompatibilityType;
   fitEstimation: ModelSearchResultDownloadOptionFitEstimation;
+  availability: ArtifactDownloadPlanDownloadOptionAvailability;
   recommended?: boolean;
 };
 export const artifactDownloadPlanDownloadOptionInfoSchema: ZodSchema<ArtifactDownloadPlanDownloadOptionInfo> =
@@ -53,6 +68,7 @@ export const artifactDownloadPlanDownloadOptionInfoSchema: ZodSchema<ArtifactDow
     quantName: z.string().optional(),
     compatibilityType: modelCompatibilityTypeSchema,
     fitEstimation: modelSearchResultDownloadOptionFitEstimationSchema,
+    availability: artifactDownloadPlanDownloadOptionAvailabilitySchema,
     recommended: z.boolean().optional(),
   });
 
@@ -131,8 +147,10 @@ export const artifactDownloadPlanNodeSchema = z.discriminatedUnion("type", [
 export interface ArtifactDownloadPlan {
   nodes: Array<ArtifactDownloadPlanNode>;
   downloadSizeBytes: number;
+  version: number;
 }
 export const artifactDownloadPlanSchema = z.object({
   nodes: z.array(artifactDownloadPlanNodeSchema),
   downloadSizeBytes: z.number().int(),
+  version: z.number().int(),
 });
