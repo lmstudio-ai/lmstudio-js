@@ -23,6 +23,24 @@ import {
 
 import { z } from "zod";
 
+export const mcpBridgeRuntimeErrorReportSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("unauthorized"),
+    pluginRunId: z.string(),
+    serverUrl: z.string(),
+    message: z.string(),
+  }),
+  z.object({
+    type: z.literal("network_unavailable"),
+    pluginRunId: z.string(),
+    serverUrl: z.string(),
+    message: z.string(),
+    unavailableHost: z.string().optional(),
+  }),
+]);
+
+export type MCPBridgeRuntimeErrorReport = z.infer<typeof mcpBridgeRuntimeErrorReportSchema>;
+
 export function createPluginsBackendInterface() {
   return (
     new BackendInterface()
@@ -520,6 +538,10 @@ export function createPluginsBackendInterface() {
       })
       .addRpcEndpoint("pluginInitCompleted", {
         parameter: z.void(),
+        returns: z.void(),
+      })
+      .addRpcEndpoint("reportError", {
+        parameter: mcpBridgeRuntimeErrorReportSchema,
         returns: z.void(),
       })
   );
