@@ -156,19 +156,6 @@ export class SystemNamespace {
     return await this.systemPort.callRpc("version", undefined, { stack });
   }
 
-  public async openExternalURL(url: string): Promise<void> {
-    const stack = getCurrentStack(1);
-    url = this.validator.validateMethodParamOrThrow(
-      "client.system",
-      "openExternalURL",
-      "url",
-      z.string(),
-      url,
-      stack,
-    );
-    await this.systemPort.callRpc("openExternalURL", url, { stack });
-  }
-
   /**
    * Sets an experiment flags for LM Studio. This is an unstable API and may change without notice.
    *
