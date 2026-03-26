@@ -127,16 +127,13 @@ type ArtifactDownloadPlannerChannelToClientPacket =
 export interface ArtifactDownloadPlannerChannel {
   onMessage: InferClientChannelType<
     RepositoryBackendInterface,
-    "createArtifactDownloadPlan"
+    "createDownloadPlan"
   >["onMessage"] & {
     subscribe: (
       listener: (message: ArtifactDownloadPlannerChannelToClientPacket) => void,
     ) => unknown;
   };
-  onError: InferClientChannelType<
-    RepositoryBackendInterface,
-    "createArtifactDownloadPlan"
-  >["onError"];
+  onError: InferClientChannelType<RepositoryBackendInterface, "createDownloadPlan">["onError"];
   send(packet: ArtifactDownloadPlannerChannelToServerPacket): void;
 }
 

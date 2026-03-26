@@ -35,6 +35,18 @@ const repositoryDownloadPlannerOptsSchema = z.object({
   compatibilityTypes: z.array(modelCompatibilityTypeSchema).optional(),
 });
 
+const repositoryDownloadPlannerTargetSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("artifact"),
+    owner: kebabCaseSchema,
+    name: kebabCaseWithDotsSchema,
+  }),
+  z.object({
+    type: z.literal("model"),
+    source: modelDownloadSourceSchema,
+  }),
+]);
+
 const fuzzyFindStaffPickResultSchema = z.object({
   owner: kebabCaseSchema,
   name: kebabCaseWithDotsSchema,
@@ -213,72 +225,11 @@ export function createRepositoryBackendInterface() {
         }),
       })
       /**
-       * Given the owner and name of an artifact, creates a download plan for the artifact. Throws
-       * an error is the artifact is not found.
+       * Creates a download plan. The target can either be an artifact root or a direct model root.
        */
-      .addChannelEndpoint("createArtifactDownloadPlan", {
+      .addChannelEndpoint("createDownloadPlan", {
         creationParameter: z.object({
-          owner: kebabCaseSchema,
-          name: kebabCaseWithDotsSchema,
-          opts: repositoryDownloadPlannerOptsSchema.optional(),
-        }),
-        toServerPacket: z.discriminatedUnion("type", [
-          /**
-           * Cancels the download.
-           */
-          z.object({
-            type: z.literal("cancelDownload"),
-          }),
-          /**
-           * Updates the selected concrete model download option for a resolved model node.
-           */
-          z.object({
-            type: z.literal("setSelectedDownloadOptionIndex"),
-            nodeIndex: z.number().int(),
-            selectedDownloadOptionIndex: z.number().int().nullable(),
-            requestedPlanVersion: z.number().int(),
-          }),
-          /**
-           * Can only be called after plan ready. Once called, starts the plan.
-           */
-          z.object({
-            type: z.literal("commit"),
-          }),
-          /**
-           * Aborts the plan.
-           */
-          z.object({
-            type: z.literal("cancelPlan"),
-          }),
-        ]),
-        toClientPacket: z.discriminatedUnion("type", [
-          z.object({
-            type: z.literal("planUpdated"),
-            plan: artifactDownloadPlanSchema,
-          }),
-          z.object({
-            type: z.literal("planReady"),
-            plan: artifactDownloadPlanSchema,
-          }),
-          z.object({
-            type: z.literal("downloadJobIdentifier"),
-            downloadJobIdentifier: z.string(),
-          }),
-          z.object({
-            type: z.literal("downloadProgress"),
-            update: downloadProgressUpdateSchema,
-          }),
-          z.object({
-            type: z.literal("startFinalizing"),
-          }),
-          z.object({
-            type: z.literal("success"),
-          }),
-        ]),
-      })
-      .addChannelEndpoint("createModelDownloadPlan", {
-        creationParameter: z.object({
-          source: modelDownloadSourceSchema,
+          target: repositoryDownloadPlannerTargetSchema,
           opts: repositoryDownloadPlannerOptsSchema.optional(),
         }),
         toServerPacket: z.discriminatedUnion("type", [

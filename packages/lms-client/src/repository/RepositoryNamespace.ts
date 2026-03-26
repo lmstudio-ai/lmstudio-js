@@ -173,6 +173,17 @@ const repositoryDownloadPlannerOptsSchema = z.object({
   compatibilityTypes: z.array(modelCompatibilityTypeSchema).optional(),
 });
 
+type RepositoryDownloadPlannerTarget =
+  | {
+      type: "artifact";
+      owner: string;
+      name: string;
+    }
+  | {
+      type: "model";
+      source: ModelDownloadSource;
+    };
+
 /**
  * Options to use with {@link RepositoryNamespace#createArtifactDownloadPlanner}.
  *
@@ -229,21 +240,9 @@ export interface FuzzyFindStaffPickResult {
 
 interface RepositoryPortWithPlannerMethods {
   createChannel(
-    endpoint: "createArtifactDownloadPlan",
+    endpoint: "createDownloadPlan",
     creationParameter: {
-      owner: string;
-      name: string;
-      opts?: RepositoryDownloadPlannerOpts;
-    },
-    messageHandler: undefined,
-    opts: {
-      stack?: string;
-    },
-  ): ArtifactDownloadPlannerChannel;
-  createChannel(
-    endpoint: "createModelDownloadPlan",
-    creationParameter: {
-      source: ModelDownloadSource;
+      target: RepositoryDownloadPlannerTarget;
       opts?: RepositoryDownloadPlannerOpts;
     },
     messageHandler: undefined,
@@ -590,10 +589,13 @@ export class RepositoryNamespace {
     const stack = getCurrentStack(1);
     const repositoryPort = this.repositoryPort as RepositoryPort & RepositoryPortWithPlannerMethods;
     const channel = repositoryPort.createChannel(
-      "createArtifactDownloadPlan",
+      "createDownloadPlan",
       {
-        owner,
-        name,
+        target: {
+          type: "artifact",
+          owner,
+          name,
+        },
         opts: {
           resolutionPreference: opts.resolutionPreference,
           compatibilityTypes: opts.compatibilityTypes,
@@ -644,9 +646,12 @@ export class RepositoryNamespace {
     const stack = getCurrentStack(1);
     const repositoryPort = this.repositoryPort as RepositoryPort & RepositoryPortWithPlannerMethods;
     const channel = repositoryPort.createChannel(
-      "createModelDownloadPlan",
+      "createDownloadPlan",
       {
-        source,
+        target: {
+          type: "model",
+          source,
+        },
         opts: {
           resolutionPreference: opts.resolutionPreference,
           compatibilityTypes: opts.compatibilityTypes,
