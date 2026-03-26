@@ -83,6 +83,63 @@ interface ArtifactDownloadPlannerSetSelectedDownloadOptionIndexOpts {
   selectedDownloadOptionIndex: number | null;
 }
 
+type ArtifactDownloadPlannerChannelToServerPacket =
+  | {
+      type: "cancelDownload";
+    }
+  | {
+      type: "setSelectedDownloadOptionIndex";
+      nodeIndex: number;
+      selectedDownloadOptionIndex: number | null;
+      requestedPlanVersion: number;
+    }
+  | {
+      type: "commit";
+    }
+  | {
+      type: "cancelPlan";
+    };
+
+type ArtifactDownloadPlannerChannelToClientPacket =
+  | {
+      type: "planUpdated";
+      plan: ArtifactDownloadPlan;
+    }
+  | {
+      type: "planReady";
+      plan: ArtifactDownloadPlan;
+    }
+  | {
+      type: "downloadJobIdentifier";
+      downloadJobIdentifier: string;
+    }
+  | {
+      type: "downloadProgress";
+      update: DownloadProgressUpdate;
+    }
+  | {
+      type: "startFinalizing";
+    }
+  | {
+      type: "success";
+    };
+
+export interface ArtifactDownloadPlannerChannel {
+  onMessage: InferClientChannelType<
+    RepositoryBackendInterface,
+    "createArtifactDownloadPlan"
+  >["onMessage"] & {
+    subscribe: (
+      listener: (message: ArtifactDownloadPlannerChannelToClientPacket) => void,
+    ) => unknown;
+  };
+  onError: InferClientChannelType<
+    RepositoryBackendInterface,
+    "createArtifactDownloadPlan"
+  >["onError"];
+  send(packet: ArtifactDownloadPlannerChannelToServerPacket): void;
+}
+
 /**
  * Represents a planner to download an artifact. The plan is not guaranteed to be ready until you
  * await on the method "untilReady".
@@ -115,34 +172,19 @@ export class ArtifactDownloadPlanner {
    * @internal Do not construct this class yourself.
    */
   public constructor(
-    public readonly owner: string,
-    public readonly name: string,
+    plannerDescription: string,
+    initialPlan: ArtifactDownloadPlan,
     private readonly onPlanUpdated: ((plan: ArtifactDownloadPlan) => void) | undefined,
     /** @internal */
-    private readonly channel: InferClientChannelType<
-      RepositoryBackendInterface,
-      "createArtifactDownloadPlan"
-    >,
+    private readonly channel: ArtifactDownloadPlannerChannel,
     private readonly validator: Validator,
     private readonly onDisposed: () => void,
     public readonly signal?: AbortSignal,
   ) {
-    this.logger = new SimpleLogger(`ArtifactDownloadPlanner(${owner}/${name})`);
+    this.logger = new SimpleLogger(`ArtifactDownloadPlanner(${plannerDescription})`);
     // Don't unhandled rejection - we don't require user to await on this promise.
     this.readyDeferredPromise.promise.catch(() => {});
-    this.planValue = {
-      nodes: [
-        {
-          type: "artifact",
-          owner,
-          name,
-          state: "pending",
-          dependencyNodes: [],
-        },
-      ],
-      downloadSizeBytes: 0,
-      version: 0,
-    };
+    this.planValue = initialPlan;
     this.channel.onMessage.subscribe(message => {
       const messageType = message.type;
       switch (messageType) {

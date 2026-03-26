@@ -126,12 +126,17 @@ export type { ModelSearchResultEntry } from "./repository/ModelSearchResultEntry
 export type { RepositoryLMLinkNamespace } from "./repository/RepositoryLMLinkNamespace.js";
 export type {
   CreateArtifactDownloadPlannerOpts,
+  CreateModelDownloadPlannerOpts,
   DownloadArtifactOpts,
   EnsureAuthenticatedOpts,
+  FuzzyFindStaffPickResult,
+  FuzzyFindStaffPicksOpts,
   InstallLocalPluginOpts,
   LoginWithPreAuthenticatedKeysOpts,
   LoginWithPreAuthenticatedKeysResult,
   PushArtifactOpts,
+  RepositoryDownloadPlannerOpts,
+  RepositoryDownloadPlannerResolutionPreference,
   RepositoryNamespace,
   UnstableRepositoryNamespace,
 } from "./repository/RepositoryNamespace.js";

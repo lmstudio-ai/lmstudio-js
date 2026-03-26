@@ -10,12 +10,39 @@ import {
   kebabCaseWithDotsSchema,
   lmLinkStatusResultSchema,
   localArtifactFileListSchema,
+  modelCompatibilityTypeSchema,
+  modelDownloadSourceSchema,
   modelSearchOptsSchema,
   modelSearchResultDownloadOptionDataSchema,
   modelSearchResultEntryDataSchema,
   modelSearchResultIdentifierSchema,
 } from "@lmstudio/lms-shared-types";
 import { z } from "zod";
+
+const repositoryDownloadPlannerResolutionPreferenceSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("fileName"),
+    fileName: z.string(),
+  }),
+  z.object({
+    type: z.literal("quantName"),
+    quantName: z.string(),
+  }),
+]);
+
+const repositoryDownloadPlannerOptsSchema = z.object({
+  resolutionPreference: z.array(repositoryDownloadPlannerResolutionPreferenceSchema).optional(),
+  compatibilityTypes: z.array(modelCompatibilityTypeSchema).optional(),
+});
+
+const fuzzyFindStaffPickResultSchema = z.object({
+  owner: kebabCaseSchema,
+  name: kebabCaseWithDotsSchema,
+  revisionNumber: z.number().int(),
+  createdAtTimestamp: z.number().int(),
+  description: z.string(),
+  exact: z.boolean(),
+});
 
 export function createRepositoryBackendInterface() {
   return (
@@ -193,6 +220,66 @@ export function createRepositoryBackendInterface() {
         creationParameter: z.object({
           owner: kebabCaseSchema,
           name: kebabCaseWithDotsSchema,
+          opts: repositoryDownloadPlannerOptsSchema.optional(),
+        }),
+        toServerPacket: z.discriminatedUnion("type", [
+          /**
+           * Cancels the download.
+           */
+          z.object({
+            type: z.literal("cancelDownload"),
+          }),
+          /**
+           * Updates the selected concrete model download option for a resolved model node.
+           */
+          z.object({
+            type: z.literal("setSelectedDownloadOptionIndex"),
+            nodeIndex: z.number().int(),
+            selectedDownloadOptionIndex: z.number().int().nullable(),
+            requestedPlanVersion: z.number().int(),
+          }),
+          /**
+           * Can only be called after plan ready. Once called, starts the plan.
+           */
+          z.object({
+            type: z.literal("commit"),
+          }),
+          /**
+           * Aborts the plan.
+           */
+          z.object({
+            type: z.literal("cancelPlan"),
+          }),
+        ]),
+        toClientPacket: z.discriminatedUnion("type", [
+          z.object({
+            type: z.literal("planUpdated"),
+            plan: artifactDownloadPlanSchema,
+          }),
+          z.object({
+            type: z.literal("planReady"),
+            plan: artifactDownloadPlanSchema,
+          }),
+          z.object({
+            type: z.literal("downloadJobIdentifier"),
+            downloadJobIdentifier: z.string(),
+          }),
+          z.object({
+            type: z.literal("downloadProgress"),
+            update: downloadProgressUpdateSchema,
+          }),
+          z.object({
+            type: z.literal("startFinalizing"),
+          }),
+          z.object({
+            type: z.literal("success"),
+          }),
+        ]),
+      })
+      .addChannelEndpoint("createModelDownloadPlan", {
+        creationParameter: z.object({
+          source: modelDownloadSourceSchema,
+          opts: repositoryDownloadPlannerOptsSchema.optional(),
         }),
         toServerPacket: z.discriminatedUnion("type", [
           /**
@@ -262,6 +349,15 @@ export function createRepositoryBackendInterface() {
         parameter: z.void(),
         returns: z.object({
           models: z.array(hubModelSchema),
+        }),
+      })
+      .addRpcEndpoint("fuzzyFindStaffPicks", {
+        parameter: z.object({
+          searchTerm: z.string().optional(),
+          limit: z.number().int().positive().optional(),
+        }),
+        returns: z.object({
+          results: z.array(fuzzyFindStaffPickResultSchema),
         }),
       })
       .addRpcEndpoint("lmLinkStatus", {
