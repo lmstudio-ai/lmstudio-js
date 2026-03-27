@@ -271,10 +271,6 @@ export function createRepositoryBackendInterface() {
             plan: artifactDownloadPlanSchema,
           }),
           z.object({
-            type: z.literal("downloadJobIdentifier"),
-            downloadJobIdentifier: z.string(),
-          }),
-          z.object({
             type: z.literal("downloadProgress"),
             update: downloadProgressUpdateSchema,
           }),

@@ -16,7 +16,6 @@ import { z } from "zod";
 
 interface ArtifactDownloadPlannerCurrentDownload {
   downloadFinished: () => void;
-  downloadJobIdentifierReceived: (downloadJobIdentifier: string) => void;
   startFinalizing: () => void;
   progressUpdate: (update: DownloadProgressUpdate) => void;
   downloadFailed: (error: unknown) => void;
@@ -36,13 +35,11 @@ interface PendingPlanWaiter {
  * @public
  */
 export interface ArtifactDownloadPlannerDownloadOpts {
-  onDownloadJobIdentifier?: (downloadJobIdentifier: string) => void;
   onStartFinalizing?: () => void;
   onProgress?: (update: DownloadProgressUpdate) => void;
   signal?: AbortSignal;
 }
 const artifactDownloadPlannerDownloadOptsSchema = z.object({
-  onDownloadJobIdentifier: z.function().optional(),
   onStartFinalizing: z.function().optional(),
   onProgress: z.function().optional(),
   signal: z.instanceof(AbortSignal).optional(),
@@ -108,10 +105,6 @@ type ArtifactDownloadPlannerChannelToClientPacket =
   | {
       type: "planReady";
       plan: ArtifactDownloadPlan;
-    }
-  | {
-      type: "downloadJobIdentifier";
-      downloadJobIdentifier: string;
     }
   | {
       type: "downloadProgress";
@@ -204,15 +197,6 @@ export class ArtifactDownloadPlanner {
           );
           this.processPendingPlanWaiters();
           safeCallCallback(this.logger, "onPlanUpdated", this.onPlanUpdated, [message.plan]);
-          break;
-        }
-        case "downloadJobIdentifier": {
-          if (this.currentDownload === null) {
-            throw new Error(
-              "Unexpected: received downloadJobIdentifier message without a download.",
-            );
-          }
-          this.currentDownload.downloadJobIdentifierReceived(message.downloadJobIdentifier);
           break;
         }
         case "success": {
@@ -418,12 +402,7 @@ export class ArtifactDownloadPlanner {
       stack,
     );
 
-    const {
-      onDownloadJobIdentifier,
-      onProgress,
-      onStartFinalizing,
-      signal = new AbortController().signal,
-    } = opts;
+    const { onProgress, onStartFinalizing, signal = new AbortController().signal } = opts;
     if (this.currentDownload !== null) {
       throw new Error("You can only call `download` once for each planner.");
     }
@@ -437,11 +416,6 @@ export class ArtifactDownloadPlanner {
     this.currentDownload = {
       downloadFinished: () => {
         resolve();
-      },
-      downloadJobIdentifierReceived: downloadJobIdentifier => {
-        safeCallCallback(this.logger, "onDownloadJobIdentifier", onDownloadJobIdentifier, [
-          downloadJobIdentifier,
-        ]);
       },
       startFinalizing: () => {
         safeCallCallback(this.logger, "onStartFinalizing", onStartFinalizing, []);

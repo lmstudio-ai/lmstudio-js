@@ -147,10 +147,15 @@ export const artifactDownloadPlanNodeSchema = z.discriminatedUnion("type", [
 export interface ArtifactDownloadPlan {
   nodes: Array<ArtifactDownloadPlanNode>;
   downloadSizeBytes: number;
+  /**
+   * Exact download job identifier for the current resolved selection, when the plan is submit-ready.
+   */
+  downloadJobIdentifier?: string;
   version: number;
 }
 export const artifactDownloadPlanSchema = z.object({
   nodes: z.array(artifactDownloadPlanNodeSchema),
   downloadSizeBytes: z.number().int(),
+  downloadJobIdentifier: z.string().optional(),
   version: z.number().int(),
 });
