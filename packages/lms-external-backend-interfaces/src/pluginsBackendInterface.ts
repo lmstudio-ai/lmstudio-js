@@ -23,6 +23,21 @@ import {
 
 import { z } from "zod";
 
+export type MCPBridgeRuntimeErrorReport =
+  | {
+      type: "unauthorized";
+      pluginRunId: string;
+      serverUrl: string;
+      message: string;
+    }
+  | {
+      type: "network_unavailable";
+      pluginRunId: string;
+      serverUrl: string;
+      message: string;
+      unavailableHost?: string;
+    };
+
 export const mcpBridgeRuntimeErrorReportSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("unauthorized"),
@@ -37,9 +52,7 @@ export const mcpBridgeRuntimeErrorReportSchema = z.discriminatedUnion("type", [
     message: z.string(),
     unavailableHost: z.string().optional(),
   }),
-]);
-
-export type MCPBridgeRuntimeErrorReport = z.infer<typeof mcpBridgeRuntimeErrorReportSchema>;
+]) as Zod.Schema<MCPBridgeRuntimeErrorReport>;
 
 export function createPluginsBackendInterface() {
   return (
