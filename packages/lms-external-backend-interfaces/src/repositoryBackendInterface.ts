@@ -302,6 +302,7 @@ export function createRepositoryBackendInterface() {
         parameter: z.object({
           searchTerm: z.string().optional(),
           limit: z.number().int().positive().optional(),
+          compatibilityTypes: z.array(modelCompatibilityTypeSchema).optional(),
         }),
         returns: z.object({
           results: z.array(fuzzyFindStaffPickResultSchema),

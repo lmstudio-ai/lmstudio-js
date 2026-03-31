@@ -222,10 +222,12 @@ export const createModelDownloadPlannerOptsSchema = repositoryDownloadPlannerOpt
 export interface FuzzyFindStaffPicksOpts {
   searchTerm?: string;
   limit?: number;
+  compatibilityTypes?: Array<ModelCompatibilityType>;
 }
 const fuzzyFindStaffPicksOptsSchema = z.object({
   searchTerm: z.string().optional(),
   limit: z.number().int().positive().optional(),
+  compatibilityTypes: z.array(modelCompatibilityTypeSchema).optional(),
 }) as ZodSchema<FuzzyFindStaffPicksOpts>;
 
 /** @public */
