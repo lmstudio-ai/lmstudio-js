@@ -22,6 +22,7 @@ export type ArtifactDownloadPlanModelInfo = {
   sizeBytes: number;
   quantName?: string;
   compatibilityType: ModelCompatibilityType;
+  modelKey?: string;
 };
 export const artifactDownloadPlanModelInfoSchema: ZodSchema<ArtifactDownloadPlanModelInfo> =
   z.object({
@@ -29,6 +30,7 @@ export const artifactDownloadPlanModelInfoSchema: ZodSchema<ArtifactDownloadPlan
     sizeBytes: z.number(),
     quantName: z.string().optional(),
     compatibilityType: modelCompatibilityTypeSchema,
+    modelKey: z.string().optional(),
   });
 
 /**
