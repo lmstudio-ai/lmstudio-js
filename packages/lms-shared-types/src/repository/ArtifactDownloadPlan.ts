@@ -169,6 +169,12 @@ export interface ArtifactDownloadPlan {
    * Exact download job identifier for the current resolved selection, when the plan is submit-ready.
    */
   downloadJobIdentifier?: string;
+  /**
+   * Version of the client-driven selection state.
+   *
+   * This only changes when the client updates a resolved model-node selection. Background plan
+   * refreshes keep the current version unchanged.
+   */
   version: number;
 }
 export const artifactDownloadPlanSchema = z.object({

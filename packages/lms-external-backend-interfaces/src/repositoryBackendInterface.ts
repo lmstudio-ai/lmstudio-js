@@ -241,6 +241,9 @@ export function createRepositoryBackendInterface() {
           }),
           /**
            * Updates the selected concrete model download option for a resolved model node.
+           *
+           * `requestedPlanVersion` identifies the client selection change that should be reflected
+           * in the next emitted plan version.
            */
           z.object({
             type: z.literal("setSelectedDownloadOptionIndex"),
