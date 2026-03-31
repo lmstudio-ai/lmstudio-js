@@ -138,6 +138,20 @@ export const artifactDownloadPlanNodeSchema = z.discriminatedUnion("type", [
 ]);
 
 /**
+ * Describes what will happen if the current plan is committed.
+ *
+ * @deprecated [DEP-HUB-API-ACCESS] LM Studio Hub API access is still in active development. Stay
+ * tuned for updates.
+ * @public
+ */
+export type ArtifactDownloadPlanDownloadAction =
+  | "none"
+  | "startNewDownload"
+  | "attachToExistingDownload";
+export const artifactDownloadPlanDownloadActionSchema: ZodSchema<ArtifactDownloadPlanDownloadAction> =
+  z.enum(["none", "startNewDownload", "attachToExistingDownload"]);
+
+/**
  * Represents a plan for downloading artifacts.
  *
  * @deprecated [DEP-HUB-API-ACCESS] LM Studio Hub API access is still in active development. Stay
@@ -148,6 +162,10 @@ export interface ArtifactDownloadPlan {
   nodes: Array<ArtifactDownloadPlanNode>;
   downloadSizeBytes: number;
   /**
+   * What will happen if the current plan is committed.
+   */
+  downloadAction?: ArtifactDownloadPlanDownloadAction;
+  /**
    * Exact download job identifier for the current resolved selection, when the plan is submit-ready.
    */
   downloadJobIdentifier?: string;
@@ -156,6 +174,7 @@ export interface ArtifactDownloadPlan {
 export const artifactDownloadPlanSchema = z.object({
   nodes: z.array(artifactDownloadPlanNodeSchema),
   downloadSizeBytes: z.number().int(),
+  downloadAction: artifactDownloadPlanDownloadActionSchema.optional(),
   downloadJobIdentifier: z.string().optional(),
   version: z.number().int(),
 });
