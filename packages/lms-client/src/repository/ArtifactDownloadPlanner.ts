@@ -80,55 +80,10 @@ interface ArtifactDownloadPlannerSetSelectedDownloadOptionIndexOpts {
   selectedDownloadOptionIndex: number | null;
 }
 
-type ArtifactDownloadPlannerChannelToServerPacket =
-  | {
-      type: "cancelDownload";
-    }
-  | {
-      type: "setSelectedDownloadOptionIndex";
-      nodeIndex: number;
-      selectedDownloadOptionIndex: number | null;
-      requestedPlanVersion: number;
-    }
-  | {
-      type: "commit";
-    }
-  | {
-      type: "cancelPlan";
-    };
-
-type ArtifactDownloadPlannerChannelToClientPacket =
-  | {
-      type: "planUpdated";
-      plan: ArtifactDownloadPlan;
-    }
-  | {
-      type: "planReady";
-      plan: ArtifactDownloadPlan;
-    }
-  | {
-      type: "downloadProgress";
-      update: DownloadProgressUpdate;
-    }
-  | {
-      type: "startFinalizing";
-    }
-  | {
-      type: "success";
-    };
-
-export interface ArtifactDownloadPlannerChannel {
-  onMessage: InferClientChannelType<
-    RepositoryBackendInterface,
-    "createDownloadPlan"
-  >["onMessage"] & {
-    subscribe: (
-      listener: (message: ArtifactDownloadPlannerChannelToClientPacket) => void,
-    ) => unknown;
-  };
-  onError: InferClientChannelType<RepositoryBackendInterface, "createDownloadPlan">["onError"];
-  send(packet: ArtifactDownloadPlannerChannelToServerPacket): void;
-}
+export type ArtifactDownloadPlannerChannel = InferClientChannelType<
+  RepositoryBackendInterface,
+  "createDownloadPlan"
+>;
 
 /**
  * Represents a planner to download an artifact. The plan is not guaranteed to be ready until you
@@ -231,6 +186,12 @@ export class ArtifactDownloadPlanner {
         this.currentDownload.downloadFailed(error);
       }
       this.isErrored = true;
+    });
+    this.channel.onClose.subscribeOnce(() => {
+      const error = new Error("Channel closed.");
+      if (this.currentDownload === null) {
+        this.rejectPendingPlanWaiters(error);
+      }
     });
     if (this.signal !== undefined) {
       if (this.signal.aborted) {
