@@ -164,7 +164,7 @@ export interface ArtifactDownloadPlan {
   /**
    * What will happen if the current plan is committed.
    */
-  downloadAction?: ArtifactDownloadPlanDownloadAction;
+  downloadAction: ArtifactDownloadPlanDownloadAction;
   /**
    * Exact download job identifier for the current resolved selection, when the plan is submit-ready.
    */
@@ -174,7 +174,7 @@ export interface ArtifactDownloadPlan {
 export const artifactDownloadPlanSchema = z.object({
   nodes: z.array(artifactDownloadPlanNodeSchema),
   downloadSizeBytes: z.number().int(),
-  downloadAction: artifactDownloadPlanDownloadActionSchema.optional(),
+  downloadAction: artifactDownloadPlanDownloadActionSchema,
   downloadJobIdentifier: z.string().optional(),
   version: z.number().int(),
 });

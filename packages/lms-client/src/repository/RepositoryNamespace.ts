@@ -584,6 +584,7 @@ export class RepositoryNamespace {
         },
       ],
       downloadSizeBytes: 0,
+      downloadAction: "none",
       version: 0,
     };
     const stack = getCurrentStack(1);
@@ -641,6 +642,7 @@ export class RepositoryNamespace {
         },
       ],
       downloadSizeBytes: 0,
+      downloadAction: "none",
       version: 0,
     };
     const stack = getCurrentStack(1);
