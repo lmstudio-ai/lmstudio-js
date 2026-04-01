@@ -10,12 +10,51 @@ import {
   kebabCaseWithDotsSchema,
   lmLinkStatusResultSchema,
   localArtifactFileListSchema,
+  modelCompatibilityTypeSchema,
+  modelDownloadSourceSchema,
   modelSearchOptsSchema,
   modelSearchResultDownloadOptionDataSchema,
   modelSearchResultEntryDataSchema,
   modelSearchResultIdentifierSchema,
 } from "@lmstudio/lms-shared-types";
 import { z } from "zod";
+
+const repositoryDownloadPlannerResolutionPreferenceSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("fileName"),
+    fileName: z.string(),
+  }),
+  z.object({
+    type: z.literal("quantName"),
+    quantName: z.string(),
+  }),
+]);
+
+const repositoryDownloadPlannerOptsSchema = z.object({
+  resolutionPreference: z.array(repositoryDownloadPlannerResolutionPreferenceSchema).optional(),
+  compatibilityTypes: z.array(modelCompatibilityTypeSchema).optional(),
+});
+
+const repositoryDownloadPlannerTargetSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("artifact"),
+    owner: kebabCaseSchema,
+    name: kebabCaseWithDotsSchema,
+  }),
+  z.object({
+    type: z.literal("model"),
+    source: modelDownloadSourceSchema,
+  }),
+]);
+
+const fuzzyFindStaffPickResultSchema = z.object({
+  owner: kebabCaseSchema,
+  name: kebabCaseWithDotsSchema,
+  revisionNumber: z.number().int(),
+  createdAtTimestamp: z.number().int(),
+  description: z.string(),
+  exact: z.boolean(),
+});
 
 export function createRepositoryBackendInterface() {
   return (
@@ -186,13 +225,12 @@ export function createRepositoryBackendInterface() {
         }),
       })
       /**
-       * Given the owner and name of an artifact, creates a download plan for the artifact. Throws
-       * an error is the artifact is not found.
+       * Creates a download plan. The target can either be an artifact root or a direct model root.
        */
-      .addChannelEndpoint("createArtifactDownloadPlan", {
+      .addChannelEndpoint("createDownloadPlan", {
         creationParameter: z.object({
-          owner: kebabCaseSchema,
-          name: kebabCaseWithDotsSchema,
+          target: repositoryDownloadPlannerTargetSchema,
+          opts: repositoryDownloadPlannerOptsSchema.optional(),
         }),
         toServerPacket: z.discriminatedUnion("type", [
           /**
@@ -200,6 +238,18 @@ export function createRepositoryBackendInterface() {
            */
           z.object({
             type: z.literal("cancelDownload"),
+          }),
+          /**
+           * Updates the selected concrete model download option for a resolved model node.
+           *
+           * `requestedPlanVersion` identifies the client selection change that should be reflected
+           * in the next emitted plan version.
+           */
+          z.object({
+            type: z.literal("setSelectedDownloadOptionIndex"),
+            nodeIndex: z.number().int(),
+            selectedDownloadOptionIndex: z.number().int().nullable(),
+            requestedPlanVersion: z.number().int(),
           }),
           /**
            * Can only be called after plan ready. Once called, starts the plan.
@@ -222,10 +272,6 @@ export function createRepositoryBackendInterface() {
           z.object({
             type: z.literal("planReady"),
             plan: artifactDownloadPlanSchema,
-          }),
-          z.object({
-            type: z.literal("downloadJobIdentifier"),
-            downloadJobIdentifier: z.string(),
           }),
           z.object({
             type: z.literal("downloadProgress"),
@@ -253,6 +299,16 @@ export function createRepositoryBackendInterface() {
         parameter: z.void(),
         returns: z.object({
           models: z.array(hubModelSchema),
+        }),
+      })
+      .addRpcEndpoint("fuzzyFindStaffPicks", {
+        parameter: z.object({
+          searchTerm: z.string().optional(),
+          limit: z.number().int().positive().optional(),
+          compatibilityTypes: z.array(modelCompatibilityTypeSchema).optional(),
+        }),
+        returns: z.object({
+          results: z.array(fuzzyFindStaffPickResultSchema),
         }),
       })
       .addRpcEndpoint("lmLinkStatus", {

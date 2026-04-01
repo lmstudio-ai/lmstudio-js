@@ -115,6 +115,8 @@ export type { RemoteToolUseSession } from "./plugins/ToolUseSession.js";
 export type {
   ArtifactDownloadPlanner,
   ArtifactDownloadPlannerDownloadOpts,
+  ArtifactDownloadPlannerSelectAlreadyOwnedModelOpts,
+  ArtifactDownloadPlannerSelectModelDownloadOptionOpts,
 } from "./repository/ArtifactDownloadPlanner.js";
 export type {
   DownloadOpts,
@@ -124,12 +126,17 @@ export type { ModelSearchResultEntry } from "./repository/ModelSearchResultEntry
 export type { RepositoryLMLinkNamespace } from "./repository/RepositoryLMLinkNamespace.js";
 export type {
   CreateArtifactDownloadPlannerOpts,
+  CreateModelDownloadPlannerOpts,
   DownloadArtifactOpts,
   EnsureAuthenticatedOpts,
+  FuzzyFindStaffPickResult,
+  FuzzyFindStaffPicksOpts,
   InstallLocalPluginOpts,
   LoginWithPreAuthenticatedKeysOpts,
   LoginWithPreAuthenticatedKeysResult,
   PushArtifactOpts,
+  RepositoryDownloadPlannerOpts,
+  RepositoryDownloadPlannerResolutionPreference,
   RepositoryNamespace,
   UnstableRepositoryNamespace,
 } from "./repository/RepositoryNamespace.js";

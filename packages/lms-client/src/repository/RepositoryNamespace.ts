@@ -14,10 +14,17 @@ import {
   type AuthenticationStatus,
   type DownloadProgressUpdate,
   type LocalArtifactFileList,
+  modelCompatibilityTypeSchema,
+  type ModelCompatibilityType,
+  type ModelDownloadSource,
+  modelDownloadSourceSchema,
   type ModelSearchOpts,
 } from "@lmstudio/lms-shared-types";
 import { z, type ZodSchema } from "zod";
-import { ArtifactDownloadPlanner } from "./ArtifactDownloadPlanner.js";
+import {
+  ArtifactDownloadPlanner,
+  type ArtifactDownloadPlannerChannel,
+} from "./ArtifactDownloadPlanner.js";
 import { ModelSearchResultEntry } from "./ModelSearchResultEntry.js";
 import { RepositoryLMLinkNamespace } from "./RepositoryLMLinkNamespace.js";
 
@@ -137,23 +144,124 @@ export const loginWithPreAuthenticatedKeysResultSchema = z.object({
   userName: z.string(),
 }) as ZodSchema<LoginWithPreAuthenticatedKeysResult>;
 
+export type RepositoryDownloadPlannerResolutionPreference =
+  | {
+      type: "fileName";
+      fileName: string;
+    }
+  | {
+      type: "quantName";
+      quantName: string;
+    };
+const repositoryDownloadPlannerResolutionPreferenceSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("fileName"),
+    fileName: z.string(),
+  }),
+  z.object({
+    type: z.literal("quantName"),
+    quantName: z.string(),
+  }),
+]);
+
+export interface RepositoryDownloadPlannerOpts {
+  resolutionPreference?: Array<RepositoryDownloadPlannerResolutionPreference>;
+  compatibilityTypes?: Array<ModelCompatibilityType>;
+}
+const repositoryDownloadPlannerOptsSchema = z.object({
+  resolutionPreference: z.array(repositoryDownloadPlannerResolutionPreferenceSchema).optional(),
+  compatibilityTypes: z.array(modelCompatibilityTypeSchema).optional(),
+});
+
+type RepositoryDownloadPlannerTarget =
+  | {
+      type: "artifact";
+      owner: string;
+      name: string;
+    }
+  | {
+      type: "model";
+      source: ModelDownloadSource;
+    };
+
 /**
  * Options to use with {@link RepositoryNamespace#createArtifactDownloadPlanner}.
  *
  * @public
  */
-export interface CreateArtifactDownloadPlannerOpts {
+export interface CreateArtifactDownloadPlannerOpts extends RepositoryDownloadPlannerOpts {
   owner: string;
   name: string;
   onPlanUpdated?: (plan: ArtifactDownloadPlan) => void;
   signal?: AbortSignal;
 }
-export const createArtifactDownloadPlannerOptsSchema = z.object({
+export const createArtifactDownloadPlannerOptsSchema = repositoryDownloadPlannerOptsSchema.extend({
   owner: z.string(),
   name: z.string(),
   onPlanUpdated: z.function().optional(),
   signal: z.instanceof(AbortSignal).optional(),
 }) as ZodSchema<CreateArtifactDownloadPlannerOpts>;
+
+/**
+ * Options to use with {@link RepositoryNamespace#createModelDownloadPlanner}.
+ *
+ * @public
+ */
+export interface CreateModelDownloadPlannerOpts extends RepositoryDownloadPlannerOpts {
+  source: ModelDownloadSource;
+  onPlanUpdated?: (plan: ArtifactDownloadPlan) => void;
+  signal?: AbortSignal;
+}
+export const createModelDownloadPlannerOptsSchema = repositoryDownloadPlannerOptsSchema.extend({
+  source: modelDownloadSourceSchema,
+  onPlanUpdated: z.function().optional(),
+  signal: z.instanceof(AbortSignal).optional(),
+}) as ZodSchema<CreateModelDownloadPlannerOpts>;
+
+/** @public */
+export interface FuzzyFindStaffPicksOpts {
+  searchTerm?: string;
+  limit?: number;
+  compatibilityTypes?: Array<ModelCompatibilityType>;
+}
+const fuzzyFindStaffPicksOptsSchema = z.object({
+  searchTerm: z.string().optional(),
+  limit: z.number().int().positive().optional(),
+  compatibilityTypes: z.array(modelCompatibilityTypeSchema).optional(),
+}) as ZodSchema<FuzzyFindStaffPicksOpts>;
+
+/** @public */
+export interface FuzzyFindStaffPickResult {
+  owner: string;
+  name: string;
+  revisionNumber: number;
+  createdAtTimestamp: number;
+  description: string;
+  exact: boolean;
+}
+
+interface RepositoryPortWithPlannerMethods {
+  createChannel(
+    endpoint: "createDownloadPlan",
+    creationParameter: {
+      target: RepositoryDownloadPlannerTarget;
+      opts?: RepositoryDownloadPlannerOpts;
+    },
+    messageHandler: undefined,
+    opts: {
+      stack?: string;
+    },
+  ): ArtifactDownloadPlannerChannel;
+  callRpc(
+    endpoint: "fuzzyFindStaffPicks",
+    parameter: FuzzyFindStaffPicksOpts,
+    opts: {
+      stack?: string;
+    },
+  ): Promise<{
+    results: Array<FuzzyFindStaffPickResult>;
+  }>;
+}
 
 /**
  * Options to use with {@link RepositoryNamespace#installLocalPlugin}.
@@ -443,17 +551,16 @@ export class RepositoryNamespace {
     return { userName };
   }
 
-  private readonly downloadPlanFinalizationRegistry = new FinalizationRegistry<{
-    owner: string;
-    name: string;
-  }>(({ owner, name }) => {
-    this.logger.warn(`
-      A download plan for artifact ${owner}/${name} has been garbage collected without being
+  private readonly downloadPlanFinalizationRegistry = new FinalizationRegistry<string>(
+    plannerDescription => {
+      this.logger.warn(`
+      A download plan for ${plannerDescription} has been garbage collected without being
       disposed. Please make sure you are creating the download plan with the "using" keyword.
 
       This is a memory leak and needs to be fixed.
     `);
-  });
+    },
+  );
   /**
    * @deprecated [DEP-HUB-API-ACCESS] LM Studio Hub API access is still in active development. Stay
    * tuned for updates.
@@ -468,16 +575,41 @@ export class RepositoryNamespace {
       createArtifactDownloadPlannerOptsSchema,
       opts,
     );
+    const initialPlan: ArtifactDownloadPlan = {
+      nodes: [
+        {
+          type: "artifact",
+          owner,
+          name,
+          state: "pending",
+          dependencyNodes: [],
+        },
+      ],
+      downloadSizeBytes: 0,
+      downloadAction: "none",
+      version: 0,
+    };
     const stack = getCurrentStack(1);
-    const channel = this.repositoryPort.createChannel(
-      "createArtifactDownloadPlan",
-      { owner, name },
+    const repositoryPort = this.repositoryPort as RepositoryPort & RepositoryPortWithPlannerMethods;
+    const channel = repositoryPort.createChannel(
+      "createDownloadPlan",
+      {
+        target: {
+          type: "artifact",
+          owner,
+          name,
+        },
+        opts: {
+          resolutionPreference: opts.resolutionPreference,
+          compatibilityTypes: opts.compatibilityTypes,
+        },
+      },
       undefined, // Don't listen to the messages yet.
       { stack },
     );
     const planner = new ArtifactDownloadPlanner(
-      owner,
-      name,
+      `${owner}/${name}`,
+      initialPlan,
       onPlanUpdated,
       channel,
       this.validator,
@@ -486,7 +618,64 @@ export class RepositoryNamespace {
       },
       signal,
     );
-    this.downloadPlanFinalizationRegistry.register(planner, { owner, name }, planner);
+    this.downloadPlanFinalizationRegistry.register(planner, `${owner}/${name}`, planner);
+    return planner;
+  }
+
+  /**
+   * @deprecated [DEP-HUB-API-ACCESS] LM Studio Hub API access is still in active development. Stay
+   * tuned for updates.
+   */
+  public createModelDownloadPlanner(opts: CreateModelDownloadPlannerOpts): ArtifactDownloadPlanner {
+    const { source, onPlanUpdated, signal } = this.validator.validateMethodParamOrThrow(
+      "repository",
+      "createModelDownloadPlanner",
+      "opts",
+      createModelDownloadPlannerOptsSchema,
+      opts,
+    );
+    const plannerDescription = `${source.user}/${source.repo}`;
+    const initialPlan: ArtifactDownloadPlan = {
+      nodes: [
+        {
+          type: "model",
+          state: "pending",
+          dependencyLabel: plannerDescription,
+        },
+      ],
+      downloadSizeBytes: 0,
+      downloadAction: "none",
+      version: 0,
+    };
+    const stack = getCurrentStack(1);
+    const repositoryPort = this.repositoryPort as RepositoryPort & RepositoryPortWithPlannerMethods;
+    const channel = repositoryPort.createChannel(
+      "createDownloadPlan",
+      {
+        target: {
+          type: "model",
+          source,
+        },
+        opts: {
+          resolutionPreference: opts.resolutionPreference,
+          compatibilityTypes: opts.compatibilityTypes,
+        },
+      },
+      undefined,
+      { stack },
+    );
+    const planner = new ArtifactDownloadPlanner(
+      plannerDescription,
+      initialPlan,
+      onPlanUpdated,
+      channel,
+      this.validator,
+      () => {
+        this.downloadPlanFinalizationRegistry.unregister(planner);
+      },
+      signal,
+    );
+    this.downloadPlanFinalizationRegistry.register(planner, plannerDescription, planner);
     return planner;
   }
 
@@ -537,5 +726,18 @@ export class UnstableRepositoryNamespace {
   public async getModelCatalog() {
     const stack = getCurrentStack(1);
     return (await this.repositoryPort.callRpc("getModelCatalog", undefined, { stack })).models;
+  }
+
+  /**
+   * @deprecated [DEP-HUB-API-ACCESS] LM Studio Hub API access is still in active development
+   * and will change. Not recommended for public adoption.
+   */
+  public async fuzzyFindStaffPicks(
+    opts: FuzzyFindStaffPicksOpts = {},
+  ): Promise<Array<FuzzyFindStaffPickResult>> {
+    const stack = getCurrentStack(1);
+    const normalizedOpts = fuzzyFindStaffPicksOptsSchema.parse(opts);
+    const repositoryPort = this.repositoryPort as RepositoryPort & RepositoryPortWithPlannerMethods;
+    return (await repositoryPort.callRpc("fuzzyFindStaffPicks", normalizedOpts, { stack })).results;
   }
 }
