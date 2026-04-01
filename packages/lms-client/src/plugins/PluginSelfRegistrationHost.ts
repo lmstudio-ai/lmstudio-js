@@ -7,6 +7,8 @@ import {
 } from "@lmstudio/lms-common";
 import { type InferClientChannelType } from "@lmstudio/lms-communication";
 import {
+  pluginRuntimeErrorReportSchema,
+  type PluginRuntimeErrorReport,
   type PluginsBackendInterface,
   type PluginsPort,
 } from "@lmstudio/lms-external-backend-interfaces";
@@ -806,5 +808,26 @@ export class PluginSelfRegistrationHost {
     const stack = getCurrentStack(1);
 
     await this.port.callRpc("pluginInitCompleted", undefined, { stack });
+  }
+
+  /**
+   * Reports a plugin runtime error to LM Studio.
+   *
+   * This is used internally by MCP bridge workers so the host can switch the plugin into a more
+   * specific state such as authentication required.
+   *
+   * @deprecated This method is used by plugins internally to report errors
+   */
+  public async reportError(report: PluginRuntimeErrorReport): Promise<void> {
+    const stack = getCurrentStack(1);
+    const parsedReport = this.validator.validateMethodParamOrThrow(
+      "plugins",
+      "reportError",
+      "report",
+      pluginRuntimeErrorReportSchema,
+      report,
+      stack,
+    );
+    await this.port.callRpc("reportError", parsedReport, { stack });
   }
 }
