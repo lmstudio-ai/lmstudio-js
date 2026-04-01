@@ -23,7 +23,7 @@ import {
 
 import { z } from "zod";
 
-export type MCPBridgeRuntimeErrorReport =
+export type PluginRuntimeErrorReport =
   | {
       type: "unauthorized";
       pluginRunId: string;
@@ -38,7 +38,7 @@ export type MCPBridgeRuntimeErrorReport =
       unavailableHost?: string;
     };
 
-export const mcpBridgeRuntimeErrorReportSchema = z.discriminatedUnion("type", [
+export const pluginRuntimeErrorReportSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("unauthorized"),
     pluginRunId: z.string(),
@@ -52,7 +52,7 @@ export const mcpBridgeRuntimeErrorReportSchema = z.discriminatedUnion("type", [
     message: z.string(),
     unavailableHost: z.string().optional(),
   }),
-]) as Zod.Schema<MCPBridgeRuntimeErrorReport>;
+]) as Zod.Schema<PluginRuntimeErrorReport>;
 
 export function createPluginsBackendInterface() {
   return (
@@ -554,7 +554,7 @@ export function createPluginsBackendInterface() {
         returns: z.void(),
       })
       .addRpcEndpoint("reportError", {
-        parameter: mcpBridgeRuntimeErrorReportSchema,
+        parameter: pluginRuntimeErrorReportSchema,
         returns: z.void(),
       })
   );

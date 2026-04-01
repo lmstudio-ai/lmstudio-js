@@ -21,11 +21,11 @@ export {
 export { createLlmBackendInterface, LLMBackendInterface, LLMPort } from "./llmBackendInterface.js";
 export {
   createPluginsBackendInterface,
-  mcpBridgeRuntimeErrorReportSchema,
+  pluginRuntimeErrorReportSchema,
   PluginsBackendInterface,
   PluginsPort,
 } from "./pluginsBackendInterface.js";
-export type { MCPBridgeRuntimeErrorReport } from "./pluginsBackendInterface.js";
+export type { PluginRuntimeErrorReport } from "./pluginsBackendInterface.js";
 export {
   createRepositoryBackendInterface,
   RepositoryBackendInterface,
