@@ -7,8 +7,6 @@ import {
 } from "@lmstudio/lms-common";
 import { type InferClientChannelType } from "@lmstudio/lms-communication";
 import {
-  pluginRuntimeErrorReportSchema,
-  type PluginRuntimeErrorReport,
   type PluginsBackendInterface,
   type PluginsPort,
 } from "@lmstudio/lms-external-backend-interfaces";
@@ -16,6 +14,8 @@ import { type GlobalKVFieldValueTypeLibraryMap, KVConfigSchematics } from "@lmst
 import {
   type ChatMessageData,
   type LLMPredictionFragmentInputOpts,
+  pluginRuntimeErrorReportSchema,
+  type PluginRuntimeErrorReport,
   serializeError,
   type ToolCallRequest,
 } from "@lmstudio/lms-shared-types";

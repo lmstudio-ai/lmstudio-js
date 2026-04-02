@@ -14,45 +14,16 @@ import {
   processingRequestResponseSchema,
   processingRequestSchema,
   processingUpdateSchema,
+  pluginRuntimeErrorReportSchema,
   promptProcessingDetailsSchema,
   serializedKVConfigSchematicsSchema,
   serializedLMSExtendedErrorSchema,
   tokenSourceIdentifierSchema,
   toolCallRequestSchema,
+  type PluginRuntimeErrorReport,
 } from "@lmstudio/lms-shared-types";
 
 import { z } from "zod";
-
-export type PluginRuntimeErrorReport =
-  | {
-      type: "unauthorized";
-      pluginRunId: string;
-      serverUrl: string;
-      message: string;
-    }
-  | {
-      type: "network_unavailable";
-      pluginRunId: string;
-      serverUrl: string;
-      message: string;
-      unavailableHost?: string;
-    };
-
-export const pluginRuntimeErrorReportSchema = z.discriminatedUnion("type", [
-  z.object({
-    type: z.literal("unauthorized"),
-    pluginRunId: z.string(),
-    serverUrl: z.string(),
-    message: z.string(),
-  }),
-  z.object({
-    type: z.literal("network_unavailable"),
-    pluginRunId: z.string(),
-    serverUrl: z.string(),
-    message: z.string(),
-    unavailableHost: z.string().optional(),
-  }),
-]) as Zod.Schema<PluginRuntimeErrorReport>;
 
 export function createPluginsBackendInterface() {
   return (

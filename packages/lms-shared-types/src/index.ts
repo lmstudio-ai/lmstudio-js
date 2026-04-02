@@ -95,6 +95,10 @@ export {
   serializeError,
 } from "./Error.js";
 export {
+  pluginRuntimeErrorReportSchema,
+  type PluginRuntimeErrorReport,
+} from "./PluginRuntimeErrorReport.js";
+export {
   EstimatedModelMemoryUsage,
   EstimatedModelMemoryUsageConfidence,
   estimatedModelMemoryUsageConfidenceSchema,

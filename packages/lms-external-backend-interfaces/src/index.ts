@@ -21,11 +21,9 @@ export {
 export { createLlmBackendInterface, LLMBackendInterface, LLMPort } from "./llmBackendInterface.js";
 export {
   createPluginsBackendInterface,
-  pluginRuntimeErrorReportSchema,
   PluginsBackendInterface,
   PluginsPort,
 } from "./pluginsBackendInterface.js";
-export type { PluginRuntimeErrorReport } from "./pluginsBackendInterface.js";
 export {
   createRepositoryBackendInterface,
   RepositoryBackendInterface,
