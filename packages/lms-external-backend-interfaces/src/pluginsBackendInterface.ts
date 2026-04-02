@@ -14,11 +14,13 @@ import {
   processingRequestResponseSchema,
   processingRequestSchema,
   processingUpdateSchema,
+  pluginRuntimeErrorReportSchema,
   promptProcessingDetailsSchema,
   serializedKVConfigSchematicsSchema,
   serializedLMSExtendedErrorSchema,
   tokenSourceIdentifierSchema,
   toolCallRequestSchema,
+  type PluginRuntimeErrorReport,
 } from "@lmstudio/lms-shared-types";
 
 import { z } from "zod";
@@ -520,6 +522,10 @@ export function createPluginsBackendInterface() {
       })
       .addRpcEndpoint("pluginInitCompleted", {
         parameter: z.void(),
+        returns: z.void(),
+      })
+      .addRpcEndpoint("reportError", {
+        parameter: pluginRuntimeErrorReportSchema,
         returns: z.void(),
       })
   );

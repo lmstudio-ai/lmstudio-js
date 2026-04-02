@@ -5,7 +5,9 @@ import {
   SimpleLogger,
   type Validator,
 } from "@lmstudio/lms-common";
-import { type PluginsPort } from "@lmstudio/lms-external-backend-interfaces";
+import {
+  type PluginsPort,
+} from "@lmstudio/lms-external-backend-interfaces";
 import { emptyKVConfig } from "@lmstudio/lms-kv-config";
 import {
   artifactIdentifierSchema,
