@@ -89,10 +89,10 @@ test("buffered event should throw on subscribe after overflowing", () => {
 test("buffered event should throw when the buffered size exceeds the configured cap", () => {
   const [_event, emit] = BufferedEvent.create<number>({ sizeLimit: 4 });
 
-  emit.emitWithSize(1, 2);
-  emit.emitWithSize(2, 2);
+  emit.withSize(1, 2);
+  emit.withSize(2, 2);
 
-  expect(() => emit.emitWithSize(3, 1)).toThrow(BufferedEventOverflowError);
+  expect(() => emit.withSize(3, 1)).toThrow(BufferedEventOverflowError);
 });
 
 test("emit should count as zero bytes against the size limit", () => {
@@ -112,10 +112,10 @@ test("buffered event should release buffered size as items are delivered", async
   const [event, emit] = BufferedEvent.create<number>({ sizeLimit: 2 });
   const listener = jest.fn();
 
-  emit.emitWithSize(1, 2);
+  emit.withSize(1, 2);
   event.subscribe(listener);
 
   await Promise.resolve();
 
-  expect(() => emit.emitWithSize(2, 2)).not.toThrow();
+  expect(() => emit.withSize(2, 2)).not.toThrow();
 });

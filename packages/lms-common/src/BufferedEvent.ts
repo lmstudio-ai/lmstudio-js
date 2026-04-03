@@ -18,7 +18,7 @@ interface BufferedEventCreateOpts {
 
 export interface BufferedEventEmitter<TData> {
   (data: TData): void;
-  emitWithSize(data: TData, size: number): void;
+  withSize(data: TData, size: number): void;
 }
 
 interface BufferedEventQueuedData<TData> {
@@ -45,7 +45,7 @@ export class BufferedEvent<TData> extends Subscribable<TData> {
     const emitter = ((data: TData) => {
       event.emit(data);
     }) as BufferedEventEmitter<TData>;
-    emitter.emitWithSize = (data: TData, size: number) => {
+    emitter.withSize = (data: TData, size: number) => {
       event.emitWithSize(data, size);
     };
     return [event, emitter] as const;
