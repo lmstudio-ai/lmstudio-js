@@ -3,6 +3,28 @@ import { Subscribable } from "./Subscribable.js";
 
 type Listener<TData> = (data: TData) => void;
 const waitForNextMicroTask = Symbol();
+
+export class BufferedEventOverflowError extends Error {
+  public constructor(message: string) {
+    super(message);
+    this.name = "BufferedEventOverflowError";
+  }
+}
+
+interface BufferedEventCreateOpts {
+  sizeLimit?: number;
+  lengthLimit?: number;
+}
+
+export interface BufferedEventEmitter<TData> {
+  (data: TData): void;
+  withSize(data: TData, size: number): void;
+}
+
+interface BufferedEventQueuedData<TData> {
+  data: TData;
+  size: number;
+}
 /**
  * A buffered event will buffer events in a queue if no subscribers are present. When a subscriber
  * is added, all buffered events will trigger sequentially in the next microtask.
@@ -13,23 +35,69 @@ const waitForNextMicroTask = Symbol();
  */
 export class BufferedEvent<TData> extends Subscribable<TData> {
   private subscriber: Listener<TData> | null = null;
-  private queued: Array<TData | typeof waitForNextMicroTask> = [];
+  private queued: Array<BufferedEventQueuedData<TData> | typeof waitForNextMicroTask> = [];
+  private queuedItemsCount = 0;
+  private queuedSize = 0;
   private isNotifying = false;
-  public static create<TData>() {
-    const event = new BufferedEvent<TData>();
-    const emitter: (data: TData) => void = data => {
+  private overflowError: BufferedEventOverflowError | null = null;
+  public static create<TData>(opts: BufferedEventCreateOpts = {}) {
+    const event = new BufferedEvent<TData>(opts);
+    const emitter = ((data: TData) => {
       event.emit(data);
+    }) as BufferedEventEmitter<TData>;
+    emitter.withSize = (data: TData, size: number) => {
+      event.emitWithSize(data, size);
     };
     return [event, emitter] as const;
   }
-  private constructor() {
+  private constructor(private readonly opts: BufferedEventCreateOpts) {
     super();
   }
   private emit(data: TData) {
-    if (this.queued.length === 0 && this.queued.at(-1) !== waitForNextMicroTask) {
+    this.emitWithSize(data, 0);
+  }
+  private emitWithSize(data: TData, size: number) {
+    if (this.overflowError !== null) {
+      throw this.overflowError;
+    }
+    if (!Number.isSafeInteger(size) || size < 0) {
+      throw new Error("BufferedEvent size must be a non-negative safe integer.");
+    }
+    if (this.queued.length === 0) {
       this.queued.push(waitForNextMicroTask);
     }
-    this.queued.push(data);
+    this.queued.push({ data, size });
+    this.queuedItemsCount += 1;
+    this.queuedSize += size;
+
+    const lengthLimit = this.opts.lengthLimit;
+    const sizeLimit = this.opts.sizeLimit;
+    let overflowError: BufferedEventOverflowError | null = null;
+    if (
+      lengthLimit !== undefined &&
+      lengthLimit >= 0 &&
+      this.queuedItemsCount > lengthLimit
+    ) {
+      overflowError = new BufferedEventOverflowError(
+        `BufferedEvent exceeded lengthLimit (${lengthLimit}).`,
+      );
+    } else if (
+      sizeLimit !== undefined &&
+      sizeLimit >= 0 &&
+      this.queuedSize > sizeLimit
+    ) {
+      overflowError = new BufferedEventOverflowError(
+        `BufferedEvent exceeded sizeLimit (${sizeLimit} bytes).`,
+      );
+    }
+
+    if (overflowError !== null) {
+      this.overflowError = overflowError;
+      this.queued = [];
+      this.queuedItemsCount = 0;
+      this.queuedSize = 0;
+      throw overflowError;
+    }
     if (!this.isNotifying) {
       this.notifier();
     }
@@ -41,12 +109,17 @@ export class BufferedEvent<TData> extends Subscribable<TData> {
       if (data === waitForNextMicroTask) {
         await Promise.resolve();
       } else {
-        this.subscriber(data);
+        this.queuedItemsCount -= 1;
+        this.queuedSize -= data.size;
+        this.subscriber(data.data);
       }
     }
     this.isNotifying = false;
   }
   public subscribe(listener: Listener<TData>) {
+    if (this.overflowError !== null) {
+      throw this.overflowError;
+    }
     if (this.subscriber !== null) {
       throw new Error("Cannot have more than one subscriber");
     }

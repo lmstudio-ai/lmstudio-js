@@ -9,7 +9,11 @@ export {
 } from "./LazySignal.js";
 
 export { apiServerPorts } from "./apiServerPorts.js";
-export { BufferedEvent } from "./BufferedEvent.js";
+export {
+  BufferedEvent,
+  BufferedEventOverflowError,
+  type BufferedEventEmitter,
+} from "./BufferedEvent.js";
 export { CancelEvent } from "./CancelEvent.js";
 export { kebabToCamelCase } from "./casingConvert.js";
 export { Cleaner } from "./Cleaner.js";
