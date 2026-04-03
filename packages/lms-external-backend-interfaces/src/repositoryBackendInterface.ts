@@ -333,6 +333,16 @@ export function createRepositoryBackendInterface() {
         }),
         returns: z.void(),
       })
+      .addRpcEndpoint("lmLinkSetupComputeDevice", {
+        parameter: z.object({
+          setupCode: z.string().min(1),
+        }),
+        returns: z.void(),
+      })
+      .addRpcEndpoint("lmLinkDeSetupComputeDevice", {
+        parameter: z.void(),
+        returns: z.void(),
+      })
   );
 }
 

@@ -59,4 +59,26 @@ export class RepositoryLMLinkNamespace {
       { stack },
     );
   }
+
+  /**
+   * @deprecated [DEP-HUB-API-ACCESS] LM Studio Hub API access is still in active development
+   * and will change. Not recommended for public adoption.
+   */
+  public async unstable_setupComputeDevice(setupCode: string): Promise<void> {
+    const stack = getCurrentStack(1);
+    return await this.repositoryPort.callRpc(
+      "lmLinkSetupComputeDevice",
+      { setupCode },
+      { stack },
+    );
+  }
+
+  /**
+   * @deprecated [DEP-HUB-API-ACCESS] LM Studio Hub API access is still in active development
+   * and will change. Not recommended for public adoption.
+   */
+  public async unstable_deSetupComputeDevice(): Promise<void> {
+    const stack = getCurrentStack(1);
+    return await this.repositoryPort.callRpc("lmLinkDeSetupComputeDevice", undefined, { stack });
+  }
 }
