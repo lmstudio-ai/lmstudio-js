@@ -8,6 +8,7 @@ import {
   jsonSerializableSchema,
   kebabCaseSchema,
   kebabCaseWithDotsSchema,
+  lmLinkSetupComputeDeviceResultSchema,
   lmLinkStatusResultSchema,
   localArtifactFileListSchema,
   modelCompatibilityTypeSchema,
@@ -337,7 +338,7 @@ export function createRepositoryBackendInterface() {
         parameter: z.object({
           setupCode: z.string().min(1),
         }),
-        returns: z.void(),
+        returns: lmLinkSetupComputeDeviceResultSchema,
       })
       .addRpcEndpoint("lmLinkDeSetupComputeDevice", {
         parameter: z.void(),

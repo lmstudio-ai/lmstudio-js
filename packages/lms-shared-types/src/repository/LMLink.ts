@@ -110,3 +110,19 @@ export const lmLinkStatusResultSchema = z.object({
   reconnectInSeconds: z.number().int().nonnegative().optional(),
   lastError: lmLinkLastErrorSchema.optional(),
 });
+
+/**
+ * Result of setting up the local machine as a compute device.
+ *
+ * @public
+ * @deprecated [DEP-HUB-API-ACCESS] LM Studio Hub API access is still in active development
+ * and will change. Not recommended for public adoption.
+ */
+export interface LMLinkSetupComputeDeviceResult {
+  ownerUsername: string;
+  ownerIsOrganization: boolean;
+}
+export const lmLinkSetupComputeDeviceResultSchema = z.object({
+  ownerUsername: z.string(),
+  ownerIsOrganization: z.boolean(),
+});
