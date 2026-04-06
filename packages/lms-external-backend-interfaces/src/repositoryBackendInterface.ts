@@ -205,10 +205,7 @@ export function createRepositoryBackendInterface() {
       .addRpcEndpoint("getAuthenticationStatus", {
         parameter: z.void(),
         returns: z.object({
-          /**
-           * Null if not authenticated.
-           */
-          authenticationStatus: authenticationStatusSchema.nullable(),
+          authenticationStatus: authenticationStatusSchema,
         }),
       })
       .addRpcEndpoint("deauthenticate", {

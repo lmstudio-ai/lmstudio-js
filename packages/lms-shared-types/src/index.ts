@@ -434,6 +434,12 @@ export {
 } from "./repository/ArtifactUpload.js";
 export {
   AuthenticationStatus,
+  ComputeDeviceAuthenticationStatus,
+  computeDeviceAuthenticationStatusSchema,
+  LoggedInUserAuthenticationStatus,
+  loggedInUserAuthenticationStatusSchema,
+  NoAuthenticationStatus,
+  noAuthenticationStatusSchema,
   authenticationStatusSchema,
 } from "./repository/AuthenticationStatus.js";
 export {

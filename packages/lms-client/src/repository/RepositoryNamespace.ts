@@ -499,7 +499,7 @@ export class RepositoryNamespace {
    * @deprecated [DEP-HUB-API-ACCESS] LM Studio Hub API access is still in active development. Stay
    * tuned for updates.
    */
-  public async getAuthenticationStatus(): Promise<AuthenticationStatus | null> {
+  public async getAuthenticationStatus(): Promise<AuthenticationStatus> {
     const stack = getCurrentStack(1);
     const { authenticationStatus } = await this.repositoryPort.callRpc(
       "getAuthenticationStatus",
