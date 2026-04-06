@@ -3,12 +3,12 @@ import { type InferClientPort } from "@lmstudio/lms-communication-client";
 import {
   artifactDownloadPlanSchema,
   authenticationStatusSchema,
+  computeDeviceAuthenticationStatusSchema,
   downloadProgressUpdateSchema,
   hubModelSchema,
   jsonSerializableSchema,
   kebabCaseSchema,
   kebabCaseWithDotsSchema,
-  lmLinkSetupComputeDeviceResultSchema,
   lmLinkStatusResultSchema,
   localArtifactFileListSchema,
   modelCompatibilityTypeSchema,
@@ -212,6 +212,12 @@ export function createRepositoryBackendInterface() {
         parameter: z.void(),
         returns: z.void(),
       })
+      .addRpcEndpoint("loginAsComputeDevice", {
+        parameter: z.object({
+          token: z.string().min(1),
+        }),
+        returns: computeDeviceAuthenticationStatusSchema,
+      })
       .addRpcEndpoint("loginWithPreAuthenticatedKeys", {
         parameter: z.object({
           keyId: z.string(),
@@ -329,16 +335,6 @@ export function createRepositoryBackendInterface() {
         parameter: z.object({
           deviceIdentifier: z.string(),
         }),
-        returns: z.void(),
-      })
-      .addRpcEndpoint("lmLinkSetupComputeDevice", {
-        parameter: z.object({
-          setupCode: z.string().min(1),
-        }),
-        returns: lmLinkSetupComputeDeviceResultSchema,
-      })
-      .addRpcEndpoint("lmLinkDeSetupComputeDevice", {
-        parameter: z.void(),
         returns: z.void(),
       })
   );

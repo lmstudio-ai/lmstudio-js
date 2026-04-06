@@ -8,6 +8,7 @@ import {
 } from "@lmstudio/lms-common";
 import { type RepositoryPort } from "@lmstudio/lms-external-backend-interfaces";
 import {
+  type ComputeDeviceAuthenticationStatus,
   jsonSerializableSchema,
   modelSearchOptsSchema,
   type ArtifactDownloadPlan,
@@ -516,6 +517,25 @@ export class RepositoryNamespace {
   public async deauthenticate(): Promise<void> {
     const stack = getCurrentStack(1);
     await this.repositoryPort.callRpc("deauthenticate", undefined, { stack });
+  }
+
+  /**
+   * @deprecated [DEP-HUB-API-ACCESS] LM Studio Hub API access is still in active development. Stay
+   * tuned for updates.
+   */
+  public async loginAsComputeDevice(
+    token: string,
+  ): Promise<ComputeDeviceAuthenticationStatus> {
+    const stack = getCurrentStack(1);
+    this.validator.validateMethodParamOrThrow(
+      "repository",
+      "loginAsComputeDevice",
+      "token",
+      z.string().min(1),
+      token,
+      stack,
+    );
+    return await this.repositoryPort.callRpc("loginAsComputeDevice", { token }, { stack });
   }
 
   /**

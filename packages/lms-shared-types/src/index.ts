@@ -461,8 +461,6 @@ export {
   lmLinkLastErrorSchema,
   LMLinkPeer,
   lmLinkPeerSchema,
-  LMLinkSetupComputeDeviceResult,
-  lmLinkSetupComputeDeviceResultSchema,
   LMLinkStatus,
   LMLinkStatusResult,
   lmLinkStatusResultSchema,
