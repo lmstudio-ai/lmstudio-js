@@ -3,6 +3,7 @@ import { type InferClientPort } from "@lmstudio/lms-communication-client";
 import {
   artifactDownloadPlanSchema,
   authenticationStatusSchema,
+  computeDeviceAuthenticationStatusSchema,
   downloadProgressUpdateSchema,
   hubModelSchema,
   jsonSerializableSchema,
@@ -204,15 +205,18 @@ export function createRepositoryBackendInterface() {
       .addRpcEndpoint("getAuthenticationStatus", {
         parameter: z.void(),
         returns: z.object({
-          /**
-           * Null if not authenticated.
-           */
-          authenticationStatus: authenticationStatusSchema.nullable(),
+          authenticationStatus: authenticationStatusSchema,
         }),
       })
       .addRpcEndpoint("deauthenticate", {
         parameter: z.void(),
         returns: z.void(),
+      })
+      .addRpcEndpoint("loginAsComputeDevice", {
+        parameter: z.object({
+          token: z.string().min(1),
+        }),
+        returns: computeDeviceAuthenticationStatusSchema,
       })
       .addRpcEndpoint("loginWithPreAuthenticatedKeys", {
         parameter: z.object({
