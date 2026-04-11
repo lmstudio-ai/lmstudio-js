@@ -1,7 +1,7 @@
 import os from "node:os";
-import { resolveConfigPath } from "./shellConfig";
+import { getZshConfigPath } from "./zshConfigPath";
 
-describe("resolveConfigPath", () => {
+describe("getZshConfigPath", () => {
   const originalZdotdir = process.env.ZDOTDIR;
 
   afterEach(() => {
@@ -15,24 +15,12 @@ describe("resolveConfigPath", () => {
   it("uses ZDOTDIR for zsh when it is set", () => {
     process.env.ZDOTDIR = "/tmp/custom-zsh";
 
-    expect(resolveConfigPath({ shellName: "zsh", configFileName: ".zshrc" })).toBe(
-      "/tmp/custom-zsh/.zshrc",
-    );
+    expect(getZshConfigPath()).toBe("/tmp/custom-zsh/.zshrc");
   });
 
   it("falls back to the home directory for zsh when ZDOTDIR is unset", () => {
     delete process.env.ZDOTDIR;
 
-    expect(resolveConfigPath({ shellName: "zsh", configFileName: ".zshrc" })).toBe(
-      `${os.homedir()}/.zshrc`,
-    );
-  });
-
-  it("keeps non-zsh shells in the home directory", () => {
-    process.env.ZDOTDIR = "/tmp/custom-zsh";
-
-    expect(resolveConfigPath({ shellName: "bash", configFileName: ".bashrc" })).toBe(
-      `${os.homedir()}/.bashrc`,
-    );
+    expect(getZshConfigPath()).toBe(`${os.homedir()}/.zshrc`);
   });
 });
