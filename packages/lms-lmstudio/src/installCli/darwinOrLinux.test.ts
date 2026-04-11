@@ -1,5 +1,6 @@
 import os from "node:os";
 import { access, readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { installCliDarwinOrLinux } from "./darwinOrLinux";
 import { getZshConfigPath } from "./zshConfigPath";
 
@@ -36,13 +37,13 @@ describe("getZshConfigPath", () => {
   it("uses ZDOTDIR for zsh when it is set", () => {
     process.env.ZDOTDIR = "/tmp/custom-zsh";
 
-    expect(getZshConfigPath()).toBe("/tmp/custom-zsh/.zshrc");
+    expect(getZshConfigPath()).toBe(join("/tmp/custom-zsh", ".zshrc"));
   });
 
   it("falls back to the home directory for zsh when ZDOTDIR is unset", () => {
     delete process.env.ZDOTDIR;
 
-    expect(getZshConfigPath()).toBe(`${os.homedir()}/.zshrc`);
+    expect(getZshConfigPath()).toBe(join(os.homedir(), ".zshrc"));
   });
 });
 
@@ -64,10 +65,11 @@ describe("installCliDarwinOrLinux", () => {
 
   it("reports the resolved zsh config path when ZDOTDIR is set", async () => {
     process.env.ZDOTDIR = "/tmp/custom-zsh";
+    const zshConfigPath = join(process.env.ZDOTDIR, ".zshrc");
     const infoSpy = jest.spyOn(console, "info").mockImplementation(() => {});
 
     accessMock.mockImplementation(async configPath => {
-      if (configPath === "/tmp/custom-zsh/.zshrc") {
+      if (configPath === zshConfigPath) {
         return;
       }
       throw new Error("missing config");
@@ -83,11 +85,11 @@ describe("installCliDarwinOrLinux", () => {
       },
     );
 
-    expect(infoSpy).toHaveBeenCalledWith(expect.stringContaining("/tmp/custom-zsh/.zshrc"));
+    expect(infoSpy).toHaveBeenCalledWith(expect.stringContaining(zshConfigPath));
   });
 
   it("reports the bash config path in the home directory", async () => {
-    const bashConfigPath = `${os.homedir()}/.bashrc`;
+    const bashConfigPath = join(os.homedir(), ".bashrc");
     const infoSpy = jest.spyOn(console, "info").mockImplementation(() => {});
 
     accessMock.mockImplementation(async configPath => {
@@ -107,6 +109,8 @@ describe("installCliDarwinOrLinux", () => {
       },
     );
 
-    expect(infoSpy).toHaveBeenCalledWith(expect.stringContaining("~/.bashrc"));
+    expect(infoSpy).toHaveBeenCalledWith(
+      expect.stringContaining(process.platform === "win32" ? bashConfigPath : "~/.bashrc"),
+    );
   });
 });
