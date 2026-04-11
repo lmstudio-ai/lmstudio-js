@@ -4,74 +4,66 @@ import chalk from "chalk";
 import inquirer from "inquirer";
 import { execSync } from "node:child_process";
 import { access, readFile } from "node:fs/promises";
-import os from "node:os";
-import { join } from "node:path";
 import { type InstallCliOpts } from ".";
+import { resolveConfigPath, type ShellInstallationInfo } from "./shellConfig.js";
 
-interface ShellInstallationInfo {
-  shellName: string;
-  configFileName: string;
-  commandToAddComment: string;
-  commandToAddPath: string;
+interface ResolvedShellInstallationInfo extends ShellInstallationInfo {
+  configPath: string;
 }
 
 const shellInstallationInfo: Array<ShellInstallationInfo> = [
   {
     shellName: "sh",
     configFileName: ".profile",
-    commandToAddComment:
-      "echo '' >> ~/.profile && echo '# Added by LM Studio CLI tool (lms)' >> ~/.profile",
-    commandToAddPath: "echo 'export PATH=\"$PATH:<TARGET>\"' >> ~/.profile",
   },
   {
     shellName: "bash",
     configFileName: ".bashrc",
-    commandToAddComment:
-      "echo '' >> ~/.bashrc && echo '# Added by LM Studio CLI tool (lms)' >> ~/.bashrc",
-    commandToAddPath: "echo 'export PATH=\"$PATH:<TARGET>\"' >> ~/.bashrc",
   },
   {
     shellName: "bash",
     configFileName: ".bash_profile",
-    commandToAddComment:
-      "echo '' >> ~/.bash_profile && echo '# Added by LM Studio CLI tool (lms)' >> ~/.bash_profile",
-    commandToAddPath: "echo 'export PATH=\"$PATH:<TARGET>\"' >> ~/.bash_profile",
   },
   {
     shellName: "zsh",
     configFileName: ".zshrc",
-    commandToAddComment:
-      "echo '' >> ~/.zshrc && echo '# Added by LM Studio CLI tool (lms)' >> ~/.zshrc",
-    commandToAddPath: "echo 'export PATH=\"$PATH:<TARGET>\"' >> ~/.zshrc",
   },
   {
     shellName: "fish",
     configFileName: ".config/fish/config.fish",
-    commandToAddComment:
-      "echo '' >> ~/.config/fish/config.fish && echo '# Added by LM Studio CLI tool (lms)' >> ~/.config/fish/config.fish",
-    commandToAddPath: "echo 'set -gx PATH $PATH <TARGET>' >> ~/.config/fish/config.fish",
   },
   {
     shellName: "csh",
     configFileName: ".cshrc",
-    commandToAddComment:
-      "echo '' >> ~/.cshrc && echo '# Added by LM Studio CLI tool (lms)' >> ~/.cshrc",
-    commandToAddPath: "echo 'setenv PATH \"$PATH:<TARGET>\"' >> ~/.cshrc",
   },
   {
     shellName: "tcsh",
     configFileName: ".tcshrc",
-    commandToAddComment:
-      "echo '' >> ~/.tcshrc && echo '# Added by LM Studio CLI tool (lms)' >> ~/.tcshrc",
-    commandToAddPath: "echo 'setenv PATH \"$PATH:<TARGET>\"' >> ~/.tcshrc",
   },
 ];
 
+function getCommandToAddComment(shell: ResolvedShellInstallationInfo) {
+  const quotedConfigPath = JSON.stringify(shell.configPath);
+  return `echo '' >> ${quotedConfigPath} && echo '# Added by LM Studio CLI tool (lms)' >> ${quotedConfigPath}`;
+}
+
+function getCommandToAddPath(shell: ResolvedShellInstallationInfo, targetPath: string) {
+  const quotedConfigPath = JSON.stringify(shell.configPath);
+  if (shell.shellName === "fish") {
+    return `echo 'set -gx PATH $PATH ${targetPath}' >> ${quotedConfigPath}`;
+  }
+  if (shell.shellName === "csh" || shell.shellName === "tcsh") {
+    return `echo 'setenv PATH "$PATH:${targetPath}"' >> ${quotedConfigPath}`;
+  }
+  return `echo 'export PATH="$PATH:${targetPath}"' >> ${quotedConfigPath}`;
+}
+
 export async function installCliDarwinOrLinux(path: string, { skipConfirmation }: InstallCliOpts) {
-  const detectedShells: Array<ShellInstallationInfo> = [];
-  const detectedAlreadyInstalledShells: Array<ShellInstallationInfo> = [];
+  const detectedShells: Array<ResolvedShellInstallationInfo> = [];
+  const detectedAlreadyInstalledShells: Array<ResolvedShellInstallationInfo> = [];
   for (const shell of shellInstallationInfo) {
-    const configPath = join(os.homedir(), shell.configFileName);
+    const configPath = resolveConfigPath(shell);
+    const resolvedShell = { ...shell, configPath };
     try {
       await access(configPath);
     } catch (e) {
@@ -79,9 +71,9 @@ export async function installCliDarwinOrLinux(path: string, { skipConfirmation }
     }
     const content = await readFile(configPath, { encoding: "utf8" });
     if (content.includes(path)) {
-      detectedAlreadyInstalledShells.push(shell);
+      detectedAlreadyInstalledShells.push(resolvedShell);
     } else {
-      detectedShells.push(shell);
+      detectedShells.push(resolvedShell);
     }
   }
 
@@ -132,8 +124,8 @@ export async function installCliDarwinOrLinux(path: string, { skipConfirmation }
   const commandsToRunFormatted: Array<string> = [];
 
   for (const shell of detectedShells) {
-    const command = shell.commandToAddPath.replace("<TARGET>", path);
-    commandsToRun.push(shell.commandToAddComment);
+    const command = getCommandToAddPath(shell, path);
+    commandsToRun.push(getCommandToAddComment(shell));
     commandsToRun.push(command);
     commandsToRunFormatted.push(`    ${command} ${chalk.gray(`# for ${shell.shellName}`)}`);
   }
