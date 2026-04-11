@@ -78,6 +78,15 @@ function getShellConfigPath(shell: ShellInstallationInfo) {
   return join(os.homedir(), shell.configFileName);
 }
 
+function formatShellConfigPath(shell: ShellInstallationInfo) {
+  const configPath = getShellConfigPath(shell);
+  const homeDir = os.homedir();
+  if (configPath.startsWith(`${homeDir}/`)) {
+    return `~/${configPath.slice(homeDir.length + 1)}`;
+  }
+  return configPath;
+}
+
 export async function installCliDarwinOrLinux(path: string, { skipConfirmation }: InstallCliOpts) {
   const detectedShells: Array<ShellInstallationInfo> = [];
   const detectedAlreadyInstalledShells: Array<ShellInstallationInfo> = [];
@@ -101,7 +110,7 @@ export async function installCliDarwinOrLinux(path: string, { skipConfirmation }
       throw makeTitledPrettyError(
         "Unable to find any shell configuration files",
         text`
-          We couldn't find any shell configuration file in your home directory.
+          We couldn't find any supported shell configuration file.
 
           To complete the installation manually, please try to add the following directory to the
           PATH environment variable:
@@ -119,7 +128,7 @@ export async function installCliDarwinOrLinux(path: string, { skipConfirmation }
           ${detectedAlreadyInstalledShells
             .map(shell =>
               chalk.cyanBright(
-                `    · ${shell.shellName} ${chalk.gray(`(~/${shell.configFileName})`)}`,
+                `    · ${shell.shellName} ${chalk.gray(`(${formatShellConfigPath(shell)})`)}`,
               ),
             )
             .join("\n")}
