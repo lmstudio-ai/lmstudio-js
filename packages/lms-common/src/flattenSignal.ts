@@ -88,6 +88,10 @@ export function flattenSignalOfWritableSignal<TInner>(
       if (!isAvailable(maybeInnerSignal)) {
         return () => {};
       }
+      if (unsubscribeInnerSignal !== null) {
+        unsubscribeInnerSignal();
+        unsubscribeInnerSignal = null;
+      }
       const maybeUpdateDownstream = (
         value: TInner | NotAvailable,
         patches?: Array<Patch>,

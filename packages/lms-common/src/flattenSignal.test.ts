@@ -81,6 +81,77 @@ describe("flattenSignalOfSignal", () => {
       [],
     );
   });
+
+  it("should keep the last available value when switching to an inner signal that is not available yet", async () => {
+    const [innerSignalA, setInnerSignalA] = Signal.create(1);
+    let emitInnerSignalB: ((value: number) => void) | null = null;
+    const innerSignalB = LazySignal.createWithoutInitialValue<number>(setDownstream => {
+      emitInnerSignalB = setDownstream;
+      return () => {};
+    });
+    const [outerSignal, setOuterSignal] = Signal.create<typeof innerSignalA | typeof innerSignalB>(
+      innerSignalA,
+    );
+    const flattenedSignal = flattenSignalOfSignal(outerSignal);
+
+    const callback = jest.fn();
+    const unsubscribe = flattenedSignal.subscribe(callback);
+
+    expect(await flattenedSignal.pull()).toBe(1);
+    callback.mockClear();
+
+    setOuterSignal(innerSignalB);
+
+    expect(callback).not.toHaveBeenCalled();
+    expect(flattenedSignal.get()).toBe(1);
+
+    setInnerSignalA(2);
+
+    expect(callback).not.toHaveBeenCalled();
+    expect(flattenedSignal.get()).toBe(1);
+
+    emitInnerSignalB?.(3);
+
+    expect(callback).toHaveBeenCalledWith(3);
+    expect(flattenedSignal.get()).toBe(3);
+
+    unsubscribe();
+  });
+
+  it("should wait for the new inner signal to become available when pull is called while stale", async () => {
+    const [innerSignalA] = Signal.create(1);
+    let emitInnerSignalB: ((value: number) => void) | null = null;
+    const innerSignalB = LazySignal.createWithoutInitialValue<number>(setDownstream => {
+      emitInnerSignalB = setDownstream;
+      return () => {};
+    });
+    const [outerSignal, setOuterSignal] = Signal.create<typeof innerSignalA | typeof innerSignalB>(
+      innerSignalA,
+    );
+    const flattenedSignal = flattenSignalOfSignal(outerSignal);
+
+    const unsubscribe = flattenedSignal.subscribe(() => {});
+    expect(await flattenedSignal.pull()).toBe(1);
+    unsubscribe();
+    await waitForTick();
+
+    setOuterSignal(innerSignalB);
+    expect(flattenedSignal.get()).toBe(1);
+
+    const pullPromise = flattenedSignal.pull();
+    let resolved = false;
+    pullPromise.then(() => {
+      resolved = true;
+    });
+    await Promise.resolve();
+
+    expect(resolved).toBe(false);
+
+    emitInnerSignalB?.(7);
+
+    await expect(pullPromise).resolves.toBe(7);
+    expect(flattenedSignal.get()).toBe(7);
+  });
 });
 
 describe("flattenSignalOfWritableSignal", () => {
@@ -227,6 +298,54 @@ describe("flattenSignalOfWritableSignal", () => {
       [{ op: "replace", path: ["nested", "count"], value: 1 }],
       ["queued-tag"],
     );
+  });
+
+  it("should stop forwarding updates from the previous inner writable signal after switching", async () => {
+    const innerWritableSignal1 = Signal.create(0);
+    const innerWritableSignal2 = Signal.create(10);
+    const [outerSignal, setOuter] = Signal.create(innerWritableSignal1);
+    const [flattened] = flattenSignalOfWritableSignal(outerSignal);
+
+    const unsubscribeKeepAlive = flattened.subscribe(() => {});
+    expect(await flattened.pull()).toBe(0);
+
+    const callback = jest.fn();
+    const unsubscribeCallback = flattened.subscribe(callback);
+
+    setOuter(innerWritableSignal2);
+    expect(await flattened.pull()).toBe(10);
+    callback.mockClear();
+
+    innerWritableSignal1[1](1);
+
+    expect(callback).not.toHaveBeenCalled();
+    expect(await flattened.pull()).toBe(10);
+
+    unsubscribeCallback();
+    unsubscribeKeepAlive();
+  });
+
+  it("should continue writing to the current inner writable signal after switching", async () => {
+    const innerWritableSignal1 = Signal.create(0);
+    const innerWritableSignal2 = Signal.create(10);
+    const [outerSignal, setOuter] = Signal.create(innerWritableSignal1);
+    const [flattened, setFlattened] = flattenSignalOfWritableSignal(outerSignal);
+
+    const unsubscribeKeepAlive = flattened.subscribe(() => {});
+    expect(await flattened.pull()).toBe(0);
+
+    setOuter(innerWritableSignal2);
+    expect(await flattened.pull()).toBe(10);
+
+    // This update should be ignored because innerWritableSignal1 is no longer the active inner
+    // signal.
+    innerWritableSignal1[1](1);
+    setFlattened(99);
+
+    expect(innerWritableSignal1[0].get()).toBe(1);
+    expect(innerWritableSignal2[0].get()).toBe(99);
+
+    unsubscribeKeepAlive();
   });
 
   it("should work when outer signal is not changing and setter is called before init", async () => {
