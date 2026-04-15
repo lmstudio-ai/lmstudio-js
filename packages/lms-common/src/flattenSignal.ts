@@ -8,6 +8,10 @@ import {
 import { makeSetterWithPatches, type Setter, type WriteTag } from "./makeSetter.js";
 import { type SignalLike } from "./Signal.js";
 
+function isReplaceRootPatch(patch: Patch): boolean {
+  return patch.op === "replace" && patch.path.length === 0;
+}
+
 /**
  * Flatten a signal of signals into a single signal.
  */
@@ -108,16 +112,26 @@ export function flattenSignalOfWritableSignal<TInner>(
           const updatesToApply = queuedUpdates;
           queuedUpdates = [];
           let currentValue: TInner = value;
-          let newPatches: Array<Patch> = [];
+          let accumulatedPatches: Array<Patch> = [];
           const tags: Array<WriteTag> = [];
           for (const { updater, tags: newTags } of updatesToApply) {
-            [currentValue, newPatches] = updater(currentValue);
+            const [newValue, newPatches] = updater(currentValue);
+            currentValue = newValue;
+            const rootReplacerIndex = newPatches.findIndex(isReplaceRootPatch);
+            if (rootReplacerIndex !== -1) {
+              accumulatedPatches = newPatches.slice(rootReplacerIndex);
+            } else {
+              accumulatedPatches.push(...newPatches);
+            }
             if (newTags !== undefined) {
               tags.push(...newTags);
             }
-            newPatches.push(...newPatches);
           }
-          setter.withValueAndPatches(currentValue as StripNotAvailable<TInner>, newPatches, tags);
+          setter.withValueAndPatches(
+            currentValue as StripNotAvailable<TInner>,
+            accumulatedPatches,
+            tags,
+          );
         }
         innerSetter = setter;
       };
