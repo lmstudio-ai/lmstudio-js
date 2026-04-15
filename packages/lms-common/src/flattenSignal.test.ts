@@ -1,5 +1,6 @@
 import { flattenSignalOfSignal, flattenSignalOfWritableSignal } from "./flattenSignal.js";
 import { LazySignal } from "./LazySignal.js";
+import { type Setter } from "./makeSetter.js";
 import { Signal } from "./Signal.js";
 
 async function waitForTick(): Promise<void> {
@@ -110,7 +111,7 @@ describe("flattenSignalOfSignal", () => {
     expect(callback).not.toHaveBeenCalled();
     expect(flattenedSignal.get()).toBe(1);
 
-    emitInnerSignalB?.(3);
+    (emitInnerSignalB as any as Setter<number>)?.(3);
 
     expect(callback).toHaveBeenCalledWith(3);
     expect(flattenedSignal.get()).toBe(3);
@@ -147,7 +148,7 @@ describe("flattenSignalOfSignal", () => {
 
     expect(resolved).toBe(false);
 
-    emitInnerSignalB?.(7);
+    (emitInnerSignalB as any as Setter<number>)?.(7);
 
     await expect(pullPromise).resolves.toBe(7);
     expect(flattenedSignal.get()).toBe(7);
