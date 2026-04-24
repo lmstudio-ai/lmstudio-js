@@ -275,6 +275,21 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
               "max",
             ),
           )
+          .field(
+            "multiGpuParallelism",
+            "select",
+            {
+              options: [
+                { value: "pipeline", displayName: "Pipeline Parallelism" },
+                { value: "tensor", displayName: "Tensor Parallelism" },
+              ],
+              displayName: "Multi-GPU Parallelism",
+              subtitle:
+                "Pipeline parallelism uses llama.cpp layer split. Tensor parallelism uses llama.cpp tensor split.",
+              machineDependent: true,
+            },
+            "pipeline",
+          )
           .field("cpuThreadPoolSize", "numeric", { min: 1, machineDependent: true }, 4)
           .field("evalBatchSize", "numeric", { min: 1, int: true }, 512)
           .field("flashAttention", "boolean", {}, false)
