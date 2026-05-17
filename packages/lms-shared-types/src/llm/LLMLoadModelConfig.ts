@@ -231,6 +231,14 @@ export interface LLMLoadModelConfig {
   flashAttention?: boolean;
 
   /**
+   * Enables speculative decoding using bundled multi-token prediction heads when the loaded model
+   * supports it.
+   *
+   * @experimental
+   */
+  speculativeDraftMtp?: boolean;
+
+  /**
    * When enabled, prevents the model from being swapped out of system memory.
    *
    * This option reserves system memory for the model even when portions are offloaded to GPU,
@@ -343,6 +351,7 @@ export const llmLoadModelConfigSchema = z.object({
   ropeFrequencyScale: z.number().or(z.literal(false)).optional(),
   evalBatchSize: z.number().int().min(1).optional(),
   flashAttention: z.boolean().optional(),
+  speculativeDraftMtp: z.boolean().optional(),
   keepModelInMemory: z.boolean().optional(),
   seed: z.number().int().or(z.literal(false)).optional(),
   useFp16ForKVCache: z.boolean().optional(),

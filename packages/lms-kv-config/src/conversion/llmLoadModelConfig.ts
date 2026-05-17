@@ -109,6 +109,11 @@ function kvConfigToLLMLlamaLoadModelConfig(
     result.flashAttention = flashAttention;
   }
 
+  const speculativeDraftMtp = parsed.get("llama.speculativeDecoding.draftMtp");
+  if (speculativeDraftMtp !== undefined) {
+    result.speculativeDraftMtp = speculativeDraftMtp;
+  }
+
   const keepModelInMemory = parsed.get("llama.keepModelInMemory");
   if (keepModelInMemory !== undefined) {
     result.keepModelInMemory = keepModelInMemory;
@@ -223,6 +228,7 @@ export function llmLoadModelConfigToKVConfig(config: LLMLoadModelConfig): KVConf
     "llama.ropeFrequencyScale": maybeFalseValueToCheckboxValue(config.ropeFrequencyScale, 0),
     "llama.evalBatchSize": config.evalBatchSize,
     "llama.flashAttention": config.flashAttention,
+    "llama.speculativeDecoding.draftMtp": config.speculativeDraftMtp,
     "llama.keepModelInMemory": config.keepModelInMemory,
     "seed": maybeFalseValueToCheckboxValue(config.seed, 0),
     "llama.useFp16ForKVCache": config.useFp16ForKVCache,
