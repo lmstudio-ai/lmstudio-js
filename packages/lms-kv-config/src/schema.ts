@@ -294,6 +294,7 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
                 "draftMtpMaxTokens",
                 "numeric",
                 {
+                  min: 0,
                   int: true,
                   displayName: "MTP Max Draft Tokens",
                   subtitle: "Maximum number of MTP draft tokens to generate",
@@ -305,6 +306,7 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
                 "draftMtpMinTokens",
                 "numeric",
                 {
+                  min: 0,
                   int: true,
                   displayName: "MTP Min Draft Tokens",
                   subtitle: "Minimum MTP draft length to verify with the main model",
