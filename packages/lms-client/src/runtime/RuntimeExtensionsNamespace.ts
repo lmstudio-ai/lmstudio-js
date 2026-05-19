@@ -26,10 +26,12 @@ import { z, type ZodSchema } from "zod";
 export interface RuntimeExtensionsSearchOpts {
   channel?: string;
   includeIncompatible?: boolean;
+  includeModels?: boolean;
 }
 const runtimeExtensionsSearchOptsSchema = z.object({
   channel: z.string().optional(),
   includeIncompatible: z.boolean().optional(),
+  includeModels: z.boolean().optional(),
 }) as ZodSchema<RuntimeExtensionsSearchOpts>;
 
 /**
@@ -105,6 +107,7 @@ export class RuntimeExtensionsNamespace {
         query,
         channelOverride: opts.channel,
         includeIncompatible: opts.includeIncompatible ?? false,
+        includeModels: opts.includeModels,
       },
       { stack },
     );

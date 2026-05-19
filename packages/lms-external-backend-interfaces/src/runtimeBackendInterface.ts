@@ -57,6 +57,10 @@ export function createRuntimeBackendInterface() {
            * Whether to include incompatible engines in the results.
            */
           includeIncompatible: z.boolean(),
+          /**
+           * Whether to include model extension packs in the results.
+           */
+          includeModels: z.boolean().optional(),
         }),
         returns: z.object({
           extensions: z.array(downloadableRuntimeExtensionInfoSchema),
