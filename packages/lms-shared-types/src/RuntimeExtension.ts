@@ -74,16 +74,42 @@ export const runtimeFrameworkExtensionInfoSchema = runtimeExtensionSpecifierSche
 });
 
 /**
- * Runtime extension info, either engine or framework.
+ * Runtime extension info for model extensions.
  *
  * @public
  * @experimental [EXP-RUNTIME-EXTENSION] Runtime extensions related APIs are experimental and may
  * change in the future.
  */
-export type RuntimeExtensionInfo = RuntimeEngineExtensionInfo | RuntimeFrameworkExtensionInfo;
+export interface RuntimeModelExtensionInfo extends RuntimeExtensionInfoBase {
+  type: "model";
+  model: string;
+  domain: string;
+  format: ModelFormatName;
+  runtimeEngine: string;
+}
+export const runtimeModelExtensionInfoSchema = runtimeExtensionSpecifierSchemaBase.extend({
+  type: z.literal("model"),
+  model: z.string(),
+  domain: z.string(),
+  format: modelFormatNameSchema,
+  runtimeEngine: z.string(),
+});
+
+/**
+ * Runtime extension info, either engine, framework, or model.
+ *
+ * @public
+ * @experimental [EXP-RUNTIME-EXTENSION] Runtime extensions related APIs are experimental and may
+ * change in the future.
+ */
+export type RuntimeExtensionInfo =
+  | RuntimeEngineExtensionInfo
+  | RuntimeFrameworkExtensionInfo
+  | RuntimeModelExtensionInfo;
 export const runtimeExtensionInfoSchema = z.discriminatedUnion("type", [
   runtimeEngineExtensionInfoSchema,
   runtimeFrameworkExtensionInfoSchema,
+  runtimeModelExtensionInfoSchema,
 ]) as ZodSchema<RuntimeExtensionInfo>;
 
 /**
@@ -131,7 +157,20 @@ export const downloadableRuntimeFrameworkExtensionSchema =
   );
 
 /**
- * Downloadable runtime extension info, either engine or framework.
+ * Downloadable model extension info.
+ *
+ * @public
+ * @experimental [EXP-RUNTIME-EXTENSION] Runtime extensions related APIs are experimental and may
+ * change in the future.
+ */
+export type DownloadableRuntimeModelExtension = RuntimeModelExtensionInfo &
+  DownloadableRuntimeExtensionInfoAdditionalFields;
+export const downloadableRuntimeModelExtensionSchema = runtimeModelExtensionInfoSchema.extend(
+  downloadableRuntimeExtensionInfoAdditionalFieldsSchema.shape,
+);
+
+/**
+ * Downloadable runtime extension info, either engine, framework, or model.
  *
  * @public
  * @experimental [EXP-RUNTIME-EXTENSION] Runtime extensions related APIs are experimental and may
@@ -139,8 +178,10 @@ export const downloadableRuntimeFrameworkExtensionSchema =
  */
 export type DownloadableRuntimeExtensionInfo =
   | DownloadableRuntimeEngineExtension
-  | DownloadableRuntimeFrameworkExtension;
+  | DownloadableRuntimeFrameworkExtension
+  | DownloadableRuntimeModelExtension;
 export const downloadableRuntimeExtensionInfoSchema = z.discriminatedUnion("type", [
   downloadableRuntimeEngineExtensionSchema,
   downloadableRuntimeFrameworkExtensionSchema,
+  downloadableRuntimeModelExtensionSchema,
 ]) as ZodSchema<DownloadableRuntimeExtensionInfo>;

@@ -529,6 +529,8 @@ export {
   downloadableRuntimeExtensionInfoSchema,
   DownloadableRuntimeFrameworkExtension,
   downloadableRuntimeFrameworkExtensionSchema,
+  DownloadableRuntimeModelExtension,
+  downloadableRuntimeModelExtensionSchema,
   RuntimeEngineExtensionInfo,
   runtimeEngineExtensionInfoSchema,
   RuntimeExtensionInfo,
@@ -539,6 +541,8 @@ export {
   runtimeExtensionSpecifierSchemaBase,
   RuntimeFrameworkExtensionInfo,
   runtimeFrameworkExtensionInfoSchema,
+  RuntimeModelExtensionInfo,
+  runtimeModelExtensionInfoSchema,
 } from "./RuntimeExtension.js";
 export {
   RuntimeHardwareCpuArchitecture,
