@@ -278,6 +278,43 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
           .field("cpuThreadPoolSize", "numeric", { min: 1, machineDependent: true }, 4)
           .field("evalBatchSize", "numeric", { min: 1, int: true }, 512)
           .field("flashAttention", "boolean", {}, false)
+          .scope("speculativeDecoding", builder =>
+            builder
+              .field(
+                "draftMtp",
+                "boolean",
+                {
+                  displayName: "MTP Speculative Decoding",
+                  subtitle: "Use bundled multi-token prediction heads when loading the model",
+                  isExperimental: true,
+                },
+                false,
+              )
+              .field(
+                "draftMtpMaxTokens",
+                "numeric",
+                {
+                  min: 0,
+                  int: true,
+                  displayName: "MTP Max Draft Tokens",
+                  subtitle: "Maximum number of MTP draft tokens to generate",
+                  isExperimental: true,
+                },
+                3,
+              )
+              .field(
+                "draftMtpMinTokens",
+                "numeric",
+                {
+                  min: 0,
+                  int: true,
+                  displayName: "MTP Min Draft Tokens",
+                  subtitle: "Minimum MTP draft length to verify with the main model",
+                  isExperimental: true,
+                },
+                0,
+              ),
+          )
           .field(
             "ropeFrequencyBase",
             "checkboxNumeric",

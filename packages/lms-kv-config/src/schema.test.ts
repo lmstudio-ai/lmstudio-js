@@ -1,4 +1,8 @@
 import { kvConfigField, KVConfigSchematicsBuilder, makeKVConfigFromFields } from "./KVConfig.js";
+import {
+  kvConfigToLLMLoadModelConfig,
+  llmLoadModelConfigToKVConfig,
+} from "./conversion/llmLoadModelConfig.js";
 import { globalConfigSchematics } from "./schema.js";
 import { kvValueTypesLibrary } from "./valueTypes.js";
 
@@ -49,6 +53,22 @@ describe("KVConfig", () => {
       expect(parsed.get("a")).toBe(1);
       expect(parsed.get("b")).toBe(2);
     });
+  });
+});
+
+describe("llmLoadModelConfig conversion", () => {
+  it("round trips MTP load-time draft token settings", () => {
+    const loadConfig = llmLoadModelConfigToKVConfig({
+      speculativeDraftMtp: true,
+      speculativeDraftMtpMaxTokens: 3,
+      speculativeDraftMtpMinTokens: 0,
+    });
+
+    const roundTrippedConfig = kvConfigToLLMLoadModelConfig(loadConfig);
+
+    expect(roundTrippedConfig.speculativeDraftMtp).toBe(true);
+    expect(roundTrippedConfig.speculativeDraftMtpMaxTokens).toBe(3);
+    expect(roundTrippedConfig.speculativeDraftMtpMinTokens).toBe(0);
   });
 });
 
