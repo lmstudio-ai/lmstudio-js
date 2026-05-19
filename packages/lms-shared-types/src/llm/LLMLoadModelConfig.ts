@@ -239,6 +239,20 @@ export interface LLMLoadModelConfig {
   speculativeDraftMtp?: boolean;
 
   /**
+   * Maximum number of bundled MTP draft tokens to generate.
+   *
+   * @experimental
+   */
+  speculativeDraftMtpMaxTokens?: number;
+
+  /**
+   * Minimum bundled MTP draft length to verify with the main model.
+   *
+   * @experimental
+   */
+  speculativeDraftMtpMinTokens?: number;
+
+  /**
    * When enabled, prevents the model from being swapped out of system memory.
    *
    * This option reserves system memory for the model even when portions are offloaded to GPU,
@@ -352,6 +366,8 @@ export const llmLoadModelConfigSchema = z.object({
   evalBatchSize: z.number().int().min(1).optional(),
   flashAttention: z.boolean().optional(),
   speculativeDraftMtp: z.boolean().optional(),
+  speculativeDraftMtpMaxTokens: z.number().int().optional(),
+  speculativeDraftMtpMinTokens: z.number().int().optional(),
   keepModelInMemory: z.boolean().optional(),
   seed: z.number().int().or(z.literal(false)).optional(),
   useFp16ForKVCache: z.boolean().optional(),

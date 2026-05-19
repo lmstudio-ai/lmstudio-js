@@ -114,6 +114,16 @@ function kvConfigToLLMLlamaLoadModelConfig(
     result.speculativeDraftMtp = speculativeDraftMtp;
   }
 
+  const speculativeDraftMtpMaxTokens = parsed.get("llama.speculativeDecoding.draftMtpMaxTokens");
+  if (speculativeDraftMtpMaxTokens !== undefined) {
+    result.speculativeDraftMtpMaxTokens = speculativeDraftMtpMaxTokens;
+  }
+
+  const speculativeDraftMtpMinTokens = parsed.get("llama.speculativeDecoding.draftMtpMinTokens");
+  if (speculativeDraftMtpMinTokens !== undefined) {
+    result.speculativeDraftMtpMinTokens = speculativeDraftMtpMinTokens;
+  }
+
   const keepModelInMemory = parsed.get("llama.keepModelInMemory");
   if (keepModelInMemory !== undefined) {
     result.keepModelInMemory = keepModelInMemory;
@@ -229,6 +239,8 @@ export function llmLoadModelConfigToKVConfig(config: LLMLoadModelConfig): KVConf
     "llama.evalBatchSize": config.evalBatchSize,
     "llama.flashAttention": config.flashAttention,
     "llama.speculativeDecoding.draftMtp": config.speculativeDraftMtp,
+    "llama.speculativeDecoding.draftMtpMaxTokens": config.speculativeDraftMtpMaxTokens,
+    "llama.speculativeDecoding.draftMtpMinTokens": config.speculativeDraftMtpMinTokens,
     "llama.keepModelInMemory": config.keepModelInMemory,
     "seed": maybeFalseValueToCheckboxValue(config.seed, 0),
     "llama.useFp16ForKVCache": config.useFp16ForKVCache,
