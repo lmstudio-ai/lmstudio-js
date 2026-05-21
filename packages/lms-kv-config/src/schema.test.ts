@@ -73,6 +73,25 @@ describe("llmLoadModelConfig conversion", () => {
 });
 
 describe("globalConfigSchematics", () => {
+  it("makes speculative decoding draft-token settings depend on a draft model", () => {
+    const dependentConfigKeys = [
+      "llm.prediction.speculativeDecoding.minDraftLengthToConsider",
+      "llm.prediction.speculativeDecoding.numReuseTokens",
+      "llm.prediction.speculativeDecoding.minContinueDraftingProbability",
+      "llm.prediction.speculativeDecoding.maxTokensToDraft",
+      "llm.prediction.speculativeDecoding.numDraftTokensExact",
+    ];
+
+    for (const configKey of dependentConfigKeys) {
+      expect(globalConfigSchematics.getValueTypeParamByFullKey(configKey).dependencies).toEqual([
+        {
+          key: "llm.prediction.speculativeDecoding.draftModel",
+          condition: { type: "notEquals", value: "" },
+        },
+      ]);
+    }
+  });
+
   describe("effectiveEquals", () => {
     it("should work with temperature", () => {
       expect(globalConfigSchematics.fieldEffectiveEquals("llm.prediction.temperature", 0, 0)).toBe(

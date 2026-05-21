@@ -7,7 +7,7 @@
  * 3. Utility types that can be used to work with types of schema.
  */
 
-import { defaultGPUSplitConfig } from "@lmstudio/lms-shared-types";
+import { defaultGPUSplitConfig, type KVConfigFieldDependency } from "@lmstudio/lms-shared-types";
 import {
   KVConfigSchematicsBuilder,
   type InferConfigFieldFilter,
@@ -21,6 +21,16 @@ import {
 import { kvValueTypesLibrary } from "./valueTypes.js";
 
 const VIRTUAL_MODEL_CUSTOM_FIELD_EXTENSION_PREFIX = "ext.virtualModel.customField";
+const speculativeDecodingDraftModelSelectedDependencies: Array<KVConfigFieldDependency> = [
+  {
+    key: "llm.prediction.speculativeDecoding.draftModel",
+    condition: { type: "notEquals", value: "" },
+  },
+];
+const speculativeDecodingDraftTokenFieldParams = {
+  modelCentric: true,
+  dependencies: speculativeDecodingDraftModelSelectedDependencies,
+};
 
 // ---------------------------
 //  1. globalConfigSchematics
@@ -67,19 +77,28 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
             "minDraftLengthToConsider",
             "numeric",
             {
-              modelCentric: true,
+              ...speculativeDecodingDraftTokenFieldParams,
               min: 0,
               int: true,
               slider: { min: 0, max: 10, step: 1 },
             },
             0,
           )
-          .field("numReuseTokens", "numeric", { modelCentric: true, min: 1, int: true }, 256)
+          .field(
+            "numReuseTokens",
+            "numeric",
+            {
+              ...speculativeDecodingDraftTokenFieldParams,
+              min: 1,
+              int: true,
+            },
+            256,
+          )
           .field(
             "minContinueDraftingProbability",
             "numeric",
             {
-              modelCentric: true,
+              ...speculativeDecodingDraftTokenFieldParams,
               min: 0,
               max: 1,
               step: 0.01,
@@ -91,14 +110,19 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
           .field(
             "maxTokensToDraft",
             "numeric",
-            { modelCentric: true, min: 1, int: true, slider: { min: 10, max: 30, step: 1 } },
+            {
+              ...speculativeDecodingDraftTokenFieldParams,
+              min: 1,
+              int: true,
+              slider: { min: 10, max: 30, step: 1 },
+            },
             16,
           )
           .field(
             "numDraftTokensExact",
             "numeric",
             {
-              modelCentric: true,
+              ...speculativeDecodingDraftTokenFieldParams,
               min: 1,
               int: true,
               slider: { min: 1, max: 10, step: 1 },
