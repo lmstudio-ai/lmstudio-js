@@ -60,14 +60,14 @@ describe("llmLoadModelConfig conversion", () => {
   it("round trips MTP load-time draft token settings", () => {
     const loadConfig = llmLoadModelConfigToKVConfig({
       speculativeDraftMtp: true,
-      speculativeDraftMtpMaxTokens: 3,
+      speculativeDraftMtpMaxTokens: 2,
       speculativeDraftMtpMinTokens: 0,
     });
 
     const roundTrippedConfig = kvConfigToLLMLoadModelConfig(loadConfig);
 
     expect(roundTrippedConfig.speculativeDraftMtp).toBe(true);
-    expect(roundTrippedConfig.speculativeDraftMtpMaxTokens).toBe(3);
+    expect(roundTrippedConfig.speculativeDraftMtpMaxTokens).toBe(2);
     expect(roundTrippedConfig.speculativeDraftMtpMinTokens).toBe(0);
   });
 

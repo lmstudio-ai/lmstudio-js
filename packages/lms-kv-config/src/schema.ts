@@ -335,7 +335,7 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
                   subtitle: "Maximum number of MTP draft tokens to generate",
                   isExperimental: true,
                 },
-                3,
+                2,
               )
               .field(
                 "draftMtpMinTokens",
