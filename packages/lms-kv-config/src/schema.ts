@@ -301,6 +301,17 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
           )
           .field("cpuThreadPoolSize", "numeric", { min: 1, machineDependent: true }, 4)
           .field("evalBatchSize", "numeric", { min: 1, int: true }, 512)
+          .field(
+            "physicalBatchSize",
+            "numeric",
+            {
+              min: 1,
+              int: true,
+              displayName: "Physical Batch Size",
+              subtitle: "Maximum number of prompt tokens to process physically at a time",
+            },
+            512,
+          )
           .field("flashAttention", "boolean", {}, false)
           .scope("speculativeDecoding", builder =>
             builder

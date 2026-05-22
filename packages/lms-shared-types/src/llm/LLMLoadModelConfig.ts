@@ -222,6 +222,14 @@ export interface LLMLoadModelConfig {
   evalBatchSize?: number;
 
   /**
+   * Maximum number of prompt tokens to process physically at a time.
+   *
+   * This advanced llama.cpp setting controls the physical batch size used for internal prompt
+   * processing. It is clamped by the evaluation batch size.
+   */
+  physicalBatchSize?: number;
+
+  /**
    * Enables Flash Attention for optimized attention computation.
    *
    * Flash Attention is an efficient implementation that reduces memory usage and speeds up
@@ -364,6 +372,7 @@ export const llmLoadModelConfigSchema = z.object({
   ropeFrequencyBase: z.number().or(z.literal(false)).optional(),
   ropeFrequencyScale: z.number().or(z.literal(false)).optional(),
   evalBatchSize: z.number().int().min(1).optional(),
+  physicalBatchSize: z.number().int().min(1).optional(),
   flashAttention: z.boolean().optional(),
   speculativeDraftMtp: z.boolean().optional(),
   speculativeDraftMtpMaxTokens: z.number().int().min(0).optional(),
