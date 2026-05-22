@@ -97,6 +97,15 @@ describe("llmLoadModelConfig conversion", () => {
 });
 
 describe("globalConfigSchematics", () => {
+  it("uses 2048 as the default llama eval batch size", () => {
+    const emptyConfig = makeKVConfigFromFields([]);
+
+    expect(globalConfigSchematics.access(emptyConfig, "llm.load.llama.evalBatchSize")).toBe(2048);
+    expect(globalConfigSchematics.access(emptyConfig, "embedding.load.llama.evalBatchSize")).toBe(
+      2048,
+    );
+  });
+
   it("makes speculative decoding draft-token settings depend on a draft model", () => {
     const dependentConfigKeys = [
       "llm.prediction.speculativeDecoding.minDraftLengthToConsider",

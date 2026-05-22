@@ -300,7 +300,7 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
             ),
           )
           .field("cpuThreadPoolSize", "numeric", { min: 1, machineDependent: true }, 4)
-          .field("evalBatchSize", "numeric", { min: 1, int: true }, 512)
+          .field("evalBatchSize", "numeric", { min: 1, int: true }, 2048)
           .field(
             "physicalBatchSize",
             "numeric",
@@ -411,7 +411,7 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
               "max",
             ),
           )
-          .field("evalBatchSize", "numeric", { min: 1, int: true }, 512)
+          .field("evalBatchSize", "numeric", { min: 1, int: true }, 2048)
           .field(
             "ropeFrequencyBase",
             "checkboxNumeric",
