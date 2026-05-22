@@ -70,6 +70,30 @@ describe("llmLoadModelConfig conversion", () => {
     expect(roundTrippedConfig.speculativeDraftMtpMaxTokens).toBe(3);
     expect(roundTrippedConfig.speculativeDraftMtpMinTokens).toBe(0);
   });
+
+  it("round trips llama physical batch size", () => {
+    const loadConfig = llmLoadModelConfigToKVConfig({
+      evalBatchSize: 512,
+      physicalBatchSize: 256,
+    });
+
+    const roundTrippedConfig = kvConfigToLLMLoadModelConfig(loadConfig);
+
+    expect(roundTrippedConfig.evalBatchSize).toBe(512);
+    expect(roundTrippedConfig.physicalBatchSize).toBe(256);
+  });
+
+  it("does not expose llama physical batch size for MLX load configs", () => {
+    const loadConfig = llmLoadModelConfigToKVConfig({
+      physicalBatchSize: 256,
+    });
+
+    const roundTrippedConfig = kvConfigToLLMLoadModelConfig(loadConfig, {
+      modelFormat: "safetensors",
+    });
+
+    expect(roundTrippedConfig.physicalBatchSize).toBeUndefined();
+  });
 });
 
 describe("globalConfigSchematics", () => {

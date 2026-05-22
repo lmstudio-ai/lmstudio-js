@@ -104,6 +104,11 @@ function kvConfigToLLMLlamaLoadModelConfig(
     result.evalBatchSize = evalBatchSize;
   }
 
+  const physicalBatchSize = parsed.get("llama.physicalBatchSize");
+  if (physicalBatchSize !== undefined) {
+    result.physicalBatchSize = physicalBatchSize;
+  }
+
   const flashAttention = parsed.get("llama.flashAttention");
   if (flashAttention !== undefined) {
     result.flashAttention = flashAttention;
@@ -237,6 +242,7 @@ export function llmLoadModelConfigToKVConfig(config: LLMLoadModelConfig): KVConf
     "llama.ropeFrequencyBase": maybeFalseValueToCheckboxValue(config.ropeFrequencyBase, 0),
     "llama.ropeFrequencyScale": maybeFalseValueToCheckboxValue(config.ropeFrequencyScale, 0),
     "llama.evalBatchSize": config.evalBatchSize,
+    "llama.physicalBatchSize": config.physicalBatchSize,
     "llama.flashAttention": config.flashAttention,
     "llama.speculativeDecoding.draftMtp": config.speculativeDraftMtp,
     "llama.speculativeDecoding.draftMtpMaxTokens": config.speculativeDraftMtpMaxTokens,
