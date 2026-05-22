@@ -304,12 +304,12 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
             "select",
             {
               options: [
-                { value: "pipeline", displayName: "Pipeline Parallelism" },
-                { value: "tensor", displayName: "Tensor Parallelism" },
+                { value: "pipeline", displayName: "Pipeline" },
+                { value: "tensor", displayName: "Tensor" },
               ],
-              displayName: "Multi-GPU Parallelism",
+              displayName: "Multi-GPU Split Mode",
               subtitle:
-                "Pipeline parallelism uses llama.cpp layer split. Tensor parallelism uses llama.cpp tensor split.",
+                "Layer split mode is used by default. Tensor split mode is exposed through CUDA GPU split settings.",
               machineDependent: true,
             },
             "pipeline",
