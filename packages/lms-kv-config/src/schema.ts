@@ -308,7 +308,6 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
               min: 1,
               int: true,
               displayName: "Physical Batch Size",
-              subtitle: "Maximum number of prompt tokens to process physically at a time",
             },
             512,
           )
