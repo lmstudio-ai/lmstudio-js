@@ -233,6 +233,12 @@ export interface LLMPredictionConfigInput<TStructuredOutputType = unknown> {
    */
   cpuThreads?: number;
   /**
+   * Controls thinking for Llama chat templates that support `enable_thinking`.
+   *
+   * @experimental
+   */
+  enableThinking?: boolean;
+  /**
    * Defines a custom template for formatting prompts before sending them to the model.
    *
    * Prompt templates allow you to control exactly how conversations are formatted, including
@@ -345,6 +351,7 @@ export const llmPredictionConfigInputSchema = z.object({
   minPSampling: z.number().optional().or(z.literal(false)),
   topPSampling: z.number().optional().or(z.literal(false)),
   cpuThreads: z.number().int().optional(),
+  enableThinking: z.boolean().optional(),
   promptTemplate: llmPromptTemplateSchema.optional(),
   draftModel: z.string().optional(),
   speculativeDecodingNumDraftTokensExact: z.number().int().min(1).optional(),

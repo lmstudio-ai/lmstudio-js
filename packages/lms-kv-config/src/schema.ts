@@ -184,16 +184,26 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
         { checked: false, value: 0 },
       )
       .scope("reasoning", builder =>
-        builder.field(
-          "parsing",
-          "llmReasoningParsing",
-          {},
-          {
-            enabled: true,
-            startString: "<think>",
-            endString: "</think>",
-          },
-        ),
+        builder
+          .field(
+            "enableThinking",
+            "boolean",
+            {
+              displayName: "Enable Thinking",
+              subtitle: "Controls thinking for chat templates that support enable_thinking.",
+            },
+            true,
+          )
+          .field(
+            "parsing",
+            "llmReasoningParsing",
+            {},
+            {
+              enabled: true,
+              startString: "<think>",
+              endString: "</think>",
+            },
+          ),
       )
       .scope("vision", builder =>
         builder
