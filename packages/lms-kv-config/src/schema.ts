@@ -309,21 +309,6 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
               "max",
             ),
           )
-          .field(
-            "multiGpuParallelism",
-            "select",
-            {
-              options: [
-                { value: "pipeline", displayName: "Pipeline" },
-                { value: "tensor", displayName: "Tensor" },
-              ],
-              displayName: "Multi-GPU Split Mode",
-              subtitle:
-                "Layer split mode is used by default. Tensor split mode is exposed through CUDA GPU split settings.",
-              machineDependent: true,
-            },
-            "pipeline",
-          )
           .field("cpuThreadPoolSize", "numeric", { min: 1, machineDependent: true }, 4)
           .field("evalBatchSize", "numeric", { min: 1, int: true }, 2048)
           .field(
