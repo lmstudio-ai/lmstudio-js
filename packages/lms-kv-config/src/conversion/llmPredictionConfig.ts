@@ -110,6 +110,11 @@ export function kvConfigToLLMPredictionConfig(
     result.cpuThreads = cpuThreads;
   }
 
+  const enableThinking = parsed.get("reasoning.enableThinking");
+  if (enableThinking !== undefined) {
+    result.enableThinking = enableThinking;
+  }
+
   const promptTemplate = parsed.get("promptTemplate");
   if (promptTemplate !== undefined) {
     result.promptTemplate = promptTemplate;
@@ -185,6 +190,7 @@ export function llmPredictionConfigToKVConfig(config: LLMPredictionConfig): KVCo
     "llama.xtcThreshold": maybeFalseValueToCheckboxValue(config.xtcThreshold, 0),
     "logProbs": maybeFalseValueToCheckboxValue(config.logProbs, 0),
     "llama.cpuThreads": config.cpuThreads,
+    "reasoning.enableThinking": config.enableThinking,
     "promptTemplate": config.promptTemplate,
     "speculativeDecoding.draftModel": config.draftModel,
     "speculativeDecoding.numDraftTokensExact": config.speculativeDecodingNumDraftTokensExact,
