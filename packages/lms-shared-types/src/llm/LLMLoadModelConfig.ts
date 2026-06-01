@@ -77,9 +77,16 @@ export const llmLlamaCacheQuantizationTypes = [
   "iq4_nl",
   "q5_0",
   "q5_1",
+  "turbo2",
+  "turbo3",
+  "turbo4",
 ] as const;
 /**
- * TODO: Add documentation
+ * TurboQuant KV cache compression (ICLR 2026, arXiv:2504.19874).
+ * See https://github.com/0xSero/turboquant and https://github.com/TheTom/turboquant_plus
+ * - turbo2: 2-bit PolarQuant + WHT rotation, 6.4x compression
+ * - turbo3: 3-bit PolarQuant + WHT rotation, 4.6x compression
+ * - turbo4: 4-bit PolarQuant + WHT rotation, 3.8x compression
  *
  * @public
  */
@@ -91,7 +98,10 @@ export type LLMLlamaCacheQuantizationType =
   | "q4_1"
   | "iq4_nl"
   | "q5_0"
-  | "q5_1";
+  | "q5_1"
+  | "turbo2"
+  | "turbo3"
+  | "turbo4";
 export const llmLlamaCacheQuantizationTypeSchema = z.enum(llmLlamaCacheQuantizationTypes);
 
 // MLX KV cache quantization
