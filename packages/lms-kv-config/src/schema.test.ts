@@ -1,5 +1,10 @@
 import { kvConfigField, KVConfigSchematicsBuilder, makeKVConfigFromFields } from "./KVConfig.js";
 import {
+  llmLoadModelConfigSchema,
+  llmLoadSpeculativeDecodingStrategySchema,
+  normalizeLLMLoadSpeculativeDecodingConfig,
+} from "@lmstudio/lms-shared-types";
+import {
   kvConfigToLLMLoadModelConfig,
   llmLoadModelConfigToKVConfig,
 } from "./conversion/llmLoadModelConfig.js";
@@ -57,6 +62,50 @@ describe("KVConfig", () => {
 });
 
 describe("llmLoadModelConfig conversion", () => {
+  it("preserves unspecified speculative decoding load config", () => {
+    const loadConfig = llmLoadModelConfigToKVConfig({});
+
+    const roundTrippedConfig = kvConfigToLLMLoadModelConfig(loadConfig);
+
+    expect(roundTrippedConfig.speculativeDecoding).toBeUndefined();
+  });
+
+  it("round trips disabled speculative decoding load config", () => {
+    const loadConfig = llmLoadModelConfigToKVConfig({
+      speculativeDecoding: [],
+    });
+
+    const roundTrippedConfig = kvConfigToLLMLoadModelConfig(loadConfig);
+
+    expect(roundTrippedConfig.speculativeDecoding).toEqual([]);
+  });
+
+  it("round trips draft-model load-time speculative decoding", () => {
+    const loadConfig = llmLoadModelConfigToKVConfig({
+      speculativeDecoding: [
+        {
+          type: "draftModel",
+          draftModel: "publisher/draft-model",
+          maxTokensToDraft: 16,
+          minDraftLengthToConsider: 0,
+          minContinueDraftingProbability: 0.75,
+        },
+      ],
+    });
+
+    const roundTrippedConfig = kvConfigToLLMLoadModelConfig(loadConfig);
+
+    expect(roundTrippedConfig.speculativeDecoding).toEqual([
+      {
+        type: "draftModel",
+        draftModel: "publisher/draft-model",
+        maxTokensToDraft: 16,
+        minDraftLengthToConsider: 0,
+        minContinueDraftingProbability: 0.75,
+      },
+    ]);
+  });
+
   it("round trips MTP load-time draft token settings", () => {
     const loadConfig = llmLoadModelConfigToKVConfig({
       speculativeDraftMtp: true,
@@ -69,6 +118,106 @@ describe("llmLoadModelConfig conversion", () => {
     expect(roundTrippedConfig.speculativeDraftMtp).toBe(true);
     expect(roundTrippedConfig.speculativeDraftMtpMaxTokens).toBe(2);
     expect(roundTrippedConfig.speculativeDraftMtpMinTokens).toBe(0);
+    expect(roundTrippedConfig.speculativeDecoding).toEqual([
+      {
+        type: "draftMtp",
+        maxTokensToDraft: 2,
+        minDraftLengthToConsider: 0,
+      },
+    ]);
+  });
+
+  it("normalizes legacy MTP load fields to the canonical strategy list", () => {
+    const canonicalConfig = normalizeLLMLoadSpeculativeDecodingConfig({
+      speculativeDecoding: [
+        {
+          type: "draftMtp",
+          maxTokensToDraft: 2,
+          minDraftLengthToConsider: 0,
+        },
+      ],
+    });
+    const legacyConfig = normalizeLLMLoadSpeculativeDecodingConfig({
+      speculativeDraftMtp: true,
+      speculativeDraftMtpMaxTokens: 2,
+      speculativeDraftMtpMinTokens: 0,
+    });
+
+    expect(legacyConfig).toEqual(canonicalConfig);
+  });
+
+  it("preserves numeric-only legacy MTP fields without enabling speculative decoding", () => {
+    const normalizedConfig = normalizeLLMLoadSpeculativeDecodingConfig({
+      speculativeDraftMtpMaxTokens: 2,
+      speculativeDraftMtpMinTokens: 0,
+    });
+
+    expect(normalizedConfig).toBeUndefined();
+  });
+
+  it("rejects conflicting canonical and legacy MTP load config", () => {
+    expect(() =>
+      normalizeLLMLoadSpeculativeDecodingConfig({
+        speculativeDecoding: [],
+        speculativeDraftMtp: true,
+      }),
+    ).toThrow("speculativeDecoding conflicts with deprecated speculativeDraftMtp load fields");
+
+    expect(
+      llmLoadModelConfigSchema.safeParse({
+        speculativeDecoding: [],
+        speculativeDraftMtp: true,
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects invalid speculative decoding strategy values", () => {
+    expect(
+      llmLoadModelConfigSchema.safeParse({
+        speculativeDecoding: [
+          {
+            type: "draftModel",
+            draftModel: "publisher/draft-model",
+            maxTokensToDraft: 1,
+            minDraftLengthToConsider: 2,
+          },
+        ],
+      }).success,
+    ).toBe(false);
+
+    expect(
+      llmLoadModelConfigSchema.safeParse({
+        speculativeDecoding: [
+          {
+            type: "draftModel",
+            draftModel: "publisher/draft-model",
+            minContinueDraftingProbability: 1.5,
+          },
+        ],
+      }).success,
+    ).toBe(false);
+
+    expect(
+      llmLoadModelConfigSchema.safeParse({
+        speculativeDecoding: [
+          {
+            type: "draftMtp",
+          },
+          {
+            type: "draftModel",
+            draftModel: "publisher/draft-model",
+          },
+        ],
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects unknown speculative decoding strategy types", () => {
+    expect(
+      llmLoadSpeculativeDecodingStrategySchema.safeParse({
+        type: "unsupportedStrategy",
+      }).success,
+    ).toBe(false);
   });
 
   it("round trips llama physical batch size", () => {

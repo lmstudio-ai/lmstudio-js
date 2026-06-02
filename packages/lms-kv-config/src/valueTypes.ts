@@ -8,6 +8,7 @@ import {
   llmLlamaCacheQuantizationTypeSchema,
   llmLlamaLogitBiasConfigSchema,
   llmLlamaMirostatSamplingConfigSchema,
+  llmLoadSpeculativeDecodingConfigSchema,
   llmMlxKvCacheQuantizationSchema,
   llmPromptTemplateSchema,
   llmReasoningParsingSchema,
@@ -243,6 +244,30 @@ const baseKVValueTypesLibraryBuilder = new KVFieldValueTypesLibraryBuilder({
     },
     stringify: value => {
       return value ? "ON" : "OFF";
+    },
+  })
+  .valueType("llmLoadSpeculativeDecoding", {
+    paramType: {},
+    schemaMaker: () => {
+      return llmLoadSpeculativeDecodingConfigSchema;
+    },
+    effectiveEquals: (a, b) => {
+      return deepEquals(a, b);
+    },
+    stringify: value => {
+      if (value.length === 0) {
+        return "OFF";
+      }
+      const strategy = value[0];
+      if (strategy === undefined) {
+        return "OFF";
+      }
+      switch (strategy.type) {
+        case "draftMtp":
+          return "MTP";
+        case "draftModel":
+          return `Draft model: ${quoteString(strategy.draftModel)}`;
+      }
     },
   })
   .valueType("stringArray", {

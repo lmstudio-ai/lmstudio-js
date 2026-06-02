@@ -325,6 +325,16 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
           .scope("speculativeDecoding", builder =>
             builder
               .field(
+                "strategies",
+                "llmLoadSpeculativeDecoding",
+                {
+                  displayName: "Speculative Decoding",
+                  subtitle: "Configure load-time speculative decoding",
+                  isExperimental: true,
+                },
+                [],
+              )
+              .field(
                 "draftMtp",
                 "boolean",
                 {

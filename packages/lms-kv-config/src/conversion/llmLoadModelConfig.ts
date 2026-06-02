@@ -5,6 +5,7 @@ import {
   type KVConfig,
   type LLMLoadModelConfig,
   type ModelCompatibilityType,
+  normalizeLLMLoadSpeculativeDecodingConfig,
 } from "@lmstudio/lms-shared-types";
 import { collapseKVStackRaw } from "../KVConfig.js";
 import {
@@ -112,6 +113,11 @@ function kvConfigToLLMLlamaLoadModelConfig(
   const flashAttention = parsed.get("llama.flashAttention");
   if (flashAttention !== undefined) {
     result.flashAttention = flashAttention;
+  }
+
+  const speculativeDecoding = parsed.get("llama.speculativeDecoding.strategies");
+  if (speculativeDecoding !== undefined) {
+    result.speculativeDecoding = speculativeDecoding;
   }
 
   const speculativeDraftMtp = parsed.get("llama.speculativeDecoding.draftMtp");
@@ -244,6 +250,7 @@ export function llmLoadModelConfigToKVConfig(config: LLMLoadModelConfig): KVConf
     "llama.evalBatchSize": config.evalBatchSize,
     "llama.physicalBatchSize": config.physicalBatchSize,
     "llama.flashAttention": config.flashAttention,
+    "llama.speculativeDecoding.strategies": normalizeLLMLoadSpeculativeDecodingConfig(config),
     "llama.speculativeDecoding.draftMtp": config.speculativeDraftMtp,
     "llama.speculativeDecoding.draftMtpMaxTokens": config.speculativeDraftMtpMaxTokens,
     "llama.speculativeDecoding.draftMtpMinTokens": config.speculativeDraftMtpMinTokens,

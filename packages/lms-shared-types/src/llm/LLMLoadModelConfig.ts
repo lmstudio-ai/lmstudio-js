@@ -139,6 +139,172 @@ export const llmMlxKvCacheQuantizationSchema = z.object({
   quantizedStart: z.number().int().nonnegative(),
 }) as z.Schema<LLMMlxKvCacheQuantization>;
 
+/**
+ * Load-time speculative decoding using bundled multi-token prediction heads.
+ *
+ * @public
+ * @experimental
+ */
+export interface LLMLoadSpeculativeDecodingDraftMtp {
+  type: "draftMtp";
+  maxTokensToDraft?: number;
+  minDraftLengthToConsider?: number;
+}
+
+/**
+ * Load-time speculative decoding using a separate draft model.
+ *
+ * @public
+ * @experimental
+ */
+export interface LLMLoadSpeculativeDecodingDraftModel {
+  type: "draftModel";
+  draftModel: string;
+  maxTokensToDraft?: number;
+  minDraftLengthToConsider?: number;
+  minContinueDraftingProbability?: number;
+}
+
+/**
+ * A load-time speculative decoding strategy.
+ *
+ * @public
+ * @experimental
+ */
+export type LLMLoadSpeculativeDecodingStrategy =
+  | LLMLoadSpeculativeDecodingDraftMtp
+  | LLMLoadSpeculativeDecodingDraftModel;
+
+/**
+ * Load-time speculative decoding configuration.
+ *
+ * Undefined means no explicit override. An empty array explicitly disables speculative decoding.
+ *
+ * @public
+ * @experimental
+ */
+export type LLMLoadSpeculativeDecodingConfig = Array<LLMLoadSpeculativeDecodingStrategy>;
+
+export const llmLoadSpeculativeDecodingDraftMtpSchema = z
+  .object({
+    type: z.literal("draftMtp"),
+    maxTokensToDraft: z.number().int().min(0).optional(),
+    minDraftLengthToConsider: z.number().int().min(0).optional(),
+  })
+  .strict();
+
+export const llmLoadSpeculativeDecodingDraftModelSchema = z
+  .object({
+    type: z.literal("draftModel"),
+    draftModel: z.string().min(1),
+    maxTokensToDraft: z.number().int().min(1).optional(),
+    minDraftLengthToConsider: z.number().int().min(0).optional(),
+    minContinueDraftingProbability: z.number().min(0).max(1).optional(),
+  })
+  .strict();
+
+export const llmLoadSpeculativeDecodingStrategySchema = z.discriminatedUnion("type", [
+  llmLoadSpeculativeDecodingDraftMtpSchema,
+  llmLoadSpeculativeDecodingDraftModelSchema,
+]) as z.Schema<LLMLoadSpeculativeDecodingStrategy>;
+
+function hasInvalidSpeculativeDecodingStrategyBounds(
+  strategy: LLMLoadSpeculativeDecodingStrategy,
+): boolean {
+  const maxTokensToDraft = strategy.maxTokensToDraft;
+  const minDraftLengthToConsider = strategy.minDraftLengthToConsider;
+  return (
+    maxTokensToDraft !== undefined &&
+    minDraftLengthToConsider !== undefined &&
+    minDraftLengthToConsider > maxTokensToDraft
+  );
+}
+
+export const llmLoadSpeculativeDecodingConfigSchema = z
+  .array(llmLoadSpeculativeDecodingStrategySchema)
+  .superRefine((strategies, context) => {
+    if (strategies.length > 1) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Only one speculative decoding strategy is supported in this release",
+      });
+    }
+
+    for (const [strategyIndex, strategy] of strategies.entries()) {
+      if (hasInvalidSpeculativeDecodingStrategyBounds(strategy)) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "minDraftLengthToConsider must be less than or equal to maxTokensToDraft",
+          path: [strategyIndex, "minDraftLengthToConsider"],
+        });
+      }
+    }
+  }) as z.Schema<LLMLoadSpeculativeDecodingConfig>;
+
+interface NormalizeLLMLoadSpeculativeDecodingConfigOpts {
+  speculativeDecoding?: LLMLoadSpeculativeDecodingConfig;
+  speculativeDraftMtp?: boolean;
+  speculativeDraftMtpMaxTokens?: number;
+  speculativeDraftMtpMinTokens?: number;
+}
+
+function legacyMtpFieldsToSpeculativeDecodingConfig({
+  speculativeDraftMtp,
+  speculativeDraftMtpMaxTokens,
+  speculativeDraftMtpMinTokens,
+}: NormalizeLLMLoadSpeculativeDecodingConfigOpts): LLMLoadSpeculativeDecodingConfig | undefined {
+  if (speculativeDraftMtp === true) {
+    return [
+      {
+        type: "draftMtp",
+        maxTokensToDraft: speculativeDraftMtpMaxTokens,
+        minDraftLengthToConsider: speculativeDraftMtpMinTokens,
+      },
+    ];
+  }
+
+  if (speculativeDraftMtp === false) {
+    return [];
+  }
+
+  return undefined;
+}
+
+function speculativeDecodingConfigsEqual(
+  left: LLMLoadSpeculativeDecodingConfig | undefined,
+  right: LLMLoadSpeculativeDecodingConfig | undefined,
+): boolean {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
+/**
+ * Converts deprecated flat MTP fields into the canonical load-time speculative decoding list.
+ *
+ * @public
+ * @experimental
+ */
+export function normalizeLLMLoadSpeculativeDecodingConfig(
+  config: NormalizeLLMLoadSpeculativeDecodingConfigOpts,
+): LLMLoadSpeculativeDecodingConfig | undefined {
+  const canonicalSpeculativeDecoding = config.speculativeDecoding;
+  const legacySpeculativeDecoding = legacyMtpFieldsToSpeculativeDecodingConfig(config);
+
+  if (canonicalSpeculativeDecoding !== undefined) {
+    if (
+      legacySpeculativeDecoding !== undefined &&
+      !speculativeDecodingConfigsEqual(canonicalSpeculativeDecoding, legacySpeculativeDecoding)
+    ) {
+      throw new Error(
+        "speculativeDecoding conflicts with deprecated speculativeDraftMtp load fields",
+      );
+    }
+
+    return canonicalSpeculativeDecoding;
+  }
+
+  return legacySpeculativeDecoding;
+}
+
 /** @public */
 export interface LLMLoadModelConfig {
   /**
@@ -239,10 +405,21 @@ export interface LLMLoadModelConfig {
   flashAttention?: boolean;
 
   /**
+   * Load-time speculative decoding configuration.
+   *
+   * Undefined means no explicit speculative decoding override. An empty array explicitly disables
+   * speculative decoding.
+   *
+   * @experimental
+   */
+  speculativeDecoding?: LLMLoadSpeculativeDecodingConfig;
+
+  /**
    * Enables speculative decoding using bundled multi-token prediction heads when the loaded model
    * supports it.
    *
    * @experimental
+   * @deprecated Use `speculativeDecoding` instead.
    */
   speculativeDraftMtp?: boolean;
 
@@ -250,6 +427,7 @@ export interface LLMLoadModelConfig {
    * Maximum number of bundled MTP draft tokens to generate.
    *
    * @experimental
+   * @deprecated Use `speculativeDecoding` instead.
    */
   speculativeDraftMtpMaxTokens?: number;
 
@@ -257,6 +435,7 @@ export interface LLMLoadModelConfig {
    * Minimum bundled MTP draft length to verify with the main model.
    *
    * @experimental
+   * @deprecated Use `speculativeDecoding` instead.
    */
   speculativeDraftMtpMinTokens?: number;
 
@@ -374,6 +553,7 @@ export const llmLoadModelConfigSchema = z.object({
   evalBatchSize: z.number().int().min(1).optional(),
   physicalBatchSize: z.number().int().min(1).optional(),
   flashAttention: z.boolean().optional(),
+  speculativeDecoding: llmLoadSpeculativeDecodingConfigSchema.optional(),
   speculativeDraftMtp: z.boolean().optional(),
   speculativeDraftMtpMaxTokens: z.number().int().min(0).optional(),
   speculativeDraftMtpMinTokens: z.number().int().min(0).optional(),
@@ -392,4 +572,14 @@ export const llmLoadModelConfigSchema = z.object({
     .or(z.literal(false))
     .optional(),
   mlxKvCacheQuantization: llmMlxKvCacheQuantizationSchema.or(z.literal(false)).optional(),
+}).superRefine((config, context) => {
+  try {
+    normalizeLLMLoadSpeculativeDecodingConfig(config);
+  } catch (error) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: error instanceof Error ? error.message : String(error),
+      path: ["speculativeDecoding"],
+    });
+  }
 });
