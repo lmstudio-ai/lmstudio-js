@@ -329,8 +329,7 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
                 "llmLoadSpeculativeDecoding",
                 {
                   displayName: "Speculative Decoding",
-                  subtitle: "Configure load-time speculative decoding",
-                  isExperimental: true,
+                  hint: "Configure load-time speculative decoding.",
                 },
                 [],
               )
@@ -339,8 +338,7 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
                 "boolean",
                 {
                   displayName: "MTP Speculative Decoding",
-                  subtitle: "Use bundled multi-token prediction heads when loading the model",
-                  isExperimental: true,
+                  hint: "Use bundled multi-token prediction heads when loading the model.",
                 },
                 false,
               )
@@ -351,8 +349,7 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
                   min: 0,
                   int: true,
                   displayName: "MTP Max Draft Tokens",
-                  subtitle: "Maximum number of MTP draft tokens to generate",
-                  isExperimental: true,
+                  hint: "Maximum number of MTP draft tokens to generate.",
                 },
                 2,
               )
@@ -363,8 +360,7 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
                   min: 0,
                   int: true,
                   displayName: "MTP Min Draft Tokens",
-                  subtitle: "Minimum MTP draft length to verify with the main model",
-                  isExperimental: true,
+                  hint: "Minimum MTP draft length to verify with the main model.",
                 },
                 0,
               ),
