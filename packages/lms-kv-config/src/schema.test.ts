@@ -1,9 +1,5 @@
 import { kvConfigField, KVConfigSchematicsBuilder, makeKVConfigFromFields } from "./KVConfig.js";
-import {
-  llmLoadModelConfigSchema,
-  llmLoadSpeculativeDecodingStrategySchema,
-  normalizeLLMLoadSpeculativeDecodingConfig,
-} from "@lmstudio/lms-shared-types";
+import { llmLoadModelConfigSchema } from "@lmstudio/lms-shared-types";
 import {
   kvConfigToLLMLoadModelConfig,
   llmLoadModelConfigToKVConfig,
@@ -67,107 +63,71 @@ describe("llmLoadModelConfig conversion", () => {
 
     const roundTrippedConfig = kvConfigToLLMLoadModelConfig(loadConfig);
 
-    expect(roundTrippedConfig.speculativeDecoding).toBeUndefined();
+    expect(roundTrippedConfig.speculativeDraftMtp).toBeUndefined();
+    expect(roundTrippedConfig.speculativeDraftModel).toBeUndefined();
+    expect(roundTrippedConfig.speculativeDraftMaxTokens).toBeUndefined();
+    expect(roundTrippedConfig.speculativeDraftMinTokens).toBeUndefined();
+    expect(roundTrippedConfig.speculativeDraftMinContinueProbability).toBeUndefined();
   });
 
-  it("round trips disabled speculative decoding load config", () => {
+  it("round trips explicit Draft MTP off", () => {
     const loadConfig = llmLoadModelConfigToKVConfig({
-      speculativeDecoding: [],
+      speculativeDraftMtp: false,
     });
 
     const roundTrippedConfig = kvConfigToLLMLoadModelConfig(loadConfig);
 
-    expect(roundTrippedConfig.speculativeDecoding).toEqual([]);
+    expect(roundTrippedConfig.speculativeDraftMtp).toBe(false);
   });
 
-  it("round trips draft-model load-time speculative decoding", () => {
-    const loadConfig = llmLoadModelConfigToKVConfig({
-      speculativeDecoding: [
-        {
-          type: "draftModel",
-          draftModel: "publisher/draft-model",
-          maxTokensToDraft: 16,
-          minDraftLengthToConsider: 0,
-          minContinueDraftingProbability: 0.75,
-        },
-      ],
-    });
-
-    const roundTrippedConfig = kvConfigToLLMLoadModelConfig(loadConfig);
-
-    expect(roundTrippedConfig.speculativeDecoding).toEqual([
-      {
-        type: "draftModel",
-        draftModel: "publisher/draft-model",
-        maxTokensToDraft: 16,
-        minDraftLengthToConsider: 0,
-        minContinueDraftingProbability: 0.75,
-      },
-    ]);
-  });
-
-  it("round trips MTP load-time draft token settings through canonical config", () => {
+  it("round trips Draft MTP load-time speculative decoding", () => {
     const loadConfig = llmLoadModelConfigToKVConfig({
       speculativeDraftMtp: true,
-      speculativeDraftMtpMaxTokens: 2,
-      speculativeDraftMtpMinTokens: 0,
+      speculativeDraftMaxTokens: 2,
+      speculativeDraftMinTokens: 0,
     });
 
     const roundTrippedConfig = kvConfigToLLMLoadModelConfig(loadConfig);
 
-    expect(roundTrippedConfig.speculativeDraftMtp).toBeUndefined();
-    expect(roundTrippedConfig.speculativeDraftMtpMaxTokens).toBeUndefined();
-    expect(roundTrippedConfig.speculativeDraftMtpMinTokens).toBeUndefined();
-    expect(roundTrippedConfig.speculativeDecoding).toEqual([
-      {
-        type: "draftMtp",
-        maxTokensToDraft: 2,
-        minDraftLengthToConsider: 0,
-      },
-    ]);
+    expect(roundTrippedConfig.speculativeDraftMtp).toBe(true);
+    expect(roundTrippedConfig.speculativeDraftMaxTokens).toBe(2);
+    expect(roundTrippedConfig.speculativeDraftMinTokens).toBe(0);
   });
 
-  it("keeps canonical MTP authoritative over default-filled legacy MTP off", () => {
-    const loadConfig = globalConfigSchematics.scoped("llm.load").buildPartialConfig({
-      "llama.speculativeDecoding.strategies": [
-        {
-          type: "draftMtp",
-          maxTokensToDraft: 2,
-        },
-      ],
+  it("round trips Draft Model load-time speculative decoding", () => {
+    const loadConfig = llmLoadModelConfigToKVConfig({
+      speculativeDraftMtp: false,
+      speculativeDraftModel: "publisher/draft-model",
+      speculativeDraftMaxTokens: 16,
+      speculativeDraftMinTokens: 0,
+      speculativeDraftMinContinueProbability: 0.75,
     });
 
-    const convertedConfig = kvConfigToLLMLoadModelConfig(loadConfig, {
-      useDefaultsForMissingKeys: true,
-    });
+    const roundTrippedConfig = kvConfigToLLMLoadModelConfig(loadConfig);
 
-    expect(convertedConfig.speculativeDecoding).toEqual([
-      {
-        type: "draftMtp",
-        maxTokensToDraft: 2,
-      },
-    ]);
-    expect(convertedConfig.speculativeDraftMtp).toBeUndefined();
+    expect(roundTrippedConfig.speculativeDraftMtp).toBe(false);
+    expect(roundTrippedConfig.speculativeDraftModel).toBe("publisher/draft-model");
+    expect(roundTrippedConfig.speculativeDraftMaxTokens).toBe(16);
+    expect(roundTrippedConfig.speculativeDraftMinTokens).toBe(0);
+    expect(roundTrippedConfig.speculativeDraftMinContinueProbability).toBe(0.75);
   });
 
-  it("keeps canonical disabled speculation authoritative over default-filled legacy MTP off", () => {
-    const loadConfig = globalConfigSchematics.scoped("llm.load").buildPartialConfig({
-      "llama.speculativeDecoding.strategies": [],
+  it("keeps undefined and false Draft MTP distinct", () => {
+    const unspecifiedLoadConfig = llmLoadModelConfigToKVConfig({});
+    const disabledLoadConfig = llmLoadModelConfigToKVConfig({
+      speculativeDraftMtp: false,
     });
 
-    const convertedConfig = kvConfigToLLMLoadModelConfig(loadConfig, {
-      useDefaultsForMissingKeys: true,
-    });
+    const unspecifiedRoundTrip = kvConfigToLLMLoadModelConfig(unspecifiedLoadConfig);
+    const disabledRoundTrip = kvConfigToLLMLoadModelConfig(disabledLoadConfig);
 
-    expect(convertedConfig.speculativeDecoding).toEqual([]);
-    expect(convertedConfig.speculativeDraftMtp).toBeUndefined();
+    expect(unspecifiedRoundTrip.speculativeDraftMtp).toBeUndefined();
+    expect(disabledRoundTrip.speculativeDraftMtp).toBe(false);
   });
 
-  it("uses legacy MTP as the fallback when canonical speculative decoding is absent", () => {
+  it("uses flat Draft MTP defaults when defaults are requested", () => {
     const loadConfig = globalConfigSchematics.scoped("llm.load").buildPartialConfig({
       "llama.speculativeDecoding.draftMtp": true,
-      "llama.speculativeDecoding.draftMtpMaxTokens": 2,
-      "llama.speculativeDecoding.draftMtpMinTokens": 0,
     });
 
     const convertedConfig = kvConfigToLLMLoadModelConfig(loadConfig, {
@@ -175,106 +135,47 @@ describe("llmLoadModelConfig conversion", () => {
     });
 
     expect(convertedConfig.speculativeDraftMtp).toBe(true);
-    expect(convertedConfig.speculativeDraftMtpMaxTokens).toBe(2);
-    expect(convertedConfig.speculativeDraftMtpMinTokens).toBe(0);
-    expect(convertedConfig.speculativeDecoding).toEqual([
-      {
-        type: "draftMtp",
-        maxTokensToDraft: 2,
-        minDraftLengthToConsider: 0,
-      },
-    ]);
+    expect(convertedConfig.speculativeDraftMaxTokens).toBe(2);
+    expect(convertedConfig.speculativeDraftMinTokens).toBe(0);
+    expect(convertedConfig.speculativeDraftMinContinueProbability).toBe(0.75);
   });
 
-  it("normalizes legacy MTP load fields to the canonical strategy list", () => {
-    const canonicalConfig = normalizeLLMLoadSpeculativeDecodingConfig({
-      speculativeDecoding: [
-        {
-          type: "draftMtp",
-          maxTokensToDraft: 2,
-          minDraftLengthToConsider: 0,
-        },
-      ],
-    });
-    const legacyConfig = normalizeLLMLoadSpeculativeDecodingConfig({
-      speculativeDraftMtp: true,
-      speculativeDraftMtpMaxTokens: 2,
-      speculativeDraftMtpMinTokens: 0,
+  it("preserves orphan draft tuning fields without enabling speculative decoding", () => {
+    const loadConfig = globalConfigSchematics.scoped("llm.load").buildPartialConfig({
+      "llama.speculativeDecoding.draftMaxTokens": 8,
+      "llama.speculativeDecoding.draftMinTokens": 2,
+      "llama.speculativeDecoding.draftMinContinueProbability": 0.5,
     });
 
-    expect(legacyConfig).toEqual(canonicalConfig);
+    const convertedConfig = kvConfigToLLMLoadModelConfig(loadConfig);
+
+    expect(convertedConfig.speculativeDraftMtp).toBeUndefined();
+    expect(convertedConfig.speculativeDraftModel).toBeUndefined();
+    expect(convertedConfig.speculativeDraftMaxTokens).toBe(8);
+    expect(convertedConfig.speculativeDraftMinTokens).toBe(2);
+    expect(convertedConfig.speculativeDraftMinContinueProbability).toBe(0.5);
   });
 
-  it("preserves numeric-only legacy MTP fields without enabling speculative decoding", () => {
-    const normalizedConfig = normalizeLLMLoadSpeculativeDecodingConfig({
-      speculativeDraftMtpMaxTokens: 2,
-      speculativeDraftMtpMinTokens: 0,
-    });
+  it("rejects invalid V2 flat speculative decoding values", () => {
+    expect(
+      llmLoadModelConfigSchema.safeParse({
+        speculativeDraftModel: "publisher/draft-model",
+        speculativeDraftMaxTokens: 1,
+        speculativeDraftMinTokens: 2,
+      }).success,
+    ).toBe(false);
 
-    expect(normalizedConfig).toBeUndefined();
-  });
+    expect(
+      llmLoadModelConfigSchema.safeParse({
+        speculativeDraftModel: "publisher/draft-model",
+        speculativeDraftMinContinueProbability: 1.5,
+      }).success,
+    ).toBe(false);
 
-  it("rejects conflicting canonical and legacy MTP load config", () => {
-    expect(() =>
-      normalizeLLMLoadSpeculativeDecodingConfig({
-        speculativeDecoding: [],
+    expect(
+      llmLoadModelConfigSchema.safeParse({
         speculativeDraftMtp: true,
-      }),
-    ).toThrow("speculativeDecoding conflicts with deprecated speculativeDraftMtp load fields");
-
-    expect(
-      llmLoadModelConfigSchema.safeParse({
-        speculativeDecoding: [],
-        speculativeDraftMtp: true,
-      }).success,
-    ).toBe(false);
-  });
-
-  it("rejects invalid speculative decoding strategy values", () => {
-    expect(
-      llmLoadModelConfigSchema.safeParse({
-        speculativeDecoding: [
-          {
-            type: "draftModel",
-            draftModel: "publisher/draft-model",
-            maxTokensToDraft: 1,
-            minDraftLengthToConsider: 2,
-          },
-        ],
-      }).success,
-    ).toBe(false);
-
-    expect(
-      llmLoadModelConfigSchema.safeParse({
-        speculativeDecoding: [
-          {
-            type: "draftModel",
-            draftModel: "publisher/draft-model",
-            minContinueDraftingProbability: 1.5,
-          },
-        ],
-      }).success,
-    ).toBe(false);
-
-    expect(
-      llmLoadModelConfigSchema.safeParse({
-        speculativeDecoding: [
-          {
-            type: "draftMtp",
-          },
-          {
-            type: "draftModel",
-            draftModel: "publisher/draft-model",
-          },
-        ],
-      }).success,
-    ).toBe(false);
-  });
-
-  it("rejects unknown speculative decoding strategy types", () => {
-    expect(
-      llmLoadSpeculativeDecodingStrategySchema.safeParse({
-        type: "unsupportedStrategy",
+        speculativeDraftModel: "publisher/draft-model",
       }).success,
     ).toBe(false);
   });
