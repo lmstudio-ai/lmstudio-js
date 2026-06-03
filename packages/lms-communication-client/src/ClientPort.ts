@@ -14,8 +14,8 @@ import {
 } from "@lmstudio/lms-common";
 import {
   Channel,
-  normalizeCommunicationWarningKind,
   deserialize,
+  normalizeCommunicationWarningKind,
   serialize,
   type BackendInterface,
   type ChannelEndpoint,
@@ -23,12 +23,12 @@ import {
   type ClientToServerMessage,
   type ClientTransport,
   type ClientTransportFactory,
+  type CommunicationWarningKind,
   type RpcEndpoint,
   type RpcEndpointsSpecBase,
   type ServerToClientMessage,
   type SignalEndpoint,
   type SignalEndpointsSpecBase,
-  type CommunicationWarningKind,
   type WritableSignalEndpoint,
   type WritableSignalEndpointsSpecBase,
 } from "@lmstudio/lms-communication";
@@ -219,12 +219,15 @@ export class ClientPort<
     const deserializedMessage = deserialize(openChannel.endpoint.serialization, message.message);
     const parsed = openChannel.endpoint.toClientPacket.safeParse(deserializedMessage);
     if (!parsed.success) {
-      this.communicationWarning(text`
-        Received invalid message for channel: endpointName = ${openChannel.endpoint.name}, message =
-        ${deserializedMessage}. Zod error:
+      this.communicationWarning(
+        text`
+          Received invalid message for channel: endpointName = ${openChannel.endpoint.name}, message =
+          ${deserializedMessage}. Zod error:
 
-        ${Validator.prettyPrintZod("message", parsed.error)}
-      `, "channelMessageTypeError");
+          ${Validator.prettyPrintZod("message", parsed.error)}
+        `,
+        "channelMessageTypeError",
+      );
       return;
     }
     openChannel.receivedMessage(parsed.data);
@@ -287,12 +290,15 @@ export class ClientPort<
     const deserializedResult = deserialize(ongoingRpc.endpoint.serialization, message.result);
     const parsed = ongoingRpc.endpoint.returns.safeParse(deserializedResult);
     if (!parsed.success) {
-      this.communicationWarning(text`
-        Received invalid result for rpc, endpointName = ${ongoingRpc.endpoint.name}, result =
-        ${deserializedResult}. Zod error:
+      this.communicationWarning(
+        text`
+          Received invalid result for rpc, endpointName = ${ongoingRpc.endpoint.name}, result =
+          ${deserializedResult}. Zod error:
 
-        ${Validator.prettyPrintZod("result", parsed.error)}
-      `, "rpcResultTypeError");
+          ${Validator.prettyPrintZod("result", parsed.error)}
+        `,
+        "rpcResultTypeError",
+      );
       return;
     }
     ongoingRpc.resolve(parsed.data);
@@ -334,36 +340,46 @@ export class ClientPort<
     );
     const beforeValue = openSignalSubscription.getValue();
     let afterValue: any;
+    // Freeze for performance. See https://immerjs.github.io/immer/performance#pre-freeze-data
+    Object.freeze(beforeValue);
     try {
       afterValue = applyPatches(beforeValue, patches);
     } catch (error) {
-      this.communicationWarning(text`
-        Failed to apply patches to signal on signalUpdate. subscribeId = ${message.subscribeId}.
+      this.communicationWarning(
+        text`
+          Failed to apply patches to signal on signalUpdate. subscribeId = ${message.subscribeId}.
 
-        beforeValue = ${JSON.stringify(beforeValue, null, 2)},
+          beforeValue = ${JSON.stringify(beforeValue, null, 2)},
 
-        patches = ${JSON.stringify(patches, null, 2)}.
+          patches = ${JSON.stringify(patches, null, 2)}.
 
-        Error: ${String(error)}
-      `, "signalUpdatePatchApplyError");
+          Error: ${String(error)}
+        `,
+        "signalUpdatePatchApplyError",
+      );
       return;
     }
-    const parseResult = openSignalSubscription.endpoint.signalData.safeParse(afterValue);
-    if (!parseResult.success) {
-      this.communicationWarning(text`
-        Received invalid signal patch data, subscribeId = ${message.subscribeId}
+    if (!openSignalSubscription.endpoint.skipSignalDataValidation) {
+      const parseResult = openSignalSubscription.endpoint.signalData.safeParse(afterValue);
+      if (!parseResult.success) {
+        this.communicationWarning(
+          text`
+            Received invalid signal patch data, subscribeId = ${message.subscribeId}
 
-        patches = ${patches},
+            patches = ${patches},
 
-        beforeValue = ${beforeValue},
+            beforeValue = ${beforeValue},
 
-        afterValue = ${afterValue}.
+            afterValue = ${afterValue}.
 
-        Zod error:
+            Zod error:
 
-        ${Validator.prettyPrintZod("value", parseResult.error)}
-      `, "signalPatchTypeError");
-      return;
+            ${Validator.prettyPrintZod("value", parseResult.error)}
+          `,
+          "signalPatchTypeError",
+        );
+        return;
+      }
     }
     // Don't use the parsed value, as it loses the substructure identities
     openSignalSubscription.receivedPatches(afterValue, patches, message.tags);
@@ -404,37 +420,47 @@ export class ClientPort<
       deserialize(openSignalSubscription.endpoint.serialization, patch),
     );
     const beforeValue = openSignalSubscription.getValue();
+    // Freeze for performance. See https://immerjs.github.io/immer/performance#pre-freeze-data
+    Object.freeze(beforeValue);
     let afterValue: any;
     try {
-      afterValue = applyPatches(openSignalSubscription.getValue(), patches);
+      afterValue = applyPatches(beforeValue, patches);
     } catch (error) {
-      this.communicationWarning(text`
-        Failed to apply patches to writable signal on writableSignalUpdate. subscribeId =
-        ${message.subscribeId}.
+      this.communicationWarning(
+        text`
+          Failed to apply patches to writable signal on writableSignalUpdate. subscribeId =
+          ${message.subscribeId}.
 
-        beforeValue = ${JSON.stringify(beforeValue, null, 2)},
+          beforeValue = ${JSON.stringify(beforeValue, null, 2)},
 
-        patches = ${JSON.stringify(patches, null, 2)}.
+          patches = ${JSON.stringify(patches, null, 2)}.
 
-        Error: ${String(error)}
-      `, "writableSignalPatchApplyError");
+          Error: ${String(error)}
+        `,
+        "writableSignalPatchApplyError",
+      );
     }
-    const parseResult = openSignalSubscription.endpoint.signalData.safeParse(afterValue);
-    if (!parseResult.success) {
-      this.communicationWarning(text`
-        Received invalid writable signal patch data, subscribeId = ${message.subscribeId}
+    if (!openSignalSubscription.endpoint.skipSignalDataValidation) {
+      const parseResult = openSignalSubscription.endpoint.signalData.safeParse(afterValue);
+      if (!parseResult.success) {
+        this.communicationWarning(
+          text`
+          Received invalid writable signal patch data, subscribeId = ${message.subscribeId}
 
-        patches = ${patches},
+          patches = ${patches},
 
-        beforeValue = ${beforeValue},
+          beforeValue = ${beforeValue},
 
-        afterValue = ${afterValue}.
+          afterValue = ${afterValue}.
 
-        Zod error:
+          Zod error:
 
-        ${Validator.prettyPrintZod("value", parseResult.error)}
-      `, "writableSignalPatchTypeError");
-      return;
+          ${Validator.prettyPrintZod("value", parseResult.error)}
+        `,
+          "writableSignalPatchTypeError",
+        );
+        return;
+      }
     }
     // Don't use the parsed value, as it loses the substructure identities
     openSignalSubscription.firstUpdateReceived = true;
