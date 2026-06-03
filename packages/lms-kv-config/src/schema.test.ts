@@ -106,7 +106,7 @@ describe("llmLoadModelConfig conversion", () => {
     ]);
   });
 
-  it("round trips MTP load-time draft token settings", () => {
+  it("round trips MTP load-time draft token settings through canonical config", () => {
     const loadConfig = llmLoadModelConfigToKVConfig({
       speculativeDraftMtp: true,
       speculativeDraftMtpMaxTokens: 2,
@@ -115,10 +115,69 @@ describe("llmLoadModelConfig conversion", () => {
 
     const roundTrippedConfig = kvConfigToLLMLoadModelConfig(loadConfig);
 
-    expect(roundTrippedConfig.speculativeDraftMtp).toBe(true);
-    expect(roundTrippedConfig.speculativeDraftMtpMaxTokens).toBe(2);
-    expect(roundTrippedConfig.speculativeDraftMtpMinTokens).toBe(0);
+    expect(roundTrippedConfig.speculativeDraftMtp).toBeUndefined();
+    expect(roundTrippedConfig.speculativeDraftMtpMaxTokens).toBeUndefined();
+    expect(roundTrippedConfig.speculativeDraftMtpMinTokens).toBeUndefined();
     expect(roundTrippedConfig.speculativeDecoding).toEqual([
+      {
+        type: "draftMtp",
+        maxTokensToDraft: 2,
+        minDraftLengthToConsider: 0,
+      },
+    ]);
+  });
+
+  it("keeps canonical MTP authoritative over default-filled legacy MTP off", () => {
+    const loadConfig = globalConfigSchematics.scoped("llm.load").buildPartialConfig({
+      "llama.speculativeDecoding.strategies": [
+        {
+          type: "draftMtp",
+          maxTokensToDraft: 2,
+        },
+      ],
+    });
+
+    const convertedConfig = kvConfigToLLMLoadModelConfig(loadConfig, {
+      useDefaultsForMissingKeys: true,
+    });
+
+    expect(convertedConfig.speculativeDecoding).toEqual([
+      {
+        type: "draftMtp",
+        maxTokensToDraft: 2,
+      },
+    ]);
+    expect(convertedConfig.speculativeDraftMtp).toBeUndefined();
+  });
+
+  it("keeps canonical disabled speculation authoritative over default-filled legacy MTP off", () => {
+    const loadConfig = globalConfigSchematics.scoped("llm.load").buildPartialConfig({
+      "llama.speculativeDecoding.strategies": [],
+    });
+
+    const convertedConfig = kvConfigToLLMLoadModelConfig(loadConfig, {
+      useDefaultsForMissingKeys: true,
+    });
+
+    expect(convertedConfig.speculativeDecoding).toEqual([]);
+    expect(convertedConfig.speculativeDraftMtp).toBeUndefined();
+  });
+
+  it("uses legacy MTP as the fallback when canonical speculative decoding is absent", () => {
+    const loadConfig = globalConfigSchematics.scoped("llm.load").buildPartialConfig({
+      "llama.speculativeDecoding.draftMtp": true,
+      "llama.speculativeDecoding.draftMtpMaxTokens": 2,
+      "llama.speculativeDecoding.draftMtpMinTokens": 0,
+    });
+
+    const convertedConfig = kvConfigToLLMLoadModelConfig(loadConfig, {
+      useDefaultsForMissingKeys: true,
+    });
+
+    expect(convertedConfig.speculativeDraftMtp).toBe(true);
+    expect(convertedConfig.speculativeDraftMtpMaxTokens).toBe(2);
+    expect(convertedConfig.speculativeDraftMtpMinTokens).toBe(0);
+    expect(convertedConfig.speculativeDecoding).toEqual([
       {
         type: "draftMtp",
         maxTokensToDraft: 2,

@@ -115,24 +115,36 @@ function kvConfigToLLMLlamaLoadModelConfig(
     result.flashAttention = flashAttention;
   }
 
-  const speculativeDecoding = parsed.get("llama.speculativeDecoding.strategies");
-  if (speculativeDecoding !== undefined) {
-    result.speculativeDecoding = speculativeDecoding;
-  }
+  const explicitSpeculativeDecoding = llmLlamaMoeLoadConfigSchematics.accessPartial(
+    config,
+    "llama.speculativeDecoding.strategies",
+  );
+  if (explicitSpeculativeDecoding !== undefined) {
+    result.speculativeDecoding = explicitSpeculativeDecoding;
+  } else {
+    const speculativeDraftMtp = parsed.get("llama.speculativeDecoding.draftMtp");
+    if (speculativeDraftMtp !== undefined) {
+      result.speculativeDraftMtp = speculativeDraftMtp;
+    }
 
-  const speculativeDraftMtp = parsed.get("llama.speculativeDecoding.draftMtp");
-  if (speculativeDraftMtp !== undefined) {
-    result.speculativeDraftMtp = speculativeDraftMtp;
-  }
+    const speculativeDraftMtpMaxTokens = parsed.get("llama.speculativeDecoding.draftMtpMaxTokens");
+    if (speculativeDraftMtpMaxTokens !== undefined) {
+      result.speculativeDraftMtpMaxTokens = speculativeDraftMtpMaxTokens;
+    }
 
-  const speculativeDraftMtpMaxTokens = parsed.get("llama.speculativeDecoding.draftMtpMaxTokens");
-  if (speculativeDraftMtpMaxTokens !== undefined) {
-    result.speculativeDraftMtpMaxTokens = speculativeDraftMtpMaxTokens;
-  }
+    const speculativeDraftMtpMinTokens = parsed.get("llama.speculativeDecoding.draftMtpMinTokens");
+    if (speculativeDraftMtpMinTokens !== undefined) {
+      result.speculativeDraftMtpMinTokens = speculativeDraftMtpMinTokens;
+    }
 
-  const speculativeDraftMtpMinTokens = parsed.get("llama.speculativeDecoding.draftMtpMinTokens");
-  if (speculativeDraftMtpMinTokens !== undefined) {
-    result.speculativeDraftMtpMinTokens = speculativeDraftMtpMinTokens;
+    const legacySpeculativeDecoding = normalizeLLMLoadSpeculativeDecodingConfig({
+      speculativeDraftMtp,
+      speculativeDraftMtpMaxTokens,
+      speculativeDraftMtpMinTokens,
+    });
+    if (legacySpeculativeDecoding !== undefined) {
+      result.speculativeDecoding = legacySpeculativeDecoding;
+    }
   }
 
   const keepModelInMemory = parsed.get("llama.keepModelInMemory");
