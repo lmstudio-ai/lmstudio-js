@@ -120,7 +120,7 @@ function kvConfigToLLMLlamaLoadModelConfig(
   }
 
   const speculativeDraftModel = parsed.get("llama.speculativeDecoding.draftModel");
-  if (speculativeDraftModel !== undefined) {
+  if (speculativeDraftModel !== undefined && speculativeDraftModel !== "") {
     result.speculativeDraftModel = speculativeDraftModel;
   }
 

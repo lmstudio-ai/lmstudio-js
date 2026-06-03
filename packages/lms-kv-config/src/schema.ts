@@ -337,8 +337,8 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
                 "draftModel",
                 "string",
                 {
-                  displayName: "Draft Model",
-                  hint: "Use a separate local GGUF LLM as the draft model.",
+                  displayName: "Speculative Decoding",
+                  hint: "Configure load-time speculative decoding.",
                 },
                 "",
               )
@@ -351,7 +351,7 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
                   displayName: "Max Draft Tokens",
                   hint: "Maximum number of draft tokens to generate.",
                 },
-                2,
+                16,
               )
               .field(
                 "draftMinTokens",

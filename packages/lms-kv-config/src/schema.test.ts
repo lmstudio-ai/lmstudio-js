@@ -125,7 +125,7 @@ describe("llmLoadModelConfig conversion", () => {
     expect(disabledRoundTrip.speculativeDraftMtp).toBe(false);
   });
 
-  it("uses flat Draft MTP defaults when defaults are requested", () => {
+  it("uses shared draft tuning defaults when defaults are requested", () => {
     const loadConfig = globalConfigSchematics.scoped("llm.load").buildPartialConfig({
       "llama.speculativeDecoding.draftMtp": true,
     });
@@ -135,9 +135,17 @@ describe("llmLoadModelConfig conversion", () => {
     });
 
     expect(convertedConfig.speculativeDraftMtp).toBe(true);
-    expect(convertedConfig.speculativeDraftMaxTokens).toBe(2);
+    expect(convertedConfig.speculativeDraftMaxTokens).toBe(16);
     expect(convertedConfig.speculativeDraftMinTokens).toBe(0);
     expect(convertedConfig.speculativeDraftMinContinueProbability).toBe(0.75);
+  });
+
+  it("does not expose an empty default Draft Model when defaults are requested", () => {
+    const convertedConfig = kvConfigToLLMLoadModelConfig(makeKVConfigFromFields([]), {
+      useDefaultsForMissingKeys: true,
+    });
+
+    expect(convertedConfig.speculativeDraftModel).toBeUndefined();
   });
 
   it("preserves orphan draft tuning fields without enabling speculative decoding", () => {
