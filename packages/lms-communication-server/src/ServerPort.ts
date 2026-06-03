@@ -11,20 +11,20 @@ import {
 } from "@lmstudio/lms-common";
 import {
   Channel,
-  normalizeCommunicationWarningKind,
   deserialize,
+  normalizeCommunicationWarningKind,
   serialize,
   type BackendInterface,
   type ChannelEndpoint,
   type ChannelEndpointsSpecBase,
   type ClientToServerMessage,
+  type CommunicationWarningKind,
   type RpcEndpointsSpecBase,
   type ServerToClientMessage,
   type ServerTransport,
   type ServerTransportFactory,
   type SignalEndpoint,
   type SignalEndpointsSpecBase,
-  type CommunicationWarningKind,
   type WritableSignalEndpoint,
   type WritableSignalEndpointsSpecBase,
 } from "@lmstudio/lms-communication";
@@ -171,12 +171,15 @@ export class ServerPort<
     );
     const parseResult = endpoint.creationParameter.safeParse(deserializedCreationParameter);
     if (!parseResult.success) {
-      this.communicationWarning(text`
-        Received invalid creationParameter for channel, endpointName = ${endpoint.name},
-        creationParameter = ${deserializedCreationParameter}. Zod error:
+      this.communicationWarning(
+        text`
+          Received invalid creationParameter for channel, endpointName = ${endpoint.name},
+          creationParameter = ${deserializedCreationParameter}. Zod error:
 
-        ${Validator.prettyPrintZod("creationParameter", parseResult.error)}
-      `, "channelCreationParameterTypeError");
+          ${Validator.prettyPrintZod("creationParameter", parseResult.error)}
+        `,
+        "channelCreationParameterTypeError",
+      );
 
       return;
     }
@@ -186,12 +189,15 @@ export class ServerPort<
       ...Channel.create((message, ackId) => {
         const result = endpoint.toClientPacket.safeParse(message);
         if (!result.success) {
-          this.communicationWarning(text`
-            Tried to send invalid message for channel, endpointName = ${endpoint.name},
-            message = ${message as object}. Zod error:
+          this.communicationWarning(
+            text`
+              Tried to send invalid message for channel, endpointName = ${endpoint.name},
+              message = ${message as object}. Zod error:
 
-            ${Validator.prettyPrintZod("message", result.error)}
-          `, "channelMessageTypeError");
+              ${Validator.prettyPrintZod("message", result.error)}
+            `,
+            "channelMessageTypeError",
+          );
           return;
         }
         const serializedMessage = serialize(endpoint.serialization, result.data);
@@ -257,12 +263,15 @@ export class ServerPort<
     const deserializedMessage = deserialize(openChannel.endpoint.serialization, message.message);
     const parsed = openChannel.endpoint.toServerPacket.safeParse(deserializedMessage);
     if (!parsed.success) {
-      this.communicationWarning(text`
-        Received invalid message for channel, endpointName = ${openChannel.endpoint.name},
-        message = ${message.message}. Zod error:
+      this.communicationWarning(
+        text`
+          Received invalid message for channel, endpointName = ${openChannel.endpoint.name},
+          message = ${message.message}. Zod error:
 
-        ${Validator.prettyPrintZod("message", parsed.error)}
-      `, "channelMessageTypeError");
+          ${Validator.prettyPrintZod("message", parsed.error)}
+        `,
+        "channelMessageTypeError",
+      );
       return;
     }
     openChannel.receivedMessage(parsed.data);
@@ -299,12 +308,15 @@ export class ServerPort<
     const deserializedParameter = deserialize(endpoint.serialization, message.parameter);
     const parseResult = endpoint.parameter.safeParse(deserializedParameter);
     if (!parseResult.success) {
-      this.communicationWarning(text`
-        Received invalid parameter for rpcCall, endpointName = ${endpoint.name},
-        parameter = ${message.parameter}. Zod error:
+      this.communicationWarning(
+        text`
+          Received invalid parameter for rpcCall, endpointName = ${endpoint.name},
+          parameter = ${message.parameter}. Zod error:
 
-        ${Validator.prettyPrintZod("parameter", parseResult.error)}
-      `, "rpcParameterTypeError");
+          ${Validator.prettyPrintZod("parameter", parseResult.error)}
+        `,
+        "rpcParameterTypeError",
+      );
       return;
     }
     const context = this.contextCreator({
@@ -377,10 +389,13 @@ export class ServerPort<
       return;
     }
     if (this.openSignalSubscriptions.has(message.subscribeId)) {
-      this.communicationWarning(text`
-        Received signalSubscribe for already open subscription, subscribeId =
-        ${message.subscribeId}
-      `, "signalAlreadyOpen");
+      this.communicationWarning(
+        text`
+          Received signalSubscribe for already open subscription, subscribeId =
+          ${message.subscribeId}
+        `,
+        "signalAlreadyOpen",
+      );
       return;
     }
     const deserializedCreationParameter = deserialize(
@@ -389,12 +404,15 @@ export class ServerPort<
     );
     const parseResult = endpoint.creationParameter.safeParse(deserializedCreationParameter);
     if (!parseResult.success) {
-      this.communicationWarning(text`
-        Received invalid parameter for signalSubscribe, endpointName = ${endpoint.name},
-        creationParameter = ${deserializedCreationParameter}. Zod error:
+      this.communicationWarning(
+        text`
+          Received invalid parameter for signalSubscribe, endpointName = ${endpoint.name},
+          creationParameter = ${deserializedCreationParameter}. Zod error:
 
-        ${Validator.prettyPrintZod("creationParameter", parseResult.error)}
-      `, "signalCreationParameterTypeError");
+          ${Validator.prettyPrintZod("creationParameter", parseResult.error)}
+        `,
+        "signalCreationParameterTypeError",
+      );
       return;
     }
     const context = this.contextCreator({
@@ -547,10 +565,13 @@ export class ServerPort<
       return;
     }
     if (this.openWritableSignalSubscriptions.has(message.subscribeId)) {
-      this.communicationWarning(text`
-        Received writableSignalSubscribe for already open subscription, subscribeId =
-        ${message.subscribeId}
-      `, "writableSignalAlreadyOpen");
+      this.communicationWarning(
+        text`
+          Received writableSignalSubscribe for already open subscription, subscribeId =
+          ${message.subscribeId}
+        `,
+        "writableSignalAlreadyOpen",
+      );
       return;
     }
     const deserializedCreationParameter = deserialize(
@@ -559,12 +580,15 @@ export class ServerPort<
     );
     const parseResult = endpoint.creationParameter.safeParse(deserializedCreationParameter);
     if (!parseResult.success) {
-      this.communicationWarning(text`
-        Received invalid parameter for writableSignalSubscribe, endpointName = ${endpoint.name},
-        creationParameter = ${deserializedCreationParameter}. Zod error:
+      this.communicationWarning(
+        text`
+          Received invalid parameter for writableSignalSubscribe, endpointName = ${endpoint.name},
+          creationParameter = ${deserializedCreationParameter}. Zod error:
 
-        ${Validator.prettyPrintZod("creationParameter", parseResult.error)}
-      `, "writableSignalCreationParameterTypeError");
+          ${Validator.prettyPrintZod("creationParameter", parseResult.error)}
+        `,
+        "writableSignalCreationParameterTypeError",
+      );
       return;
     }
     const context = this.contextCreator({
@@ -659,20 +683,26 @@ export class ServerPort<
                 const result = applyPatches(data, deserializedPatches);
                 const parseResult = endpoint.signalData.safeParse(result);
                 if (!parseResult.success) {
-                  this.communicationWarning(text`
-                    Received invalid data for writable signal, endpointName = ${endpoint.name},
-                    data = ${result}. Zod error:
+                  this.communicationWarning(
+                    text`
+                      Received invalid data for writable signal, endpointName = ${endpoint.name},
+                      data = ${result}. Zod error:
 
-                    ${Validator.prettyPrintZod("data", parseResult.error)}
-                  `, "writableSignalDataTypeError");
+                      ${Validator.prettyPrintZod("data", parseResult.error)}
+                    `,
+                    "writableSignalDataTypeError",
+                  );
                   return;
                 }
                 setter.withValueAndPatches(parseResult.data, deserializedPatches, tags);
               } catch (error: any) {
-                this.communicationWarning(text`
-                  Error in receivedPatches for writable signal, endpointName = ${endpoint.name},
-                  error = ${error.message}
-                `, "writableSignalPatchApplyError");
+                this.communicationWarning(
+                  text`
+                    Error in receivedPatches for writable signal, endpointName = ${endpoint.name},
+                    error = ${error.message}
+                  `,
+                  "writableSignalPatchApplyError",
+                );
               }
             },
           };
