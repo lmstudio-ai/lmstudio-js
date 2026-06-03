@@ -1,4 +1,8 @@
 import { z } from "zod";
+import {
+  llmLoadPromptTemplateOverrideSchema,
+  type LLMLoadPromptTemplateOverride,
+} from "./LLMLoadPromptTemplateOverride.js";
 
 /**
  * How much of the model's work should be offloaded to the GPU. The value should be between 0 and 1.
@@ -190,6 +194,16 @@ export interface LLMLoadModelConfig {
   contextLength?: number;
 
   /**
+   * Overrides the chat template used by engine-protocol llama-server runtimes at model load time.
+   *
+   * `modelDefault` means the runtime should use the model/server default template. Custom Jinja
+   * templates are applied per loaded model instance and require a reload to change.
+   *
+   * @experimental
+   */
+  promptTemplate?: LLMLoadPromptTemplateOverride;
+
+  /**
    * Custom base frequency for rotary positional embeddings (RoPE).
    *
    * This advanced parameter adjusts how positional information is embedded in the model's
@@ -369,6 +383,7 @@ export const llmLoadModelConfigSchema = z.object({
   gpuStrictVramCap: z.boolean().optional(),
   offloadKVCacheToGpu: z.boolean().optional(),
   contextLength: z.number().int().min(1).optional(),
+  promptTemplate: llmLoadPromptTemplateOverrideSchema.optional(),
   ropeFrequencyBase: z.number().or(z.literal(false)).optional(),
   ropeFrequencyScale: z.number().or(z.literal(false)).optional(),
   evalBatchSize: z.number().int().min(1).optional(),

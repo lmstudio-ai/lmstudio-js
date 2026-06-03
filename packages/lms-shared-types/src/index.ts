@@ -168,6 +168,10 @@ export {
   llmContextReferenceYamlFileSchema,
 } from "./llm/LLMContextReference.js";
 export {
+  LLMLoadPromptTemplateOverride,
+  llmLoadPromptTemplateOverrideSchema,
+} from "./llm/LLMLoadPromptTemplateOverride.js";
+export {
   GPUSetting,
   gpuSettingSchema,
   LLMLlamaAccelerationOffloadRatio,

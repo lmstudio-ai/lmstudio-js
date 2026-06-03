@@ -89,6 +89,11 @@ function kvConfigToLLMLlamaLoadModelConfig(
     result.contextLength = contextLength;
   }
 
+  const promptTemplate = parsed.get("promptTemplate");
+  if (promptTemplate !== undefined) {
+    result.promptTemplate = promptTemplate;
+  }
+
   const ropeFrequencyBase = parsed.get("llama.ropeFrequencyBase");
   if (ropeFrequencyBase !== undefined) {
     result.ropeFrequencyBase = ropeFrequencyBase.checked ? ropeFrequencyBase.value : false;
@@ -239,6 +244,7 @@ export function llmLoadModelConfigToKVConfig(config: LLMLoadModelConfig): KVConf
     "useUnifiedKvCache": config.useUnifiedKvCache,
     "offloadKVCacheToGpu": config.offloadKVCacheToGpu,
     "contextLength": config.contextLength,
+    "promptTemplate": config.promptTemplate,
     "llama.ropeFrequencyBase": maybeFalseValueToCheckboxValue(config.ropeFrequencyBase, 0),
     "llama.ropeFrequencyScale": maybeFalseValueToCheckboxValue(config.ropeFrequencyScale, 0),
     "llama.evalBatchSize": config.evalBatchSize,

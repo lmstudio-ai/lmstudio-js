@@ -3,7 +3,12 @@ import {
   kvConfigToLLMLoadModelConfig,
   llmLoadModelConfigToKVConfig,
 } from "./conversion/llmLoadModelConfig.js";
-import { globalConfigSchematics } from "./schema.js";
+import {
+  globalConfigSchematics,
+  llmLlamaLoadConfigSchematics,
+  llmLoadSchematics,
+  llmMlxLoadConfigSchematics,
+} from "./schema.js";
 import { kvValueTypesLibrary } from "./valueTypes.js";
 
 describe("KVConfig", () => {
@@ -57,6 +62,35 @@ describe("KVConfig", () => {
 });
 
 describe("llmLoadModelConfig conversion", () => {
+  it("round trips load-time prompt template override", () => {
+    const promptTemplate = {
+      type: "jinja" as const,
+      jinjaPromptTemplate: {
+        template: "{% for message in messages %}{{ message.content }}{% endfor %}",
+      },
+      stopStrings: ["<|end|>"],
+    };
+    const loadConfig = llmLoadModelConfigToKVConfig({
+      promptTemplate,
+    });
+
+    const roundTrippedConfig = kvConfigToLLMLoadModelConfig(loadConfig);
+
+    expect(roundTrippedConfig.promptTemplate).toEqual(promptTemplate);
+  });
+
+  it("keeps absent load-time prompt template distinct from defaulted model default", () => {
+    const emptyConfig = makeKVConfigFromFields([]);
+
+    const partialConfig = kvConfigToLLMLoadModelConfig(emptyConfig);
+    const defaultedConfig = kvConfigToLLMLoadModelConfig(emptyConfig, {
+      useDefaultsForMissingKeys: true,
+    });
+
+    expect(partialConfig.promptTemplate).toBeUndefined();
+    expect(defaultedConfig.promptTemplate).toEqual({ type: "modelDefault" });
+  });
+
   it("round trips MTP load-time draft token settings", () => {
     const loadConfig = llmLoadModelConfigToKVConfig({
       speculativeDraftMtp: true,
@@ -97,6 +131,44 @@ describe("llmLoadModelConfig conversion", () => {
 });
 
 describe("globalConfigSchematics", () => {
+  it("accepts load-time model default prompt template override", () => {
+    const loadConfig = llmLoadSchematics.buildPartialConfig({
+      promptTemplate: {
+        type: "modelDefault",
+      },
+    });
+
+    expect(globalConfigSchematics.access(loadConfig, "llm.load.promptTemplate")).toEqual({
+      type: "modelDefault",
+    });
+  });
+
+  it("accepts load-time Jinja prompt template override with stop strings", () => {
+    const promptTemplate = {
+      type: "jinja" as const,
+      jinjaPromptTemplate: {
+        template: "{% for message in messages %}{{ message.content }}{% endfor %}",
+      },
+      stopStrings: ["<|end|>"],
+    };
+    const loadConfig = llmLoadSchematics.buildPartialConfig({
+      promptTemplate,
+    });
+
+    expect(globalConfigSchematics.access(loadConfig, "llm.load.promptTemplate")).toEqual(
+      promptTemplate,
+    );
+  });
+
+  it("includes load-time prompt template in llama load schematics but not MLX load schematics", () => {
+    expect(llmLlamaLoadConfigSchematics.obtainField("promptTemplate").fullKey).toBe(
+      "llm.load.promptTemplate",
+    );
+    expect(() => llmMlxLoadConfigSchematics.obtainField("promptTemplate")).toThrow(
+      "Cannot access key promptTemplate",
+    );
+  });
+
   it("uses 2048 as the default llama eval batch size", () => {
     const emptyConfig = makeKVConfigFromFields([]);
 

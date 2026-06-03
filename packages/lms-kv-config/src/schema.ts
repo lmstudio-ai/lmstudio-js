@@ -285,6 +285,12 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
         { int: true, min: -1, uncheckedHint: "config:seedUncheckedHint" },
         { checked: false, value: -1 },
       )
+      .field(
+        "promptTemplate",
+        "llmLoadPromptTemplateOverride",
+        { modelCentric: true, isExperimental: true },
+        { type: "modelDefault" },
+      )
       .field("offloadKVCacheToGpu", "boolean", {}, true)
       .field(
         "numCpuExpertLayersRatio",
@@ -541,6 +547,7 @@ export const llmLlamaLoadConfigSchematics = llmSharedLoadConfigSchematics
     llmLoadSchematics.sliced(
       "llama.*",
       "load.*",
+      "promptTemplate",
       "offloadKVCacheToGpu",
       "numParallelSessions",
       "useUnifiedKvCache",

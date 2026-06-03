@@ -6,6 +6,7 @@ import {
   llmContextReferenceSchema,
   llmLlamaAccelerationOffloadRatioSchema,
   llmLlamaCacheQuantizationTypeSchema,
+  llmLoadPromptTemplateOverrideSchema,
   llmLlamaLogitBiasConfigSchema,
   llmLlamaMirostatSamplingConfigSchema,
   llmMlxKvCacheQuantizationSchema,
@@ -551,6 +552,63 @@ export const kvValueTypesLibrary = baseKVValueTypesLibraryBuilder
         default: {
           const exhaustiveCheck: never = value.type;
           throw new Error("Unknown template type: " + exhaustiveCheck);
+        }
+      }
+    },
+  })
+  .valueType("llmLoadPromptTemplateOverride", {
+    paramType: {},
+    schemaMaker: () => {
+      return llmLoadPromptTemplateOverrideSchema;
+    },
+    effectiveEquals: (a, b) => {
+      if (a.type !== b.type) {
+        return false;
+      }
+      switch (a.type) {
+        case "modelDefault":
+          return true;
+        case "jinja":
+          return (
+            b.type === "jinja" &&
+            a.jinjaPromptTemplate.template === b.jinjaPromptTemplate.template &&
+            a.stopStrings.length === b.stopStrings.length &&
+            a.stopStrings.every((stopString, index) => stopString === b.stopStrings[index])
+          );
+        default: {
+          const exhaustiveCheck: never = a;
+          throw new Error("Unknown load prompt template override: " + exhaustiveCheck);
+        }
+      }
+    },
+    stringify: (value, _typeParam, { t, desiredLength }) => {
+      switch (value.type) {
+        case "modelDefault":
+          return t("config:customInputs.llmLoadPromptTemplateOverride.modelDefault", "Model Default");
+        case "jinja": {
+          const lead =
+            `${t("config:customInputs.llmPromptTemplate.type", "Type")}: ` +
+            `${t("config:customInputs.llmPromptTemplate.types.jinja/label", "Jinja")}\n` +
+            `${t("config:customInputs.llmPromptTemplate.jinja.template/label", "Template")}: `;
+          const template = value.jinjaPromptTemplate.template;
+          if (desiredLength === undefined) {
+            return lead + template;
+          }
+          const currentLength = lead.length;
+          const remainingLength = Math.min(100, desiredLength - currentLength);
+          if (template.length <= remainingLength) {
+            return lead + template;
+          }
+          return (
+            lead +
+            template.slice(0, Math.floor(remainingLength / 2)) +
+            "..." +
+            template.slice(-Math.ceil(remainingLength / 2))
+          );
+        }
+        default: {
+          const exhaustiveCheck: never = value;
+          throw new Error("Unknown load prompt template override: " + exhaustiveCheck);
         }
       }
     },
