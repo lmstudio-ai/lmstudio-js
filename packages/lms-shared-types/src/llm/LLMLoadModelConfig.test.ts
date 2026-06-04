@@ -14,6 +14,34 @@ function expectSpeculativeConfigRejectedByHelpers(
 }
 
 describe("LLMLoad speculative decoding validation", () => {
+  it("rejects invalid Draft MTP values through the public helpers", () => {
+    const invalidConfigCases: Array<{
+      config: unknown;
+      expectedMessage: string;
+    }> = [
+      {
+        config: { speculativeDraftMtp: "true" },
+        expectedMessage: "speculativeDraftMtp must be a boolean",
+      },
+      {
+        config: { speculativeDraftMtp: 1 },
+        expectedMessage: "speculativeDraftMtp must be a boolean",
+      },
+      {
+        config: { speculativeDraftMtp: null },
+        expectedMessage: "speculativeDraftMtp must be a boolean",
+      },
+    ];
+
+    for (const invalidConfigCase of invalidConfigCases) {
+      expectSpeculativeConfigRejectedByHelpers(
+        invalidConfigCase.config as LLMLoadSpeculativeDecodingConfig,
+        invalidConfigCase.expectedMessage,
+      );
+      expect(llmLoadModelConfigSchema.safeParse(invalidConfigCase.config).success).toBe(false);
+    }
+  });
+
   it("rejects invalid draft model values through the public helpers", () => {
     const invalidConfigCases: Array<{
       config: unknown;

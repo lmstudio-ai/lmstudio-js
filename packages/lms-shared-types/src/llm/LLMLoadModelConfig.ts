@@ -160,6 +160,7 @@ export interface LLMLoadSpeculativeDecodingConfig {
 }
 
 const speculativeDraftModelSchema = z.string().min(1);
+const speculativeDraftMtpSchema = z.boolean();
 const speculativeDraftTokenCountSchema = z.number().int().min(0);
 const speculativeDraftMinContinueProbabilitySchema = z.number().min(0).max(1);
 
@@ -197,12 +198,23 @@ interface LLMLoadSpeculativeDecodingValidationIssue {
 }
 
 function getLLMLoadSpeculativeDecodingScalarValidationIssues({
+  speculativeDraftMtp,
   speculativeDraftModel,
   speculativeDraftMaxTokens,
   speculativeDraftMinTokens,
   speculativeDraftMinContinueProbability,
 }: LLMLoadSpeculativeDecodingConfig): Array<LLMLoadSpeculativeDecodingValidationIssue> {
   const issues: Array<LLMLoadSpeculativeDecodingValidationIssue> = [];
+
+  if (
+    speculativeDraftMtp !== undefined &&
+    !speculativeDraftMtpSchema.safeParse(speculativeDraftMtp).success
+  ) {
+    issues.push({
+      message: "speculativeDraftMtp must be a boolean",
+      path: ["speculativeDraftMtp"],
+    });
+  }
 
   if (
     speculativeDraftModel !== undefined &&
@@ -591,7 +603,7 @@ export const llmLoadModelConfigSchema = z
     evalBatchSize: z.number().int().min(1).optional(),
     physicalBatchSize: z.number().int().min(1).optional(),
     flashAttention: z.boolean().optional(),
-    speculativeDraftMtp: z.boolean().optional(),
+    speculativeDraftMtp: speculativeDraftMtpSchema.optional(),
     speculativeDraftModel: speculativeDraftModelSchema.optional(),
     speculativeDraftMaxTokens: speculativeDraftTokenCountSchema.optional(),
     speculativeDraftMinTokens: speculativeDraftTokenCountSchema.optional(),
