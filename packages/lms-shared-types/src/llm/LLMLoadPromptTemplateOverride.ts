@@ -5,23 +5,20 @@ import {
 } from "./LLMPromptTemplate.js";
 
 /** @public */
-export type LLMLoadPromptTemplateOverride =
-  | {
-      type: "modelDefault";
-    }
-  | {
-      type: "jinja";
-      jinjaPromptTemplate: LLMJinjaPromptTemplate;
-      stopStrings: Array<string>;
-    };
+export interface LLMLoadPromptTemplateOverride {
+  type: "jinja";
+  jinjaPromptTemplate: LLMJinjaPromptTemplate;
+  stopStrings: Array<string>;
+}
 
-export const llmLoadPromptTemplateOverrideSchema = z.discriminatedUnion("type", [
-  z.object({
-    type: z.literal("modelDefault"),
-  }),
-  z.object({
-    type: z.literal("jinja"),
-    jinjaPromptTemplate: llmJinjaPromptTemplateSchema,
-    stopStrings: z.array(z.string()),
-  }),
-]) as z.Schema<LLMLoadPromptTemplateOverride>;
+export const llmLoadPromptTemplateOverrideSchema = z.object({
+  type: z.literal("jinja"),
+  jinjaPromptTemplate: llmJinjaPromptTemplateSchema,
+  stopStrings: z.array(z.string()),
+}) as z.Schema<LLMLoadPromptTemplateOverride>;
+
+export const optionalLlmLoadPromptTemplateOverrideSchema = z
+  .union([
+    llmLoadPromptTemplateOverrideSchema,
+    z.undefined(),
+  ]) as z.Schema<LLMLoadPromptTemplateOverride | undefined>;

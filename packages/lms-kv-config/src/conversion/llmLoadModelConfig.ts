@@ -29,10 +29,11 @@ function kvConfigToLLMLlamaLoadModelConfig(
   const result: LLMLoadModelConfig = {};
 
   let parsed;
+  const partialParsed = llmLlamaMoeLoadConfigSchematics.parsePartial(config);
   if (useDefaultsForMissingKeys === true) {
     parsed = llmLlamaMoeLoadConfigSchematics.parse(config);
   } else {
-    parsed = llmLlamaMoeLoadConfigSchematics.parsePartial(config);
+    parsed = partialParsed;
   }
 
   let gpuFields: GPUSetting = {};
@@ -89,7 +90,7 @@ function kvConfigToLLMLlamaLoadModelConfig(
     result.contextLength = contextLength;
   }
 
-  const promptTemplate = parsed.get("promptTemplate");
+  const promptTemplate = partialParsed.get("promptTemplate");
   if (promptTemplate !== undefined) {
     result.promptTemplate = promptTemplate;
   }

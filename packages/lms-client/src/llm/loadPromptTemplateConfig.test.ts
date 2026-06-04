@@ -167,6 +167,16 @@ describe("SDK load prompt template config", () => {
     });
   });
 
+  test("load config schema rejects modelDefault prompt template sentinel", () => {
+    expect(() =>
+      llmLoadModelConfigSchema.parse({
+        promptTemplate: {
+          type: "modelDefault",
+        },
+      }),
+    ).toThrow();
+  });
+
   test("client.llm.load maps promptTemplate to llm.load.promptTemplate", async () => {
     const harness = createNamespaceHarness();
 
@@ -212,26 +222,22 @@ describe("SDK load prompt template config", () => {
     expect(loadConfig.promptTemplate).toEqual(customLoadPromptTemplate);
   });
 
-  test("getLoadConfig does not synthesize custom templates from model defaults", async () => {
+  test("getLoadConfig does not synthesize prompt templates when absent", async () => {
     const harness = createNamespaceHarness();
     harness.setLoadConfigResponse(emptyKVConfig);
     const model = await harness.namespace.load("test/model", { verbose: false });
     const loadConfig = await model.getLoadConfig();
 
-    expect(loadConfig.promptTemplate).toEqual({
-      type: "modelDefault",
-    });
+    expect(loadConfig.promptTemplate).toBeUndefined();
   });
 
-  test("raw load config conversion distinguishes absent and defaulted prompt templates", () => {
+  test("raw load config conversion preserves absent prompt template with defaults", () => {
     expect(kvConfigToLLMLoadModelConfig(emptyKVConfig).promptTemplate).toBeUndefined();
     expect(
       kvConfigToLLMLoadModelConfig(emptyKVConfig, {
         useDefaultsForMissingKeys: true,
       }).promptTemplate,
-    ).toEqual({
-      type: "modelDefault",
-    });
+    ).toBeUndefined();
   });
 
   test("SDK prediction-time promptTemplate remains a client-side prediction config", () => {

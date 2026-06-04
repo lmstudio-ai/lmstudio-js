@@ -479,7 +479,7 @@ export class KVConfigSchematics<
 
   private parseField(fieldSchema: KVConcreteFieldSchema, value: any) {
     if (value === undefined) {
-      if (fieldSchema.defaultValue === undefined) {
+      if (!Object.prototype.hasOwnProperty.call(fieldSchema, "defaultValue")) {
         throw new Error(
           `Field with key ${fieldSchema.fullKey} is missing and has no default value`,
         );
