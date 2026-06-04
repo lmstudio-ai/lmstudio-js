@@ -1,4 +1,13 @@
-import { kvConfigField, KVConfigSchematicsBuilder, makeKVConfigFromFields } from "./KVConfig.js";
+import {
+  llmLoadModelConfigSchema,
+  serializedKVConfigSchematicsSchema,
+} from "@lmstudio/lms-shared-types";
+import {
+  kvConfigField,
+  KVConfigSchematics,
+  KVConfigSchematicsBuilder,
+  makeKVConfigFromFields,
+} from "./KVConfig.js";
 import {
   kvConfigToLLMLoadModelConfig,
   llmLoadModelConfigToKVConfig,
@@ -146,6 +155,60 @@ describe("globalConfigSchematics", () => {
     expect(globalConfigSchematics.access(loadConfig, "llm.load.promptTemplate")).toEqual(
       promptTemplate,
     );
+  });
+
+  it("serializes absent load-time prompt template default as JSON-safe null", () => {
+    const serializedSchematics = llmLoadSchematics.serialize();
+    const promptTemplateField = serializedSchematics.fields.find(
+      field => field.fullKey === "llm.load.promptTemplate",
+    );
+
+    expect(promptTemplateField?.defaultValue).toBeNull();
+    expect(() => serializedKVConfigSchematicsSchema.parse(serializedSchematics)).not.toThrow();
+
+    const deserializedSchematics = KVConfigSchematics.deserialize(
+      kvValueTypesLibrary,
+      serializedSchematics,
+    );
+    const emptyConfig = makeKVConfigFromFields([]);
+
+    expect(deserializedSchematics.obtainField("promptTemplate").defaultValue).toBeUndefined();
+    expect(deserializedSchematics.access(emptyConfig, "promptTemplate")).toBeUndefined();
+    expect(deserializedSchematics.accessPartial(emptyConfig, "promptTemplate")).toBeUndefined();
+  });
+
+  it("keeps concrete load-time prompt template defaults serializable", () => {
+    const promptTemplate = {
+      type: "jinja" as const,
+      jinjaPromptTemplate: {
+        template: "{% for message in messages %}{{ message.content }}{% endfor %}",
+      },
+      stopStrings: ["<|end|>"],
+    };
+    const schematics = new KVConfigSchematicsBuilder(kvValueTypesLibrary)
+      .field("promptTemplate", "llmLoadPromptTemplateOverride", {}, promptTemplate)
+      .build();
+    const serializedSchematics = schematics.serialize();
+
+    expect(serializedSchematics.fields[0]?.defaultValue).toEqual(promptTemplate);
+    expect(() => serializedKVConfigSchematicsSchema.parse(serializedSchematics)).not.toThrow();
+
+    const deserializedSchematics = KVConfigSchematics.deserialize(
+      kvValueTypesLibrary,
+      serializedSchematics,
+    );
+
+    expect(deserializedSchematics.access(makeKVConfigFromFields([]), "promptTemplate")).toEqual(
+      promptTemplate,
+    );
+  });
+
+  it("does not expose null as a public load-time prompt template value", () => {
+    expect(() =>
+      llmLoadModelConfigSchema.parse({
+        promptTemplate: null,
+      }),
+    ).toThrow();
   });
 
   it("rejects load-time model default prompt template sentinel", () => {

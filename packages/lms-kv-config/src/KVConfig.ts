@@ -103,6 +103,8 @@ export interface KVConcreteFieldValueType {
   schemaMaker: (param: any) => ZodSchema;
   effectiveEquals: (a: any, b: any, typeParam: any) => boolean;
   stringify: (value: any, typeParam: any, opts: InnerFieldStringifyOpts) => string;
+  serializeDefaultValue?: (value: unknown, typeParam: unknown) => unknown;
+  deserializeDefaultValue?: (value: unknown, typeParam: unknown, schema: ZodSchema) => unknown;
 }
 /**
  * @public
@@ -152,6 +154,12 @@ export class KVFieldValueTypesLibraryBuilder<
         typeParam: TValueTypeParams,
         opts: InnerFieldStringifyOpts,
       ) => string;
+      serializeDefaultValue?: (value: TValue, typeParam: TValueTypeParams) => unknown;
+      deserializeDefaultValue?: (
+        value: unknown,
+        typeParam: TValueTypeParams,
+        schema: ZodSchema<TValue>,
+      ) => TValue;
     },
   ): KVFieldValueTypesLibraryBuilder<
     TKVFieldValueTypeBase,
@@ -165,6 +173,8 @@ export class KVFieldValueTypesLibraryBuilder<
     if (this.valueTypes.has(key)) {
       throw new Error(`ValueType with key ${key} already exists`);
     }
+    const serializeDefaultValue = param.serializeDefaultValue;
+    const deserializeDefaultValue = param.deserializeDefaultValue;
     this.valueTypes.set(key, {
       paramType: z.object({
         ...this.baseSchema,
@@ -173,6 +183,20 @@ export class KVFieldValueTypesLibraryBuilder<
       schemaMaker: param.schemaMaker,
       effectiveEquals: param.effectiveEquals,
       stringify: param.stringify,
+      serializeDefaultValue:
+        serializeDefaultValue === undefined
+          ? undefined
+          : (value, typeParam) =>
+              serializeDefaultValue(value as TValue, typeParam as TValueTypeParams),
+      deserializeDefaultValue:
+        deserializeDefaultValue === undefined
+          ? undefined
+          : (value, typeParam, schema) =>
+              deserializeDefaultValue(
+                value,
+                typeParam as TValueTypeParams,
+                schema as ZodSchema<TValue>,
+              ),
     });
     return this;
   }
@@ -227,6 +251,36 @@ export class KVFieldValueTypeLibrary<
     value: TKVFieldValueTypeLibraryMap[TKey]["value"],
   ) {
     return this.valueTypes.get(key)!.stringify(value, typeParam, opts);
+  }
+
+  public serializeDefaultValue<TKey extends keyof TKVFieldValueTypeLibraryMap & string>(
+    key: TKey,
+    typeParam: TKVFieldValueTypeLibraryMap[TKey]["param"],
+    value: TKVFieldValueTypeLibraryMap[TKey]["value"],
+  ): unknown {
+    const valueType = this.valueTypes.get(key)!;
+    if (valueType.serializeDefaultValue !== undefined) {
+      return valueType.serializeDefaultValue(value, valueType.paramType.parse(typeParam));
+    }
+    return value;
+  }
+
+  public deserializeDefaultValue<TKey extends keyof TKVFieldValueTypeLibraryMap & string>(
+    key: TKey,
+    typeParam: TKVFieldValueTypeLibraryMap[TKey]["param"],
+    value: unknown,
+  ): TKVFieldValueTypeLibraryMap[TKey]["value"] {
+    const valueType = this.valueTypes.get(key)!;
+    const parsedTypeParam = valueType.paramType.parse(typeParam);
+    const schema = valueType.schemaMaker(parsedTypeParam);
+    if (valueType.deserializeDefaultValue !== undefined) {
+      return valueType.deserializeDefaultValue(
+        value,
+        parsedTypeParam,
+        schema,
+      ) as TKVFieldValueTypeLibraryMap[TKey]["value"];
+    }
+    return schema.parse(value);
   }
 }
 
@@ -1163,7 +1217,11 @@ export class KVConfigSchematics<
         fullKey: field.fullKey,
         typeKey: field.valueTypeKey,
         typeParams: field.valueTypeParams,
-        defaultValue: field.defaultValue!,
+        defaultValue: this.valueTypeLibrary.serializeDefaultValue(
+          field.valueTypeKey,
+          field.valueTypeParams,
+          field.defaultValue,
+        ),
       })),
       extensionPrefixes: Array.from(this.extensionPrefixes),
     };
@@ -1196,7 +1254,11 @@ export class KVConfigSchematics<
             valueTypeParams: typeParams,
             schema: valueSchema,
             fullKey: field.fullKey,
-            defaultValue: valueSchema.parse(field.defaultValue),
+            defaultValue: valueTypeLibrary.deserializeDefaultValue(
+              field.typeKey,
+              typeParams,
+              field.defaultValue,
+            ),
           },
         ];
       }),
@@ -1225,7 +1287,11 @@ export class KVConfigSchematics<
           valueTypeParams: typeParams,
           schema: valueSchema,
           fullKey: field.fullKey,
-          defaultValue: valueSchema.parse(field.defaultValue),
+          defaultValue: valueTypeLibrary.deserializeDefaultValue(
+            field.typeKey,
+            typeParams,
+            field.defaultValue,
+          ),
         });
       } catch (error) {
         errors.push({

@@ -561,6 +561,19 @@ export const kvValueTypesLibrary = baseKVValueTypesLibraryBuilder
     schemaMaker: () => {
       return optionalLlmLoadPromptTemplateOverrideSchema;
     },
+    serializeDefaultValue: value => {
+      if (value === undefined) {
+        return null;
+      }
+      return value;
+    },
+    deserializeDefaultValue: (value, typeParam, schema) => {
+      void typeParam;
+      if (value === null) {
+        return undefined;
+      }
+      return schema.parse(value);
+    },
     effectiveEquals: (a, b) => {
       if (a === undefined || b === undefined) {
         return a === b;
