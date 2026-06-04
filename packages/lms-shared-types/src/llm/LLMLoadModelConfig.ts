@@ -159,6 +159,7 @@ export interface LLMLoadSpeculativeDecodingConfig {
   speculativeDraftMinContinueProbability?: number;
 }
 
+const speculativeDraftModelSchema = z.string().min(1);
 const speculativeDraftTokenCountSchema = z.number().int().min(0);
 const speculativeDraftMinContinueProbabilitySchema = z.number().min(0).max(1);
 
@@ -196,11 +197,22 @@ interface LLMLoadSpeculativeDecodingValidationIssue {
 }
 
 function getLLMLoadSpeculativeDecodingScalarValidationIssues({
+  speculativeDraftModel,
   speculativeDraftMaxTokens,
   speculativeDraftMinTokens,
   speculativeDraftMinContinueProbability,
 }: LLMLoadSpeculativeDecodingConfig): Array<LLMLoadSpeculativeDecodingValidationIssue> {
   const issues: Array<LLMLoadSpeculativeDecodingValidationIssue> = [];
+
+  if (
+    speculativeDraftModel !== undefined &&
+    !speculativeDraftModelSchema.safeParse(speculativeDraftModel).success
+  ) {
+    issues.push({
+      message: "speculativeDraftModel must be a non-empty string",
+      path: ["speculativeDraftModel"],
+    });
+  }
 
   if (
     speculativeDraftMaxTokens !== undefined &&
@@ -243,7 +255,7 @@ function getLLMLoadSpeculativeDecodingCrossFieldValidationIssues({
   speculativeDraftMinTokens,
 }: LLMLoadSpeculativeDecodingConfig): Array<LLMLoadSpeculativeDecodingValidationIssue> {
   const issues: Array<LLMLoadSpeculativeDecodingValidationIssue> = [];
-  const hasDraftModel = speculativeDraftModel !== undefined && speculativeDraftModel.length > 0;
+  const hasDraftModel = speculativeDraftModelSchema.safeParse(speculativeDraftModel).success;
 
   if (speculativeDraftMtp === true && hasDraftModel) {
     issues.push({
@@ -580,7 +592,7 @@ export const llmLoadModelConfigSchema = z
     physicalBatchSize: z.number().int().min(1).optional(),
     flashAttention: z.boolean().optional(),
     speculativeDraftMtp: z.boolean().optional(),
-    speculativeDraftModel: z.string().min(1).optional(),
+    speculativeDraftModel: speculativeDraftModelSchema.optional(),
     speculativeDraftMaxTokens: speculativeDraftTokenCountSchema.optional(),
     speculativeDraftMinTokens: speculativeDraftTokenCountSchema.optional(),
     speculativeDraftMinContinueProbability: speculativeDraftMinContinueProbabilitySchema.optional(),

@@ -148,6 +148,16 @@ describe("llmLoadModelConfig conversion", () => {
     expect(convertedConfig.speculativeDraftModel).toBeUndefined();
   });
 
+  it("does not expose an explicitly empty Draft Model from KV config", () => {
+    const loadConfig = globalConfigSchematics.scoped("llm.load").buildPartialConfig({
+      "llama.speculativeDecoding.draftModel": "",
+    });
+
+    const convertedConfig = kvConfigToLLMLoadModelConfig(loadConfig);
+
+    expect(convertedConfig.speculativeDraftModel).toBeUndefined();
+  });
+
   it("preserves orphan draft tuning fields without enabling speculative decoding", () => {
     const loadConfig = globalConfigSchematics.scoped("llm.load").buildPartialConfig({
       "llama.speculativeDecoding.draftMaxTokens": 8,
