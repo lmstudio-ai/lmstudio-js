@@ -26,6 +26,9 @@ import {
   type KVFieldValueTypeLibrary,
 } from "./KVConfig.js";
 
+/**
+ * Quote a string.
+ */
 function quoteString(str: string | undefined, empty?: string) {
   if (str === undefined || str === "") {
     return empty ?? '""';
