@@ -159,6 +159,9 @@ export interface LLMLoadSpeculativeDecodingConfig {
   speculativeDraftMinContinueProbability?: number;
 }
 
+const speculativeDraftTokenCountSchema = z.number().int().min(0);
+const speculativeDraftMinContinueProbabilitySchema = z.number().min(0).max(1);
+
 /** @public @experimental */
 export type LLMLoadSpeculativeDecodingResolution =
   | {
@@ -192,15 +195,55 @@ interface LLMLoadSpeculativeDecodingValidationIssue {
   path: Array<string>;
 }
 
-function getLLMLoadSpeculativeDecodingValidationIssues({
+function getLLMLoadSpeculativeDecodingScalarValidationIssues({
+  speculativeDraftMaxTokens,
+  speculativeDraftMinTokens,
+  speculativeDraftMinContinueProbability,
+}: LLMLoadSpeculativeDecodingConfig): Array<LLMLoadSpeculativeDecodingValidationIssue> {
+  const issues: Array<LLMLoadSpeculativeDecodingValidationIssue> = [];
+
+  if (
+    speculativeDraftMaxTokens !== undefined &&
+    !speculativeDraftTokenCountSchema.safeParse(speculativeDraftMaxTokens).success
+  ) {
+    issues.push({
+      message: "speculativeDraftMaxTokens must be an integer greater than or equal to 0",
+      path: ["speculativeDraftMaxTokens"],
+    });
+  }
+
+  if (
+    speculativeDraftMinTokens !== undefined &&
+    !speculativeDraftTokenCountSchema.safeParse(speculativeDraftMinTokens).success
+  ) {
+    issues.push({
+      message: "speculativeDraftMinTokens must be an integer greater than or equal to 0",
+      path: ["speculativeDraftMinTokens"],
+    });
+  }
+
+  if (
+    speculativeDraftMinContinueProbability !== undefined &&
+    !speculativeDraftMinContinueProbabilitySchema.safeParse(speculativeDraftMinContinueProbability)
+      .success
+  ) {
+    issues.push({
+      message: "speculativeDraftMinContinueProbability must be between 0 and 1",
+      path: ["speculativeDraftMinContinueProbability"],
+    });
+  }
+
+  return issues;
+}
+
+function getLLMLoadSpeculativeDecodingCrossFieldValidationIssues({
   speculativeDraftMtp,
   speculativeDraftModel,
   speculativeDraftMaxTokens,
   speculativeDraftMinTokens,
 }: LLMLoadSpeculativeDecodingConfig): Array<LLMLoadSpeculativeDecodingValidationIssue> {
   const issues: Array<LLMLoadSpeculativeDecodingValidationIssue> = [];
-  const hasDraftModel =
-    speculativeDraftModel !== undefined && speculativeDraftModel.length > 0;
+  const hasDraftModel = speculativeDraftModel !== undefined && speculativeDraftModel.length > 0;
 
   if (speculativeDraftMtp === true && hasDraftModel) {
     issues.push({
@@ -221,6 +264,15 @@ function getLLMLoadSpeculativeDecodingValidationIssues({
   }
 
   return issues;
+}
+
+function getLLMLoadSpeculativeDecodingValidationIssues(
+  config: LLMLoadSpeculativeDecodingConfig,
+): Array<LLMLoadSpeculativeDecodingValidationIssue> {
+  return [
+    ...getLLMLoadSpeculativeDecodingScalarValidationIssues(config),
+    ...getLLMLoadSpeculativeDecodingCrossFieldValidationIssues(config),
+  ];
 }
 
 /**
@@ -514,44 +566,46 @@ export interface LLMLoadModelConfig {
    */
   mlxKvCacheQuantization?: LLMMlxKvCacheQuantization | false;
 }
-export const llmLoadModelConfigSchema = z.object({
-  gpu: gpuSettingSchema.optional(),
-  maxParallelPredictions: z.number().int().min(1).optional(),
-  useUnifiedKvCache: z.boolean().optional(),
-  gpuStrictVramCap: z.boolean().optional(),
-  offloadKVCacheToGpu: z.boolean().optional(),
-  contextLength: z.number().int().min(1).optional(),
-  ropeFrequencyBase: z.number().or(z.literal(false)).optional(),
-  ropeFrequencyScale: z.number().or(z.literal(false)).optional(),
-  evalBatchSize: z.number().int().min(1).optional(),
-  physicalBatchSize: z.number().int().min(1).optional(),
-  flashAttention: z.boolean().optional(),
-  speculativeDraftMtp: z.boolean().optional(),
-  speculativeDraftModel: z.string().min(1).optional(),
-  speculativeDraftMaxTokens: z.number().int().min(0).optional(),
-  speculativeDraftMinTokens: z.number().int().min(0).optional(),
-  speculativeDraftMinContinueProbability: z.number().min(0).max(1).optional(),
-  keepModelInMemory: z.boolean().optional(),
-  seed: z.number().int().or(z.literal(false)).optional(),
-  useFp16ForKVCache: z.boolean().optional(),
-  tryMmap: z.boolean().optional(),
-  tryDirectIO: z.boolean().optional(),
-  numExperts: z.number().int().optional(),
-  llamaKCacheQuantizationType: z
-    .enum(llmLlamaCacheQuantizationTypes)
-    .or(z.literal(false))
-    .optional(),
-  llamaVCacheQuantizationType: z
-    .enum(llmLlamaCacheQuantizationTypes)
-    .or(z.literal(false))
-    .optional(),
-  mlxKvCacheQuantization: llmMlxKvCacheQuantizationSchema.or(z.literal(false)).optional(),
-}).superRefine((config, context) => {
-  for (const issue of getLLMLoadSpeculativeDecodingValidationIssues(config)) {
-    context.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: issue.message,
-      path: issue.path,
-    });
-  }
-});
+export const llmLoadModelConfigSchema = z
+  .object({
+    gpu: gpuSettingSchema.optional(),
+    maxParallelPredictions: z.number().int().min(1).optional(),
+    useUnifiedKvCache: z.boolean().optional(),
+    gpuStrictVramCap: z.boolean().optional(),
+    offloadKVCacheToGpu: z.boolean().optional(),
+    contextLength: z.number().int().min(1).optional(),
+    ropeFrequencyBase: z.number().or(z.literal(false)).optional(),
+    ropeFrequencyScale: z.number().or(z.literal(false)).optional(),
+    evalBatchSize: z.number().int().min(1).optional(),
+    physicalBatchSize: z.number().int().min(1).optional(),
+    flashAttention: z.boolean().optional(),
+    speculativeDraftMtp: z.boolean().optional(),
+    speculativeDraftModel: z.string().min(1).optional(),
+    speculativeDraftMaxTokens: speculativeDraftTokenCountSchema.optional(),
+    speculativeDraftMinTokens: speculativeDraftTokenCountSchema.optional(),
+    speculativeDraftMinContinueProbability: speculativeDraftMinContinueProbabilitySchema.optional(),
+    keepModelInMemory: z.boolean().optional(),
+    seed: z.number().int().or(z.literal(false)).optional(),
+    useFp16ForKVCache: z.boolean().optional(),
+    tryMmap: z.boolean().optional(),
+    tryDirectIO: z.boolean().optional(),
+    numExperts: z.number().int().optional(),
+    llamaKCacheQuantizationType: z
+      .enum(llmLlamaCacheQuantizationTypes)
+      .or(z.literal(false))
+      .optional(),
+    llamaVCacheQuantizationType: z
+      .enum(llmLlamaCacheQuantizationTypes)
+      .or(z.literal(false))
+      .optional(),
+    mlxKvCacheQuantization: llmMlxKvCacheQuantizationSchema.or(z.literal(false)).optional(),
+  })
+  .superRefine((config, context) => {
+    for (const issue of getLLMLoadSpeculativeDecodingCrossFieldValidationIssues(config)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: issue.message,
+        path: issue.path,
+      });
+    }
+  });
