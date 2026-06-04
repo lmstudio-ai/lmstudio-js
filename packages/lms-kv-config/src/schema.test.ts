@@ -164,6 +164,84 @@ describe("llmLoadModelConfig conversion", () => {
     expect(convertedConfig.speculativeDraftMinContinueProbability).toBe(0.5);
   });
 
+  it("reads legacy persisted Draft MTP token limits as V2 shared draft token limits", () => {
+    const loadConfig = makeKVConfigFromFields([
+      kvConfigField("llm.load.llama.speculativeDecoding.draftMtpMaxTokens", 8),
+      kvConfigField("llm.load.llama.speculativeDecoding.draftMtpMinTokens", 2),
+    ]);
+
+    const convertedConfig = kvConfigToLLMLoadModelConfig(loadConfig);
+
+    expect(convertedConfig.speculativeDraftMaxTokens).toBe(8);
+    expect(convertedConfig.speculativeDraftMinTokens).toBe(2);
+  });
+
+  it("prefers V2 shared draft token limits over legacy persisted Draft MTP token limits", () => {
+    const loadConfig = makeKVConfigFromFields([
+      kvConfigField("llm.load.llama.speculativeDecoding.draftMaxTokens", 10),
+      kvConfigField("llm.load.llama.speculativeDecoding.draftMinTokens", 3),
+      kvConfigField("llm.load.llama.speculativeDecoding.draftMtpMaxTokens", 8),
+      kvConfigField("llm.load.llama.speculativeDecoding.draftMtpMinTokens", 2),
+    ]);
+
+    const convertedConfig = kvConfigToLLMLoadModelConfig(loadConfig);
+
+    expect(convertedConfig.speculativeDraftMaxTokens).toBe(10);
+    expect(convertedConfig.speculativeDraftMinTokens).toBe(3);
+  });
+
+  it("uses legacy persisted Draft MTP token limits instead of V2 defaults", () => {
+    const loadConfig = makeKVConfigFromFields([
+      kvConfigField("llm.load.llama.speculativeDecoding.draftMtpMaxTokens", 8),
+      kvConfigField("llm.load.llama.speculativeDecoding.draftMtpMinTokens", 2),
+    ]);
+
+    const convertedConfig = kvConfigToLLMLoadModelConfig(loadConfig, {
+      useDefaultsForMissingKeys: true,
+    });
+
+    expect(convertedConfig.speculativeDraftMaxTokens).toBe(8);
+    expect(convertedConfig.speculativeDraftMinTokens).toBe(2);
+  });
+
+  it("preserves zero legacy persisted Draft MTP token limits", () => {
+    const loadConfig = makeKVConfigFromFields([
+      kvConfigField("llm.load.llama.speculativeDecoding.draftMtpMaxTokens", 0),
+      kvConfigField("llm.load.llama.speculativeDecoding.draftMtpMinTokens", 0),
+    ]);
+
+    const convertedConfig = kvConfigToLLMLoadModelConfig(loadConfig);
+
+    expect(convertedConfig.speculativeDraftMaxTokens).toBe(0);
+    expect(convertedConfig.speculativeDraftMinTokens).toBe(0);
+  });
+
+  it("ignores malformed legacy persisted Draft MTP token limits", () => {
+    const loadConfig = makeKVConfigFromFields([
+      kvConfigField("llm.load.llama.speculativeDecoding.draftMtpMaxTokens", "8"),
+      kvConfigField("llm.load.llama.speculativeDecoding.draftMtpMinTokens", -1),
+    ]);
+
+    const convertedConfig = kvConfigToLLMLoadModelConfig(loadConfig);
+
+    expect(convertedConfig.speculativeDraftMaxTokens).toBeUndefined();
+    expect(convertedConfig.speculativeDraftMinTokens).toBeUndefined();
+  });
+
+  it("writes only V2 shared draft token limits", () => {
+    const loadConfig = llmLoadModelConfigToKVConfig({
+      speculativeDraftMaxTokens: 8,
+      speculativeDraftMinTokens: 2,
+    });
+
+    const fieldKeys = loadConfig.fields.map(field => field.key);
+
+    expect(fieldKeys).toContain("llm.load.llama.speculativeDecoding.draftMaxTokens");
+    expect(fieldKeys).toContain("llm.load.llama.speculativeDecoding.draftMinTokens");
+    expect(fieldKeys).not.toContain("llm.load.llama.speculativeDecoding.draftMtpMaxTokens");
+    expect(fieldKeys).not.toContain("llm.load.llama.speculativeDecoding.draftMtpMinTokens");
+  });
+
   it("rejects invalid V2 flat speculative decoding values", () => {
     expect(
       llmLoadModelConfigSchema.safeParse({
