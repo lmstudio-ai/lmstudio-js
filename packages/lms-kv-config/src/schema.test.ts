@@ -13,6 +13,7 @@ import {
   llmLoadModelConfigToKVConfig,
 } from "./conversion/llmLoadModelConfig.js";
 import {
+  defaultLlmLoadPromptTemplateOverride,
   globalConfigSchematics,
   llmLlamaLoadConfigSchematics,
   llmLoadSchematics,
@@ -100,6 +101,18 @@ describe("llmLoadModelConfig conversion", () => {
     expect(defaultedConfig.promptTemplate).toBeUndefined();
   });
 
+  it("keeps absent raw load-time prompt template absent even with a concrete schema default", () => {
+    const emptyConfig = makeKVConfigFromFields([]);
+    const defaultedConfig = kvConfigToLLMLoadModelConfig(emptyConfig, {
+      useDefaultsForMissingKeys: true,
+    });
+
+    expect(defaultedConfig.promptTemplate).toBeUndefined();
+    expect(globalConfigSchematics.access(emptyConfig, "llm.load.promptTemplate")).toEqual(
+      defaultLlmLoadPromptTemplateOverride,
+    );
+  });
+
   it("round trips MTP load-time draft token settings", () => {
     const loadConfig = llmLoadModelConfigToKVConfig({
       speculativeDraftMtp: true,
@@ -157,13 +170,35 @@ describe("globalConfigSchematics", () => {
     );
   });
 
-  it("serializes absent load-time prompt template default as JSON-safe null", () => {
+  it("rejects undefined as a load-time prompt template stored value", () => {
+    expect(llmLoadSchematics.getSchemaForKey("promptTemplate").safeParse(undefined).success).toBe(
+      false,
+    );
+  });
+
+  it("materializes the concrete load-time prompt template schema default", () => {
+    const fullConfig = llmLoadSchematics.buildFullConfig({});
+
+    expect(llmLoadSchematics.access(fullConfig, "promptTemplate")).toEqual(
+      defaultLlmLoadPromptTemplateOverride,
+    );
+  });
+
+  it("omits undefined prompt template values from partial load configs", () => {
+    const partialConfig = llmLoadSchematics.buildPartialConfig({
+      promptTemplate: undefined,
+    });
+
+    expect(partialConfig.fields.some(field => field.key === "llm.load.promptTemplate")).toBe(false);
+  });
+
+  it("serializes load-time prompt template schema default as concrete Jinja", () => {
     const serializedSchematics = llmLoadSchematics.serialize();
     const promptTemplateField = serializedSchematics.fields.find(
       field => field.fullKey === "llm.load.promptTemplate",
     );
 
-    expect(promptTemplateField?.defaultValue).toBeNull();
+    expect(promptTemplateField?.defaultValue).toEqual(defaultLlmLoadPromptTemplateOverride);
     expect(() => serializedKVConfigSchematicsSchema.parse(serializedSchematics)).not.toThrow();
 
     const deserializedSchematics = KVConfigSchematics.deserialize(
@@ -172,8 +207,12 @@ describe("globalConfigSchematics", () => {
     );
     const emptyConfig = makeKVConfigFromFields([]);
 
-    expect(deserializedSchematics.obtainField("promptTemplate").defaultValue).toBeUndefined();
-    expect(deserializedSchematics.access(emptyConfig, "promptTemplate")).toBeUndefined();
+    expect(deserializedSchematics.obtainField("promptTemplate").defaultValue).toEqual(
+      defaultLlmLoadPromptTemplateOverride,
+    );
+    expect(deserializedSchematics.access(emptyConfig, "promptTemplate")).toEqual(
+      defaultLlmLoadPromptTemplateOverride,
+    );
     expect(deserializedSchematics.accessPartial(emptyConfig, "promptTemplate")).toBeUndefined();
   });
 

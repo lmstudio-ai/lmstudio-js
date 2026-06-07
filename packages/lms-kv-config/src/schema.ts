@@ -7,7 +7,11 @@
  * 3. Utility types that can be used to work with types of schema.
  */
 
-import { defaultGPUSplitConfig, type KVConfigFieldDependency } from "@lmstudio/lms-shared-types";
+import {
+  defaultGPUSplitConfig,
+  type KVConfigFieldDependency,
+  type LLMLoadPromptTemplateOverride,
+} from "@lmstudio/lms-shared-types";
 import {
   KVConfigSchematicsBuilder,
   type InferConfigFieldFilter,
@@ -30,6 +34,21 @@ const speculativeDecodingDraftModelSelectedDependencies: Array<KVConfigFieldDepe
 const speculativeDecodingDraftTokenFieldParams = {
   modelCentric: true,
   dependencies: speculativeDecodingDraftModelSelectedDependencies,
+};
+
+export const defaultLlmLoadPromptTemplateOverride: LLMLoadPromptTemplateOverride = {
+  type: "jinja",
+  jinjaPromptTemplate: {
+    template:
+      "{% for message in messages %}" +
+      "{% if message['role'] == 'system' %}{{ 'Instruct: ' + message['content'] + '\\n' }}" +
+      "{% elif message['role'] == 'user' %}{{ 'Human: ' + message['content'] + '\\n' }}" +
+      "{% elif message['role'] == 'assistant' %}{{ 'AI: ' + message['content'] + '\\n' }}" +
+      "{% endif %}" +
+      "{% endfor %}" +
+      "{% if add_generation_prompt %}{{ 'AI: ' }}{% endif %}",
+  },
+  stopStrings: [],
 };
 
 // ---------------------------
@@ -289,7 +308,7 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
         "promptTemplate",
         "llmLoadPromptTemplateOverride",
         { modelCentric: true, isExperimental: true },
-        undefined,
+        defaultLlmLoadPromptTemplateOverride,
       )
       .field("offloadKVCacheToGpu", "boolean", {}, true)
       .field(

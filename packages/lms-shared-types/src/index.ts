@@ -170,7 +170,6 @@ export {
 export {
   LLMLoadPromptTemplateOverride,
   llmLoadPromptTemplateOverrideSchema,
-  optionalLlmLoadPromptTemplateOverrideSchema,
 } from "./llm/LLMLoadPromptTemplateOverride.js";
 export {
   GPUSetting,

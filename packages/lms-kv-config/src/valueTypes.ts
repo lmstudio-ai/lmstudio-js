@@ -8,6 +8,7 @@ import {
   llmLlamaCacheQuantizationTypeSchema,
   llmLlamaLogitBiasConfigSchema,
   llmLlamaMirostatSamplingConfigSchema,
+  llmLoadPromptTemplateOverrideSchema,
   llmMlxKvCacheQuantizationSchema,
   llmPromptTemplateSchema,
   llmReasoningParsingSchema,
@@ -17,7 +18,6 @@ import {
   modelDomainTypeSchema,
   retrievalChunkingMethodSchema,
   toolNamingSchema,
-  optionalLlmLoadPromptTemplateOverrideSchema,
 } from "@lmstudio/lms-shared-types";
 import { z } from "zod";
 import {
@@ -559,25 +559,9 @@ export const kvValueTypesLibrary = baseKVValueTypesLibraryBuilder
   .valueType("llmLoadPromptTemplateOverride", {
     paramType: {},
     schemaMaker: () => {
-      return optionalLlmLoadPromptTemplateOverrideSchema;
-    },
-    serializeDefaultValue: value => {
-      if (value === undefined) {
-        return null;
-      }
-      return value;
-    },
-    deserializeDefaultValue: (value, typeParam, schema) => {
-      void typeParam;
-      if (value === null) {
-        return undefined;
-      }
-      return schema.parse(value);
+      return llmLoadPromptTemplateOverrideSchema;
     },
     effectiveEquals: (a, b) => {
-      if (a === undefined || b === undefined) {
-        return a === b;
-      }
       return (
         a.jinjaPromptTemplate.template === b.jinjaPromptTemplate.template &&
         a.stopStrings.length === b.stopStrings.length &&
@@ -585,9 +569,6 @@ export const kvValueTypesLibrary = baseKVValueTypesLibraryBuilder
       );
     },
     stringify: (value, _typeParam, { t, desiredLength }) => {
-      if (value === undefined) {
-        return t("config:customInputs.llmLoadPromptTemplateOverride.notSet", "Not Set");
-      }
       const lead =
         `${t("config:customInputs.llmPromptTemplate.type", "Type")}: ` +
         `${t("config:customInputs.llmPromptTemplate.types.jinja/label", "Jinja")}\n` +
