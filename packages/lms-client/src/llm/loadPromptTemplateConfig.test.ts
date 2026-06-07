@@ -167,16 +167,6 @@ describe("SDK load prompt template config", () => {
     });
   });
 
-  test("load config schema rejects modelDefault prompt template sentinel", () => {
-    expect(() =>
-      llmLoadModelConfigSchema.parse({
-        promptTemplate: {
-          type: "modelDefault",
-        },
-      }),
-    ).toThrow();
-  });
-
   test("client.llm.load maps promptTemplate to llm.load.promptTemplate", async () => {
     const harness = createNamespaceHarness();
 

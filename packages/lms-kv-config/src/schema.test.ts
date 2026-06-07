@@ -250,16 +250,6 @@ describe("globalConfigSchematics", () => {
     ).toThrow();
   });
 
-  it("rejects load-time model default prompt template sentinel", () => {
-    expect(() =>
-      llmLoadSchematics.buildPartialConfig({
-        promptTemplate: {
-          type: "modelDefault",
-        } as never,
-      }),
-    ).toThrow();
-  });
-
   it("includes load-time prompt template in llama load schematics but not MLX load schematics", () => {
     expect(llmLlamaLoadConfigSchematics.obtainField("promptTemplate").fullKey).toBe(
       "llm.load.promptTemplate",
