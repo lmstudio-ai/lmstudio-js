@@ -3,10 +3,6 @@ export {
   kvConfigToEmbeddingLoadModelConfig,
 } from "./conversion/embeddingLoadModelConfig.js";
 export {
-  LLMLoadPromptTemplateOverride,
-  llmLoadPromptTemplateOverrideSchema,
-} from "@lmstudio/lms-shared-types";
-export {
   kvConfigToLLMLoadModelConfig,
   llmLoadModelConfigToKVConfig,
 } from "./conversion/llmLoadModelConfig.js";
