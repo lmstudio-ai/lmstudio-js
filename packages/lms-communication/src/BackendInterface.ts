@@ -60,6 +60,7 @@ export interface SignalEndpoint {
   creationParameter: z.ZodType;
   signalData: z.ZodType;
   serialization: SerializationType;
+  skipSignalDataValidation: boolean;
   handler: SignalEndpointHandler | null;
 }
 
@@ -68,6 +69,7 @@ export interface WritableSignalEndpoint {
   creationParameter: z.ZodType;
   signalData: z.ZodType;
   serialization: SerializationType;
+  skipSignalDataValidation: boolean;
   handler: WritableSignalEndpointHandler | null;
 }
 
@@ -236,10 +238,12 @@ export class BackendInterface<
       creationParameter,
       signalData,
       serialization = "raw",
+      skipSignalDataValidation = false,
     }: {
       creationParameter: TCreationParameterZod;
       signalData: TSignalDataZod;
       serialization?: SerializationType;
+      skipSignalDataValidation?: boolean;
     },
   ): BackendInterface<
     TContext,
@@ -260,6 +264,7 @@ export class BackendInterface<
       creationParameter,
       signalData,
       serialization,
+      skipSignalDataValidation,
       handler: null,
     });
     return this;
@@ -275,10 +280,12 @@ export class BackendInterface<
       creationParameter,
       signalData,
       serialization = "raw",
+      skipSignalDataValidation = false,
     }: {
       creationParameter: TCreationParameterZod;
       signalData: TSignalDataZod;
       serialization?: SerializationType;
+      skipSignalDataValidation?: boolean;
     },
   ): BackendInterface<
     TContext,
@@ -299,6 +306,7 @@ export class BackendInterface<
       creationParameter,
       signalData,
       serialization,
+      skipSignalDataValidation,
       handler: null,
     });
     return this;
