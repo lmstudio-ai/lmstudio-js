@@ -6,20 +6,13 @@ import {
   type LLMLoadModelConfig,
   type ModelCompatibilityType,
 } from "@lmstudio/lms-shared-types";
-import { collapseKVStackRaw, kvConfigToMap } from "../KVConfig.js";
+import { collapseKVStackRaw } from "../KVConfig.js";
 import {
   llmLlamaMoeLoadConfigSchematics,
   llmLoadSchematics,
   llmMlxLoadConfigSchematics,
 } from "../schema.js";
 import { maybeFalseValueToCheckboxValue, maybeFalseValueToValue } from "./utils.js";
-
-const speculativeDraftMaxTokensKey = "llm.load.llama.speculativeDecoding.draftMaxTokens";
-const speculativeDraftMinTokensKey = "llm.load.llama.speculativeDecoding.draftMinTokens";
-const legacySpeculativeDraftMtpMaxTokensKey =
-  "llm.load.llama.speculativeDecoding.draftMtpMaxTokens";
-const legacySpeculativeDraftMtpMinTokensKey =
-  "llm.load.llama.speculativeDecoding.draftMtpMinTokens";
 
 interface KvConfigToLLMLoadModelConfigOpts {
   /**
@@ -29,50 +22,11 @@ interface KvConfigToLLMLoadModelConfigOpts {
   modelFormat?: ModelCompatibilityType;
 }
 
-interface ReadSpeculativeDraftTokenValueOpts {
-  rawConfigMap: ReadonlyMap<string, unknown>;
-  parsedValue: number | undefined;
-  v2Key: string;
-  legacyKey: string;
-}
-
-function readLegacySpeculativeDraftTokenValue(
-  rawConfigMap: ReadonlyMap<string, unknown>,
-  legacyKey: string,
-): number | undefined {
-  const legacyValue = rawConfigMap.get(legacyKey);
-  if (typeof legacyValue !== "number") {
-    return undefined;
-  }
-  if (!Number.isFinite(legacyValue) || !Number.isInteger(legacyValue) || legacyValue < 0) {
-    return undefined;
-  }
-  return legacyValue;
-}
-
-function readSpeculativeDraftTokenValue({
-  rawConfigMap,
-  parsedValue,
-  v2Key,
-  legacyKey,
-}: ReadSpeculativeDraftTokenValueOpts): number | undefined {
-  if (rawConfigMap.get(v2Key) !== undefined) {
-    return parsedValue;
-  }
-
-  // Persisted KV configs from the beta MTP shape used method-specific token keys. Keep reading
-  // them here only so upgraded saved configs do not lose explicit token limits; writes and public
-  // schemas use the V2 shared draft keys.
-  const legacyValue = readLegacySpeculativeDraftTokenValue(rawConfigMap, legacyKey);
-  return legacyValue ?? parsedValue;
-}
-
 function kvConfigToLLMLlamaLoadModelConfig(
   config: KVConfig,
   { useDefaultsForMissingKeys }: Omit<KvConfigToLLMLoadModelConfigOpts, "modelFormat"> = {},
 ): LLMLoadModelConfig {
   const result: LLMLoadModelConfig = {};
-  const rawConfigMap = kvConfigToMap(config);
 
   let parsed;
   if (useDefaultsForMissingKeys === true) {
@@ -165,27 +119,22 @@ function kvConfigToLLMLlamaLoadModelConfig(
     result.speculativeDraftMtp = speculativeDraftMtp;
   }
 
+  const speculativeDraftSimple = parsed.get("llama.speculativeDecoding.draftSimple");
+  if (speculativeDraftSimple !== undefined) {
+    result.speculativeDraftSimple = speculativeDraftSimple;
+  }
+
   const speculativeDraftModel = parsed.get("llama.speculativeDecoding.draftModel");
-  if (speculativeDraftModel !== undefined && speculativeDraftModel !== "") {
+  if (speculativeDraftModel !== undefined) {
     result.speculativeDraftModel = speculativeDraftModel;
   }
 
-  const speculativeDraftMaxTokens = readSpeculativeDraftTokenValue({
-    rawConfigMap,
-    parsedValue: parsed.get("llama.speculativeDecoding.draftMaxTokens"),
-    v2Key: speculativeDraftMaxTokensKey,
-    legacyKey: legacySpeculativeDraftMtpMaxTokensKey,
-  });
+  const speculativeDraftMaxTokens = parsed.get("llama.speculativeDecoding.draftMaxTokens");
   if (speculativeDraftMaxTokens !== undefined) {
     result.speculativeDraftMaxTokens = speculativeDraftMaxTokens;
   }
 
-  const speculativeDraftMinTokens = readSpeculativeDraftTokenValue({
-    rawConfigMap,
-    parsedValue: parsed.get("llama.speculativeDecoding.draftMinTokens"),
-    v2Key: speculativeDraftMinTokensKey,
-    legacyKey: legacySpeculativeDraftMtpMinTokensKey,
-  });
+  const speculativeDraftMinTokens = parsed.get("llama.speculativeDecoding.draftMinTokens");
   if (speculativeDraftMinTokens !== undefined) {
     result.speculativeDraftMinTokens = speculativeDraftMinTokens;
   }
@@ -313,6 +262,7 @@ export function llmLoadModelConfigToKVConfig(config: LLMLoadModelConfig): KVConf
     "llama.physicalBatchSize": config.physicalBatchSize,
     "llama.flashAttention": config.flashAttention,
     "llama.speculativeDecoding.draftMtp": config.speculativeDraftMtp,
+    "llama.speculativeDecoding.draftSimple": config.speculativeDraftSimple,
     "llama.speculativeDecoding.draftModel": config.speculativeDraftModel,
     "llama.speculativeDecoding.draftMaxTokens": config.speculativeDraftMaxTokens,
     "llama.speculativeDecoding.draftMinTokens": config.speculativeDraftMinTokens,

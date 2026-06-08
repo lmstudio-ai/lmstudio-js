@@ -334,6 +334,15 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
                 false,
               )
               .field(
+                "draftSimple",
+                "boolean",
+                {
+                  displayName: "Draft Simple",
+                  hint: "Use a separate draft model for speculative decoding.",
+                },
+                false,
+              )
+              .field(
                 "draftModel",
                 "string",
                 {
