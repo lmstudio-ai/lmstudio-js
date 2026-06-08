@@ -86,4 +86,3 @@ export {
   GlobalKVValueTypesLibrary,
   kvValueTypesLibrary,
 } from "./valueTypes.js";
-export type { LLMLoadSpeculativeDecodingConfig } from "@lmstudio/lms-shared-types";
