@@ -199,6 +199,7 @@ describe("globalConfigSchematics", () => {
     );
 
     expect(promptTemplateField?.defaultValue).toEqual(defaultLlmLoadPromptTemplateOverride);
+    expect(promptTemplateField?.typeParams.isExperimental).toBeUndefined();
     expect(() => serializedKVConfigSchematicsSchema.parse(serializedSchematics)).not.toThrow();
 
     const deserializedSchematics = KVConfigSchematics.deserialize(

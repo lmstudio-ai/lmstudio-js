@@ -307,7 +307,7 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
       .field(
         "promptTemplate",
         "llmLoadPromptTemplateOverride",
-        { modelCentric: true, isExperimental: true },
+        { modelCentric: true },
         defaultLlmLoadPromptTemplateOverride,
       )
       .field("offloadKVCacheToGpu", "boolean", {}, true)
