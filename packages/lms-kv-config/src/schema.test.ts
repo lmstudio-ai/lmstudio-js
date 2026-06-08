@@ -53,6 +53,21 @@ describe("KVConfig", () => {
 });
 
 describe("globalConfigSchematics", () => {
+  describe("lenient parsing", () => {
+    it("should preserve LLMSter Jinja variable extension fields", () => {
+      const parsed = globalConfigSchematics.getLenientZodSchema().parse({
+        fields: [
+          kvConfigField("llm.prediction.jinjaVariables.slot1.name", "reasoning_effort"),
+          kvConfigField("unknown.key", "dropped"),
+        ],
+      });
+
+      expect(parsed.fields).toEqual([
+        kvConfigField("llm.prediction.jinjaVariables.slot1.name", "reasoning_effort"),
+      ]);
+    });
+  });
+
   describe("effectiveEquals", () => {
     it("should work with temperature", () => {
       expect(globalConfigSchematics.fieldEffectiveEquals("llm.prediction.temperature", 0, 0)).toBe(

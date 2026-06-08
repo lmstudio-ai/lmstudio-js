@@ -21,6 +21,7 @@ import {
 import { kvValueTypesLibrary } from "./valueTypes.js";
 
 const VIRTUAL_MODEL_CUSTOM_FIELD_EXTENSION_PREFIX = "ext.virtualModel.customField";
+const LLMSTER_JINJA_VARIABLE_EXTENSION_PREFIX = "llm.prediction.jinjaVariables";
 
 // ---------------------------
 //  1. globalConfigSchematics
@@ -28,6 +29,7 @@ const VIRTUAL_MODEL_CUSTOM_FIELD_EXTENSION_PREFIX = "ext.virtualModel.customFiel
 
 export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypesLibrary)
   .extension(VIRTUAL_MODEL_CUSTOM_FIELD_EXTENSION_PREFIX)
+  .extension(LLMSTER_JINJA_VARIABLE_EXTENSION_PREFIX)
   .field("envVars", "envVars", {}, {})
   .scope("llm.prediction", builder =>
     builder
