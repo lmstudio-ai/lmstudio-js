@@ -641,12 +641,14 @@ export interface LLMActBaseOpts<TPredictionResult> {
    *
    * If we successfully parsed the request (thus the request parameter is not undefined), anything
    * returned in this callback will be used as the result of the tool call. This is useful for
-   * providing a error message to the model so it may try again. However, if nothing (undefined) is
+   * providing an error message to the model so it may try again. However, if nothing (undefined) is
    * returned, LM Studio will not provide a result to the given tool call.
    *
-   * If we failed to parsed the request (thus the request parameter is undefined), the return value
+   * If we failed to parse the request (thus the request parameter is undefined), the return value
    * of this callback will be ignored as LM Studio cannot provide results to a tool call that has
-   * failed to parse.
+   * failed to parse. In this case, `.act` will first try to recover by adding an internal user
+   * repair message that asks the model to generate the tool call again. This repair message is not
+   * emitted through `onMessage`.
    *
    * If you decide the failure is too severe to continue, you can always throw an error in this
    * callback, which will immediately fail the `.act` call with the same error you provided.
@@ -664,8 +666,8 @@ export interface LLMActBaseOpts<TPredictionResult> {
    *
    * The default handler will do the following: If the model requested a tool that can be parsed but
    * is still invalid, we will return the error message as the result of the tool call. If the model
-   * requested a tool that cannot be parsed, we will throw an error, which will immediately fail the
-   * `.act` call.
+   * requested a tool that cannot be parsed after the internal repair attempt, we will throw an
+   * error, which will fail the `.act` call.
    *
    * Note, when an invalid tool request occurs due to parameters type mismatch, we will never call
    * the original tool automatically due to security considerations. If you do decide to call the
@@ -735,6 +737,8 @@ const defaultHandleInvalidToolRequest = (error: Error, request: ToolCallRequest 
   }
   throw error;
 };
+
+const maxToolCallGenerationRepairRetries = 1;
 
 interface ActPredictionImplementationArgs<TEndPacket> {
   /**
@@ -831,6 +835,7 @@ export async function internalAct<TPredictionResult, TEndPacket>(
 
   let shouldContinue = false;
   let predictionsPerformed = 0;
+  let toolCallGenerationRepairRetries = 0;
 
   const toolsMap = new Map<string, Tool>();
   for (const tool of tools) {
@@ -864,6 +869,7 @@ export async function internalAct<TPredictionResult, TEndPacket>(
     const nonReasoningContentArray: Array<string> = [];
 
     const toolCallRequests: Array<ToolCallRequest> = [];
+    let toolCallGenerationRepairPrompt: string | null = null;
     let nextToolCallIndex = 0;
     const toolCallResults: Array<{
       /**
@@ -1277,16 +1283,37 @@ export async function internalAct<TPredictionResult, TEndPacket>(
           error.message,
           rawContent,
         );
-        toolCallPromises.push(
-          internalHandleInvalidToolCallRequest(
-            toolCallRequestError,
-            // We don't have a request in this because the model has failed miserably.
-            undefined,
-            // Tool call index. Doesn't matter because if there is no request, there cannot be
-            // a replacement.
-            0,
-          ).catch(finalReject),
-        );
+        if (
+          toolCallGenerationRepairPrompt === null &&
+          toolCallGenerationRepairRetries < maxToolCallGenerationRepairRetries
+        ) {
+          toolCallGenerationRepairRetries++;
+          toolCallGenerationRepairPrompt = `Please try to generate the tool again, this is the relevant error: ${toolCallRequestError.message}`;
+
+          if (baseOpts.handleInvalidToolRequest !== undefined) {
+            toolCallPromises.push(
+              internalHandleInvalidToolCallRequest(
+                toolCallRequestError,
+                // We don't have a request in this because the model has failed miserably.
+                undefined,
+                // Tool call index. Doesn't matter because if there is no request, there cannot be
+                // a replacement.
+                0,
+              ).catch(finalReject),
+            );
+          }
+        } else {
+          toolCallPromises.push(
+            internalHandleInvalidToolCallRequest(
+              toolCallRequestError,
+              // We don't have a request in this because the model has failed miserably.
+              undefined,
+              // Tool call index. Doesn't matter because if there is no request, there cannot be
+              // a replacement.
+              0,
+            ).catch(finalReject),
+          );
+        }
         safeCallCallback(logger, "onToolCallRequestFailure", baseOpts.onToolCallRequestFailure, [
           predictionsPerformed,
           currentCallId,
@@ -1370,6 +1397,10 @@ export async function internalAct<TPredictionResult, TEndPacket>(
       });
       mutableChat.append(toolMessage.asMutableCopy());
       safeCallCallback(logger, "onMessage", baseOpts.onMessage, [toolMessage]);
+      shouldContinue = true;
+    }
+    if (toolCallGenerationRepairPrompt !== null) {
+      mutableChat.append("user", toolCallGenerationRepairPrompt);
       shouldContinue = true;
     }
 
