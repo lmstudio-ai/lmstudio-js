@@ -167,6 +167,7 @@ export {
   LLMContextReferenceYamlFile,
   llmContextReferenceYamlFileSchema,
 } from "./llm/LLMContextReference.js";
+export { LLMLoadPromptTemplate, llmLoadPromptTemplateSchema } from "./llm/LLMLoadPromptTemplate.js";
 export {
   GPUSetting,
   gpuSettingSchema,

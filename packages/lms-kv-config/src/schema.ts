@@ -7,7 +7,11 @@
  * 3. Utility types that can be used to work with types of schema.
  */
 
-import { defaultGPUSplitConfig, type KVConfigFieldDependency } from "@lmstudio/lms-shared-types";
+import {
+  defaultGPUSplitConfig,
+  type KVConfigFieldDependency,
+  type LLMLoadPromptTemplate,
+} from "@lmstudio/lms-shared-types";
 import {
   KVConfigSchematicsBuilder,
   type InferConfigFieldFilter,
@@ -30,6 +34,21 @@ const speculativeDecodingDraftModelSelectedDependencies: Array<KVConfigFieldDepe
 const speculativeDecodingDraftTokenFieldParams = {
   modelCentric: true,
   dependencies: speculativeDecodingDraftModelSelectedDependencies,
+};
+
+export const defaultLlmLoadPromptTemplate: LLMLoadPromptTemplate = {
+  type: "jinja",
+  jinjaPromptTemplate: {
+    template:
+      "{% for message in messages %}" +
+      "{% if message['role'] == 'system' %}{{ 'Instruct: ' + message['content'] + '\\n' }}" +
+      "{% elif message['role'] == 'user' %}{{ 'Human: ' + message['content'] + '\\n' }}" +
+      "{% elif message['role'] == 'assistant' %}{{ 'AI: ' + message['content'] + '\\n' }}" +
+      "{% endif %}" +
+      "{% endfor %}" +
+      "{% if add_generation_prompt %}{{ 'AI: ' }}{% endif %}",
+  },
+  stopStrings: [],
 };
 
 // ---------------------------
@@ -284,6 +303,12 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
         "checkboxNumeric",
         { int: true, min: -1, uncheckedHint: "config:seedUncheckedHint" },
         { checked: false, value: -1 },
+      )
+      .field(
+        "promptTemplate",
+        "llmLoadPromptTemplate",
+        { modelCentric: true },
+        defaultLlmLoadPromptTemplate,
       )
       .field("offloadKVCacheToGpu", "boolean", {}, true)
       .field(
@@ -541,6 +566,7 @@ export const llmLlamaLoadConfigSchematics = llmSharedLoadConfigSchematics
     llmLoadSchematics.sliced(
       "llama.*",
       "load.*",
+      "promptTemplate",
       "offloadKVCacheToGpu",
       "numParallelSessions",
       "useUnifiedKvCache",
