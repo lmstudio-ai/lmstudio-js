@@ -1,8 +1,8 @@
 import { z } from "zod";
 import {
-  llmLoadPromptTemplateOverrideSchema,
-  type LLMLoadPromptTemplateOverride,
-} from "./LLMLoadPromptTemplateOverride.js";
+  llmLoadPromptTemplateSchema,
+  type LLMLoadPromptTemplate,
+} from "./LLMLoadPromptTemplate.js";
 
 /**
  * How much of the model's work should be offloaded to the GPU. The value should be between 0 and 1.
@@ -201,7 +201,7 @@ export interface LLMLoadModelConfig {
    *
    * @experimental
    */
-  promptTemplate?: LLMLoadPromptTemplateOverride;
+  promptTemplate?: LLMLoadPromptTemplate;
 
   /**
    * Custom base frequency for rotary positional embeddings (RoPE).
@@ -383,7 +383,7 @@ export const llmLoadModelConfigSchema = z.object({
   gpuStrictVramCap: z.boolean().optional(),
   offloadKVCacheToGpu: z.boolean().optional(),
   contextLength: z.number().int().min(1).optional(),
-  promptTemplate: llmLoadPromptTemplateOverrideSchema.optional(),
+  promptTemplate: llmLoadPromptTemplateSchema.optional(),
   ropeFrequencyBase: z.number().or(z.literal(false)).optional(),
   ropeFrequencyScale: z.number().or(z.literal(false)).optional(),
   evalBatchSize: z.number().int().min(1).optional(),

@@ -8,7 +8,7 @@ import {
   llmLlamaCacheQuantizationTypeSchema,
   llmLlamaLogitBiasConfigSchema,
   llmLlamaMirostatSamplingConfigSchema,
-  llmLoadPromptTemplateOverrideSchema,
+  llmLoadPromptTemplateSchema,
   llmMlxKvCacheQuantizationSchema,
   llmPromptTemplateSchema,
   llmReasoningParsingSchema,
@@ -556,10 +556,10 @@ export const kvValueTypesLibrary = baseKVValueTypesLibraryBuilder
       }
     },
   })
-  .valueType("llmLoadPromptTemplateOverride", {
+  .valueType("llmLoadPromptTemplate", {
     paramType: {},
     schemaMaker: () => {
-      return llmLoadPromptTemplateOverrideSchema;
+      return llmLoadPromptTemplateSchema;
     },
     effectiveEquals: (a, b) => {
       return (

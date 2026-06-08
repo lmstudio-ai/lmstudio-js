@@ -2,14 +2,14 @@ import { z } from "zod";
 import { llmJinjaPromptTemplateSchema, type LLMJinjaPromptTemplate } from "./LLMPromptTemplate.js";
 
 /** @public */
-export interface LLMLoadPromptTemplateOverride {
+export interface LLMLoadPromptTemplate {
   type: "jinja";
   jinjaPromptTemplate: LLMJinjaPromptTemplate;
   stopStrings: Array<string>;
 }
 
-export const llmLoadPromptTemplateOverrideSchema = z.object({
+export const llmLoadPromptTemplateSchema = z.object({
   type: z.literal("jinja"),
   jinjaPromptTemplate: llmJinjaPromptTemplateSchema,
   stopStrings: z.array(z.string()),
-}) as z.Schema<LLMLoadPromptTemplateOverride>;
+}) as z.Schema<LLMLoadPromptTemplate>;

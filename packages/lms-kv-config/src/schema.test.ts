@@ -13,7 +13,7 @@ import {
   llmLoadModelConfigToKVConfig,
 } from "./conversion/llmLoadModelConfig.js";
 import {
-  defaultLlmLoadPromptTemplateOverride,
+  defaultLlmLoadPromptTemplate,
   globalConfigSchematics,
   llmLlamaLoadConfigSchematics,
   llmLoadSchematics,
@@ -72,7 +72,7 @@ describe("KVConfig", () => {
 });
 
 describe("llmLoadModelConfig conversion", () => {
-  it("round trips load-time prompt template override", () => {
+  it("round trips load-time prompt template config", () => {
     const promptTemplate = {
       type: "jinja" as const,
       jinjaPromptTemplate: {
@@ -109,7 +109,7 @@ describe("llmLoadModelConfig conversion", () => {
 
     expect(defaultedConfig.promptTemplate).toBeUndefined();
     expect(globalConfigSchematics.access(emptyConfig, "llm.load.promptTemplate")).toEqual(
-      defaultLlmLoadPromptTemplateOverride,
+      defaultLlmLoadPromptTemplate,
     );
   });
 
@@ -153,7 +153,7 @@ describe("llmLoadModelConfig conversion", () => {
 });
 
 describe("globalConfigSchematics", () => {
-  it("accepts load-time Jinja prompt template override with stop strings", () => {
+  it("accepts load-time Jinja prompt template with stop strings", () => {
     const promptTemplate = {
       type: "jinja" as const,
       jinjaPromptTemplate: {
@@ -180,7 +180,7 @@ describe("globalConfigSchematics", () => {
     const fullConfig = llmLoadSchematics.buildFullConfig({});
 
     expect(llmLoadSchematics.access(fullConfig, "promptTemplate")).toEqual(
-      defaultLlmLoadPromptTemplateOverride,
+      defaultLlmLoadPromptTemplate,
     );
   });
 
@@ -198,7 +198,7 @@ describe("globalConfigSchematics", () => {
       field => field.fullKey === "llm.load.promptTemplate",
     );
 
-    expect(promptTemplateField?.defaultValue).toEqual(defaultLlmLoadPromptTemplateOverride);
+    expect(promptTemplateField?.defaultValue).toEqual(defaultLlmLoadPromptTemplate);
     expect(promptTemplateField?.typeParams.isExperimental).toBeUndefined();
     expect(() => serializedKVConfigSchematicsSchema.parse(serializedSchematics)).not.toThrow();
 
@@ -209,10 +209,10 @@ describe("globalConfigSchematics", () => {
     const emptyConfig = makeKVConfigFromFields([]);
 
     expect(deserializedSchematics.obtainField("promptTemplate").defaultValue).toEqual(
-      defaultLlmLoadPromptTemplateOverride,
+      defaultLlmLoadPromptTemplate,
     );
     expect(deserializedSchematics.access(emptyConfig, "promptTemplate")).toEqual(
-      defaultLlmLoadPromptTemplateOverride,
+      defaultLlmLoadPromptTemplate,
     );
     expect(deserializedSchematics.accessPartial(emptyConfig, "promptTemplate")).toBeUndefined();
   });
@@ -226,7 +226,7 @@ describe("globalConfigSchematics", () => {
       stopStrings: ["<|end|>"],
     };
     const schematics = new KVConfigSchematicsBuilder(kvValueTypesLibrary)
-      .field("promptTemplate", "llmLoadPromptTemplateOverride", {}, promptTemplate)
+      .field("promptTemplate", "llmLoadPromptTemplate", {}, promptTemplate)
       .build();
     const serializedSchematics = schematics.serialize();
 

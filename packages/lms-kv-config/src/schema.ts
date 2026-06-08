@@ -10,7 +10,7 @@
 import {
   defaultGPUSplitConfig,
   type KVConfigFieldDependency,
-  type LLMLoadPromptTemplateOverride,
+  type LLMLoadPromptTemplate,
 } from "@lmstudio/lms-shared-types";
 import {
   KVConfigSchematicsBuilder,
@@ -36,7 +36,7 @@ const speculativeDecodingDraftTokenFieldParams = {
   dependencies: speculativeDecodingDraftModelSelectedDependencies,
 };
 
-export const defaultLlmLoadPromptTemplateOverride: LLMLoadPromptTemplateOverride = {
+export const defaultLlmLoadPromptTemplate: LLMLoadPromptTemplate = {
   type: "jinja",
   jinjaPromptTemplate: {
     template:
@@ -306,9 +306,9 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
       )
       .field(
         "promptTemplate",
-        "llmLoadPromptTemplateOverride",
+        "llmLoadPromptTemplate",
         { modelCentric: true },
-        defaultLlmLoadPromptTemplateOverride,
+        defaultLlmLoadPromptTemplate,
       )
       .field("offloadKVCacheToGpu", "boolean", {}, true)
       .field(
