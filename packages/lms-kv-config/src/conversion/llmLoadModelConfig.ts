@@ -29,10 +29,11 @@ function kvConfigToLLMLlamaLoadModelConfig(
   const result: LLMLoadModelConfig = {};
 
   let parsed;
+  const partialParsed = llmLlamaMoeLoadConfigSchematics.parsePartial(config);
   if (useDefaultsForMissingKeys === true) {
     parsed = llmLlamaMoeLoadConfigSchematics.parse(config);
   } else {
-    parsed = llmLlamaMoeLoadConfigSchematics.parsePartial(config);
+    parsed = partialParsed;
   }
 
   let gpuFields: GPUSetting = {};
@@ -87,6 +88,11 @@ function kvConfigToLLMLlamaLoadModelConfig(
   const contextLength = parsed.get("contextLength");
   if (contextLength !== undefined) {
     result.contextLength = contextLength;
+  }
+
+  const promptTemplate = partialParsed.get("promptTemplate");
+  if (promptTemplate !== undefined) {
+    result.promptTemplate = promptTemplate;
   }
 
   const ropeFrequencyBase = parsed.get("llama.ropeFrequencyBase");
@@ -256,6 +262,7 @@ export function llmLoadModelConfigToKVConfig(config: LLMLoadModelConfig): KVConf
     "useUnifiedKvCache": config.useUnifiedKvCache,
     "offloadKVCacheToGpu": config.offloadKVCacheToGpu,
     "contextLength": config.contextLength,
+    "promptTemplate": config.promptTemplate,
     "llama.ropeFrequencyBase": maybeFalseValueToCheckboxValue(config.ropeFrequencyBase, 0),
     "llama.ropeFrequencyScale": maybeFalseValueToCheckboxValue(config.ropeFrequencyScale, 0),
     "llama.evalBatchSize": config.evalBatchSize,

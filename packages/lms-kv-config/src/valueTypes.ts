@@ -8,6 +8,7 @@ import {
   llmLlamaCacheQuantizationTypeSchema,
   llmLlamaLogitBiasConfigSchema,
   llmLlamaMirostatSamplingConfigSchema,
+  llmLoadPromptTemplateSchema,
   llmMlxKvCacheQuantizationSchema,
   llmPromptTemplateSchema,
   llmReasoningParsingSchema,
@@ -553,6 +554,40 @@ export const kvValueTypesLibrary = baseKVValueTypesLibraryBuilder
           throw new Error("Unknown template type: " + exhaustiveCheck);
         }
       }
+    },
+  })
+  .valueType("llmLoadPromptTemplate", {
+    paramType: {},
+    schemaMaker: () => {
+      return llmLoadPromptTemplateSchema;
+    },
+    effectiveEquals: (a, b) => {
+      return (
+        a.jinjaPromptTemplate.template === b.jinjaPromptTemplate.template &&
+        a.stopStrings.length === b.stopStrings.length &&
+        a.stopStrings.every((stopString, index) => stopString === b.stopStrings[index])
+      );
+    },
+    stringify: (value, _typeParam, { t, desiredLength }) => {
+      const lead =
+        `${t("config:customInputs.llmPromptTemplate.type", "Type")}: ` +
+        `${t("config:customInputs.llmPromptTemplate.types.jinja/label", "Jinja")}\n` +
+        `${t("config:customInputs.llmPromptTemplate.jinja.template/label", "Template")}: `;
+      const template = value.jinjaPromptTemplate.template;
+      if (desiredLength === undefined) {
+        return lead + template;
+      }
+      const currentLength = lead.length;
+      const remainingLength = Math.min(100, desiredLength - currentLength);
+      if (template.length <= remainingLength) {
+        return lead + template;
+      }
+      return (
+        lead +
+        template.slice(0, Math.floor(remainingLength / 2)) +
+        "..." +
+        template.slice(-Math.ceil(remainingLength / 2))
+      );
     },
   })
   .valueType("llmReasoningParsing", {
