@@ -125,14 +125,36 @@ function kvConfigToLLMLlamaLoadModelConfig(
     result.speculativeDraftMtp = speculativeDraftMtp;
   }
 
-  const speculativeDraftMtpMaxTokens = parsed.get("llama.speculativeDecoding.draftMtpMaxTokens");
-  if (speculativeDraftMtpMaxTokens !== undefined) {
-    result.speculativeDraftMtpMaxTokens = speculativeDraftMtpMaxTokens;
+  const speculativeDraftSimple = parsed.get("llama.speculativeDecoding.draftSimple");
+  if (speculativeDraftSimple !== undefined) {
+    result.speculativeDraftSimple = speculativeDraftSimple;
   }
 
-  const speculativeDraftMtpMinTokens = parsed.get("llama.speculativeDecoding.draftMtpMinTokens");
-  if (speculativeDraftMtpMinTokens !== undefined) {
-    result.speculativeDraftMtpMinTokens = speculativeDraftMtpMinTokens;
+  const speculativeDraftModel = parsed.get("llama.speculativeDecoding.draftModel");
+  if (speculativeDraftModel !== undefined) {
+    // Materialized public configs must be valid if passed back to client.llm.load(). Keep stale
+    // draft-model resources internal unless Draft Simple currently consumes them.
+    result.speculativeDraftModel =
+      useDefaultsForMissingKeys === true && speculativeDraftSimple !== true
+        ? ""
+        : speculativeDraftModel;
+  }
+
+  const speculativeDraftMaxTokens = parsed.get("llama.speculativeDecoding.draftMaxTokens");
+  if (speculativeDraftMaxTokens !== undefined) {
+    result.speculativeDraftMaxTokens = speculativeDraftMaxTokens;
+  }
+
+  const speculativeDraftMinTokens = parsed.get("llama.speculativeDecoding.draftMinTokens");
+  if (speculativeDraftMinTokens !== undefined) {
+    result.speculativeDraftMinTokens = speculativeDraftMinTokens;
+  }
+
+  const speculativeDraftMinContinueProbability = parsed.get(
+    "llama.speculativeDecoding.draftMinContinueProbability",
+  );
+  if (speculativeDraftMinContinueProbability !== undefined) {
+    result.speculativeDraftMinContinueProbability = speculativeDraftMinContinueProbability;
   }
 
   const keepModelInMemory = parsed.get("llama.keepModelInMemory");
@@ -252,8 +274,12 @@ export function llmLoadModelConfigToKVConfig(config: LLMLoadModelConfig): KVConf
     "llama.physicalBatchSize": config.physicalBatchSize,
     "llama.flashAttention": config.flashAttention,
     "llama.speculativeDecoding.draftMtp": config.speculativeDraftMtp,
-    "llama.speculativeDecoding.draftMtpMaxTokens": config.speculativeDraftMtpMaxTokens,
-    "llama.speculativeDecoding.draftMtpMinTokens": config.speculativeDraftMtpMinTokens,
+    "llama.speculativeDecoding.draftSimple": config.speculativeDraftSimple,
+    "llama.speculativeDecoding.draftModel": config.speculativeDraftModel,
+    "llama.speculativeDecoding.draftMaxTokens": config.speculativeDraftMaxTokens,
+    "llama.speculativeDecoding.draftMinTokens": config.speculativeDraftMinTokens,
+    "llama.speculativeDecoding.draftMinContinueProbability":
+      config.speculativeDraftMinContinueProbability,
     "llama.keepModelInMemory": config.keepModelInMemory,
     "seed": maybeFalseValueToCheckboxValue(config.seed, 0),
     "llama.useFp16ForKVCache": config.useFp16ForKVCache,

@@ -176,6 +176,8 @@ export {
   LLMLlamaCacheQuantizationType,
   llmLlamaCacheQuantizationTypes,
   llmLlamaCacheQuantizationTypeSchema,
+  LLMLoadSpeculativeDecodingConfig,
+  LLMLoadSpeculativeDecodingResolution,
   LLMLoadModelConfig,
   llmLoadModelConfigSchema,
   LLMMlxKvCacheBitsType,
@@ -188,6 +190,9 @@ export {
   llmMlxKvCacheQuantizationSchema,
   LLMSplitStrategy,
   llmSplitStrategySchema,
+  resolveEffectiveLLMLoadSpeculativeDecodingConfig,
+  resolveLLMLoadSpeculativeDecodingConfig,
+  validateLLMLoadSpeculativeDecodingConfig,
 } from "./llm/LLMLoadModelConfig.js";
 export {
   LLMAdditionalInfo,

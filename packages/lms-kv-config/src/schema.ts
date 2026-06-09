@@ -353,35 +353,63 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
                 "draftMtp",
                 "boolean",
                 {
-                  displayName: "MTP Speculative Decoding",
-                  subtitle: "Use bundled multi-token prediction heads when loading the model",
-                  isExperimental: true,
+                  displayName: "Draft MTP",
+                  hint: "Use bundled multi-token prediction heads when loading the model.",
                 },
                 false,
               )
               .field(
-                "draftMtpMaxTokens",
-                "numeric",
+                "draftSimple",
+                "boolean",
                 {
-                  min: 0,
-                  int: true,
-                  displayName: "MTP Max Draft Tokens",
-                  subtitle: "Maximum number of MTP draft tokens to generate",
-                  isExperimental: true,
+                  displayName: "Draft Simple",
+                  hint: "Use a separate draft model for speculative decoding.",
                 },
-                2,
+                false,
               )
               .field(
-                "draftMtpMinTokens",
+                "draftModel",
+                "string",
+                {
+                  displayName: "Speculative Decoding",
+                  hint: "Configure load-time speculative decoding.",
+                },
+                "",
+              )
+              .field(
+                "draftMaxTokens",
                 "numeric",
                 {
                   min: 0,
                   int: true,
-                  displayName: "MTP Min Draft Tokens",
-                  subtitle: "Minimum MTP draft length to verify with the main model",
-                  isExperimental: true,
+                  displayName: "Max Draft Tokens",
+                  hint: "Maximum number of draft tokens to generate.",
+                },
+                16,
+              )
+              .field(
+                "draftMinTokens",
+                "numeric",
+                {
+                  min: 0,
+                  int: true,
+                  displayName: "Min Draft Tokens",
+                  hint: "Minimum draft length to verify with the main model.",
                 },
                 0,
+              )
+              .field(
+                "draftMinContinueProbability",
+                "numeric",
+                {
+                  min: 0,
+                  max: 1,
+                  step: 0.01,
+                  precision: 2,
+                  displayName: "Drafting Probability Cutoff",
+                  hint: "Continue drafting while token probability is at or above this threshold.",
+                },
+                0.75,
               ),
           )
           .field(

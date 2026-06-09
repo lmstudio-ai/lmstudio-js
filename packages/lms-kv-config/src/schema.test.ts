@@ -113,18 +113,228 @@ describe("llmLoadModelConfig conversion", () => {
     );
   });
 
-  it("round trips MTP load-time draft token settings", () => {
+  it("preserves unspecified speculative decoding load config", () => {
+    const loadConfig = llmLoadModelConfigToKVConfig({});
+
+    const roundTrippedConfig = kvConfigToLLMLoadModelConfig(loadConfig);
+
+    expect(roundTrippedConfig.speculativeDraftMtp).toBeUndefined();
+    expect(roundTrippedConfig.speculativeDraftSimple).toBeUndefined();
+    expect(roundTrippedConfig.speculativeDraftModel).toBeUndefined();
+    expect(roundTrippedConfig.speculativeDraftMaxTokens).toBeUndefined();
+    expect(roundTrippedConfig.speculativeDraftMinTokens).toBeUndefined();
+    expect(roundTrippedConfig.speculativeDraftMinContinueProbability).toBeUndefined();
+  });
+
+  it("round trips explicit Draft MTP off", () => {
+    const loadConfig = llmLoadModelConfigToKVConfig({
+      speculativeDraftMtp: false,
+    });
+
+    const roundTrippedConfig = kvConfigToLLMLoadModelConfig(loadConfig);
+
+    expect(roundTrippedConfig.speculativeDraftMtp).toBe(false);
+  });
+
+  it("round trips Draft MTP load-time speculative decoding", () => {
     const loadConfig = llmLoadModelConfigToKVConfig({
       speculativeDraftMtp: true,
-      speculativeDraftMtpMaxTokens: 2,
-      speculativeDraftMtpMinTokens: 0,
+      speculativeDraftMaxTokens: 2,
+      speculativeDraftMinTokens: 0,
     });
 
     const roundTrippedConfig = kvConfigToLLMLoadModelConfig(loadConfig);
 
     expect(roundTrippedConfig.speculativeDraftMtp).toBe(true);
-    expect(roundTrippedConfig.speculativeDraftMtpMaxTokens).toBe(2);
-    expect(roundTrippedConfig.speculativeDraftMtpMinTokens).toBe(0);
+    expect(roundTrippedConfig.speculativeDraftMaxTokens).toBe(2);
+    expect(roundTrippedConfig.speculativeDraftMinTokens).toBe(0);
+  });
+
+  it("round trips Draft Model load-time speculative decoding", () => {
+    const loadConfig = llmLoadModelConfigToKVConfig({
+      speculativeDraftMtp: false,
+      speculativeDraftSimple: true,
+      speculativeDraftModel: "publisher/draft-model",
+      speculativeDraftMaxTokens: 16,
+      speculativeDraftMinTokens: 0,
+      speculativeDraftMinContinueProbability: 0.75,
+    });
+
+    const roundTrippedConfig = kvConfigToLLMLoadModelConfig(loadConfig);
+
+    expect(roundTrippedConfig.speculativeDraftMtp).toBe(false);
+    expect(roundTrippedConfig.speculativeDraftSimple).toBe(true);
+    expect(roundTrippedConfig.speculativeDraftModel).toBe("publisher/draft-model");
+    expect(roundTrippedConfig.speculativeDraftMaxTokens).toBe(16);
+    expect(roundTrippedConfig.speculativeDraftMinTokens).toBe(0);
+    expect(roundTrippedConfig.speculativeDraftMinContinueProbability).toBe(0.75);
+  });
+
+  it("keeps undefined and false Draft MTP distinct", () => {
+    const unspecifiedLoadConfig = llmLoadModelConfigToKVConfig({});
+    const disabledLoadConfig = llmLoadModelConfigToKVConfig({
+      speculativeDraftMtp: false,
+    });
+
+    const unspecifiedRoundTrip = kvConfigToLLMLoadModelConfig(unspecifiedLoadConfig);
+    const disabledRoundTrip = kvConfigToLLMLoadModelConfig(disabledLoadConfig);
+
+    expect(unspecifiedRoundTrip.speculativeDraftMtp).toBeUndefined();
+    expect(disabledRoundTrip.speculativeDraftMtp).toBe(false);
+  });
+
+  it("uses shared draft tuning defaults when defaults are requested", () => {
+    const loadConfig = globalConfigSchematics.scoped("llm.load").buildPartialConfig({
+      "llama.speculativeDecoding.draftMtp": true,
+    });
+
+    const convertedConfig = kvConfigToLLMLoadModelConfig(loadConfig, {
+      useDefaultsForMissingKeys: true,
+    });
+
+    expect(convertedConfig.speculativeDraftMtp).toBe(true);
+    expect(convertedConfig.speculativeDraftSimple).toBe(false);
+    expect(convertedConfig.speculativeDraftModel).toBe("");
+    expect(convertedConfig.speculativeDraftMaxTokens).toBe(16);
+    expect(convertedConfig.speculativeDraftMinTokens).toBe(0);
+    expect(convertedConfig.speculativeDraftMinContinueProbability).toBe(0.75);
+  });
+
+  it("materializes empty default Draft Model when defaults are requested", () => {
+    const convertedConfig = kvConfigToLLMLoadModelConfig(makeKVConfigFromFields([]), {
+      useDefaultsForMissingKeys: true,
+    });
+
+    expect(convertedConfig.speculativeDraftMtp).toBe(false);
+    expect(convertedConfig.speculativeDraftSimple).toBe(false);
+    expect(convertedConfig.speculativeDraftModel).toBe("");
+  });
+
+  it("normalizes inert materialized Draft Model resources for public round trips", () => {
+    const loadConfig = globalConfigSchematics.scoped("llm.load").buildPartialConfig({
+      "llama.speculativeDecoding.draftMtp": false,
+      "llama.speculativeDecoding.draftSimple": false,
+      "llama.speculativeDecoding.draftModel": "publisher/stale-draft-model",
+    });
+
+    const convertedConfig = kvConfigToLLMLoadModelConfig(loadConfig, {
+      useDefaultsForMissingKeys: true,
+    });
+
+    expect(convertedConfig.speculativeDraftMtp).toBe(false);
+    expect(convertedConfig.speculativeDraftSimple).toBe(false);
+    expect(convertedConfig.speculativeDraftModel).toBe("");
+    expect(llmLoadModelConfigSchema.safeParse(convertedConfig).success).toBe(true);
+  });
+
+  it("preserves materialized Draft Model resources when Draft Simple is active", () => {
+    const loadConfig = globalConfigSchematics.scoped("llm.load").buildPartialConfig({
+      "llama.speculativeDecoding.draftMtp": false,
+      "llama.speculativeDecoding.draftSimple": true,
+      "llama.speculativeDecoding.draftModel": "publisher/draft-model",
+    });
+
+    const convertedConfig = kvConfigToLLMLoadModelConfig(loadConfig, {
+      useDefaultsForMissingKeys: true,
+    });
+
+    expect(convertedConfig.speculativeDraftMtp).toBe(false);
+    expect(convertedConfig.speculativeDraftSimple).toBe(true);
+    expect(convertedConfig.speculativeDraftModel).toBe("publisher/draft-model");
+    expect(llmLoadModelConfigSchema.safeParse(convertedConfig).success).toBe(true);
+  });
+
+  it("preserves an explicitly empty Draft Model from KV config", () => {
+    const loadConfig = globalConfigSchematics.scoped("llm.load").buildPartialConfig({
+      "llama.speculativeDecoding.draftModel": "",
+    });
+
+    const convertedConfig = kvConfigToLLMLoadModelConfig(loadConfig);
+
+    expect(convertedConfig.speculativeDraftModel).toBe("");
+  });
+
+  it("preserves orphan draft tuning fields without enabling speculative decoding", () => {
+    const loadConfig = globalConfigSchematics.scoped("llm.load").buildPartialConfig({
+      "llama.speculativeDecoding.draftMaxTokens": 8,
+      "llama.speculativeDecoding.draftMinTokens": 2,
+      "llama.speculativeDecoding.draftMinContinueProbability": 0.5,
+    });
+
+    const convertedConfig = kvConfigToLLMLoadModelConfig(loadConfig);
+
+    expect(convertedConfig.speculativeDraftMtp).toBeUndefined();
+    expect(convertedConfig.speculativeDraftSimple).toBeUndefined();
+    expect(convertedConfig.speculativeDraftModel).toBeUndefined();
+    expect(convertedConfig.speculativeDraftMaxTokens).toBe(8);
+    expect(convertedConfig.speculativeDraftMinTokens).toBe(2);
+    expect(convertedConfig.speculativeDraftMinContinueProbability).toBe(0.5);
+  });
+
+  it("ignores beta Draft MTP token limit keys", () => {
+    const loadConfig = makeKVConfigFromFields([
+      kvConfigField("llm.load.llama.speculativeDecoding.draftMtpMaxTokens", 8),
+      kvConfigField("llm.load.llama.speculativeDecoding.draftMtpMinTokens", 2),
+    ]);
+
+    const convertedConfig = kvConfigToLLMLoadModelConfig(loadConfig);
+
+    expect(convertedConfig.speculativeDraftMaxTokens).toBeUndefined();
+    expect(convertedConfig.speculativeDraftMinTokens).toBeUndefined();
+  });
+
+  it("writes only V2 shared draft token limits", () => {
+    const loadConfig = llmLoadModelConfigToKVConfig({
+      speculativeDraftMaxTokens: 8,
+      speculativeDraftMinTokens: 2,
+    });
+
+    const fieldKeys = loadConfig.fields.map(field => field.key);
+
+    expect(fieldKeys).toContain("llm.load.llama.speculativeDecoding.draftMaxTokens");
+    expect(fieldKeys).toContain("llm.load.llama.speculativeDecoding.draftMinTokens");
+    expect(fieldKeys).not.toContain("llm.load.llama.speculativeDecoding.draftMtpMaxTokens");
+    expect(fieldKeys).not.toContain("llm.load.llama.speculativeDecoding.draftMtpMinTokens");
+  });
+
+  it("rejects invalid V2 flat speculative decoding values", () => {
+    expect(
+      llmLoadModelConfigSchema.safeParse({
+        speculativeDraftModel: "publisher/draft-model",
+      }).success,
+    ).toBe(false);
+
+    expect(
+      llmLoadModelConfigSchema.safeParse({
+        speculativeDraftSimple: true,
+        speculativeDraftModel: "",
+      }).success,
+    ).toBe(false);
+
+    expect(
+      llmLoadModelConfigSchema.safeParse({
+        speculativeDraftSimple: true,
+        speculativeDraftModel: "publisher/draft-model",
+        speculativeDraftMaxTokens: 1,
+        speculativeDraftMinTokens: 2,
+      }).success,
+    ).toBe(false);
+
+    expect(
+      llmLoadModelConfigSchema.safeParse({
+        speculativeDraftSimple: true,
+        speculativeDraftModel: "publisher/draft-model",
+        speculativeDraftMinContinueProbability: 1.5,
+      }).success,
+    ).toBe(false);
+
+    expect(
+      llmLoadModelConfigSchema.safeParse({
+        speculativeDraftMtp: true,
+        speculativeDraftSimple: true,
+        speculativeDraftModel: "publisher/draft-model",
+      }).success,
+    ).toBe(false);
   });
 
   it("round trips llama physical batch size", () => {
