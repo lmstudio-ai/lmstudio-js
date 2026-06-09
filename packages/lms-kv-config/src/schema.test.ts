@@ -210,6 +210,40 @@ describe("llmLoadModelConfig conversion", () => {
     expect(convertedConfig.speculativeDraftModel).toBe("");
   });
 
+  it("normalizes inert materialized Draft Model resources for public round trips", () => {
+    const loadConfig = globalConfigSchematics.scoped("llm.load").buildPartialConfig({
+      "llama.speculativeDecoding.draftMtp": false,
+      "llama.speculativeDecoding.draftSimple": false,
+      "llama.speculativeDecoding.draftModel": "publisher/stale-draft-model",
+    });
+
+    const convertedConfig = kvConfigToLLMLoadModelConfig(loadConfig, {
+      useDefaultsForMissingKeys: true,
+    });
+
+    expect(convertedConfig.speculativeDraftMtp).toBe(false);
+    expect(convertedConfig.speculativeDraftSimple).toBe(false);
+    expect(convertedConfig.speculativeDraftModel).toBe("");
+    expect(llmLoadModelConfigSchema.safeParse(convertedConfig).success).toBe(true);
+  });
+
+  it("preserves materialized Draft Model resources when Draft Simple is active", () => {
+    const loadConfig = globalConfigSchematics.scoped("llm.load").buildPartialConfig({
+      "llama.speculativeDecoding.draftMtp": false,
+      "llama.speculativeDecoding.draftSimple": true,
+      "llama.speculativeDecoding.draftModel": "publisher/draft-model",
+    });
+
+    const convertedConfig = kvConfigToLLMLoadModelConfig(loadConfig, {
+      useDefaultsForMissingKeys: true,
+    });
+
+    expect(convertedConfig.speculativeDraftMtp).toBe(false);
+    expect(convertedConfig.speculativeDraftSimple).toBe(true);
+    expect(convertedConfig.speculativeDraftModel).toBe("publisher/draft-model");
+    expect(llmLoadModelConfigSchema.safeParse(convertedConfig).success).toBe(true);
+  });
+
   it("preserves an explicitly empty Draft Model from KV config", () => {
     const loadConfig = globalConfigSchematics.scoped("llm.load").buildPartialConfig({
       "llama.speculativeDecoding.draftModel": "",

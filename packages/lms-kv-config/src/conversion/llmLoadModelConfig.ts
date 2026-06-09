@@ -132,7 +132,12 @@ function kvConfigToLLMLlamaLoadModelConfig(
 
   const speculativeDraftModel = parsed.get("llama.speculativeDecoding.draftModel");
   if (speculativeDraftModel !== undefined) {
-    result.speculativeDraftModel = speculativeDraftModel;
+    // Materialized public configs must be valid if passed back to client.llm.load(). Keep stale
+    // draft-model resources internal unless Draft Simple currently consumes them.
+    result.speculativeDraftModel =
+      useDefaultsForMissingKeys === true && speculativeDraftSimple !== true
+        ? ""
+        : speculativeDraftModel;
   }
 
   const speculativeDraftMaxTokens = parsed.get("llama.speculativeDecoding.draftMaxTokens");
