@@ -230,6 +230,11 @@ function kvConfigToLLMMlxLoadModelConfig(
   if (maxParallelPredictions !== undefined) {
     result.maxParallelPredictions = maxParallelPredictions;
   }
+  const mlxEvalBatchSize = parsed.get("mlx.evalBatchSize");
+  if (mlxEvalBatchSize !== undefined) {
+    result.evalBatchSize = mlxEvalBatchSize;
+  }
+
   const mlxKvCacheQuantization = parsed.get("mlx.kvCacheQuantization");
   if (mlxKvCacheQuantization !== undefined) {
     result.mlxKvCacheQuantization = mlxKvCacheQuantization.enabled ? mlxKvCacheQuantization : false;
@@ -294,6 +299,7 @@ export function llmLoadModelConfigToKVConfig(config: LLMLoadModelConfig): KVConf
       config.llamaVCacheQuantizationType,
       "f16",
     ),
+    "mlx.evalBatchSize": config.evalBatchSize,
     "mlx.kvCacheQuantization": maybeFalseValueToValue(config.mlxKvCacheQuantization, {
       enabled: false,
       bits: 8,
