@@ -105,6 +105,18 @@ export interface LMStudioClientConstructorOpts {
    * same `clientIdentifier` and `clientPasskey`.
    */
   clientPasskey?: string;
+  /**
+   * A custom fetch function to use for HTTP requests. If not provided, the global `fetch` will be
+   * used.
+   *
+   * This is useful when you need to customize the fetch behavior, such as adding custom headers,
+   * using a proxy, or running in environments with custom fetch implementations.
+   *
+   * ```typescript
+   * const client = new LMStudioClient({ fetch: myCustomFetch });
+   * ```
+   */
+  fetch?: typeof fetch;
 }
 const constructorOptsSchema = z
   .object({
@@ -114,6 +126,7 @@ const constructorOptsSchema = z
     apiToken: z.string().optional(),
     clientIdentifier: z.string().optional(),
     clientPasskey: z.string().optional(),
+    fetch: z.function().optional(),
 
     // Internal testing options
     disableConnection: z.boolean().optional(),
@@ -154,6 +167,8 @@ export class LMStudioClient {
   private readonly pluginsPort: PluginsPort;
   /** @internal */
   private readonly runtimePort: RuntimePort;
+  /** @internal */
+  private readonly fetch: typeof fetch;
 
   public readonly llm: LLMNamespace;
   public readonly embedding: EmbeddingNamespace;
@@ -211,7 +226,7 @@ export class LMStudioClient {
   }
 
   private async isLocalhostWithGivenPortLMStudioServer(port: number): Promise<number> {
-    const response = await fetch(`http://127.0.0.1:${port}/lmstudio-greeting`);
+    const response = await this.fetch(`http://127.0.0.1:${port}/lmstudio-greeting`);
     if (response.status !== 200) {
       throw new Error("Status is not 200.");
     }
@@ -323,6 +338,7 @@ export class LMStudioClient {
       apiToken,
       clientIdentifier: clientIdentifierInput,
       clientPasskey: clientPasskeyInput,
+      fetch: fetchInput,
       disableConnection,
       llmPort,
       embeddingPort,
@@ -420,6 +436,7 @@ export class LMStudioClient {
     this.logger = new SimpleLogger("LMStudioClient", logger);
     this.clientIdentifier = clientIdentifier ?? `guest:${generateRandomBase64(18)}`;
     this.clientPasskey = clientPasskey ?? generateRandomBase64(18);
+    this.fetch = fetchInput ?? globalThis.fetch;
 
     const stack = getCurrentStack(1);
     if (disableConnection) {
