@@ -36,7 +36,6 @@ const customLoadPromptTemplate: NonNullable<LLMLoadModelConfig["promptTemplate"]
   jinjaPromptTemplate: {
     template: "{% for message in messages %}{{ message.content }}{% endfor %}",
   },
-  stopStrings: ["<load-stop>"],
 };
 
 const predictionPromptTemplate: NonNullable<LLMPredictionConfig["promptTemplate"]> = {

@@ -562,11 +562,7 @@ export const kvValueTypesLibrary = baseKVValueTypesLibraryBuilder
       return llmLoadPromptTemplateSchema;
     },
     effectiveEquals: (a, b) => {
-      return (
-        a.jinjaPromptTemplate.template === b.jinjaPromptTemplate.template &&
-        a.stopStrings.length === b.stopStrings.length &&
-        a.stopStrings.every((stopString, index) => stopString === b.stopStrings[index])
-      );
+      return a.jinjaPromptTemplate.template === b.jinjaPromptTemplate.template;
     },
     stringify: (value, _typeParam, { t, desiredLength }) => {
       const lead =
