@@ -48,7 +48,6 @@ export const defaultLlmLoadPromptTemplate: LLMLoadPromptTemplate = {
       "{% endfor %}" +
       "{% if add_generation_prompt %}{{ 'AI: ' }}{% endif %}",
   },
-  stopStrings: [],
 };
 
 // ---------------------------

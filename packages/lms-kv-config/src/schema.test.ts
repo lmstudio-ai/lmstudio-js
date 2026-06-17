@@ -78,7 +78,6 @@ describe("llmLoadModelConfig conversion", () => {
       jinjaPromptTemplate: {
         template: "{% for message in messages %}{{ message.content }}{% endfor %}",
       },
-      stopStrings: ["<|end|>"],
     };
     const loadConfig = llmLoadModelConfigToKVConfig({
       promptTemplate,
@@ -363,17 +362,35 @@ describe("llmLoadModelConfig conversion", () => {
 });
 
 describe("globalConfigSchematics", () => {
-  it("accepts load-time Jinja prompt template with stop strings", () => {
+  it("accepts load-time Jinja prompt template", () => {
     const promptTemplate = {
       type: "jinja" as const,
       jinjaPromptTemplate: {
         template: "{% for message in messages %}{{ message.content }}{% endfor %}",
       },
-      stopStrings: ["<|end|>"],
     };
     const loadConfig = llmLoadSchematics.buildPartialConfig({
       promptTemplate,
     });
+
+    expect(globalConfigSchematics.access(loadConfig, "llm.load.promptTemplate")).toEqual(
+      promptTemplate,
+    );
+  });
+
+  it("ignores beta load-time prompt template stop strings", () => {
+    const promptTemplate = {
+      type: "jinja" as const,
+      jinjaPromptTemplate: {
+        template: "{% for message in messages %}{{ message.content }}{% endfor %}",
+      },
+    };
+    const loadConfig = makeKVConfigFromFields([
+      kvConfigField("llm.load.promptTemplate", {
+        ...promptTemplate,
+        stopStrings: ["<beta-stop>"],
+      }),
+    ]);
 
     expect(globalConfigSchematics.access(loadConfig, "llm.load.promptTemplate")).toEqual(
       promptTemplate,
@@ -433,7 +450,6 @@ describe("globalConfigSchematics", () => {
       jinjaPromptTemplate: {
         template: "{% for message in messages %}{{ message.content }}{% endfor %}",
       },
-      stopStrings: ["<|end|>"],
     };
     const schematics = new KVConfigSchematicsBuilder(kvValueTypesLibrary)
       .field("promptTemplate", "llmLoadPromptTemplate", {}, promptTemplate)
