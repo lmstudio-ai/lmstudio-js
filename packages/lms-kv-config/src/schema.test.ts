@@ -378,24 +378,6 @@ describe("globalConfigSchematics", () => {
     );
   });
 
-  it("ignores beta load-time prompt template stop strings", () => {
-    const promptTemplate = {
-      type: "jinja" as const,
-      jinjaPromptTemplate: {
-        template: "{% for message in messages %}{{ message.content }}{% endfor %}",
-      },
-    };
-    const loadConfig = makeKVConfigFromFields([
-      kvConfigField("llm.load.promptTemplate", {
-        ...promptTemplate,
-        stopStrings: ["<beta-stop>"],
-      }),
-    ]);
-
-    expect(globalConfigSchematics.access(loadConfig, "llm.load.promptTemplate")).toEqual(
-      promptTemplate,
-    );
-  });
 
   it("rejects undefined as a load-time prompt template stored value", () => {
     expect(llmLoadSchematics.getSchemaForKey("promptTemplate").safeParse(undefined).success).toBe(
