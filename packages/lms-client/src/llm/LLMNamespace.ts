@@ -48,4 +48,26 @@ export class LLMNamespace extends ModelNamespace<
   ): LLMDynamicHandle {
     return new LLMDynamicHandle(port, specifier, validator, logger);
   }
+
+  /**
+   * List all available (downloaded) LLM models.
+   *
+   * This is a convenience method that returns all downloaded LLM models. It's equivalent to
+   * calling `client.system.listDownloadedModels("llm")`.
+   *
+   * @example
+   * ```ts
+   * const availableModels = await client.llm.listAvailable();
+   * console.log(`Found ${availableModels.length} available LLM models`);
+   * for (const model of availableModels) {
+   *   console.log(`- ${model.displayName} (${model.modelKey})`);
+   * }
+   * ```
+   *
+   * @returns A promise that resolves to an array of available LLM model information
+   * @public
+   */
+  public async listAvailable(): Promise<Array<LLMInfo>> {
+    return await this.client.system.listDownloadedModels("llm");
+  }
 }
