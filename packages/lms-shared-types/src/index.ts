@@ -221,6 +221,10 @@ export {
   llmReasoningParsingSchema,
 } from "./llm/LLMPredictionConfig.js";
 export {
+  LLMPredictionOperationIntent,
+  llmPredictionOperationIntentSchema,
+} from "./llm/LLMPredictionOperationIntent.js";
+export {
   LLMCandidateToken,
   llmCandidateTokenSchema,
   LLMPredictionFragment,

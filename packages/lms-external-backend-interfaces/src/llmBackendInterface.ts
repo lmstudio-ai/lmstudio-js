@@ -9,6 +9,7 @@ import {
   type LLMInstanceInfo,
   llmInstanceInfoSchema,
   llmPredictionFragmentSchema,
+  llmPredictionOperationIntentSchema,
   llmPredictionStatsSchema,
   modelSpecifierSchema,
   promptProcessingDetailsSchema,
@@ -38,6 +39,7 @@ export function createLlmBackendInterface() {
            */
           fuzzyPresetIdentifier: z.string().optional(),
           ignoreServerSessionConfig: z.boolean().optional(),
+          operationIntent: llmPredictionOperationIntentSchema.optional(),
         }),
         toClientPacket: z.discriminatedUnion("type", [
           z.object({
