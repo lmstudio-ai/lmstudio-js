@@ -10,7 +10,7 @@ import { z } from "zod";
  */
 export const llmPredictionOperationIntentSchema = z.discriminatedUnion("type", [
   z.object({
-    type: z.literal("standardPrediction"),
+    type: z.literal("chatPrediction"),
   }),
   z.object({
     type: z.literal("rawTextCompletion"),
