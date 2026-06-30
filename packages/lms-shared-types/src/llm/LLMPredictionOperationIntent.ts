@@ -1,10 +1,10 @@
 import { z } from "zod";
 
 /**
- * Internal descriptor for the operation being carried over the shared prediction channel.
+ * Describes the original prediction interface that started this prediction.
  *
- * This is not a public SDK prediction option. Public SDK methods choose the intent and pass it
- * through backend plumbing so providers can dispatch without inferring from config-stack details.
+ * This lets a prediction request keep the caller's intended operation separate from the chat
+ * history and prediction config used to carry it.
  *
  * @internal
  */
