@@ -3,6 +3,7 @@
   "version": "0.4.6",
   "description": "",
   "main": "dist/cjs/index.js",
+  "module": "dist/esm/index.js",
   "browser": "dist/cjs/browser.js",
   "types": "dist/types/index.d.ts",
   "scripts": {
@@ -18,5 +19,13 @@
     "ws": "^8.16.0"
   },
   "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "require": "./dist/cjs/index.js",
+      "import": "./dist/esm/index.js",
+      "default": "./dist/esm/index.js"
+    }
+  },
   "gitHead": "883a08d0cbc27d0ea888355a21f8bca61275f23d"
 }
