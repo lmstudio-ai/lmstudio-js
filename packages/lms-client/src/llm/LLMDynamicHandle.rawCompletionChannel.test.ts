@@ -116,6 +116,18 @@ describe("LLMDynamicHandle raw completion channel", () => {
     ).toEqual([]);
   });
 
+  test.each([
+    ["rawTools", { rawTools: { type: "none" } }],
+    ["toolChoice", { toolChoice: { type: "generic", mode: "none" } }],
+  ] as const)("complete rejects explicit %s config before opening a channel", (_label, opts) => {
+    const harness = createHandleHarness();
+
+    expect(() => harness.handle.complete("raw prompt", opts)).toThrow(
+      "Tools are not supported in model.complete().",
+    );
+    expect(harness.capturedChannelCreations).toEqual([]);
+  });
+
   test("respond remains on predict", async () => {
     const harness = createHandleHarness();
 

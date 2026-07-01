@@ -233,6 +233,20 @@ function splitPredictionOpts<TStructuredOutputType>(
   ];
 }
 
+function validateRawCompletionConfigDoesNotRequestTools(
+  config: LLMPredictionConfigInput,
+  stack: string,
+): void {
+  if (config.rawTools === undefined && config.toolChoice === undefined) {
+    return;
+  }
+
+  throw makePrettyError(
+    "Tools are not supported in model.complete(). Use model.respond() or model.act() for tool use.",
+    stack,
+  );
+}
+
 /**
  * Options for {@link LLMDynamicHandle#respond}.
  *
@@ -754,6 +768,7 @@ export class LLMDynamicHandle extends DynamicHandle<
       stack,
     );
     const [config, extraOpts] = splitPredictionOpts(opts);
+    validateRawCompletionConfigDoesNotRequestTools(config, stack);
     const [cancelEvent, emitCancelEvent] = BufferedEvent.create<void>();
 
     if (extraOpts.signal !== undefined) {
