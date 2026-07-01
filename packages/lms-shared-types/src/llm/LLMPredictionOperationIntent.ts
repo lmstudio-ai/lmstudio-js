@@ -5,8 +5,6 @@ import { z } from "zod";
  *
  * This lets a prediction request keep the caller's intended operation separate from the chat
  * history and prediction config used to carry it.
- *
- * @internal
  */
 export const llmPredictionOperationIntentSchema = z.discriminatedUnion("type", [
   z.object({
@@ -18,5 +16,4 @@ export const llmPredictionOperationIntentSchema = z.discriminatedUnion("type", [
   }),
 ]);
 
-/** @internal */
 export type LLMPredictionOperationIntent = z.infer<typeof llmPredictionOperationIntentSchema>;
