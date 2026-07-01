@@ -5,7 +5,6 @@ import {
   makePrettyError,
   safeCallCallback,
   SimpleLogger,
-  text,
   type Validator,
 } from "@lmstudio/lms-common";
 import { type LLMPort } from "@lmstudio/lms-external-backend-interfaces";
@@ -16,7 +15,6 @@ import {
   kvConfigToLLMPredictionConfig,
   llmPredictionConfigToKVConfig,
   llmSharedLoadConfigSchematics,
-  llmSharedPredictionConfigSchematics,
 } from "@lmstudio/lms-kv-config";
 import {
   type ChatHistoryData,
@@ -401,10 +399,6 @@ function splitActOpts<TStructuredOutputType>(
   ];
 }
 
-const noFormattingTemplate = text`
-  {% for message in messages %}{{ message['content'] }}{% endfor %}
-`;
-
 /**
  * This represents a set of requirements for a model. It is not tied to a specific model, but rather
  * to a set of requirements that a model must satisfy.
@@ -601,6 +595,77 @@ export class LLMDynamicHandle extends DynamicHandle<
     channel.onError.subscribeOnce(onError);
   }
 
+  /** @internal */
+  private internalCompleteRawText(
+    rawPrompt: string,
+    predictionConfigStack: KVConfigStack,
+    cancelEvent: BufferedEvent<void>,
+    extraOpts: LLMPredictionExtraOpts,
+    onFragment: (fragment: LLMPredictionFragment) => void,
+    onFinished: (
+      stats: LLMPredictionStats,
+      modelInfo: LLMInstanceInfo,
+      loadModelConfig: KVConfig,
+      predictionConfig: KVConfig,
+    ) => void,
+    onError: (error: Error) => void,
+  ) {
+    let finished = false;
+    let firstTokenTriggered = false;
+    const channel = this.port.createChannel(
+      "completeRawText",
+      {
+        modelSpecifier: this.specifier,
+        rawPrompt,
+        predictionConfigStack,
+        fuzzyPresetIdentifier: extraOpts.preset,
+        ignoreServerSessionConfig: this.internalIgnoreServerSessionConfig,
+      },
+      message => {
+        switch (message.type) {
+          case "fragment": {
+            if (!firstTokenTriggered) {
+              firstTokenTriggered = true;
+              safeCallCallback(this.logger, "onFirstToken", extraOpts.onFirstToken, []);
+            }
+            safeCallCallback(this.logger, "onFragment", extraOpts.onPredictionFragment, [
+              message.fragment,
+            ]);
+            onFragment(message.fragment);
+            break;
+          }
+          case "promptProcessingProgress": {
+            safeCallCallback(
+              this.logger,
+              "onPromptProcessingProgress",
+              extraOpts.onPromptProcessingProgress,
+              [message.progress, message.details],
+            );
+            break;
+          }
+          case "success": {
+            finished = true;
+            onFinished(
+              message.stats,
+              message.modelInfo,
+              message.loadModelConfig,
+              message.predictionConfig,
+            );
+            break;
+          }
+        }
+      },
+      { stack: getCurrentStack(2) },
+    );
+    cancelEvent.subscribeOnce(() => {
+      if (finished) {
+        return;
+      }
+      channel.send({ type: "cancel" });
+    });
+    channel.onError.subscribeOnce(onError);
+  }
+
   private predictionConfigInputToKVConfig(config: LLMPredictionConfigInput): KVConfig {
     let structuredField: undefined | LLMStructuredPredictionSetting = undefined;
     if (typeof (config.structured as any)?.parse === "function") {
@@ -712,8 +777,8 @@ export class LLMDynamicHandle extends DynamicHandle<
       !zodSchemaParseResult.success ? null : this.createZodParser(zodSchemaParseResult.data),
     );
 
-    this.internalPredict(
-      this.resolveCompletionContext(prompt),
+    this.internalCompleteRawText(
+      prompt,
       {
         layers: [
           ...this.internalKVConfigStack.layers,
@@ -726,18 +791,6 @@ export class LLMDynamicHandle extends DynamicHandle<
               ...config,
             }),
           },
-          {
-            layerName: "completeModeFormatting",
-            config: llmSharedPredictionConfigSchematics.buildPartialConfig({
-              promptTemplate: {
-                type: "jinja",
-                jinjaPromptTemplate: {
-                  template: noFormattingTemplate,
-                },
-                stopStrings: [],
-              },
-            }),
-          },
         ],
       },
       cancelEvent,
@@ -748,17 +801,6 @@ export class LLMDynamicHandle extends DynamicHandle<
       error => failed(error),
     );
     return ongoingPrediction;
-  }
-
-  private resolveCompletionContext(contextInput: string): ChatHistoryData {
-    return {
-      messages: [
-        {
-          role: "user",
-          content: [{ type: "text", text: contextInput }],
-        },
-      ],
-    };
   }
 
   /**
