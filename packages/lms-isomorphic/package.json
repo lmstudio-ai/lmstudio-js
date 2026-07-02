@@ -21,6 +21,12 @@
   "sideEffects": false,
   "exports": {
     ".": {
+      "browser": {
+        "types": "./dist/types/browser.d.ts",
+        "require": "./dist/cjs/browser.js",
+        "import": "./dist/esm/browser.js",
+        "default": "./dist/esm/browser.js"
+      },
       "types": "./dist/types/index.d.ts",
       "require": "./dist/cjs/index.js",
       "import": "./dist/esm/index.js",
