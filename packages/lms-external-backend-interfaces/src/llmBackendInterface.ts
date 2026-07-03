@@ -102,6 +102,41 @@ export function createLlmBackendInterface() {
           }),
         ]),
       })
+      .addChannelEndpoint("completeRawText", {
+        creationParameter: z.object({
+          modelSpecifier: modelSpecifierSchema,
+          rawPrompt: z.string(),
+          predictionConfigStack: kvConfigStackSchema,
+          /**
+           * Which preset to use. Supports limited fuzzy matching.
+           */
+          fuzzyPresetIdentifier: z.string().optional(),
+          ignoreServerSessionConfig: z.boolean().optional(),
+        }),
+        toClientPacket: z.discriminatedUnion("type", [
+          z.object({
+            type: z.literal("fragment"),
+            fragment: llmPredictionFragmentSchema,
+          }),
+          z.object({
+            type: z.literal("promptProcessingProgress"),
+            progress: z.number(),
+            details: promptProcessingDetailsSchema,
+          }),
+          z.object({
+            type: z.literal("success"),
+            stats: llmPredictionStatsSchema,
+            modelInfo: llmInstanceInfoSchema,
+            loadModelConfig: kvConfigSchema,
+            predictionConfig: kvConfigSchema,
+          }),
+        ]),
+        toServerPacket: z.discriminatedUnion("type", [
+          z.object({
+            type: z.literal("cancel"),
+          }),
+        ]),
+      })
       .addRpcEndpoint("applyPromptTemplate", {
         parameter: z.object({
           specifier: modelSpecifierSchema,
