@@ -325,7 +325,7 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
       .field("useUnifiedKvCache", "boolean", { isExperimental: true }, true)
       .scope("llama", builder =>
         builder
-          .field("autoFit", "boolean", { machineDependent: true }, false)
+          .field("autoFit", "boolean", { machineDependent: true }, true)
           .scope("acceleration", builder =>
             builder.field(
               "offloadRatio",
