@@ -120,6 +120,11 @@ function kvConfigToLLMLlamaLoadModelConfig(
     result.flashAttention = flashAttention;
   }
 
+  const llamaContextCheckpoints = parsed.get("llama.contextCheckpoints");
+  if (llamaContextCheckpoints !== undefined) {
+    result.llamaContextCheckpoints = llamaContextCheckpoints;
+  }
+
   const speculativeDraftMtp = parsed.get("llama.speculativeDecoding.draftMtp");
   if (speculativeDraftMtp !== undefined) {
     result.speculativeDraftMtp = speculativeDraftMtp;
@@ -273,6 +278,7 @@ export function llmLoadModelConfigToKVConfig(config: LLMLoadModelConfig): KVConf
     "llama.evalBatchSize": config.evalBatchSize,
     "llama.physicalBatchSize": config.physicalBatchSize,
     "llama.flashAttention": config.flashAttention,
+    "llama.contextCheckpoints": config.llamaContextCheckpoints,
     "llama.speculativeDecoding.draftMtp": config.speculativeDraftMtp,
     "llama.speculativeDecoding.draftSimple": config.speculativeDraftSimple,
     "llama.speculativeDecoding.draftModel": config.speculativeDraftModel,
