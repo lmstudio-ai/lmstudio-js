@@ -348,6 +348,16 @@ describe("llmLoadModelConfig conversion", () => {
     expect(roundTrippedConfig.physicalBatchSize).toBe(256);
   });
 
+  it("round trips llama context checkpoints", () => {
+    const loadConfig = llmLoadModelConfigToKVConfig({
+      contextCheckpoints: 0,
+    });
+
+    const roundTrippedConfig = kvConfigToLLMLoadModelConfig(loadConfig);
+
+    expect(roundTrippedConfig.contextCheckpoints).toBe(0);
+  });
+
   it("does not expose llama physical batch size for MLX load configs", () => {
     const loadConfig = llmLoadModelConfigToKVConfig({
       physicalBatchSize: 256,
@@ -474,6 +484,17 @@ describe("globalConfigSchematics", () => {
     expect(globalConfigSchematics.access(emptyConfig, "llm.load.llama.evalBatchSize")).toBe(2048);
     expect(globalConfigSchematics.access(emptyConfig, "embedding.load.llama.evalBatchSize")).toBe(
       2048,
+    );
+  });
+
+  it("uses 32 as the default llama context checkpoints", () => {
+    const emptyConfig = makeKVConfigFromFields([]);
+
+    expect(globalConfigSchematics.access(emptyConfig, "llm.load.llama.contextCheckpoints")).toBe(
+      32,
+    );
+    expect(llmLlamaLoadConfigSchematics.obtainField("llama.contextCheckpoints").fullKey).toBe(
+      "llm.load.llama.contextCheckpoints",
     );
   });
 

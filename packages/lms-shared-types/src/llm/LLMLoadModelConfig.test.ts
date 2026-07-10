@@ -14,6 +14,18 @@ function expectSpeculativeConfigRejectedByHelpers(
   expect(() => resolveLLMLoadSpeculativeDecodingConfig(config)).toThrow(expectedMessage);
 }
 
+describe("LLMLoadModelConfig schema", () => {
+  it("accepts llama context checkpoints including 0", () => {
+    expect(llmLoadModelConfigSchema.safeParse({ contextCheckpoints: 0 }).success).toBe(true);
+    expect(llmLoadModelConfigSchema.safeParse({ contextCheckpoints: 32 }).success).toBe(true);
+  });
+
+  it("rejects invalid llama context checkpoint values", () => {
+    expect(llmLoadModelConfigSchema.safeParse({ contextCheckpoints: -1 }).success).toBe(false);
+    expect(llmLoadModelConfigSchema.safeParse({ contextCheckpoints: 1.5 }).success).toBe(false);
+  });
+});
+
 describe("LLMLoad speculative decoding validation", () => {
   it("rejects invalid Draft MTP values through the public helpers", () => {
     const invalidConfigCases: Array<{

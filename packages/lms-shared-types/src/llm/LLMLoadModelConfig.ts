@@ -583,6 +583,12 @@ export interface LLMLoadModelConfig {
   flashAttention?: boolean;
 
   /**
+   * Maximum number of llama-server context checkpoints to keep per slot.
+   * Set to 0 to disable context checkpoints.
+   */
+  contextCheckpoints?: number;
+
+  /**
    * Enables speculative decoding using bundled multi-token prediction heads when the loaded model
    * supports it.
    *
@@ -741,6 +747,7 @@ export const llmLoadModelConfigSchema = z
     evalBatchSize: z.number().int().min(1).optional(),
     physicalBatchSize: z.number().int().min(1).optional(),
     flashAttention: z.boolean().optional(),
+    contextCheckpoints: z.number().int().min(0).optional(),
     speculativeDraftMtp: speculativeDraftMtpSchema.optional(),
     speculativeDraftSimple: speculativeDraftSimpleSchema.optional(),
     speculativeDraftModel: speculativeDraftModelSchema.optional(),

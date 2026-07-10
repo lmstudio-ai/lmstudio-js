@@ -347,6 +347,18 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
             512,
           )
           .field("flashAttention", "boolean", {}, false)
+          .field(
+            "contextCheckpoints",
+            "numeric",
+            {
+              min: 0,
+              int: true,
+              displayName: "Context Checkpoints",
+              hint:
+                "Maximum number of context checkpoints to keep per llama-server slot. 0 disables checkpoints.",
+            },
+            32,
+          )
           .scope("speculativeDecoding", builder =>
             builder
               .field(
