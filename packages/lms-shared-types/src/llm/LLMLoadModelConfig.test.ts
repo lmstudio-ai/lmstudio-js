@@ -16,17 +16,13 @@ function expectSpeculativeConfigRejectedByHelpers(
 
 describe("LLMLoadModelConfig schema", () => {
   it("accepts llama context checkpoints including 0", () => {
-    expect(llmLoadModelConfigSchema.safeParse({ llamaContextCheckpoints: 0 }).success).toBe(true);
-    expect(llmLoadModelConfigSchema.safeParse({ llamaContextCheckpoints: 32 }).success).toBe(true);
+    expect(llmLoadModelConfigSchema.safeParse({ contextCheckpoints: 0 }).success).toBe(true);
+    expect(llmLoadModelConfigSchema.safeParse({ contextCheckpoints: 32 }).success).toBe(true);
   });
 
   it("rejects invalid llama context checkpoint values", () => {
-    expect(llmLoadModelConfigSchema.safeParse({ llamaContextCheckpoints: -1 }).success).toBe(
-      false,
-    );
-    expect(llmLoadModelConfigSchema.safeParse({ llamaContextCheckpoints: 1.5 }).success).toBe(
-      false,
-    );
+    expect(llmLoadModelConfigSchema.safeParse({ contextCheckpoints: -1 }).success).toBe(false);
+    expect(llmLoadModelConfigSchema.safeParse({ contextCheckpoints: 1.5 }).success).toBe(false);
   });
 });
 

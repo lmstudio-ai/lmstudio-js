@@ -350,12 +350,12 @@ describe("llmLoadModelConfig conversion", () => {
 
   it("round trips llama context checkpoints", () => {
     const loadConfig = llmLoadModelConfigToKVConfig({
-      llamaContextCheckpoints: 0,
+      contextCheckpoints: 0,
     });
 
     const roundTrippedConfig = kvConfigToLLMLoadModelConfig(loadConfig);
 
-    expect(roundTrippedConfig.llamaContextCheckpoints).toBe(0);
+    expect(roundTrippedConfig.contextCheckpoints).toBe(0);
   });
 
   it("does not expose llama physical batch size for MLX load configs", () => {
