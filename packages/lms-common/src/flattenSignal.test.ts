@@ -153,9 +153,169 @@ describe("flattenSignalOfSignal", () => {
     await expect(pullPromise).resolves.toBe(7);
     expect(flattenedSignal.get()).toBe(7);
   });
+
+  it("should not treat a stale root signal's cached inner signal as fresh", async () => {
+    const cachedInnerSignal = Signal.createReadonly("cached");
+    const freshInnerSignal = Signal.createReadonly("fresh");
+    let emitRootSignal: (value: typeof cachedInnerSignal) => void = () => {};
+    const rootSignal = LazySignal.create(cachedInnerSignal, setDownstream => {
+      emitRootSignal = setDownstream;
+      return () => {};
+    });
+    const flattenedSignal = flattenSignalOfSignal(rootSignal);
+
+    const pullPromise = flattenedSignal.pull();
+    let pullResolved = false;
+    void pullPromise.then(() => {
+      pullResolved = true;
+    });
+    await waitForTick();
+
+    expect(pullResolved).toBe(false);
+
+    emitRootSignal(freshInnerSignal);
+    await expect(pullPromise).resolves.toBe("fresh");
+  });
+
+  it("should not treat a stale inner signal's cached value as fresh", async () => {
+    let emitInnerSignal: (value: string) => void = () => {};
+    const innerSignal = LazySignal.create("cached", setDownstream => {
+      emitInnerSignal = setDownstream;
+      return () => {};
+    });
+    const outerSignal = Signal.createReadonly(innerSignal);
+    const flattenedSignal = flattenSignalOfSignal(outerSignal);
+
+    const pullPromise = flattenedSignal.pull();
+    let pullResolved = false;
+    void pullPromise.then(() => {
+      pullResolved = true;
+    });
+    await waitForTick();
+
+    expect(pullResolved).toBe(false);
+
+    emitInnerSignal("fresh");
+    await expect(pullPromise).resolves.toBe("fresh");
+  });
+
+  it("should accept a same-value snapshot from a stale inner signal as fresh", async () => {
+    let emitInnerSignal: (value: string) => void = () => {};
+    const innerSignal = LazySignal.create("cached", setDownstream => {
+      emitInnerSignal = setDownstream;
+      return () => {};
+    });
+    const outerSignal = Signal.createReadonly(innerSignal);
+    const flattenedSignal = flattenSignalOfSignal(outerSignal);
+
+    const pullPromise = flattenedSignal.pull();
+    let pullResolved = false;
+    void pullPromise.then(() => {
+      pullResolved = true;
+    });
+    await waitForTick();
+
+    expect(pullResolved).toBe(false);
+
+    emitInnerSignal("cached");
+    await expect(pullPromise).resolves.toBe("cached");
+  });
+
+  it("should stop waiting for a stale inner signal after switching inner signals", async () => {
+    let emitStaleInnerSignal: (value: string) => void = () => {};
+    const unsubscribeStaleInnerSignal = jest.fn();
+    const staleInnerSignal = LazySignal.create("stale-cached", setDownstream => {
+      emitStaleInnerSignal = setDownstream;
+      return unsubscribeStaleInnerSignal;
+    });
+    const freshInnerSignal = Signal.createReadonly("fresh");
+    const [outerSignal, setOuterSignal] = Signal.create<
+      typeof staleInnerSignal | typeof freshInnerSignal
+    >(staleInnerSignal);
+    const flattenedSignal = flattenSignalOfSignal(outerSignal);
+
+    const pullPromise = flattenedSignal.pull();
+    await waitForTick();
+
+    setOuterSignal(freshInnerSignal);
+    await expect(pullPromise).resolves.toBe("fresh");
+    expect(unsubscribeStaleInnerSignal).toHaveBeenCalledTimes(1);
+
+    emitStaleInnerSignal("late");
+    expect(flattenedSignal.get()).toBe("fresh");
+  });
 });
 
 describe("flattenSignalOfWritableSignal", () => {
+  it("should not treat a stale root signal's cached writable signal as fresh", async () => {
+    const cachedInnerWritableSignal = Signal.create("cached");
+    const freshInnerWritableSignal = Signal.create("fresh");
+    let emitRootSignal: (value: typeof cachedInnerWritableSignal) => void = () => {};
+    const rootSignal = LazySignal.create(cachedInnerWritableSignal, setDownstream => {
+      emitRootSignal = setDownstream;
+      return () => {};
+    });
+    const [flattenedSignal] = flattenSignalOfWritableSignal(rootSignal);
+
+    const pullPromise = flattenedSignal.pull();
+    let pullResolved = false;
+    void pullPromise.then(() => {
+      pullResolved = true;
+    });
+    await waitForTick();
+
+    expect(pullResolved).toBe(false);
+
+    emitRootSignal(freshInnerWritableSignal);
+    await expect(pullPromise).resolves.toBe("fresh");
+  });
+
+  it("should not treat a stale inner writable signal's cached value as fresh", async () => {
+    let emitInnerSignal: (value: string) => void = () => {};
+    const innerSignal = LazySignal.create("cached", setDownstream => {
+      emitInnerSignal = setDownstream;
+      return () => {};
+    });
+    const [, unusedSetter] = Signal.create("unused");
+    const outerSignal = Signal.createReadonly([innerSignal, unusedSetter] as const);
+    const [flattenedSignal] = flattenSignalOfWritableSignal(outerSignal);
+
+    const pullPromise = flattenedSignal.pull();
+    let pullResolved = false;
+    void pullPromise.then(() => {
+      pullResolved = true;
+    });
+    await waitForTick();
+
+    expect(pullResolved).toBe(false);
+
+    emitInnerSignal("fresh");
+    await expect(pullPromise).resolves.toBe("fresh");
+  });
+
+  it("should accept a same-value snapshot from a stale inner writable signal as fresh", async () => {
+    let emitInnerSignal: (value: string) => void = () => {};
+    const innerSignal = LazySignal.create("cached", setDownstream => {
+      emitInnerSignal = setDownstream;
+      return () => {};
+    });
+    const [, unusedSetter] = Signal.create("unused");
+    const outerSignal = Signal.createReadonly([innerSignal, unusedSetter] as const);
+    const [flattenedSignal] = flattenSignalOfWritableSignal(outerSignal);
+
+    const pullPromise = flattenedSignal.pull();
+    let pullResolved = false;
+    void pullPromise.then(() => {
+      pullResolved = true;
+    });
+    await waitForTick();
+
+    expect(pullResolved).toBe(false);
+
+    emitInnerSignal("cached");
+    await expect(pullPromise).resolves.toBe("cached");
+  });
+
   it("should preserve nested patches and tags from a stable inner writable signal", async () => {
     const innerWritableSignal = Signal.create({
       nested: {

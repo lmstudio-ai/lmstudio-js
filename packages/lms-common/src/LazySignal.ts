@@ -43,6 +43,8 @@ export type SubscribeUpstream<TData> = (
  */
 export class LazySignal<TData> extends Subscribable<TData> implements SignalLike<TData> {
   public readonly [isLazySignalSymbol] = true;
+  public static isLazySignal<TData>(value: SignalLike<TData>): value is LazySignal<TData>;
+  public static isLazySignal(value: unknown): value is LazySignal<unknown>;
   public static isLazySignal(value: unknown): value is LazySignal<unknown> {
     return (
       typeof value === "object" &&
@@ -96,6 +98,44 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
     );
   }
 
+  private static subscribeToSources<TSource extends Array<unknown>>(
+    sourceSignals: { [TKey in keyof TSource]: SignalLike<TSource[TKey]> },
+    onSourceValuesChanged: () => void,
+  ): () => void {
+    let pendingSourceRefreshes = 0;
+    let sourceSubscriptionsReady = false;
+    const freshnessUnsubscribers = new Array<() => void>();
+    for (const sourceSignal of sourceSignals) {
+      if (LazySignal.isLazySignal(sourceSignal) && sourceSignal.isStale()) {
+        pendingSourceRefreshes++;
+        freshnessUnsubscribers.push(
+          sourceSignal.updateReceivedEvent.subscribeOnce(() => {
+            pendingSourceRefreshes--;
+            if (sourceSubscriptionsReady && pendingSourceRefreshes === 0) {
+              onSourceValuesChanged();
+            }
+          }),
+        );
+      }
+    }
+    const sourceUnsubscribers = sourceSignals.map(sourceSignal =>
+      sourceSignal.subscribe(() => {
+        if (sourceSubscriptionsReady && pendingSourceRefreshes === 0) {
+          onSourceValuesChanged();
+        }
+      }),
+    );
+    sourceSubscriptionsReady = true;
+    if (pendingSourceRefreshes === 0) {
+      onSourceValuesChanged();
+    }
+
+    return () => {
+      sourceUnsubscribers.forEach(unsubscribe => unsubscribe());
+      freshnessUnsubscribers.forEach(unsubscribe => unsubscribe());
+    };
+  }
+
   public static deriveFrom<TSource extends Array<unknown>, TData>(
     sourceSignals: { [TKey in keyof TSource]: SignalLike<TSource[TKey]> },
     deriver: (
@@ -131,23 +171,13 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
     };
     return new LazySignal(
       derive(),
-      setDownstream => {
-        const unsubscriber = sourceSignals.map(signal =>
-          signal.subscribe(() => {
-            const value = derive();
-            if (isAvailable(value)) {
-              setDownstream(value);
-            }
-          }),
-        );
-        const newValue = derive();
-        if (isAvailable(newValue)) {
-          setDownstream(newValue);
-        }
-        return () => {
-          unsubscriber.forEach(unsub => unsub());
-        };
-      },
+      setDownstream =>
+        LazySignal.subscribeToSources(sourceSignals, () => {
+          const value = derive();
+          if (isAvailable(value)) {
+            setDownstream(value);
+          }
+        }),
       fullEqualsPredicate,
     ) as any;
   }
@@ -204,15 +234,7 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
             }
           });
         };
-        const unsubscriber = sourceSignals.map(signal =>
-          signal.subscribe(() => {
-            deriveAndUpdate();
-          }),
-        );
-        deriveAndUpdate();
-        return () => {
-          unsubscriber.forEach(unsub => unsub());
-        };
+        return LazySignal.subscribeToSources(sourceSignals, deriveAndUpdate);
       },
       fullEqualsPredicate,
     );
@@ -345,8 +367,7 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
           }
         };
 
-        const unsubscribers = sourceSignals.map(signal => signal.subscribe(onSourceChange));
-        onSourceChange();
+        const unsubscribeFromSources = LazySignal.subscribeToSources(sourceSignals, onSourceChange);
 
         return () => {
           subscribed = false;
@@ -357,7 +378,7 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
             clearTimeout(throttleTimeoutId);
             throttleTimeoutId = null;
           }
-          unsubscribers.forEach(unsubscribe => unsubscribe());
+          unsubscribeFromSources();
         };
       },
       fullEqualsPredicate,
@@ -530,20 +551,44 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
    * If the data is not stale, the callback will be called synchronously with the current value.
    *
    * If the data is stale, it will pull the current value and call the callback with the value.
+   * Returns a function that cancels the pending callback and temporary subscription.
    */
-  public runOnNextFreshData(callback: (value: StripNotAvailable<TData>) => void) {
+  public runOnNextFreshData(
+    callback: (value: StripNotAvailable<TData>) => void,
+  ): () => void {
     if (!this.isStale()) {
       callback(this.get() as StripNotAvailable<TData>);
-    } else {
-      let unsubscribe: (() => void) | null = null;
-      const updateCallback = () => {
-        this.updateReceivedSynchronousCallbacks.delete(updateCallback);
-        callback(this.get() as StripNotAvailable<TData>);
-        unsubscribe?.();
-      };
-      this.updateReceivedSynchronousCallbacks.add(updateCallback);
-      unsubscribe = this.subscribe(() => {});
+      return () => {};
     }
+
+    let active = true;
+    let unsubscribe: (() => void) | null = null;
+    const updateCallback = () => {
+      if (!active) {
+        return;
+      }
+      active = false;
+      this.updateReceivedSynchronousCallbacks.delete(updateCallback);
+      try {
+        callback(this.get() as StripNotAvailable<TData>);
+      } finally {
+        unsubscribe?.();
+      }
+    };
+    this.updateReceivedSynchronousCallbacks.add(updateCallback);
+    unsubscribe = this.subscribe(() => {});
+    if (!active) {
+      unsubscribe();
+    }
+
+    return () => {
+      if (!active) {
+        return;
+      }
+      active = false;
+      this.updateReceivedSynchronousCallbacks.delete(updateCallback);
+      unsubscribe?.();
+    };
   }
 
   public async ensureAvailable(): Promise<LazySignal<StripNotAvailable<TData>>> {
