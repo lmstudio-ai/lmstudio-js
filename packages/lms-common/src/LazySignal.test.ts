@@ -1,5 +1,6 @@
 import { LazySignal } from "./LazySignal.js";
-import { type WriteTag } from "./makeSetter.js";
+import { type Setter, type WriteTag } from "./makeSetter.js";
+import { OWLSignal } from "./OWLSignal.js";
 import { Signal } from "./Signal.js";
 
 describe("LazySignal", () => {
@@ -83,6 +84,501 @@ describe("LazySignal", () => {
     const promise = lazySignal.pull();
     callback(data);
     await expect(promise).resolves.toBe(data);
+  });
+
+  it("should allow waiting for fresh data to be cancelled", () => {
+    let emitUpstream: (value: string) => void = () => {};
+    const unsubscribeUpstream = jest.fn();
+    const lazySignal = LazySignal.create("cached", setDownstream => {
+      emitUpstream = setDownstream;
+      return unsubscribeUpstream;
+    });
+    const callback = jest.fn();
+
+    const cancel = lazySignal.runOnNextFreshData(callback);
+    cancel();
+    emitUpstream("fresh");
+
+    expect(callback).not.toHaveBeenCalled();
+    expect(unsubscribeUpstream).toHaveBeenCalledTimes(1);
+  });
+
+  it("should clean up after fresh data is emitted synchronously during subscription", () => {
+    const unsubscribeUpstream = jest.fn();
+    const lazySignal = LazySignal.create("cached", setDownstream => {
+      setDownstream("fresh");
+      return unsubscribeUpstream;
+    });
+    const callback = jest.fn();
+
+    lazySignal.runOnNextFreshData(callback);
+
+    expect(callback).toHaveBeenCalledWith("fresh");
+    expect(unsubscribeUpstream).toHaveBeenCalledTimes(1);
+    expect(lazySignal.isStale()).toBe(true);
+  });
+
+  it("should not let a derived signal treat a stale source value as fresh", async () => {
+    let emitUpstream: (value: string) => void = () => {};
+    const sourceSignal = LazySignal.create("cached", setDownstream => {
+      emitUpstream = setDownstream;
+      return () => {};
+    });
+    const derivedSignal = LazySignal.deriveFrom(
+      [sourceSignal],
+      sourceValue => `derived:${sourceValue}`,
+    );
+
+    const pullPromise = derivedSignal.pull();
+    let pullResolved = false;
+    void pullPromise.then(() => {
+      pullResolved = true;
+    });
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    expect(sourceSignal.isStale()).toBe(true);
+    expect(pullResolved).toBe(false);
+
+    emitUpstream("fresh");
+    await expect(pullPromise).resolves.toBe("derived:fresh");
+  });
+
+  it("should pull fresh data through a nested derive chain", async () => {
+    let emitUpstream: (value: string) => void = () => {};
+    const sourceSignal = LazySignal.createWithoutInitialValue<string>(setDownstream => {
+      emitUpstream = setDownstream;
+      return () => {};
+    });
+    const firstDerivedSignal = LazySignal.deriveFrom(
+      [sourceSignal],
+      sourceValue => `first:${sourceValue}`,
+    );
+    const secondDerivedSignal = LazySignal.deriveFrom(
+      [firstDerivedSignal],
+      firstDerivedValue => `second:${firstDerivedValue}`,
+    );
+
+    const initialPullPromise = secondDerivedSignal.pull();
+    emitUpstream("initial");
+    await expect(initialPullPromise).resolves.toBe("second:first:initial");
+
+    const refreshedPullPromise = secondDerivedSignal.pull();
+    emitUpstream("updated");
+
+    await expect(refreshedPullPromise).resolves.toBe("second:first:updated");
+  });
+
+  it("should derive once from the final value of a reentrant OWLSignal refresh", () => {
+    const initialValue = { count: 0 };
+    let emitUpstream!: Setter<typeof initialValue>;
+    const [sourceSignal, setSourceSignal] = OWLSignal.create(
+      initialValue,
+      setDownstream => {
+        emitUpstream = setDownstream;
+        return () => {};
+      },
+      () => true,
+    );
+    const unsubscribeReentrantUpdate = sourceSignal.subscribe(value => {
+      if (value.count === 1) {
+        emitUpstream({ count: 10 });
+      }
+    });
+    const derivedSignal = LazySignal.deriveFrom([sourceSignal], value => value.count);
+    const listener = jest.fn();
+    const unsubscribe = derivedSignal.subscribe(listener);
+
+    setSourceSignal.withProducer(draft => {
+      draft.count += 1;
+    });
+
+    expect(sourceSignal.isStale()).toBe(false);
+    expect(sourceSignal.get()).toEqual({ count: 11 });
+    expect(derivedSignal.isStale()).toBe(false);
+    expect(derivedSignal.get()).toBe(11);
+    expect(listener.mock.calls).toEqual([[11]]);
+
+    unsubscribe();
+    unsubscribeReentrantUpdate();
+  });
+
+  it("should finish stale when a source errors reentrantly during a fresh update", async () => {
+    let emitUpstream: (value: string) => void = () => {};
+    let failUpstream: (error: Error) => void = () => {};
+    const sourceSignal = LazySignal.create("cached", (setDownstream, errorListener) => {
+      emitUpstream = setDownstream;
+      failUpstream = errorListener;
+      return () => {};
+    });
+    const unsubscribeReentrantError = sourceSignal.subscribe(value => {
+      if (value === "updated") {
+        failUpstream(new Error("failed during delivery"));
+      }
+    });
+    const derivedSignal = LazySignal.deriveFrom(
+      [sourceSignal],
+      sourceValue => `derived:${sourceValue}`,
+    );
+    const unsubscribe = derivedSignal.subscribe(() => {});
+
+    emitUpstream("initial");
+    emitUpstream("updated");
+
+    expect(sourceSignal.isStale()).toBe(true);
+    expect(derivedSignal.isStale()).toBe(true);
+    expect(derivedSignal.get()).toBe("derived:updated");
+
+    const pullPromise = derivedSignal.pull();
+    expect(sourceSignal.recoverFromError()).toBe(true);
+    emitUpstream("recovered");
+    await expect(pullPromise).resolves.toBe("derived:recovered");
+
+    unsubscribe();
+    unsubscribeReentrantError();
+  });
+
+  it("should wait for a same-value refresh from a stale source", async () => {
+    let emitUpstream: (value: string) => void = () => {};
+    const sourceSignal = LazySignal.create("unchanged", setDownstream => {
+      emitUpstream = setDownstream;
+      return () => {};
+    });
+    const derivedSignal = LazySignal.deriveFrom(
+      [sourceSignal],
+      sourceValue => `derived:${sourceValue}`,
+    );
+
+    const pullPromise = derivedSignal.pull();
+    let pullResolved = false;
+    void pullPromise.then(() => {
+      pullResolved = true;
+    });
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    expect(pullResolved).toBe(false);
+
+    emitUpstream("unchanged");
+    await expect(pullPromise).resolves.toBe("derived:unchanged");
+  });
+
+  it("should wait until every source has fresh data", async () => {
+    const eagerSourceSignal = Signal.createReadonly("eager");
+    let emitLazyUpstream: (value: string) => void = () => {};
+    const lazySourceSignal = LazySignal.create("cached", setDownstream => {
+      emitLazyUpstream = setDownstream;
+      return () => {};
+    });
+    const derivedSignal = LazySignal.deriveFrom(
+      [eagerSourceSignal, lazySourceSignal],
+      (eagerValue, lazyValue) => `${eagerValue}:${lazyValue}`,
+    );
+
+    const pullPromise = derivedSignal.pull();
+    let pullResolved = false;
+    void pullPromise.then(() => {
+      pullResolved = true;
+    });
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    expect(pullResolved).toBe(false);
+
+    emitLazyUpstream("fresh");
+    await expect(pullPromise).resolves.toBe("eager:fresh");
+  });
+
+  it("should wait for multiple stale sources that refresh out of order", async () => {
+    let emitFirstUpstream: (value: string) => void = () => {};
+    const firstSourceSignal = LazySignal.create("first-cached", setDownstream => {
+      emitFirstUpstream = setDownstream;
+      return () => {};
+    });
+    let emitSecondUpstream: (value: string) => void = () => {};
+    const secondSourceSignal = LazySignal.create("second-cached", setDownstream => {
+      emitSecondUpstream = setDownstream;
+      return () => {};
+    });
+    const derivedSignal = LazySignal.deriveFrom(
+      [firstSourceSignal, secondSourceSignal],
+      (firstValue, secondValue) => `${firstValue}:${secondValue}`,
+    );
+
+    const pullPromise = derivedSignal.pull();
+    let pullResolved = false;
+    void pullPromise.then(() => {
+      pullResolved = true;
+    });
+
+    emitSecondUpstream("second-fresh");
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(pullResolved).toBe(false);
+
+    emitFirstUpstream("first-fresh");
+    await expect(pullPromise).resolves.toBe("first-fresh:second-fresh");
+  });
+
+  it("should continue waiting when a stale source errors before its first refresh and recovers", async () => {
+    let emitFirstUpstream: (value: string) => void = () => {};
+    let failFirstUpstream: (error: Error) => void = () => {};
+    const firstSourceSignal = LazySignal.create("first-cached", (setDownstream, errorListener) => {
+      emitFirstUpstream = setDownstream;
+      failFirstUpstream = errorListener;
+      return () => {};
+    });
+    let emitSecondUpstream: (value: string) => void = () => {};
+    const secondSourceSignal = LazySignal.create("second-cached", setDownstream => {
+      emitSecondUpstream = setDownstream;
+      return () => {};
+    });
+    const derivedSignal = LazySignal.deriveFrom(
+      [firstSourceSignal, secondSourceSignal],
+      (firstValue, secondValue) => `${firstValue}:${secondValue}`,
+    );
+
+    const pullPromise = derivedSignal.pull();
+    let pullResolved = false;
+    void pullPromise.then(() => {
+      pullResolved = true;
+    });
+
+    failFirstUpstream(new Error("upstream failed"));
+    expect(firstSourceSignal.recoverFromError()).toBe(true);
+    emitSecondUpstream("second-fresh");
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(pullResolved).toBe(false);
+
+    emitFirstUpstream("first-recovered");
+    await expect(pullPromise).resolves.toBe("first-recovered:second-fresh");
+  });
+
+  it("should wait for a recovered source to refresh again if it errors while other sources are pending", async () => {
+    let emitFirstUpstream: (value: string) => void = () => {};
+    let failFirstUpstream: (error: Error) => void = () => {};
+    const firstSourceSignal = LazySignal.create("first-cached", (setDownstream, errorListener) => {
+      emitFirstUpstream = setDownstream;
+      failFirstUpstream = errorListener;
+      return () => {};
+    });
+    let emitSecondUpstream: (value: string) => void = () => {};
+    const secondSourceSignal = LazySignal.create("second-cached", setDownstream => {
+      emitSecondUpstream = setDownstream;
+      return () => {};
+    });
+    const derivedSignal = LazySignal.deriveFrom(
+      [firstSourceSignal, secondSourceSignal],
+      (firstValue, secondValue) => `${firstValue}:${secondValue}`,
+    );
+
+    const pullPromise = derivedSignal.pull();
+    let pullResolved = false;
+    void pullPromise.then(() => {
+      pullResolved = true;
+    });
+
+    emitFirstUpstream("first-fresh");
+    failFirstUpstream(new Error("upstream failed"));
+    expect(firstSourceSignal.recoverFromError()).toBe(true);
+    emitSecondUpstream("second-fresh");
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    expect(firstSourceSignal.isStale()).toBe(true);
+    expect(pullResolved).toBe(false);
+
+    emitFirstUpstream("first-recovered");
+    await expect(pullPromise).resolves.toBe("first-recovered:second-fresh");
+  });
+
+  it("should not derive from a stale source after an earlier successful derivation", () => {
+    let emitFirstUpstream: (value: string) => void = () => {};
+    let failFirstUpstream: (error: Error) => void = () => {};
+    const firstSourceSignal = LazySignal.create("first-cached", (setDownstream, errorListener) => {
+      emitFirstUpstream = setDownstream;
+      failFirstUpstream = errorListener;
+      return () => {};
+    });
+    let emitSecondUpstream: (value: string) => void = () => {};
+    const secondSourceSignal = LazySignal.create("second-cached", setDownstream => {
+      emitSecondUpstream = setDownstream;
+      return () => {};
+    });
+    const derivedSignal = LazySignal.deriveFrom(
+      [firstSourceSignal, secondSourceSignal],
+      (firstValue, secondValue) => `${firstValue}:${secondValue}`,
+    );
+    const listener = jest.fn();
+    const unsubscribe = derivedSignal.subscribe(listener);
+
+    emitFirstUpstream("first-fresh");
+    emitSecondUpstream("second-fresh");
+    expect(derivedSignal.get()).toBe("first-fresh:second-fresh");
+    listener.mockClear();
+
+    failFirstUpstream(new Error("upstream failed"));
+    expect(firstSourceSignal.recoverFromError()).toBe(true);
+    emitSecondUpstream("second-new");
+
+    expect(firstSourceSignal.isStale()).toBe(true);
+    expect(listener).not.toHaveBeenCalled();
+    expect(derivedSignal.get()).toBe("first-fresh:second-fresh");
+
+    emitFirstUpstream("first-recovered");
+    expect(listener).toHaveBeenCalledWith("first-recovered:second-new");
+    expect(derivedSignal.get()).toBe("first-recovered:second-new");
+    unsubscribe();
+  });
+
+  it("should become stale and make pull wait when a source errors after deriving", async () => {
+    let emitUpstream: (value: string) => void = () => {};
+    let failUpstream: (error: Error) => void = () => {};
+    const sourceSignal = LazySignal.create("cached", (setDownstream, errorListener) => {
+      emitUpstream = setDownstream;
+      failUpstream = errorListener;
+      return () => {};
+    });
+    const derivedSignal = LazySignal.deriveFrom(
+      [sourceSignal],
+      sourceValue => `derived:${sourceValue}`,
+    );
+    const unsubscribe = derivedSignal.subscribe(() => {});
+
+    emitUpstream("fresh");
+    expect(derivedSignal.isStale()).toBe(false);
+
+    failUpstream(new Error("upstream failed"));
+    expect(derivedSignal.isStale()).toBe(true);
+
+    const pullPromise = derivedSignal.pull();
+    let pullResolved = false;
+    void pullPromise.then(() => {
+      pullResolved = true;
+    });
+    expect(sourceSignal.recoverFromError()).toBe(true);
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(pullResolved).toBe(false);
+
+    emitUpstream("fresh");
+    await expect(pullPromise).resolves.toBe("derived:fresh");
+    expect(derivedSignal.isStale()).toBe(false);
+    unsubscribe();
+  });
+
+  it("should propagate source staleness through a nested derive chain", async () => {
+    let emitUpstream: (value: string) => void = () => {};
+    let failUpstream: (error: Error) => void = () => {};
+    const sourceSignal = LazySignal.create("cached", (setDownstream, errorListener) => {
+      emitUpstream = setDownstream;
+      failUpstream = errorListener;
+      return () => {};
+    });
+    const firstDerivedSignal = LazySignal.deriveFrom(
+      [sourceSignal],
+      sourceValue => `first:${sourceValue}`,
+    );
+    const secondDerivedSignal = LazySignal.deriveFrom(
+      [firstDerivedSignal],
+      sourceValue => `second:${sourceValue}`,
+    );
+    const unsubscribe = secondDerivedSignal.subscribe(() => {});
+
+    emitUpstream("fresh");
+    expect(secondDerivedSignal.isStale()).toBe(false);
+
+    failUpstream(new Error("upstream failed"));
+    expect(firstDerivedSignal.isStale()).toBe(true);
+    expect(secondDerivedSignal.isStale()).toBe(true);
+
+    const pullPromise = secondDerivedSignal.pull();
+    expect(sourceSignal.recoverFromError()).toBe(true);
+    emitUpstream("fresh");
+
+    await expect(pullPromise).resolves.toBe("second:first:fresh");
+    expect(secondDerivedSignal.isStale()).toBe(false);
+    unsubscribe();
+  });
+
+  it("should capture a synchronous upstream emission during subscription", async () => {
+    const sourceSignal = LazySignal.create("cached", setDownstream => {
+      setDownstream("synchronous");
+      return () => {};
+    });
+    const derivedSignal = LazySignal.deriveFrom(
+      [sourceSignal],
+      sourceValue => `derived:${sourceValue}`,
+    );
+
+    await expect(derivedSignal.pull()).resolves.toBe("derived:synchronous");
+  });
+
+  it("should capture the last of several synchronous subscription emissions", async () => {
+    const sourceSignal = LazySignal.create("cached", setDownstream => {
+      setDownstream("first");
+      setDownstream("second");
+      return () => {};
+    });
+    const derivedSignal = LazySignal.deriveFrom(
+      [sourceSignal],
+      sourceValue => `derived:${sourceValue}`,
+    );
+
+    await expect(derivedSignal.pull()).resolves.toBe("derived:second");
+  });
+
+  it("should release stale source subscriptions when the derived signal is unsubscribed", () => {
+    let activeUpstreamSubscriptions = 0;
+    const sourceSignal = LazySignal.create("cached", () => {
+      activeUpstreamSubscriptions++;
+      return () => {
+        activeUpstreamSubscriptions--;
+      };
+    });
+    const derivedSignal = LazySignal.deriveFrom(
+      [sourceSignal],
+      sourceValue => `derived:${sourceValue}`,
+    );
+
+    const unsubscribe = derivedSignal.subscribe(() => {});
+    expect(activeUpstreamSubscriptions).toBe(1);
+
+    unsubscribe();
+    expect(activeUpstreamSubscriptions).toBe(0);
+  });
+
+  it("should propagate eager source updates synchronously", () => {
+    const [sourceSignal, setSourceSignal] = Signal.create("initial");
+    const derivedSignal = LazySignal.deriveFrom(
+      [sourceSignal],
+      sourceValue => `derived:${sourceValue}`,
+    );
+    const listener = jest.fn();
+    const unsubscribe = derivedSignal.subscribe(listener);
+
+    setSourceSignal("updated");
+
+    expect(listener).toHaveBeenCalledWith("derived:updated");
+    expect(derivedSignal.get()).toBe("derived:updated");
+    unsubscribe();
+  });
+
+  it("should wait for an unavailable source to become available", async () => {
+    let emitUpstream: (value: string) => void = () => {};
+    const sourceSignal = LazySignal.createWithoutInitialValue<string>(setDownstream => {
+      emitUpstream = setDownstream;
+      return () => {};
+    });
+    const derivedSignal = LazySignal.deriveFrom(
+      [sourceSignal],
+      sourceValue => `derived:${sourceValue}`,
+    );
+
+    const pullPromise = derivedSignal.pull();
+    let pullResolved = false;
+    void pullPromise.then(() => {
+      pullResolved = true;
+    });
+    await Promise.resolve();
+    expect(pullResolved).toBe(false);
+
+    emitUpstream("available");
+    await expect(pullPromise).resolves.toBe("derived:available");
   });
 
   it("should preserve tags from the upstream", () => {
@@ -380,6 +876,67 @@ describe("LazySignal", () => {
   });
 });
 
+describe("asyncDeriveFrom", () => {
+  it("should ignore work started before a source became stale", async () => {
+    let emitUpstream: (value: string) => void = () => {};
+    let failUpstream: (error: Error) => void = () => {};
+    const sourceSignal = LazySignal.create("cached", (setDownstream, errorListener) => {
+      emitUpstream = setDownstream;
+      failUpstream = errorListener;
+      return () => {};
+    });
+    const resolvers = new Array<(value: string) => void>();
+    const deriver = jest.fn(
+      (sourceValue: string) =>
+        new Promise<string>(resolve => {
+          resolvers.push(result => resolve(`${sourceValue}:${result}`));
+        }),
+    );
+    const derivedSignal = LazySignal.asyncDeriveFrom("eager", [sourceSignal], deriver);
+    const unsubscribe = derivedSignal.subscribe(() => {});
+
+    emitUpstream("first");
+    resolvers[0]("done");
+    await Promise.resolve();
+    expect(derivedSignal.get()).toBe("first:done");
+
+    emitUpstream("second");
+    failUpstream(new Error("upstream failed"));
+    expect(sourceSignal.recoverFromError()).toBe(true);
+    expect(derivedSignal.isStale()).toBe(true);
+
+    resolvers[1]("outdated");
+    await Promise.resolve();
+    expect(derivedSignal.get()).toBe("first:done");
+    expect(derivedSignal.isStale()).toBe(true);
+
+    emitUpstream("second");
+    resolvers[2]("recovered");
+    await Promise.resolve();
+    expect(derivedSignal.get()).toBe("second:recovered");
+    expect(derivedSignal.isStale()).toBe(false);
+    unsubscribe();
+  });
+
+  it("should wait for fresh source data before invoking the deriver", async () => {
+    let emitUpstream: (value: string) => void = () => {};
+    const sourceSignal = LazySignal.create("cached", setDownstream => {
+      emitUpstream = setDownstream;
+      return () => {};
+    });
+    const deriver = jest.fn(async (sourceValue: string) => `derived:${sourceValue}`);
+    const derivedSignal = LazySignal.asyncDeriveFrom("eager", [sourceSignal], deriver);
+
+    const pullPromise = derivedSignal.pull();
+    await Promise.resolve();
+    expect(deriver).not.toHaveBeenCalled();
+
+    emitUpstream("fresh");
+    await expect(pullPromise).resolves.toBe("derived:fresh");
+    expect(deriver).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe("blockingAsyncDeriveFromWithThrottling", () => {
   beforeEach(() => {
     jest.useFakeTimers();
@@ -413,6 +970,67 @@ describe("blockingAsyncDeriveFromWithThrottling", () => {
 
     return { deriver, invocations };
   }
+
+  it("should ignore work started before a source became stale", async () => {
+    let emitUpstream: (value: string) => void = () => {};
+    let failUpstream: (error: Error) => void = () => {};
+    const sourceSignal = LazySignal.create("cached", (setDownstream, errorListener) => {
+      emitUpstream = setDownstream;
+      failUpstream = errorListener;
+      return () => {};
+    });
+    const { deriver, invocations } = createControllableDeriver<string>();
+    const derivedSignal = LazySignal.blockingAsyncDeriveFromWithThrottling(
+      0,
+      [sourceSignal],
+      deriver,
+    );
+    const unsubscribe = derivedSignal.subscribe(() => {});
+
+    emitUpstream("first");
+    invocations[0].resolve("first-result");
+    await Promise.resolve();
+    expect(derivedSignal.get()).toBe("first-result");
+
+    emitUpstream("second");
+    failUpstream(new Error("upstream failed"));
+    expect(sourceSignal.recoverFromError()).toBe(true);
+    expect(derivedSignal.isStale()).toBe(true);
+
+    invocations[1].resolve("outdated-result");
+    await Promise.resolve();
+    expect(derivedSignal.get()).toBe("first-result");
+    expect(derivedSignal.isStale()).toBe(true);
+
+    emitUpstream("second");
+    expect(invocations).toHaveLength(3);
+    invocations[2].resolve("recovered-result");
+    await Promise.resolve();
+    expect(derivedSignal.get()).toBe("recovered-result");
+    expect(derivedSignal.isStale()).toBe(false);
+    unsubscribe();
+  });
+
+  it("should wait for fresh source data before invoking the deriver", () => {
+    let emitUpstream: (value: string) => void = () => {};
+    const sourceSignal = LazySignal.create("cached", setDownstream => {
+      emitUpstream = setDownstream;
+      return () => {};
+    });
+    const { deriver, invocations } = createControllableDeriver<string>();
+    const derivedSignal = LazySignal.blockingAsyncDeriveFromWithThrottling(
+      0,
+      [sourceSignal],
+      deriver,
+    );
+
+    derivedSignal.subscribe(() => {});
+    expect(invocations).toHaveLength(0);
+
+    emitUpstream("fresh");
+    expect(invocations).toHaveLength(1);
+    expect(invocations[0].args).toEqual(["fresh"]);
+  });
 
   it("should run derives serially, not concurrently", async () => {
     const [source, setSource] = Signal.create("A");
@@ -651,11 +1269,7 @@ describe("blockingAsyncDeriveFromWithThrottling", () => {
       return deriver(...args);
     };
 
-    const derived = LazySignal.blockingAsyncDeriveFromWithThrottling(
-      0,
-      [source],
-      throwOnceDeriver,
-    );
+    const derived = LazySignal.blockingAsyncDeriveFromWithThrottling(0, [source], throwOnceDeriver);
     derived.subscribe(() => {});
 
     // A's derive throws synchronously — should not crash or freeze

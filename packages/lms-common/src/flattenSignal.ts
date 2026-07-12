@@ -18,38 +18,82 @@ function isReplaceRootPatch(patch: Patch): boolean {
 export function flattenSignalOfSignal<TInner>(
   rootSignal: SignalLike<SignalLike<TInner | NotAvailable> | NotAvailable>,
 ): LazySignal<TInner | NotAvailable> {
-  return LazySignal.createWithoutInitialValue<TInner>(setDownstream => {
-    let unsubscribeInnerSignal: (() => void) | null = null;
-    const subscribeToInnerSignal = (
-      maybeInnerSignal: SignalLike<TInner | NotAvailable> | NotAvailable,
-    ) => {
-      if (!isAvailable(maybeInnerSignal)) {
-        return () => {};
-      }
-      if (unsubscribeInnerSignal !== null) {
-        unsubscribeInnerSignal();
+  return LazySignal.createWithoutInitialValue<TInner>(
+    (setDownstream, _errorListener, markDownstreamStale) => {
+      let unsubscribeInnerSignal: (() => void) | null = null;
+      let unsubscribeInnerStaleSignal: (() => void) | null = null;
+
+      /** Stops listening to the previously selected inner signal. */
+      const unsubscribeInner = () => {
+        unsubscribeInnerStaleSignal?.();
+        unsubscribeInnerStaleSignal = null;
+        unsubscribeInnerSignal?.();
         unsubscribeInnerSignal = null;
-      }
-      unsubscribeInnerSignal = maybeInnerSignal.subscribeFull((value, patches, tags) => {
-        if (!isAvailable(value)) {
+      };
+
+      /** Selects the current inner signal once both levels are fresh. */
+      const subscribeToInnerSignal = (
+        maybeInnerSignal: SignalLike<TInner | NotAvailable> | NotAvailable,
+      ) => {
+        unsubscribeInner();
+        if (!isAvailable(maybeInnerSignal)) {
+          markDownstreamStale();
           return;
         }
-        setDownstream.withValueAndPatches(value, patches, tags);
+
+        /** Applies an inner update only when both levels are fresh. */
+        const updateFromInner = (
+          value: TInner | NotAvailable,
+          patches?: Array<Patch>,
+          tags?: Array<WriteTag>,
+        ) => {
+          if (
+            rootSignal.staleSignal?.get() === true ||
+            maybeInnerSignal.staleSignal?.get() === true ||
+            !isAvailable(value)
+          ) {
+            markDownstreamStale(tags);
+          } else if (patches === undefined) {
+            setDownstream(value, tags);
+          } else {
+            setDownstream.withValueAndPatches(value, patches, tags);
+          }
+        };
+
+        unsubscribeInnerSignal = maybeInnerSignal.subscribeFull(updateFromInner);
+        unsubscribeInnerStaleSignal =
+          maybeInnerSignal.staleSignal?.subscribe(isStale => {
+            if (isStale) {
+              markDownstreamStale();
+            }
+          }) ?? null;
+        updateFromInner(maybeInnerSignal.get());
+      };
+
+      /** Rechecks the root after value and freshness changes. */
+      const updateFromRoot = () => {
+        if (rootSignal.staleSignal?.get() === true) {
+          markDownstreamStale();
+        } else {
+          subscribeToInnerSignal(rootSignal.get());
+        }
+      };
+
+      const unsubscribeRootSignal = rootSignal.subscribe(updateFromRoot);
+      const unsubscribeRootStaleSignal = rootSignal.staleSignal?.subscribe(isStale => {
+        if (isStale) {
+          markDownstreamStale();
+        }
       });
-      const currentValue = maybeInnerSignal.get();
-      if (isAvailable(currentValue)) {
-        setDownstream(currentValue);
-      }
-    };
-    const unsubscribeRootSignal = rootSignal.subscribe(subscribeToInnerSignal);
-    subscribeToInnerSignal(rootSignal.get());
-    return () => {
-      if (unsubscribeInnerSignal !== null) {
-        unsubscribeInnerSignal();
-      }
-      unsubscribeRootSignal();
-    };
-  });
+      updateFromRoot();
+
+      return () => {
+        unsubscribeInner();
+        unsubscribeRootStaleSignal?.();
+        unsubscribeRootSignal();
+      };
+    },
+  );
 }
 
 /**
@@ -78,75 +122,119 @@ export function flattenSignalOfWritableSignal<TInner>(
       signal.pull().catch(console.error);
     }
   });
-  signal = LazySignal.createWithoutInitialValue<TInner>(setDownstream => {
-    let unsubscribeInnerSignal: (() => void) | null = null;
-    const subscribeToInnerSignal = (
-      maybeInnerSignal:
-        | readonly [signal: SignalLike<TInner | NotAvailable>, setter: Setter<TInner>]
-        | NotAvailable,
-    ) => {
-      if (!isAvailable(maybeInnerSignal)) {
-        return () => {};
-      }
-      if (unsubscribeInnerSignal !== null) {
-        unsubscribeInnerSignal();
+  signal = LazySignal.createWithoutInitialValue<TInner>(
+    (setDownstream, _errorListener, markDownstreamStale) => {
+      let unsubscribeInnerSignal: (() => void) | null = null;
+      let unsubscribeInnerStaleSignal: (() => void) | null = null;
+
+      /** Stops writes and updates from the previously selected inner signal. */
+      const unsubscribeInner = () => {
+        unsubscribeInnerStaleSignal?.();
+        unsubscribeInnerStaleSignal = null;
+        unsubscribeInnerSignal?.();
         unsubscribeInnerSignal = null;
-      }
-      const maybeUpdateDownstream = (
-        value: TInner | NotAvailable,
-        patches?: Array<Patch>,
-        tags?: Array<WriteTag>,
+        innerSetter = null;
+      };
+
+      /** Selects the current writable signal once both levels are fresh. */
+      const subscribeToInnerSignal = (
+        maybeInnerSignal:
+          | readonly [signal: SignalLike<TInner | NotAvailable>, setter: Setter<TInner>]
+          | NotAvailable,
       ) => {
-        if (!isAvailable(value)) {
+        unsubscribeInner();
+        if (!isAvailable(maybeInnerSignal)) {
+          markDownstreamStale();
           return;
         }
-        if (patches !== undefined) {
-          setDownstream.withValueAndPatches(value, patches, tags);
-        } else {
-          setDownstream(value, tags);
-        }
-        const setter = maybeInnerSignal[1];
 
-        // Apply queued updates
-        if (queuedUpdates.length !== 0) {
-          const updatesToApply = queuedUpdates;
-          queuedUpdates = [];
-          let currentValue: TInner = value;
-          let accumulatedPatches: Array<Patch> = [];
-          const tags: Array<WriteTag> = [];
-          for (const { updater, tags: newTags } of updatesToApply) {
-            const [newValue, newPatches] = updater(currentValue);
-            currentValue = newValue;
-            const rootReplacerIndex = newPatches.findIndex(isReplaceRootPatch);
-            if (rootReplacerIndex !== -1) {
-              accumulatedPatches = newPatches.slice(rootReplacerIndex);
-            } else {
-              accumulatedPatches.push(...newPatches);
-            }
-            if (newTags !== undefined) {
-              tags.push(...newTags);
-            }
+        /** Applies an inner update only when both levels are fresh. */
+        const maybeUpdateDownstream = (
+          value: TInner | NotAvailable,
+          patches?: Array<Patch>,
+          tags?: Array<WriteTag>,
+        ) => {
+          if (
+            rootSignal.staleSignal?.get() === true ||
+            maybeInnerSignal[0].staleSignal?.get() === true ||
+            !isAvailable(value)
+          ) {
+            innerSetter = null;
+            markDownstreamStale(tags);
+            return;
           }
-          setter.withValueAndPatches(
-            currentValue as StripNotAvailable<TInner>,
-            accumulatedPatches,
-            tags,
-          );
-        }
-        innerSetter = setter;
+          if (patches !== undefined) {
+            setDownstream.withValueAndPatches(value, patches, tags);
+          } else {
+            setDownstream(value, tags);
+          }
+          const setter = maybeInnerSignal[1];
+
+          // Apply writes that arrived while the selected signal was stale or unavailable.
+          if (queuedUpdates.length !== 0) {
+            const updatesToApply = queuedUpdates;
+            queuedUpdates = [];
+            let currentValue: TInner = value;
+            let accumulatedPatches: Array<Patch> = [];
+            const tags: Array<WriteTag> = [];
+            for (const { updater, tags: newTags } of updatesToApply) {
+              const [newValue, newPatches] = updater(currentValue);
+              currentValue = newValue;
+              const rootReplacerIndex = newPatches.findIndex(isReplaceRootPatch);
+              if (rootReplacerIndex !== -1) {
+                accumulatedPatches = newPatches.slice(rootReplacerIndex);
+              } else {
+                accumulatedPatches.push(...newPatches);
+              }
+              if (newTags !== undefined) {
+                tags.push(...newTags);
+              }
+            }
+            setter.withValueAndPatches(
+              currentValue as StripNotAvailable<TInner>,
+              accumulatedPatches,
+              tags,
+            );
+          }
+          innerSetter = setter;
+        };
+
+        unsubscribeInnerSignal = maybeInnerSignal[0].subscribeFull(maybeUpdateDownstream);
+        unsubscribeInnerStaleSignal =
+          maybeInnerSignal[0].staleSignal?.subscribe(isStale => {
+            if (isStale) {
+              innerSetter = null;
+              markDownstreamStale();
+            }
+          }) ?? null;
+        maybeUpdateDownstream(maybeInnerSignal[0].get());
       };
-      unsubscribeInnerSignal = maybeInnerSignal[0].subscribeFull(maybeUpdateDownstream);
-      maybeUpdateDownstream(maybeInnerSignal[0].get());
-    };
-    const unsubscribeRootSignal = rootSignal.subscribe(subscribeToInnerSignal);
-    subscribeToInnerSignal(rootSignal.get());
-    return () => {
-      if (unsubscribeInnerSignal !== null) {
-        unsubscribeInnerSignal();
-      }
-      innerSetter = null;
-      unsubscribeRootSignal();
-    };
-  });
+
+      /** Rechecks the root after value and freshness changes. */
+      const updateFromRoot = () => {
+        if (rootSignal.staleSignal?.get() === true) {
+          innerSetter = null;
+          markDownstreamStale();
+        } else {
+          subscribeToInnerSignal(rootSignal.get());
+        }
+      };
+
+      const unsubscribeRootSignal = rootSignal.subscribe(updateFromRoot);
+      const unsubscribeRootStaleSignal = rootSignal.staleSignal?.subscribe(isStale => {
+        if (isStale) {
+          innerSetter = null;
+          markDownstreamStale();
+        }
+      });
+      updateFromRoot();
+
+      return () => {
+        unsubscribeInner();
+        unsubscribeRootStaleSignal?.();
+        unsubscribeRootSignal();
+      };
+    },
+  );
   return [signal, setter] as const;
 }

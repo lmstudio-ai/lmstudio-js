@@ -105,6 +105,84 @@ describe("OWLSignal Write Loop Error Recovery", () => {
       expect(signal.get()).toEqual({ count: 1 });
     });
 
+    it("should settle once when writeUpstream confirms synchronously and returns false", async () => {
+      const initialValue = { count: 0 };
+      let emitUpstream!: Setter<typeof initialValue>;
+      let writeCount = 0;
+      const [signal, setter] = OWLSignal.create(
+        initialValue,
+        setDownstream => {
+          emitUpstream = setDownstream;
+          return () => {};
+        },
+        (data, patches, tags) => {
+          writeCount++;
+          emitUpstream.withValueAndPatches(data, patches, tags);
+          return false;
+        },
+      );
+      signal.subscribe(() => {});
+      emitUpstream(initialValue);
+
+      setter.withProducer(draft => {
+        draft.count = 1;
+      });
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(writeCount).toBe(1);
+      expect(signal.get()).toEqual({ count: 1 });
+      expect(signal.isStale()).toBe(false);
+    });
+
+    it("should start one write loop when subscribing produces a synchronous value", async () => {
+      const initialValue = { count: 0 };
+      let writeCount = 0;
+      const [signal, setter] = OWLSignal.create(
+        initialValue,
+        setDownstream => {
+          setDownstream(initialValue);
+          return () => {};
+        },
+        () => {
+          writeCount++;
+          return false;
+        },
+      );
+
+      setter.withProducer(draft => {
+        draft.count = 1;
+      });
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(writeCount).toBe(1);
+      expect(signal.isStale()).toBe(true);
+    });
+
+    it("should forward stale inner tags without restoring outer freshness", () => {
+      const initialValue = { count: 0 };
+      let emitUpstream!: Setter<typeof initialValue>;
+      let markUpstreamStale!: (tags?: Array<WriteTag>) => void;
+      const [signal] = OWLSignal.create(
+        initialValue,
+        (setDownstream, _errorListener, markDownstreamStale) => {
+          emitUpstream = setDownstream;
+          markUpstreamStale = markDownstreamStale;
+          return () => {};
+        },
+        () => true,
+      );
+      const callbackFull = jest.fn();
+      signal.subscribeFull(callbackFull);
+      emitUpstream(initialValue);
+      callbackFull.mockClear();
+
+      markUpstreamStale(["stale-tag"]);
+
+      expect(signal.isStale()).toBe(true);
+      expect(signal.get()).toEqual(initialValue);
+      expect(callbackFull).toHaveBeenCalledWith(initialValue, [], ["stale-tag"]);
+    });
+
     it("should batch multiple rapid writes", async () => {
       const mock = createMockUpstream<{ count: number }>();
       const [signal, setter] = OWLSignal.create(
@@ -272,6 +350,35 @@ describe("OWLSignal Write Loop Error Recovery", () => {
       await new Promise(resolve => setTimeout(resolve, 0));
 
       expect(signal.get()).toEqual({ count: 4 });
+    });
+
+    it("should roll back a failed write while the inner signal remains fresh", async () => {
+      const mock = createMockUpstream<{ count: number }>();
+      const [signal, setter, emitWriteError] = OWLSignal.create(
+        { count: 0 },
+        mock.subscribeUpstream,
+        mock.writeUpstream,
+      );
+      const callbackFull = jest.fn();
+      signal.subscribeFull(callbackFull);
+
+      mock.simulateUpdate({ count: 0 });
+      callbackFull.mockClear();
+
+      setter({ count: 1 }, ["failed-write"]);
+      await new Promise(resolve => setTimeout(resolve, 0));
+      expect(signal.get()).toEqual({ count: 1 });
+
+      emitWriteError(mock.getLastWrite().tags, new Error("write rejected"));
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(signal.isStale()).toBe(false);
+      expect(signal.get()).toEqual({ count: 0 });
+      expect(callbackFull).toHaveBeenLastCalledWith(
+        { count: 0 },
+        [{ op: "replace", path: [], value: { count: 0 } }],
+        ["failed-write"],
+      );
     });
 
     it("should flush pending write tags to full subscribers on transport error", async () => {

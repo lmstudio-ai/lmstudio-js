@@ -152,4 +152,60 @@ describe("Signal", () => {
     setSignal(0, ["tag1"]);
     expect(subscriber).toHaveBeenCalledWith(0, [{ op: "replace", path: [], value: 0 }], ["tag1"]);
   });
+
+  test("should commit a fresh value before notifying value and stale subscribers", () => {
+    const state = Signal.createWithStaleState(0, true);
+    const events: Array<string> = [];
+    state.signal.subscribe(value => {
+      events.push(`value:${value}:${state.signal.get()}:${state.signal.staleSignal?.get()}`);
+    });
+    state.signal.staleSignal?.subscribe(isStale => {
+      events.push(`stale:${isStale}:${state.signal.get()}`);
+    });
+
+    state.setFreshValue(1);
+
+    expect(events).toEqual(["value:1:1:false", "stale:false:1"]);
+  });
+
+  test("should notify value subscribers when an equal value restores freshness", () => {
+    const state = Signal.createWithStaleState(1, true);
+    const subscriber = jest.fn();
+    state.signal.subscribe(subscriber);
+
+    state.setFreshValue(1);
+
+    expect(subscriber).toHaveBeenCalledWith(1);
+    expect(state.signal.staleSignal?.get()).toBe(false);
+  });
+
+  test("should keep stale acknowledgement tags in the stale transaction", () => {
+    const state = Signal.createWithStaleState(0, false);
+    const callbackFull = jest.fn((_value, _patches, tags) => {
+      if (tags.includes("stale-tag")) {
+        expect(state.signal.staleSignal?.get()).toBe(true);
+        state.setFreshValue(1);
+      }
+    });
+    state.signal.subscribeFull(callbackFull);
+
+    state.markStale(["stale-tag"]);
+
+    expect(callbackFull).toHaveBeenNthCalledWith(1, 0, [], ["stale-tag"]);
+    expect(callbackFull).toHaveBeenNthCalledWith(2, 1, [{ op: "replace", path: [], value: 1 }], []);
+    expect(state.signal.staleSignal?.get()).toBe(false);
+  });
+
+  test("should not expose an uncommitted custom-equal candidate", () => {
+    const state = Signal.createWithStaleState({ id: 1, label: "old" }, true, (left, right) => {
+      return left.id === right.id;
+    });
+    const callbackFull = jest.fn();
+    state.signal.subscribeFull(callbackFull);
+
+    state.setFreshValue({ id: 1, label: "new" }, ["fresh-tag"]);
+
+    expect(state.signal.get()).toEqual({ id: 1, label: "old" });
+    expect(callbackFull).toHaveBeenCalledWith({ id: 1, label: "old" }, [], ["fresh-tag"]);
+  });
 });

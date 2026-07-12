@@ -5,7 +5,7 @@ import {
   type NotAvailable,
   type StripNotAvailable,
 } from "./LazySignal.js";
-import { makeSetterWithPatches, type Setter } from "./makeSetter.js";
+import { makeSetterWithPatches, type Setter, type WriteTag } from "./makeSetter.js";
 import { type SignalLike } from "./Signal.js";
 
 type PathSegment =
@@ -275,6 +275,7 @@ class SlicedSignalBuilderImpl<
     this.path.push(key);
     return this as any;
   }
+  /** Builds a writable signal for the selected path. */
   public done(): readonly [
     signal: LazySignal<
       | TCurrent
@@ -293,8 +294,34 @@ class SlicedSignalBuilderImpl<
       | TCurrent
       | (TCanBeNotAvailable extends true ? NotAvailable : never)
       | (TCanBeShortCircuited extends true ? ShortCircuited : never)
-    >(initialValue, setDownstream => {
-      const unsubscribe = this.sourceSignal.subscribeFull((value, patches, tags) => {
+    >(initialValue, (setDownstream, _errorListener, markDownstreamStale) => {
+      /** Replaces the slice after its source becomes fresh. */
+      const updateFromCurrentSource = () => {
+        if (this.sourceSignal.staleSignal?.get() === true) {
+          markDownstreamStale();
+          return;
+        }
+        const value = this.sourceSignal.get();
+        if (!isAvailable(value)) {
+          markDownstreamStale();
+        } else {
+          setDownstream(isShortCircuited(value) ? value : drill(value, this.accessPath));
+        }
+      };
+
+      /** Applies fresh source metadata and forwards only acknowledgements while stale. */
+      const updateFromSource = (
+        value: TSource | ShortCircuited,
+        patches: Array<Patch>,
+        tags: Array<WriteTag>,
+      ) => {
+        const newTags = tags
+          .filter(tag => tag.startsWith(this.tagKey))
+          .map(tag => tag.slice(this.tagKey.length));
+        if (this.sourceSignal.staleSignal?.get() === true) {
+          markDownstreamStale(newTags);
+          return;
+        }
         const newPatches: Array<Patch> = [];
         // Transform patches
         for (const patch of patches) {
@@ -343,23 +370,20 @@ class SlicedSignalBuilderImpl<
           // Otherwise, we don't need to do anything
         }
         const newValue = isShortCircuited(value) ? value : drill(value, this.accessPath);
-        const newTags = tags
-          .filter(tag => tag.startsWith(this.tagKey))
-          .map(tag => tag.slice(this.tagKey.length));
-        if (newPatches.length > 0 || newTags.length > 0) {
-          setDownstream.withValueAndPatches(newValue, newPatches, newTags);
+        setDownstream.withValueAndPatches(newValue, newPatches, newTags);
+      };
+      const unsubscribe = this.sourceSignal.subscribeFull(updateFromSource);
+      const unsubscribeStaleSignal = this.sourceSignal.staleSignal?.subscribe(isStale => {
+        if (isStale) {
+          markDownstreamStale();
         }
       });
-      const value = this.sourceSignal.pull();
-      if (value instanceof Promise) {
-        value.then(value => {
-          setDownstream(drill(value, this.accessPath));
-        });
-      } else {
-        setDownstream(drill(value, this.accessPath));
-      }
+      updateFromCurrentSource();
 
-      return unsubscribe;
+      return () => {
+        unsubscribeStaleSignal?.();
+        unsubscribe();
+      };
     });
     const setter = makeSetterWithPatches<TCurrent>((updater, tags) => {
       const newTags = tags?.map(tag => this.tagKey + tag);

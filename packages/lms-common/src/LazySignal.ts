@@ -1,8 +1,7 @@
 import { Signal, type SignalFullSubscriber, type SignalLike, type Subscriber } from "./Signal.js";
 import { Subscribable } from "./Subscribable.js";
-import { SyncEvent } from "./SyncEvent.js";
 import { makePromise } from "./makePromise.js";
-import { makeSetterWithPatches, type Setter } from "./makeSetter.js";
+import { makeSetterWithPatches, type Setter, type WriteTag } from "./makeSetter.js";
 
 const isLazySignalSymbol = Symbol("isLazySignal");
 export type NotAvailable = typeof LazySignal.NOT_AVAILABLE;
@@ -30,6 +29,11 @@ export type SubscribeUpstream<TData> = (
    * the unsubscriber will NOT be called.
    */
   errorListener: (error: any) => void,
+  /**
+   * Marks the downstream value stale without ending its subscription. Composed signals use this
+   * while one of their sources is waiting to recover.
+   */
+  markDownstreamStale: (tags?: Array<WriteTag>) => void,
 ) => () => void;
 
 /**
@@ -43,6 +47,8 @@ export type SubscribeUpstream<TData> = (
  */
 export class LazySignal<TData> extends Subscribable<TData> implements SignalLike<TData> {
   public readonly [isLazySignalSymbol] = true;
+  public static isLazySignal<TData>(value: SignalLike<TData>): value is LazySignal<TData>;
+  public static isLazySignal(value: unknown): value is LazySignal<unknown>;
   public static isLazySignal(value: unknown): value is LazySignal<unknown> {
     return (
       typeof value === "object" &&
@@ -52,8 +58,10 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
   }
   public static readonly NOT_AVAILABLE = Symbol("notAvailable");
   private readonly signal: Signal<TData>;
-  private readonly setValue: Setter<TData>;
-  private dataIsStale = true;
+  private readonly setFreshValue: Setter<TData>;
+  /** Tracks whether the cached value is current for the active upstream subscription. */
+  public readonly staleSignal: Signal<boolean>;
+  private readonly markStale: (tags?: Array<WriteTag>) => void;
   private upstreamUnsubscribe: (() => void) | null = null;
   private subscribersCount = 0;
   private isSubscribedToUpstream = false;
@@ -64,12 +72,6 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
    */
   public readonly errorSignal: Signal<Error | null>;
   private readonly setError: Setter<Error | null>;
-  /**
-   * This event will be triggered even if the value did not change. This is for resolving .pull.
-   */
-  private readonly updateReceivedEvent: SyncEvent<void>;
-  private readonly emitUpdateReceivedEvent: () => void;
-  private readonly updateReceivedSynchronousCallbacks = new Set<() => void>();
 
   public static create<TData>(
     initialValue: TData,
@@ -94,6 +96,55 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
       subscribeUpstream as any,
       fullEqualsPredicate,
     );
+  }
+
+  /**
+   * Subscribes to each source and runs the update only while every source has fresh data.
+   */
+  private static subscribeToSources<TSource extends Array<unknown>>(
+    sourceSignals: { [TKey in keyof TSource]: SignalLike<TSource[TKey]> },
+    onSourceValuesChanged: () => void,
+    markDownstreamStale: () => void,
+  ): () => void {
+    let sourceSubscriptionsReady = false;
+
+    /** Updates the downstream value only when every source is fresh. */
+    const updateIfSourcesAreFresh = () => {
+      if (sourceSignals.every(sourceSignal => sourceSignal.staleSignal?.get() !== true)) {
+        onSourceValuesChanged();
+      }
+    };
+
+    const sourceUnsubscribers = sourceSignals.map(sourceSignal =>
+      sourceSignal.subscribe(() => {
+        if (sourceSubscriptionsReady) {
+          updateIfSourcesAreFresh();
+        }
+      }),
+    );
+    const freshnessUnsubscribers = sourceSignals.flatMap(sourceSignal => {
+      if (sourceSignal.staleSignal === undefined) {
+        return [];
+      }
+      return [
+        sourceSignal.staleSignal.subscribe(sourceIsStale => {
+          if (sourceSubscriptionsReady && sourceIsStale) {
+            markDownstreamStale();
+          }
+        }),
+      ];
+    });
+    sourceSubscriptionsReady = true;
+    if (sourceSignals.some(sourceSignal => sourceSignal.staleSignal?.get() === true)) {
+      markDownstreamStale();
+    } else {
+      onSourceValuesChanged();
+    }
+
+    return () => {
+      freshnessUnsubscribers.forEach(unsubscribe => unsubscribe());
+      sourceUnsubscribers.forEach(unsubscribe => unsubscribe());
+    };
   }
 
   public static deriveFrom<TSource extends Array<unknown>, TData>(
@@ -131,27 +182,22 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
     };
     return new LazySignal(
       derive(),
-      setDownstream => {
-        const unsubscriber = sourceSignals.map(signal =>
-          signal.subscribe(() => {
+      (setDownstream, _errorListener, markDownstreamStale) =>
+        LazySignal.subscribeToSources(
+          sourceSignals,
+          () => {
             const value = derive();
             if (isAvailable(value)) {
               setDownstream(value);
             }
-          }),
-        );
-        const newValue = derive();
-        if (isAvailable(newValue)) {
-          setDownstream(newValue);
-        }
-        return () => {
-          unsubscriber.forEach(unsub => unsub());
-        };
-      },
+          },
+          markDownstreamStale,
+        ),
       fullEqualsPredicate,
     ) as any;
   }
 
+  /** Derives asynchronously and ignores results invalidated by a newer source state. */
   public static asyncDeriveFrom<TSource extends Array<unknown>, TData>(
     strategy: AsyncDeriveFromStrategy,
     sourceSignals: { [TKey in keyof TSource]: SignalLike<TSource[TKey]> },
@@ -177,7 +223,7 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
     let lastIssuedUpdateId = -1;
     return new LazySignal<TData | NotAvailable>(
       LazySignal.NOT_AVAILABLE,
-      setDownstream => {
+      (setDownstream, _errorListener, markDownstreamStale) => {
         const deriveAndUpdate = () => {
           lastIssuedUpdateId++;
           const updateId = lastIssuedUpdateId;
@@ -204,15 +250,11 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
             }
           });
         };
-        const unsubscriber = sourceSignals.map(signal =>
-          signal.subscribe(() => {
-            deriveAndUpdate();
-          }),
-        );
-        deriveAndUpdate();
-        return () => {
-          unsubscriber.forEach(unsub => unsub());
-        };
+        return LazySignal.subscribeToSources(sourceSignals, deriveAndUpdate, () => {
+          // Work started before a source became stale must not make the output fresh again.
+          lastAppliedUpdateId = ++lastIssuedUpdateId;
+          markDownstreamStale();
+        });
       },
       fullEqualsPredicate,
     );
@@ -266,8 +308,9 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
 
     return new LazySignal<TData | NotAvailable>(
       LazySignal.NOT_AVAILABLE,
-      setDownstream => {
+      (setDownstream, _errorListener, markDownstreamStale) => {
         let subscribed = true;
+        let freshnessGeneration = 0;
 
         const processPending = () => {
           throttleTimeoutId = null;
@@ -300,6 +343,7 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
 
         const startDerive = (sourceValues: Array<unknown>) => {
           isRunning = true;
+          const deriveFreshnessGeneration = freshnessGeneration;
           let promise: Promise<TData>;
           try {
             promise = deriver(...(sourceValues as any));
@@ -313,7 +357,7 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
             }
             isRunning = false;
             lastDeriveCompletedAt = Date.now();
-            if (isAvailable(result)) {
+            if (deriveFreshnessGeneration === freshnessGeneration && isAvailable(result)) {
               setDownstream(result);
             }
             advanceQueue();
@@ -345,8 +389,20 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
           }
         };
 
-        const unsubscribers = sourceSignals.map(signal => signal.subscribe(onSourceChange));
-        onSourceChange();
+        const unsubscribeFromSources = LazySignal.subscribeToSources(
+          sourceSignals,
+          onSourceChange,
+          () => {
+            // Drop queued and in-flight work that was based on a subscription which is now stale.
+            freshnessGeneration++;
+            pending = null;
+            if (throttleTimeoutId !== null) {
+              clearTimeout(throttleTimeoutId);
+              throttleTimeoutId = null;
+            }
+            markDownstreamStale();
+          },
+        );
 
         return () => {
           subscribed = false;
@@ -357,22 +413,25 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
             clearTimeout(throttleTimeoutId);
             throttleTimeoutId = null;
           }
-          unsubscribers.forEach(unsubscribe => unsubscribe());
+          unsubscribeFromSources();
         };
       },
       fullEqualsPredicate,
     );
   }
 
+  /** Creates the lazy signal state shared by the public factory methods. */
   protected constructor(
     initialValue: TData,
     private readonly subscribeUpstream: SubscribeUpstream<TData>,
     equalsPredicate: (a: TData, b: TData) => boolean = (a, b) => a === b,
   ) {
     super();
-    // Initialize with dummy values, will be set by resetErrorPromise
-    [this.signal, this.setValue] = Signal.create<TData>(initialValue, equalsPredicate) as any;
-    [this.updateReceivedEvent, this.emitUpdateReceivedEvent] = SyncEvent.create();
+    const state = Signal.createWithStaleState(initialValue, true, equalsPredicate);
+    this.signal = state.signal;
+    this.setFreshValue = state.setFreshValue;
+    this.staleSignal = state.signal.staleSignal!;
+    this.markStale = state.markStale;
     [this.errorSignal, this.setError] = Signal.create<Error | null>(null);
   }
 
@@ -393,7 +452,7 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
    * {@link LazySignal#pull}.
    */
   public isStale() {
-    return this.dataIsStale;
+    return this.staleSignal.get();
   }
 
   /**
@@ -423,7 +482,7 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
     }
 
     this.hasEncounteredError = false;
-    this.dataIsStale = true;
+    this.markStale();
     this.setError(null);
 
     // If we have subscribers, immediately try to reconnect
@@ -434,23 +493,17 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
     return true;
   }
 
+  /** Starts the upstream subscription and tracks its freshness and errors. */
   private subscribeToUpstream() {
     if (this.hasEncounteredError) {
       return;
     }
     this.isSubscribedToUpstream = true;
     let subscribed = true;
-    let becameStale = false;
     const unsubscribeFromUpstream = this.subscribeUpstream(
       makeSetterWithPatches((updater, tags) => {
-        if (!subscribed) {
-          return;
-        }
-        this.setValue.withPatchUpdater(updater, tags);
-        this.dataIsStale = becameStale;
-        this.emitUpdateReceivedEvent();
-        for (const callback of this.updateReceivedSynchronousCallbacks) {
-          callback();
+        if (subscribed) {
+          this.setFreshValue.withPatchUpdater(updater, tags);
         }
       }),
       error => {
@@ -465,28 +518,32 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
           this.hasEncounteredError = true;
           this.setError(normalizedError);
         }
-        this.dataIsStale = true;
+        this.markStale();
         this.isSubscribedToUpstream = false;
         this.upstreamUnsubscribe = null;
-        becameStale = true;
         subscribed = false;
+      },
+      tags => {
+        if (subscribed) {
+          this.markStale(tags);
+        }
       },
     );
     this.upstreamUnsubscribe = () => {
       if (subscribed) {
         subscribed = false;
-        becameStale = true;
         unsubscribeFromUpstream();
       }
     };
   }
 
+  /** Stops the active upstream subscription and marks its cached value stale. */
   private unsubscribeFromUpstream() {
     this.isSubscribedToUpstream = false;
     if (this.upstreamUnsubscribe !== null) {
       this.upstreamUnsubscribe();
       this.upstreamUnsubscribe = null;
-      this.dataIsStale = true;
+      this.markStale();
     }
   }
 
@@ -511,18 +568,7 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
    */
   public async pull(): Promise<StripNotAvailable<TData>> {
     const { promise, resolve } = makePromise<StripNotAvailable<TData>>();
-    if (!this.isStale()) {
-      // If not stale, definitely not "NOT_AVAILABLE"
-      resolve(this.get() as StripNotAvailable<TData>);
-    } else {
-      // Register event listener BEFORE subscribe() because subscribe() may trigger
-      // subscribeToUpstream() which can emit the event synchronously
-      this.updateReceivedEvent.subscribeOnce(() => {
-        resolve(this.get() as StripNotAvailable<TData>);
-      });
-      const unsubscribe = this.subscribe(() => {});
-      promise.then(unsubscribe);
-    }
+    this.runOnNextFreshData(resolve);
     return promise;
   }
 
@@ -530,20 +576,41 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
    * If the data is not stale, the callback will be called synchronously with the current value.
    *
    * If the data is stale, it will pull the current value and call the callback with the value.
+   * Returns a function that cancels the pending callback and temporary subscription.
    */
-  public runOnNextFreshData(callback: (value: StripNotAvailable<TData>) => void) {
+  public runOnNextFreshData(callback: (value: StripNotAvailable<TData>) => void): () => void {
     if (!this.isStale()) {
       callback(this.get() as StripNotAvailable<TData>);
-    } else {
-      let unsubscribe: (() => void) | null = null;
-      const updateCallback = () => {
-        this.updateReceivedSynchronousCallbacks.delete(updateCallback);
-        callback(this.get() as StripNotAvailable<TData>);
-        unsubscribe?.();
-      };
-      this.updateReceivedSynchronousCallbacks.add(updateCallback);
-      unsubscribe = this.subscribe(() => {});
+      return () => {};
     }
+
+    let active = true;
+    let unsubscribeSignal: (() => void) | null = null;
+    const unsubscribeStaleSignal = this.staleSignal.subscribe(isStale => {
+      if (!active || isStale) {
+        return;
+      }
+      active = false;
+      unsubscribeStaleSignal();
+      try {
+        callback(this.get() as StripNotAvailable<TData>);
+      } finally {
+        unsubscribeSignal?.();
+      }
+    });
+    unsubscribeSignal = this.subscribe(() => {});
+    if (!active) {
+      unsubscribeSignal();
+    }
+
+    return () => {
+      if (!active) {
+        return;
+      }
+      active = false;
+      unsubscribeStaleSignal();
+      unsubscribeSignal?.();
+    };
   }
 
   public async ensureAvailable(): Promise<LazySignal<StripNotAvailable<TData>>> {
