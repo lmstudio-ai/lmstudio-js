@@ -98,6 +98,9 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
     );
   }
 
+  /**
+   * Subscribes to each source and runs the update only after every source has fresh data.
+   */
   private static subscribeToSources<TSource extends Array<unknown>>(
     sourceSignals: { [TKey in keyof TSource]: SignalLike<TSource[TKey]> },
     onSourceValuesChanged: () => void,
@@ -105,19 +108,30 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
     let pendingSourceRefreshes = 0;
     let sourceSubscriptionsReady = false;
     const freshnessUnsubscribers = new Array<() => void>();
-    for (const sourceSignal of sourceSignals) {
-      if (LazySignal.isLazySignal(sourceSignal) && sourceSignal.isStale()) {
-        pendingSourceRefreshes++;
-        freshnessUnsubscribers.push(
-          sourceSignal.updateReceivedEvent.subscribeOnce(() => {
-            pendingSourceRefreshes--;
-            if (sourceSubscriptionsReady && pendingSourceRefreshes === 0) {
-              onSourceValuesChanged();
-            }
-          }),
-        );
+
+    /** Runs the update now or waits for every stale source to refresh. */
+    const updateOrWaitForStaleSources = () => {
+      // A source may have refreshed and then failed while another source was still pending. Check
+      // the whole group again before treating it as fresh.
+      for (const sourceSignal of sourceSignals) {
+        if (LazySignal.isLazySignal(sourceSignal) && sourceSignal.isStale()) {
+          pendingSourceRefreshes++;
+          freshnessUnsubscribers.push(
+            sourceSignal.updateReceivedEvent.subscribeOnce(() => {
+              pendingSourceRefreshes--;
+              if (sourceSubscriptionsReady && pendingSourceRefreshes === 0) {
+                updateOrWaitForStaleSources();
+              }
+            }),
+          );
+        }
       }
-    }
+      if (sourceSubscriptionsReady && pendingSourceRefreshes === 0) {
+        onSourceValuesChanged();
+      }
+    };
+
+    updateOrWaitForStaleSources();
     const sourceUnsubscribers = sourceSignals.map(sourceSignal =>
       sourceSignal.subscribe(() => {
         if (sourceSubscriptionsReady && pendingSourceRefreshes === 0) {
@@ -127,7 +141,7 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
     );
     sourceSubscriptionsReady = true;
     if (pendingSourceRefreshes === 0) {
-      onSourceValuesChanged();
+      updateOrWaitForStaleSources();
     }
 
     return () => {
