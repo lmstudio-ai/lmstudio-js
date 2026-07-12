@@ -99,6 +99,7 @@ export class OWLSignal<TData> extends Subscribable<TData> implements SignalLike<
     this.setOuterSignal(this.applyOptimisticUpdates(innerValue), tags);
   }
 
+  /** Creates the optimistic wrapper around its lazy upstream signal. */
   private constructor(
     initialValue: TData,
     subscribeUpstream: SubscribeUpstream<TData>,

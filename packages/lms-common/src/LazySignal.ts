@@ -200,6 +200,7 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
     ) as any;
   }
 
+  /** Derives asynchronously and ignores results invalidated by a newer source state. */
   public static asyncDeriveFrom<TSource extends Array<unknown>, TData>(
     strategy: AsyncDeriveFromStrategy,
     sourceSignals: { [TKey in keyof TSource]: SignalLike<TSource[TKey]> },
@@ -253,6 +254,7 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
           });
         };
         return LazySignal.subscribeToSources(sourceSignals, deriveAndUpdate, () => {
+          // Work started before a source became stale must not make the output fresh again.
           lastAppliedUpdateId = ++lastIssuedUpdateId;
           markDownstreamStale();
         });
@@ -394,6 +396,7 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
           sourceSignals,
           onSourceChange,
           () => {
+            // Drop queued and in-flight work that was based on a subscription which is now stale.
             freshnessGeneration++;
             pending = null;
             if (throttleTimeoutId !== null) {
@@ -420,6 +423,7 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
     );
   }
 
+  /** Creates the lazy signal state shared by the public factory methods. */
   protected constructor(
     initialValue: TData,
     private readonly subscribeUpstream: SubscribeUpstream<TData>,
@@ -489,6 +493,7 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
     return true;
   }
 
+  /** Starts the upstream subscription and tracks its freshness and errors. */
   private subscribeToUpstream() {
     if (this.hasEncounteredError) {
       return;
@@ -537,6 +542,7 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
     };
   }
 
+  /** Stops the active upstream subscription and marks its cached value stale. */
   private unsubscribeFromUpstream() {
     this.isSubscribedToUpstream = false;
     if (this.upstreamUnsubscribe !== null) {
