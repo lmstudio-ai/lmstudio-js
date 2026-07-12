@@ -1,4 +1,10 @@
-import { Signal, type SignalFullSubscriber, type SignalLike, type Subscriber } from "./Signal.js";
+import {
+  Signal,
+  type SignalFullSubscriber,
+  type SignalFullSubscriberWithFreshness,
+  type SignalLike,
+  type Subscriber,
+} from "./Signal.js";
 import { Subscribable } from "./Subscribable.js";
 import { makePromise } from "./makePromise.js";
 import { makeSetterWithPatches, type Setter } from "./makeSetter.js";
@@ -583,9 +589,7 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
    * If the data is stale, it will pull the current value and call the callback with the value.
    * Returns a function that cancels the pending callback and temporary subscription.
    */
-  public runOnNextFreshData(
-    callback: (value: StripNotAvailable<TData>) => void,
-  ): () => void {
+  public runOnNextFreshData(callback: (value: StripNotAvailable<TData>) => void): () => void {
     if (!this.isStale()) {
       callback(this.get() as StripNotAvailable<TData>);
       return () => {};
@@ -663,6 +667,18 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
         this.unsubscribeFromUpstream();
       }
     };
+  }
+
+  /**
+   * Marks upstream value packets as fresh even though staleSignal changes after value subscribers
+   * run. Every accepted packet from a LazySignal's upstream restores freshness.
+   */
+  public subscribeFullWithFreshness(
+    subscriber: SignalFullSubscriberWithFreshness<TData>,
+  ): () => void {
+    return this.subscribeFull((value, patches, tags) => {
+      subscriber(value, patches, tags, true);
+    });
   }
 
   /**

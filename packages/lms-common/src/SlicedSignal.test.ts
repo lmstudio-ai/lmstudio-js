@@ -372,7 +372,7 @@ describe("SlicedSignal", () => {
   it("should remain stale when a stale OWLSignal emits an optimistic update", async () => {
     const sourceValue = { a: { b: { c: 1 } } };
     let emitUpstream!: Setter<typeof sourceValue>;
-    const sourceWritableSignal = OWLSignal.create(
+    const [sourceSignal, setSourceSignal] = OWLSignal.create(
       sourceValue,
       setDownstream => {
         emitUpstream = setDownstream;
@@ -380,18 +380,18 @@ describe("SlicedSignal", () => {
       },
       () => false,
     );
-    const [slicedSignal] = makeSlicedSignalFrom(sourceWritableSignal)
+    const [slicedSignal] = makeSlicedSignalFrom([sourceSignal, setSourceSignal])
       .access("a")
       .access("b")
       .done();
     const callback = jest.fn();
     const unsubscribe = slicedSignal.subscribe(callback);
 
-    sourceWritableSignal[1].withProducer(draft => {
+    setSourceSignal.withProducer(draft => {
       draft.a.b.c = 2;
     });
 
-    expect(sourceWritableSignal[0].isStale()).toBe(true);
+    expect(sourceSignal.isStale()).toBe(true);
     expect(slicedSignal.isStale()).toBe(true);
     expect(slicedSignal.get()).toEqual({ c: 1 });
     expect(callback).not.toHaveBeenCalled();

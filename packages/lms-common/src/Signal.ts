@@ -15,6 +15,14 @@ export type SignalFullSubscriber<TValue> = (
   tags: Array<WriteTag>,
 ) => void;
 
+/** Receives a full update and whether that update is based on fresh source data. */
+export type SignalFullSubscriberWithFreshness<TValue> = (
+  value: TValue,
+  patches: Array<Patch>,
+  tags: Array<WriteTag>,
+  isFresh: boolean,
+) => void;
+
 type InternalSubscriber<TValue> =
   | {
       type: "regular";
@@ -220,6 +228,11 @@ export interface SignalLike<TValue> extends Subscribable<TValue> {
   get(): TValue;
   subscribe(subscriber: Subscriber<TValue>): () => void;
   subscribeFull(subscriber: SignalFullSubscriber<TValue>): () => void;
+  /**
+   * Reports freshness on the value update itself, before a later staleSignal notification. Signals
+   * that can emit local updates while stale should implement this method.
+   */
+  subscribeFullWithFreshness?(subscriber: SignalFullSubscriberWithFreshness<TValue>): () => void;
   pull(): Promise<StripNotAvailable<TValue>> | StripNotAvailable<TValue>;
 }
 

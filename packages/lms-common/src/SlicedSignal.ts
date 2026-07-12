@@ -5,7 +5,7 @@ import {
   type NotAvailable,
   type StripNotAvailable,
 } from "./LazySignal.js";
-import { makeSetterWithPatches, type Setter } from "./makeSetter.js";
+import { makeSetterWithPatches, type Setter, type WriteTag } from "./makeSetter.js";
 import { type SignalLike } from "./Signal.js";
 
 type PathSegment =
@@ -309,9 +309,17 @@ class SlicedSignalBuilderImpl<
         }
       };
 
-      const unsubscribe = this.sourceSignal.subscribeFull((value, patches, tags) => {
-        // This update restores source freshness after recovery. Handle it before staleSignal changes
-        // so its patches and tags reach the sliced signal.
+      /** Applies source metadata only when the source says this particular update is fresh. */
+      const updateFromSource = (
+        value: TSource | ShortCircuited,
+        patches: Array<Patch>,
+        tags: Array<WriteTag>,
+        isFresh = this.sourceSignal.staleSignal?.get() !== true,
+      ) => {
+        if (!isFresh) {
+          markDownstreamStale();
+          return;
+        }
         const newPatches: Array<Patch> = [];
         // Transform patches
         for (const patch of patches) {
@@ -366,7 +374,10 @@ class SlicedSignalBuilderImpl<
         if (newPatches.length > 0 || newTags.length > 0) {
           setDownstream.withValueAndPatches(newValue, newPatches, newTags);
         }
-      });
+      };
+      const unsubscribe =
+        this.sourceSignal.subscribeFullWithFreshness?.(updateFromSource) ??
+        this.sourceSignal.subscribeFull(updateFromSource);
       const unsubscribeStaleSignal = this.sourceSignal.staleSignal?.subscribe(isStale => {
         if (isStale) {
           markDownstreamStale();

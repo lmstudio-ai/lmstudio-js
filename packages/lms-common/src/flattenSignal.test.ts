@@ -250,11 +250,19 @@ describe("flattenSignalOfSignal", () => {
 
     expect(innerSignal.isStale()).toBe(true);
     expect(flattenedSignal.isStale()).toBe(true);
-    expect(flattenedSignal.get()).toEqual(initialValue);
+    expect(flattenedSignal.get()).toBe(LazySignal.NOT_AVAILABLE);
     expect(callback).not.toHaveBeenCalled();
 
+    const pullPromise = flattenedSignal.pull();
+    let pullResolved = false;
+    void pullPromise.then(() => {
+      pullResolved = true;
+    });
+    await Promise.resolve();
+    expect(pullResolved).toBe(false);
+
     emitUpstream(initialValue);
-    await waitForTick();
+    await expect(pullPromise).resolves.toEqual({ count: 1 });
     unsubscribe();
   });
 
@@ -442,7 +450,7 @@ describe("flattenSignalOfWritableSignal", () => {
   it("should remain stale when a stale inner OWLSignal emits an optimistic update", async () => {
     const initialValue = { count: 0 };
     let emitUpstream!: Setter<typeof initialValue>;
-    const innerWritableSignal = OWLSignal.create(
+    const [innerSignal, setInnerSignal] = OWLSignal.create(
       initialValue,
       setDownstream => {
         emitUpstream = setDownstream;
@@ -450,18 +458,18 @@ describe("flattenSignalOfWritableSignal", () => {
       },
       () => false,
     );
-    const outerSignal = Signal.createReadonly(innerWritableSignal);
+    const outerSignal = Signal.createReadonly([innerSignal, setInnerSignal] as const);
     const [flattenedSignal] = flattenSignalOfWritableSignal(outerSignal);
     const callback = jest.fn();
     const unsubscribe = flattenedSignal.subscribe(callback);
 
-    innerWritableSignal[1].withProducer(draft => {
+    setInnerSignal.withProducer(draft => {
       draft.count = 1;
     });
 
-    expect(innerWritableSignal[0].isStale()).toBe(true);
+    expect(innerSignal.isStale()).toBe(true);
     expect(flattenedSignal.isStale()).toBe(true);
-    expect(flattenedSignal.get()).toEqual(initialValue);
+    expect(flattenedSignal.get()).toBe(LazySignal.NOT_AVAILABLE);
     expect(callback).not.toHaveBeenCalled();
 
     emitUpstream(initialValue);

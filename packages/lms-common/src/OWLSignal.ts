@@ -9,7 +9,13 @@ import {
 } from "./LazySignal.js";
 import { makePromise } from "./makePromise.js";
 import { makeSetterWithPatches, type Setter, type WriteTag } from "./makeSetter.js";
-import { Signal, type SignalFullSubscriber, type SignalLike, type Subscriber } from "./Signal.js";
+import {
+  Signal,
+  type SignalFullSubscriber,
+  type SignalFullSubscriberWithFreshness,
+  type SignalLike,
+  type Subscriber,
+} from "./Signal.js";
 import { Subscribable } from "./Subscribable.js";
 
 interface WriteError {
@@ -57,6 +63,8 @@ export class OWLSignal<TData> extends Subscribable<TData> implements SignalLike<
    * The setter function to update the value of the signal.
    */
   private readonly setOuterSignal: Setter<TData>;
+  /** Freshness attached to the outer update currently notifying subscribers. */
+  private outerUpdateIsFresh: boolean | null = null;
   private isWriteLoopRunning = false;
   /**
    * We have a passive subscription to the inner signal to update the optimistic value whenever the
@@ -91,12 +99,25 @@ export class OWLSignal<TData> extends Subscribable<TData> implements SignalLike<
     return data;
   }
 
-  private updateOptimisticValue(tags?: Array<WriteTag>) {
+  /**
+   * Rebuilds the optimistic value and records whether its base value is fresh. Updates caused by an
+   * inner value packet pass true because that packet restores the inner signal's freshness.
+   */
+  private updateOptimisticValue(
+    tags?: Array<WriteTag>,
+    isFresh = this.outerUpdateIsFresh ?? !this.isStale(),
+  ) {
     const innerValue = this.innerSignal.get();
     if (!isAvailable(innerValue)) {
       return;
     }
-    this.setOuterSignal(this.applyOptimisticUpdates(innerValue), tags);
+    const previousOuterUpdateIsFresh = this.outerUpdateIsFresh;
+    this.outerUpdateIsFresh = isFresh;
+    try {
+      this.setOuterSignal(this.applyOptimisticUpdates(innerValue), tags);
+    } finally {
+      this.outerUpdateIsFresh = previousOuterUpdateIsFresh;
+    }
   }
 
   /** Creates the optimistic wrapper around its lazy upstream signal. */
@@ -119,7 +140,7 @@ export class OWLSignal<TData> extends Subscribable<TData> implements SignalLike<
       if (this.isSubscriptionHandledByWriteLoop) {
         return;
       }
-      this.updateOptimisticValue(tags);
+      this.updateOptimisticValue(tags, true);
     });
   }
 
@@ -267,11 +288,14 @@ export class OWLSignal<TData> extends Subscribable<TData> implements SignalLike<
                 // If this update is caused by the write, we need to remove the optimistic update
                 // and apply the remaining optimistic updates
                 this.queuedUpdates.splice(0, numQueuedUpdatesToHandle);
-                this.updateOptimisticValue(tags.filter(t => t !== tag));
+                this.updateOptimisticValue(
+                  tags.filter(t => t !== tag),
+                  true,
+                );
               } else {
                 // This update is not caused by the write, simply update the optimistic value
                 // as normal
-                this.updateOptimisticValue(tags);
+                this.updateOptimisticValue(tags, true);
               }
             }),
           );
@@ -435,5 +459,16 @@ export class OWLSignal<TData> extends Subscribable<TData> implements SignalLike<
       unsubscribeOuter();
       unsubscribeInner();
     };
+  }
+
+  /**
+   * Distinguishes optimistic updates made while stale from updates based on a fresh inner value.
+   */
+  public subscribeFullWithFreshness(
+    subscriber: SignalFullSubscriberWithFreshness<TData>,
+  ): () => void {
+    return this.subscribeFull((value, patches, tags) => {
+      subscriber(value, patches, tags, this.outerUpdateIsFresh ?? !this.isStale());
+    });
   }
 }

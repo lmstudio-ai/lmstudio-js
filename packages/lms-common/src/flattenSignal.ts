@@ -41,16 +41,14 @@ export function flattenSignalOfSignal<TInner>(
           return;
         }
 
+        /** Applies an inner update only when both levels say its value is fresh. */
         const updateFromInner = (
           value: TInner | NotAvailable,
           patches?: Array<Patch>,
           tags?: Array<WriteTag>,
+          isFresh = maybeInnerSignal.staleSignal?.get() !== true,
         ) => {
-          // Full updates restore inner freshness and include patches, while get() snapshots do not.
-          if (
-            rootSignal.staleSignal?.get() === true ||
-            (patches === undefined && maybeInnerSignal.staleSignal?.get() === true)
-          ) {
+          if (rootSignal.staleSignal?.get() === true || !isFresh) {
             markDownstreamStale();
             return;
           }
@@ -63,14 +61,17 @@ export function flattenSignalOfSignal<TInner>(
           }
         };
 
-        unsubscribeInnerSignal = maybeInnerSignal.subscribeFull(updateFromInner);
-        unsubscribeInnerStaleSignal = maybeInnerSignal.staleSignal?.subscribe(isStale => {
-          if (isStale) {
-            markDownstreamStale();
-          } else {
-            updateFromInner(maybeInnerSignal.get());
-          }
-        }) ?? null;
+        unsubscribeInnerSignal =
+          maybeInnerSignal.subscribeFullWithFreshness?.(updateFromInner) ??
+          maybeInnerSignal.subscribeFull(updateFromInner);
+        unsubscribeInnerStaleSignal =
+          maybeInnerSignal.staleSignal?.subscribe(isStale => {
+            if (isStale) {
+              markDownstreamStale();
+            } else {
+              updateFromInner(maybeInnerSignal.get());
+            }
+          }) ?? null;
         updateFromInner(maybeInnerSignal.get());
       };
 
@@ -154,17 +155,14 @@ export function flattenSignalOfWritableSignal<TInner>(
           return;
         }
 
+        /** Applies an inner update only when both levels say its value is fresh. */
         const maybeUpdateDownstream = (
           value: TInner | NotAvailable,
           patches?: Array<Patch>,
           tags?: Array<WriteTag>,
+          isFresh = maybeInnerSignal[0].staleSignal?.get() !== true,
         ) => {
-          // Full updates restore inner freshness and include patches, while get() snapshots do not.
-          if (
-            rootSignal.staleSignal?.get() === true ||
-            (patches === undefined && maybeInnerSignal[0].staleSignal?.get() === true) ||
-            !isAvailable(value)
-          ) {
+          if (rootSignal.staleSignal?.get() === true || !isFresh || !isAvailable(value)) {
             innerSetter = null;
             markDownstreamStale();
             return;
@@ -205,15 +203,18 @@ export function flattenSignalOfWritableSignal<TInner>(
           innerSetter = setter;
         };
 
-        unsubscribeInnerSignal = maybeInnerSignal[0].subscribeFull(maybeUpdateDownstream);
-        unsubscribeInnerStaleSignal = maybeInnerSignal[0].staleSignal?.subscribe(isStale => {
-          if (isStale) {
-            innerSetter = null;
-            markDownstreamStale();
-          } else {
-            maybeUpdateDownstream(maybeInnerSignal[0].get());
-          }
-        }) ?? null;
+        unsubscribeInnerSignal =
+          maybeInnerSignal[0].subscribeFullWithFreshness?.(maybeUpdateDownstream) ??
+          maybeInnerSignal[0].subscribeFull(maybeUpdateDownstream);
+        unsubscribeInnerStaleSignal =
+          maybeInnerSignal[0].staleSignal?.subscribe(isStale => {
+            if (isStale) {
+              innerSetter = null;
+              markDownstreamStale();
+            } else {
+              maybeUpdateDownstream(maybeInnerSignal[0].get());
+            }
+          }) ?? null;
         maybeUpdateDownstream(maybeInnerSignal[0].get());
       };
 
