@@ -215,6 +215,8 @@ export class Signal<TValue> extends Subscribable<TValue> implements SignalLike<T
 }
 
 export interface SignalLike<TValue> extends Subscribable<TValue> {
+  /** Present when the signal can report whether its cached value is stale. */
+  readonly staleSignal?: Signal<boolean>;
   get(): TValue;
   subscribe(subscriber: Subscriber<TValue>): () => void;
   subscribeFull(subscriber: SignalFullSubscriber<TValue>): () => void;

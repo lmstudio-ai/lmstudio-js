@@ -47,6 +47,8 @@ export class OWLSignal<TData> extends Subscribable<TData> implements SignalLike<
    * The inner signal used to subscribe to the upstream
    */
   private readonly innerSignal: LazySignal<TData>;
+  /** Reports whether the latest upstream value is still current. */
+  public readonly staleSignal: Signal<boolean>;
   /**
    * The outer signal used to notify subscribers of the value (after applying optimistic updates)
    */
@@ -111,6 +113,7 @@ export class OWLSignal<TData> extends Subscribable<TData> implements SignalLike<
     [this.writeErrorEvent, this.emitWriteErrorEvent] = Event.create();
     [this.outerSignal, this.setOuterSignal] = Signal.create(initialValue, equalsPredicate);
     this.innerSignal = LazySignal.create(initialValue, subscribeUpstream, equalsPredicate);
+    this.staleSignal = this.innerSignal.staleSignal;
     this.innerSignal.passiveSubscribeFull((_data, _patches, tags) => {
       if (this.isSubscriptionHandledByWriteLoop) {
         return;
