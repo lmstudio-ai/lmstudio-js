@@ -337,6 +337,38 @@ describe("SlicedSignal", () => {
     );
   });
 
+  it("should become stale while its lazy source recovers", async () => {
+    const sourceValue = { a: { b: { c: 1 } } };
+    let emitUpstream: (value: typeof sourceValue) => void = () => {};
+    let failUpstream: (error: Error) => void = () => {};
+    const sourceSignal = LazySignal.create(sourceValue, (setDownstream, errorListener) => {
+      emitUpstream = setDownstream;
+      failUpstream = errorListener;
+      return () => {};
+    });
+    const sourceSetter = makeSetterWithPatches<typeof sourceValue>(() => {});
+    const [slicedSignal] = makeSlicedSignalFrom([sourceSignal, sourceSetter])
+      .access("a")
+      .access("b")
+      .done();
+    const unsubscribe = slicedSignal.subscribe(() => {});
+
+    emitUpstream(sourceValue);
+    expect(slicedSignal.isStale()).toBe(false);
+
+    failUpstream(new Error("source failed"));
+    expect(slicedSignal.isStale()).toBe(true);
+
+    const pullPromise = slicedSignal.pull();
+    expect(sourceSignal.recoverFromError()).toBe(true);
+    await new Promise(resolve => setTimeout(resolve, 0));
+    emitUpstream(sourceValue);
+
+    await expect(pullPromise).resolves.toEqual({ c: 1 });
+    expect(slicedSignal.isStale()).toBe(false);
+    unsubscribe();
+  });
+
   it("should be able to read with regular signal with arrays", () => {
     const [sourceSignal, setSource] = Signal.create({ a: [{ b: { c: 1 } }, { d: { e: 2 } }] });
     const [slicedSignal, _setSliced] = makeSlicedSignalFrom([sourceSignal, setSource])

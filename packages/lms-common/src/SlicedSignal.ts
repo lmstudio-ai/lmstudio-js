@@ -275,6 +275,7 @@ class SlicedSignalBuilderImpl<
     this.path.push(key);
     return this as any;
   }
+  /** Builds a writable signal for the selected path. */
   public done(): readonly [
     signal: LazySignal<
       | TCurrent
@@ -293,8 +294,26 @@ class SlicedSignalBuilderImpl<
       | TCurrent
       | (TCanBeNotAvailable extends true ? NotAvailable : never)
       | (TCanBeShortCircuited extends true ? ShortCircuited : never)
-    >(initialValue, setDownstream => {
+    >(initialValue, (setDownstream, _errorListener, markDownstreamStale) => {
+      /** Replaces the slice after its source becomes fresh. */
+      const updateFromCurrentSource = () => {
+        if (this.sourceSignal.staleSignal?.get() === true) {
+          markDownstreamStale();
+          return;
+        }
+        const value = this.sourceSignal.get();
+        if (!isAvailable(value)) {
+          markDownstreamStale();
+        } else {
+          setDownstream(isShortCircuited(value) ? value : drill(value, this.accessPath));
+        }
+      };
+
       const unsubscribe = this.sourceSignal.subscribeFull((value, patches, tags) => {
+        if (this.sourceSignal.staleSignal?.get() === true) {
+          markDownstreamStale();
+          return;
+        }
         const newPatches: Array<Patch> = [];
         // Transform patches
         for (const patch of patches) {
@@ -350,16 +369,19 @@ class SlicedSignalBuilderImpl<
           setDownstream.withValueAndPatches(newValue, newPatches, newTags);
         }
       });
-      const value = this.sourceSignal.pull();
-      if (value instanceof Promise) {
-        value.then(value => {
-          setDownstream(drill(value, this.accessPath));
-        });
-      } else {
-        setDownstream(drill(value, this.accessPath));
-      }
+      const unsubscribeStaleSignal = this.sourceSignal.staleSignal?.subscribe(isStale => {
+        if (isStale) {
+          markDownstreamStale();
+        } else {
+          updateFromCurrentSource();
+        }
+      });
+      updateFromCurrentSource();
 
-      return unsubscribe;
+      return () => {
+        unsubscribeStaleSignal?.();
+        unsubscribe();
+      };
     });
     const setter = makeSetterWithPatches<TCurrent>((updater, tags) => {
       const newTags = tags?.map(tag => this.tagKey + tag);

@@ -177,6 +177,34 @@ describe("flattenSignalOfSignal", () => {
     await expect(pullPromise).resolves.toBe("fresh");
   });
 
+  it("should become stale while its root signal recovers", async () => {
+    const innerSignal = Signal.createReadonly("value");
+    let emitRootSignal: (value: typeof innerSignal) => void = () => {};
+    let failRootSignal: (error: Error) => void = () => {};
+    const rootSignal = LazySignal.create(innerSignal, (setDownstream, errorListener) => {
+      emitRootSignal = setDownstream;
+      failRootSignal = errorListener;
+      return () => {};
+    });
+    const flattenedSignal = flattenSignalOfSignal(rootSignal);
+    const unsubscribe = flattenedSignal.subscribe(() => {});
+
+    emitRootSignal(innerSignal);
+    expect(flattenedSignal.isStale()).toBe(false);
+
+    failRootSignal(new Error("root failed"));
+    expect(flattenedSignal.isStale()).toBe(true);
+
+    const pullPromise = flattenedSignal.pull();
+    expect(rootSignal.recoverFromError()).toBe(true);
+    await waitForTick();
+    emitRootSignal(innerSignal);
+
+    await expect(pullPromise).resolves.toBe("value");
+    expect(flattenedSignal.isStale()).toBe(false);
+    unsubscribe();
+  });
+
   it("should not treat a stale inner signal's cached value as fresh", async () => {
     let emitInnerSignal: (value: string) => void = () => {};
     const innerSignal = LazySignal.create("cached", setDownstream => {
@@ -197,6 +225,34 @@ describe("flattenSignalOfSignal", () => {
 
     emitInnerSignal("fresh");
     await expect(pullPromise).resolves.toBe("fresh");
+  });
+
+  it("should become stale while its inner signal recovers", async () => {
+    let emitInnerSignal: (value: string) => void = () => {};
+    let failInnerSignal: (error: Error) => void = () => {};
+    const innerSignal = LazySignal.create("cached", (setDownstream, errorListener) => {
+      emitInnerSignal = setDownstream;
+      failInnerSignal = errorListener;
+      return () => {};
+    });
+    const outerSignal = Signal.createReadonly(innerSignal);
+    const flattenedSignal = flattenSignalOfSignal(outerSignal);
+    const unsubscribe = flattenedSignal.subscribe(() => {});
+
+    emitInnerSignal("fresh");
+    expect(flattenedSignal.isStale()).toBe(false);
+
+    failInnerSignal(new Error("inner failed"));
+    expect(flattenedSignal.isStale()).toBe(true);
+
+    const pullPromise = flattenedSignal.pull();
+    expect(innerSignal.recoverFromError()).toBe(true);
+    await waitForTick();
+    emitInnerSignal("fresh");
+
+    await expect(pullPromise).resolves.toBe("fresh");
+    expect(flattenedSignal.isStale()).toBe(false);
+    unsubscribe();
   });
 
   it("should accept a same-value snapshot from a stale inner signal as fresh", async () => {
@@ -291,6 +347,35 @@ describe("flattenSignalOfWritableSignal", () => {
 
     emitInnerSignal("fresh");
     await expect(pullPromise).resolves.toBe("fresh");
+  });
+
+  it("should become stale while its inner writable signal recovers", async () => {
+    let emitInnerSignal: (value: string) => void = () => {};
+    let failInnerSignal: (error: Error) => void = () => {};
+    const innerSignal = LazySignal.create("cached", (setDownstream, errorListener) => {
+      emitInnerSignal = setDownstream;
+      failInnerSignal = errorListener;
+      return () => {};
+    });
+    const [, unusedSetter] = Signal.create("unused");
+    const outerSignal = Signal.createReadonly([innerSignal, unusedSetter] as const);
+    const [flattenedSignal] = flattenSignalOfWritableSignal(outerSignal);
+    const unsubscribe = flattenedSignal.subscribe(() => {});
+
+    emitInnerSignal("fresh");
+    expect(flattenedSignal.isStale()).toBe(false);
+
+    failInnerSignal(new Error("inner failed"));
+    expect(flattenedSignal.isStale()).toBe(true);
+
+    const pullPromise = flattenedSignal.pull();
+    expect(innerSignal.recoverFromError()).toBe(true);
+    await waitForTick();
+    emitInnerSignal("fresh");
+
+    await expect(pullPromise).resolves.toBe("fresh");
+    expect(flattenedSignal.isStale()).toBe(false);
+    unsubscribe();
   });
 
   it("should accept a same-value snapshot from a stale inner writable signal as fresh", async () => {
