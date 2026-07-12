@@ -309,15 +309,17 @@ class SlicedSignalBuilderImpl<
         }
       };
 
-      /** Applies source metadata only when the source says this particular update is fresh. */
+      /** Applies fresh source metadata and forwards only acknowledgements while stale. */
       const updateFromSource = (
         value: TSource | ShortCircuited,
         patches: Array<Patch>,
         tags: Array<WriteTag>,
-        isFresh = this.sourceSignal.staleSignal?.get() !== true,
       ) => {
-        if (!isFresh) {
-          markDownstreamStale();
+        const newTags = tags
+          .filter(tag => tag.startsWith(this.tagKey))
+          .map(tag => tag.slice(this.tagKey.length));
+        if (this.sourceSignal.staleSignal?.get() === true) {
+          markDownstreamStale(newTags);
           return;
         }
         const newPatches: Array<Patch> = [];
@@ -368,21 +370,12 @@ class SlicedSignalBuilderImpl<
           // Otherwise, we don't need to do anything
         }
         const newValue = isShortCircuited(value) ? value : drill(value, this.accessPath);
-        const newTags = tags
-          .filter(tag => tag.startsWith(this.tagKey))
-          .map(tag => tag.slice(this.tagKey.length));
-        if (newPatches.length > 0 || newTags.length > 0) {
-          setDownstream.withValueAndPatches(newValue, newPatches, newTags);
-        }
+        setDownstream.withValueAndPatches(newValue, newPatches, newTags);
       };
-      const unsubscribe =
-        this.sourceSignal.subscribeFullWithFreshness?.(updateFromSource) ??
-        this.sourceSignal.subscribeFull(updateFromSource);
+      const unsubscribe = this.sourceSignal.subscribeFull(updateFromSource);
       const unsubscribeStaleSignal = this.sourceSignal.staleSignal?.subscribe(isStale => {
         if (isStale) {
           markDownstreamStale();
-        } else {
-          updateFromCurrentSource();
         }
       });
       updateFromCurrentSource();

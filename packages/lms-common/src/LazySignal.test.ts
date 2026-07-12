@@ -202,6 +202,41 @@ describe("LazySignal", () => {
     unsubscribeReentrantUpdate();
   });
 
+  it("should finish stale when a source errors reentrantly during a fresh update", async () => {
+    let emitUpstream: (value: string) => void = () => {};
+    let failUpstream: (error: Error) => void = () => {};
+    const sourceSignal = LazySignal.create("cached", (setDownstream, errorListener) => {
+      emitUpstream = setDownstream;
+      failUpstream = errorListener;
+      return () => {};
+    });
+    const unsubscribeReentrantError = sourceSignal.subscribe(value => {
+      if (value === "updated") {
+        failUpstream(new Error("failed during delivery"));
+      }
+    });
+    const derivedSignal = LazySignal.deriveFrom(
+      [sourceSignal],
+      sourceValue => `derived:${sourceValue}`,
+    );
+    const unsubscribe = derivedSignal.subscribe(() => {});
+
+    emitUpstream("initial");
+    emitUpstream("updated");
+
+    expect(sourceSignal.isStale()).toBe(true);
+    expect(derivedSignal.isStale()).toBe(true);
+    expect(derivedSignal.get()).toBe("derived:updated");
+
+    const pullPromise = derivedSignal.pull();
+    expect(sourceSignal.recoverFromError()).toBe(true);
+    emitUpstream("recovered");
+    await expect(pullPromise).resolves.toBe("derived:recovered");
+
+    unsubscribe();
+    unsubscribeReentrantError();
+  });
+
   it("should wait for a same-value refresh from a stale source", async () => {
     let emitUpstream: (value: string) => void = () => {};
     const sourceSignal = LazySignal.create("unchanged", setDownstream => {
@@ -284,14 +319,11 @@ describe("LazySignal", () => {
   it("should continue waiting when a stale source errors before its first refresh and recovers", async () => {
     let emitFirstUpstream: (value: string) => void = () => {};
     let failFirstUpstream: (error: Error) => void = () => {};
-    const firstSourceSignal = LazySignal.create(
-      "first-cached",
-      (setDownstream, errorListener) => {
-        emitFirstUpstream = setDownstream;
-        failFirstUpstream = errorListener;
-        return () => {};
-      },
-    );
+    const firstSourceSignal = LazySignal.create("first-cached", (setDownstream, errorListener) => {
+      emitFirstUpstream = setDownstream;
+      failFirstUpstream = errorListener;
+      return () => {};
+    });
     let emitSecondUpstream: (value: string) => void = () => {};
     const secondSourceSignal = LazySignal.create("second-cached", setDownstream => {
       emitSecondUpstream = setDownstream;
@@ -321,14 +353,11 @@ describe("LazySignal", () => {
   it("should wait for a recovered source to refresh again if it errors while other sources are pending", async () => {
     let emitFirstUpstream: (value: string) => void = () => {};
     let failFirstUpstream: (error: Error) => void = () => {};
-    const firstSourceSignal = LazySignal.create(
-      "first-cached",
-      (setDownstream, errorListener) => {
-        emitFirstUpstream = setDownstream;
-        failFirstUpstream = errorListener;
-        return () => {};
-      },
-    );
+    const firstSourceSignal = LazySignal.create("first-cached", (setDownstream, errorListener) => {
+      emitFirstUpstream = setDownstream;
+      failFirstUpstream = errorListener;
+      return () => {};
+    });
     let emitSecondUpstream: (value: string) => void = () => {};
     const secondSourceSignal = LazySignal.create("second-cached", setDownstream => {
       emitSecondUpstream = setDownstream;
@@ -361,14 +390,11 @@ describe("LazySignal", () => {
   it("should not derive from a stale source after an earlier successful derivation", () => {
     let emitFirstUpstream: (value: string) => void = () => {};
     let failFirstUpstream: (error: Error) => void = () => {};
-    const firstSourceSignal = LazySignal.create(
-      "first-cached",
-      (setDownstream, errorListener) => {
-        emitFirstUpstream = setDownstream;
-        failFirstUpstream = errorListener;
-        return () => {};
-      },
-    );
+    const firstSourceSignal = LazySignal.create("first-cached", (setDownstream, errorListener) => {
+      emitFirstUpstream = setDownstream;
+      failFirstUpstream = errorListener;
+      return () => {};
+    });
     let emitSecondUpstream: (value: string) => void = () => {};
     const secondSourceSignal = LazySignal.create("second-cached", setDownstream => {
       emitSecondUpstream = setDownstream;

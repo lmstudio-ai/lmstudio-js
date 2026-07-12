@@ -401,6 +401,67 @@ describe("SlicedSignal", () => {
     unsubscribe();
   });
 
+  it("should forward stale OWLSignal tags without forwarding its optimistic value", () => {
+    const sourceValue = { a: { b: { c: 1 } } };
+    let emitUpstream!: Setter<typeof sourceValue>;
+    let failUpstream: (error: Error) => void = () => {};
+    const [sourceSignal, setSourceSignal] = OWLSignal.create(
+      sourceValue,
+      (setDownstream, errorListener) => {
+        emitUpstream = setDownstream;
+        failUpstream = errorListener;
+        return () => {};
+      },
+      () => true,
+    );
+    const [slicedSignal, setSliced] = makeSlicedSignalFrom([sourceSignal, setSourceSignal])
+      .access("a")
+      .access("b")
+      .done();
+    const callbackFull = jest.fn();
+    const unsubscribe = slicedSignal.subscribeFull(callbackFull);
+
+    emitUpstream(sourceValue);
+    callbackFull.mockClear();
+    failUpstream(new Error("transport failed"));
+    setSliced.withValueAndPatches({ c: 1 }, [], ["dropped-write"]);
+
+    expect(sourceSignal.isStale()).toBe(true);
+    expect(slicedSignal.isStale()).toBe(true);
+    expect(slicedSignal.get()).toEqual({ c: 1 });
+    expect(callbackFull).toHaveBeenCalledWith({ c: 1 }, [], ["dropped-write"]);
+    unsubscribe();
+  });
+
+  it("should become fresh when recovery patches do not affect the slice", async () => {
+    const sourceValue = { a: { b: { c: 1 } }, outside: 0 };
+    let emitUpstream!: Setter<typeof sourceValue>;
+    let failUpstream: (error: Error) => void = () => {};
+    const sourceSignal = LazySignal.create(sourceValue, (setDownstream, errorListener) => {
+      emitUpstream = setDownstream;
+      failUpstream = errorListener;
+      return () => {};
+    });
+    const sourceSetter = makeSetterWithPatches<typeof sourceValue>(() => {});
+    const [slicedSignal] = makeSlicedSignalFrom([sourceSignal, sourceSetter])
+      .access("a")
+      .access("b")
+      .done();
+    const unsubscribe = slicedSignal.subscribe(() => {});
+
+    emitUpstream(sourceValue);
+    failUpstream(new Error("source failed"));
+    const pullPromise = slicedSignal.pull();
+    expect(sourceSignal.recoverFromError()).toBe(true);
+    emitUpstream.withProducer(draft => {
+      draft.outside = 1;
+    });
+
+    await expect(pullPromise).resolves.toEqual({ c: 1 });
+    expect(slicedSignal.isStale()).toBe(false);
+    unsubscribe();
+  });
+
   it("should preserve sliced patches and tags from a recovery update", () => {
     const sourceValue = { a: { b: { c: 1 } } };
     let emitUpstream!: Setter<typeof sourceValue>;

@@ -547,6 +547,36 @@ describe("flattenSignalOfWritableSignal", () => {
     unsubscribe();
   });
 
+  it("should forward stale inner OWLSignal tags without forwarding its value", () => {
+    const initialValue = { count: 0 };
+    let emitUpstream!: Setter<typeof initialValue>;
+    let failUpstream: (error: Error) => void = () => {};
+    const [innerSignal, setInnerSignal] = OWLSignal.create(
+      initialValue,
+      (setDownstream, errorListener) => {
+        emitUpstream = setDownstream;
+        failUpstream = errorListener;
+        return () => {};
+      },
+      () => true,
+    );
+    const outerSignal = Signal.createReadonly([innerSignal, setInnerSignal] as const);
+    const [flattenedSignal] = flattenSignalOfWritableSignal(outerSignal);
+    const callbackFull = jest.fn();
+    const unsubscribe = flattenedSignal.subscribeFull(callbackFull);
+
+    emitUpstream(initialValue);
+    callbackFull.mockClear();
+    failUpstream(new Error("transport failed"));
+    setInnerSignal(initialValue, ["dropped-write"]);
+
+    expect(innerSignal.isStale()).toBe(true);
+    expect(flattenedSignal.isStale()).toBe(true);
+    expect(flattenedSignal.get()).toEqual(initialValue);
+    expect(callbackFull).toHaveBeenCalledWith(initialValue, [], ["dropped-write"]);
+    unsubscribe();
+  });
+
   it("should become stale while its inner writable signal recovers", async () => {
     let emitInnerSignal: (value: string) => void = () => {};
     let failInnerSignal: (error: Error) => void = () => {};

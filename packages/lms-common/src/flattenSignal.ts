@@ -41,19 +41,18 @@ export function flattenSignalOfSignal<TInner>(
           return;
         }
 
-        /** Applies an inner update only when both levels say its value is fresh. */
+        /** Applies an inner update only when both levels are fresh. */
         const updateFromInner = (
           value: TInner | NotAvailable,
           patches?: Array<Patch>,
           tags?: Array<WriteTag>,
-          isFresh = maybeInnerSignal.staleSignal?.get() !== true,
         ) => {
-          if (rootSignal.staleSignal?.get() === true || !isFresh) {
-            markDownstreamStale();
-            return;
-          }
-          if (!isAvailable(value)) {
-            markDownstreamStale();
+          if (
+            rootSignal.staleSignal?.get() === true ||
+            maybeInnerSignal.staleSignal?.get() === true ||
+            !isAvailable(value)
+          ) {
+            markDownstreamStale(tags);
           } else if (patches === undefined) {
             setDownstream(value, tags);
           } else {
@@ -61,15 +60,11 @@ export function flattenSignalOfSignal<TInner>(
           }
         };
 
-        unsubscribeInnerSignal =
-          maybeInnerSignal.subscribeFullWithFreshness?.(updateFromInner) ??
-          maybeInnerSignal.subscribeFull(updateFromInner);
+        unsubscribeInnerSignal = maybeInnerSignal.subscribeFull(updateFromInner);
         unsubscribeInnerStaleSignal =
           maybeInnerSignal.staleSignal?.subscribe(isStale => {
             if (isStale) {
               markDownstreamStale();
-            } else {
-              updateFromInner(maybeInnerSignal.get());
             }
           }) ?? null;
         updateFromInner(maybeInnerSignal.get());
@@ -88,8 +83,6 @@ export function flattenSignalOfSignal<TInner>(
       const unsubscribeRootStaleSignal = rootSignal.staleSignal?.subscribe(isStale => {
         if (isStale) {
           markDownstreamStale();
-        } else {
-          updateFromRoot();
         }
       });
       updateFromRoot();
@@ -155,16 +148,19 @@ export function flattenSignalOfWritableSignal<TInner>(
           return;
         }
 
-        /** Applies an inner update only when both levels say its value is fresh. */
+        /** Applies an inner update only when both levels are fresh. */
         const maybeUpdateDownstream = (
           value: TInner | NotAvailable,
           patches?: Array<Patch>,
           tags?: Array<WriteTag>,
-          isFresh = maybeInnerSignal[0].staleSignal?.get() !== true,
         ) => {
-          if (rootSignal.staleSignal?.get() === true || !isFresh || !isAvailable(value)) {
+          if (
+            rootSignal.staleSignal?.get() === true ||
+            maybeInnerSignal[0].staleSignal?.get() === true ||
+            !isAvailable(value)
+          ) {
             innerSetter = null;
-            markDownstreamStale();
+            markDownstreamStale(tags);
             return;
           }
           if (patches !== undefined) {
@@ -203,16 +199,12 @@ export function flattenSignalOfWritableSignal<TInner>(
           innerSetter = setter;
         };
 
-        unsubscribeInnerSignal =
-          maybeInnerSignal[0].subscribeFullWithFreshness?.(maybeUpdateDownstream) ??
-          maybeInnerSignal[0].subscribeFull(maybeUpdateDownstream);
+        unsubscribeInnerSignal = maybeInnerSignal[0].subscribeFull(maybeUpdateDownstream);
         unsubscribeInnerStaleSignal =
           maybeInnerSignal[0].staleSignal?.subscribe(isStale => {
             if (isStale) {
               innerSetter = null;
               markDownstreamStale();
-            } else {
-              maybeUpdateDownstream(maybeInnerSignal[0].get());
             }
           }) ?? null;
         maybeUpdateDownstream(maybeInnerSignal[0].get());
@@ -233,8 +225,6 @@ export function flattenSignalOfWritableSignal<TInner>(
         if (isStale) {
           innerSetter = null;
           markDownstreamStale();
-        } else {
-          updateFromRoot();
         }
       });
       updateFromRoot();

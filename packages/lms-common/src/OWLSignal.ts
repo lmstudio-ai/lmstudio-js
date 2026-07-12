@@ -9,13 +9,7 @@ import {
 } from "./LazySignal.js";
 import { makePromise } from "./makePromise.js";
 import { makeSetterWithPatches, type Setter, type WriteTag } from "./makeSetter.js";
-import {
-  Signal,
-  type SignalFullSubscriber,
-  type SignalFullSubscriberWithFreshness,
-  type SignalLike,
-  type Subscriber,
-} from "./Signal.js";
+import { Signal, type SignalFullSubscriber, type SignalLike, type Subscriber } from "./Signal.js";
 import { Subscribable } from "./Subscribable.js";
 
 interface WriteError {
@@ -63,8 +57,8 @@ export class OWLSignal<TData> extends Subscribable<TData> implements SignalLike<
    * The setter function to update the value of the signal.
    */
   private readonly setOuterSignal: Setter<TData>;
-  /** Freshness attached to the outer update currently notifying subscribers. */
-  private outerUpdateIsFresh: boolean | null = null;
+  private readonly setFreshOuterSignal: Setter<TData>;
+  private readonly markOuterStale: (tags?: Array<WriteTag>) => void;
   private isWriteLoopRunning = false;
   /**
    * We have a passive subscription to the inner signal to update the optimistic value whenever the
@@ -99,24 +93,11 @@ export class OWLSignal<TData> extends Subscribable<TData> implements SignalLike<
     return data;
   }
 
-  /**
-   * Rebuilds the optimistic value and records whether its base value is fresh. Updates caused by an
-   * inner value packet pass true because that packet restores the inner signal's freshness.
-   */
-  private updateOptimisticValue(
-    tags?: Array<WriteTag>,
-    isFresh = this.outerUpdateIsFresh ?? !this.isStale(),
-  ) {
+  /** Rebuilds the optimistic value with the setter chosen by the caller. */
+  private updateOptimisticValue(setOuterSignal: Setter<TData>, tags?: Array<WriteTag>) {
     const innerValue = this.innerSignal.get();
-    if (!isAvailable(innerValue)) {
-      return;
-    }
-    const previousOuterUpdateIsFresh = this.outerUpdateIsFresh;
-    this.outerUpdateIsFresh = isFresh;
-    try {
-      this.setOuterSignal(this.applyOptimisticUpdates(innerValue), tags);
-    } finally {
-      this.outerUpdateIsFresh = previousOuterUpdateIsFresh;
+    if (isAvailable(innerValue)) {
+      setOuterSignal(this.applyOptimisticUpdates(innerValue), tags);
     }
   }
 
@@ -133,14 +114,27 @@ export class OWLSignal<TData> extends Subscribable<TData> implements SignalLike<
   ) {
     super();
     [this.writeErrorEvent, this.emitWriteErrorEvent] = Event.create();
-    [this.outerSignal, this.setOuterSignal] = Signal.create(initialValue, equalsPredicate);
+    const outerState = Signal.createWithStaleState(initialValue, true, equalsPredicate);
+    this.outerSignal = outerState.signal;
+    this.setOuterSignal = outerState.setValue;
+    this.setFreshOuterSignal = outerState.setFreshValue;
+    this.markOuterStale = outerState.markStale;
+    this.staleSignal = outerState.signal.staleSignal!;
     this.innerSignal = LazySignal.create(initialValue, subscribeUpstream, equalsPredicate);
-    this.staleSignal = this.innerSignal.staleSignal;
     this.innerSignal.passiveSubscribeFull((_data, _patches, tags) => {
       if (this.isSubscriptionHandledByWriteLoop) {
         return;
       }
-      this.updateOptimisticValue(tags, true);
+      if (this.innerSignal.isStale()) {
+        this.markOuterStale(tags);
+      } else {
+        this.updateOptimisticValue(this.setFreshOuterSignal, tags);
+      }
+    });
+    this.innerSignal.staleSignal.subscribe(isStale => {
+      if (isStale) {
+        this.markOuterStale();
+      }
     });
   }
 
@@ -188,6 +182,7 @@ export class OWLSignal<TData> extends Subscribable<TData> implements SignalLike<
     );
   }
 
+  /** Applies a write optimistically or acknowledges it immediately while errored. */
   private async update(
     updater: (
       oldValue: StripNotAvailable<TData>,
@@ -195,9 +190,7 @@ export class OWLSignal<TData> extends Subscribable<TData> implements SignalLike<
     tags?: Array<WriteTag>,
   ) {
     if (this.hasError()) {
-      if (tags !== undefined && tags.length > 0) {
-        this.setOuterSignal(this.outerSignal.get() as StripNotAvailable<TData>, tags);
-      }
+      this.markOuterStale(tags);
       return Promise.resolve();
     }
     const { promise, reject, resolve } = makePromise<void>();
@@ -207,7 +200,7 @@ export class OWLSignal<TData> extends Subscribable<TData> implements SignalLike<
       resolve,
       reject,
     });
-    this.updateOptimisticValue();
+    this.updateOptimisticValue(this.setOuterSignal);
     this.ensureWriteLoop();
     // FIXME: Don't propagate errors here since setters cannot fail currently.
     return promise.catch(() => {});
@@ -220,39 +213,35 @@ export class OWLSignal<TData> extends Subscribable<TData> implements SignalLike<
       this.writeLoop(); // This is not expected to error, if it does, just default behavior
     }
   }
-  /**
-   * The main write loop, it will keep running until there are no more updates to process.
-   */
+  /** Runs queued writes serially against fresh inner data. */
   private async writeLoop() {
-    const unsubscribe = this.innerSignal.subscribe(() => {});
     this.isWriteLoopRunning = true;
+    let unsubscribe = () => {};
     try {
-      if (this.isStale()) {
-        await this.innerSignal.pull();
-      }
+      unsubscribe = this.innerSignal.subscribe(() => {});
       while (this.queuedUpdates.length > 0) {
-        const numQueuedUpdatesToHandle = this.queuedUpdates.length;
+        if (this.innerSignal.isStale()) {
+          await this.innerSignal.pull();
+        }
+
+        const handledUpdates = this.queuedUpdates.slice();
+        const numHandledUpdates = handledUpdates.length;
         const updater = (data: StripNotAvailable<TData>) => {
           const patches: Array<Patch> = [];
-          for (let i = 0; i < numQueuedUpdatesToHandle; i++) {
-            const [newData, newPatches] = this.queuedUpdates[i].updater(data);
+          for (const update of handledUpdates) {
+            const [newData, newPatches] = update.updater(data);
             data = newData;
             patches.push(...newPatches);
           }
           return [data, patches] as const;
         };
-        const resolve = () => {
-          for (let i = 0; i < numQueuedUpdatesToHandle; i++) {
-            this.queuedUpdates[i].resolve();
-          }
+        const resolveHandledUpdates = () => {
+          handledUpdates.forEach(update => update.resolve());
         };
-        const reject = (error: any) => {
-          for (let i = 0; i < numQueuedUpdatesToHandle; i++) {
-            this.queuedUpdates[i].reject(error);
-          }
+        const rejectHandledUpdates = (error: any) => {
+          handledUpdates.forEach(update => update.reject(error));
         };
-        const queuedUpdateTags = this.queuedUpdates.flatMap(update => update.tags);
-
+        const queuedUpdateTags = handledUpdates.flatMap(update => update.tags);
         const tag = Date.now() + "-" + Math.random();
 
         await new Promise<void>(nextStep => {
@@ -260,85 +249,83 @@ export class OWLSignal<TData> extends Subscribable<TData> implements SignalLike<
           const unsubscribeArray: Array<() => void> = [];
           let settled = false;
 
-          const settle = () => {
+          /** Removes the handled batch before passive inner updates can resume. */
+          const finishWrite = (finishPromises: () => void, publishOuter: () => void) => {
             if (settled) {
               return;
             }
             settled = true;
-            this.isSubscriptionHandledByWriteLoop = false;
+            this.queuedUpdates.splice(0, numHandledUpdates);
             unsubscribeArray.forEach(unsubscribe => unsubscribe());
-            nextStep();
-          };
-          const flushQueuedTags = () => {
-            if (queuedUpdateTags.length > 0) {
-              this.setOuterSignal(
-                this.outerSignal.get() as StripNotAvailable<TData>,
-                queuedUpdateTags,
-              );
+            this.isSubscriptionHandledByWriteLoop = false;
+            finishPromises();
+            try {
+              publishOuter();
+            } finally {
+              nextStep();
             }
           };
+
+          /** Publishes a dropped write from fresh data, or keeps the outer value stale. */
+          const publishDroppedWrite = () => {
+            if (this.innerSignal.isStale()) {
+              this.markOuterStale(queuedUpdateTags);
+            } else {
+              this.updateOptimisticValue(this.setFreshOuterSignal, queuedUpdateTags);
+            }
+          };
+
           unsubscribeArray.push(
             this.innerSignal.subscribeFull((_data, _patches, tags) => {
-              if (!this.isSubscriptionHandledByWriteLoop) {
+              if (settled || !this.isSubscriptionHandledByWriteLoop) {
                 return;
               }
-              if (tags?.includes(tag)) {
-                settle();
-                resolve();
-                // If this update is caused by the write, we need to remove the optimistic update
-                // and apply the remaining optimistic updates
-                this.queuedUpdates.splice(0, numQueuedUpdatesToHandle);
-                this.updateOptimisticValue(
-                  tags.filter(t => t !== tag),
-                  true,
-                );
+              if (this.innerSignal.isStale()) {
+                this.markOuterStale(tags.filter(currentTag => currentTag !== tag));
+              } else if (tags.includes(tag)) {
+                finishWrite(resolveHandledUpdates, () => {
+                  this.updateOptimisticValue(
+                    this.setFreshOuterSignal,
+                    tags.filter(currentTag => currentTag !== tag),
+                  );
+                });
               } else {
-                // This update is not caused by the write, simply update the optimistic value
-                // as normal
-                this.updateOptimisticValue(tags, true);
+                this.updateOptimisticValue(this.setFreshOuterSignal, tags);
               }
             }),
           );
           unsubscribeArray.push(
             this.writeErrorEvent.subscribe(({ tags, error }) => {
-              if (!this.isSubscriptionHandledByWriteLoop) {
-                return;
-              }
-              if (tags.includes(tag)) {
-                flushQueuedTags();
-                settle();
-                reject(error);
-                this.queuedUpdates.splice(0, numQueuedUpdatesToHandle);
+              if (!settled && tags.includes(tag)) {
+                finishWrite(() => rejectHandledUpdates(error), publishDroppedWrite);
               }
             }),
           );
-
-          // Listen for transport-level errors on the inner signal
-          // This handles the case where the transport fails during an in-flight write
           unsubscribeArray.push(
             this.innerSignal.errorSignal.subscribe(error => {
-              // Only act if we're still waiting (not settled yet) and an error occurred
-              if (error !== null && !settled && this.isSubscriptionHandledByWriteLoop) {
-                flushQueuedTags();
-                settle();
-                reject(error);
-                this.queuedUpdates.splice(0, numQueuedUpdatesToHandle);
+              if (error !== null && !settled) {
+                finishWrite(
+                  () => rejectHandledUpdates(error),
+                  () => {
+                    this.markOuterStale(queuedUpdateTags);
+                  },
+                );
               }
             }),
           );
 
-          // At this point, we know the data is available, because upon entering the write loop, we
-          // ensure that the data is available by pulling. Hence, we can safely cast the data to
-          // StripNotAvailable<TData>.
-          const sent = this.writeUpstream(
-            ...updater(this.innerSignal.get() as StripNotAvailable<TData>),
-            [tag, ...queuedUpdateTags],
-          );
-          if (!sent) {
-            settle();
-            resolve();
-            this.queuedUpdates.splice(0, numQueuedUpdatesToHandle);
-            this.updateOptimisticValue(queuedUpdateTags.filter(t => t !== tag));
+          let sent: boolean;
+          try {
+            sent = this.writeUpstream(
+              ...updater(this.innerSignal.get() as StripNotAvailable<TData>),
+              [tag, ...queuedUpdateTags],
+            );
+          } catch (error) {
+            finishWrite(() => rejectHandledUpdates(error), publishDroppedWrite);
+            return;
+          }
+          if (!sent && !settled) {
+            finishWrite(resolveHandledUpdates, publishDroppedWrite);
           }
         });
       }
@@ -365,7 +352,7 @@ export class OWLSignal<TData> extends Subscribable<TData> implements SignalLike<
    * {@link OWLSignal#pull}.
    */
   public isStale() {
-    return this.innerSignal.isStale();
+    return this.staleSignal.get();
   }
 
   /**
@@ -459,16 +446,5 @@ export class OWLSignal<TData> extends Subscribable<TData> implements SignalLike<
       unsubscribeOuter();
       unsubscribeInner();
     };
-  }
-
-  /**
-   * Distinguishes optimistic updates made while stale from updates based on a fresh inner value.
-   */
-  public subscribeFullWithFreshness(
-    subscriber: SignalFullSubscriberWithFreshness<TData>,
-  ): () => void {
-    return this.subscribeFull((value, patches, tags) => {
-      subscriber(value, patches, tags, this.outerUpdateIsFresh ?? !this.isStale());
-    });
   }
 }
