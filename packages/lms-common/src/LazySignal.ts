@@ -135,7 +135,7 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
     const sourceUnsubscribers = sourceSignals.map(sourceSignal =>
       sourceSignal.subscribe(() => {
         if (sourceSubscriptionsReady && pendingSourceRefreshes === 0) {
-          onSourceValuesChanged();
+          updateOrWaitForStaleSources();
         }
       }),
     );
