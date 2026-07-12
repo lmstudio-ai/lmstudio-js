@@ -365,6 +365,41 @@ describe("LazySignal", () => {
     unsubscribe();
   });
 
+  it("should become stale and make pull wait when a source errors after deriving", async () => {
+    let emitUpstream: (value: string) => void = () => {};
+    let failUpstream: (error: Error) => void = () => {};
+    const sourceSignal = LazySignal.create("cached", (setDownstream, errorListener) => {
+      emitUpstream = setDownstream;
+      failUpstream = errorListener;
+      return () => {};
+    });
+    const derivedSignal = LazySignal.deriveFrom(
+      [sourceSignal],
+      sourceValue => `derived:${sourceValue}`,
+    );
+    const unsubscribe = derivedSignal.subscribe(() => {});
+
+    emitUpstream("fresh");
+    expect(derivedSignal.isStale()).toBe(false);
+
+    failUpstream(new Error("upstream failed"));
+    expect(derivedSignal.isStale()).toBe(true);
+
+    const pullPromise = derivedSignal.pull();
+    let pullResolved = false;
+    void pullPromise.then(() => {
+      pullResolved = true;
+    });
+    expect(sourceSignal.recoverFromError()).toBe(true);
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(pullResolved).toBe(false);
+
+    emitUpstream("fresh");
+    await expect(pullPromise).resolves.toBe("derived:fresh");
+    expect(derivedSignal.isStale()).toBe(false);
+    unsubscribe();
+  });
+
   it("should capture a synchronous upstream emission during subscription", async () => {
     const sourceSignal = LazySignal.create("cached", setDownstream => {
       setDownstream("synchronous");
