@@ -1,6 +1,7 @@
 import { flattenSignalOfSignal, flattenSignalOfWritableSignal } from "./flattenSignal.js";
 import { LazySignal } from "./LazySignal.js";
 import { type Setter } from "./makeSetter.js";
+import { OWLSignal } from "./OWLSignal.js";
 import { Signal } from "./Signal.js";
 
 async function waitForTick(): Promise<void> {
@@ -227,6 +228,36 @@ describe("flattenSignalOfSignal", () => {
     await expect(pullPromise).resolves.toBe("fresh");
   });
 
+  it("should remain stale when a stale OWLSignal emits an optimistic update", async () => {
+    const initialValue = { count: 0 };
+    let emitUpstream!: Setter<typeof initialValue>;
+    const [innerSignal, setInnerSignal] = OWLSignal.create(
+      initialValue,
+      setDownstream => {
+        emitUpstream = setDownstream;
+        return () => {};
+      },
+      () => false,
+    );
+    const outerSignal = Signal.createReadonly(innerSignal);
+    const flattenedSignal = flattenSignalOfSignal(outerSignal);
+    const callback = jest.fn();
+    const unsubscribe = flattenedSignal.subscribe(callback);
+
+    setInnerSignal.withProducer(draft => {
+      draft.count = 1;
+    });
+
+    expect(innerSignal.isStale()).toBe(true);
+    expect(flattenedSignal.isStale()).toBe(true);
+    expect(flattenedSignal.get()).toEqual(initialValue);
+    expect(callback).not.toHaveBeenCalled();
+
+    emitUpstream(initialValue);
+    await waitForTick();
+    unsubscribe();
+  });
+
   it("should become stale while its inner signal recovers", async () => {
     let emitInnerSignal: (value: string) => void = () => {};
     let failInnerSignal: (error: Error) => void = () => {};
@@ -406,6 +437,36 @@ describe("flattenSignalOfWritableSignal", () => {
 
     emitInnerSignal("fresh");
     await expect(pullPromise).resolves.toBe("fresh");
+  });
+
+  it("should remain stale when a stale inner OWLSignal emits an optimistic update", async () => {
+    const initialValue = { count: 0 };
+    let emitUpstream!: Setter<typeof initialValue>;
+    const innerWritableSignal = OWLSignal.create(
+      initialValue,
+      setDownstream => {
+        emitUpstream = setDownstream;
+        return () => {};
+      },
+      () => false,
+    );
+    const outerSignal = Signal.createReadonly(innerWritableSignal);
+    const [flattenedSignal] = flattenSignalOfWritableSignal(outerSignal);
+    const callback = jest.fn();
+    const unsubscribe = flattenedSignal.subscribe(callback);
+
+    innerWritableSignal[1].withProducer(draft => {
+      draft.count = 1;
+    });
+
+    expect(innerWritableSignal[0].isStale()).toBe(true);
+    expect(flattenedSignal.isStale()).toBe(true);
+    expect(flattenedSignal.get()).toEqual(initialValue);
+    expect(callback).not.toHaveBeenCalled();
+
+    emitUpstream(initialValue);
+    await waitForTick();
+    unsubscribe();
   });
 
   it("should become stale while its inner writable signal recovers", async () => {

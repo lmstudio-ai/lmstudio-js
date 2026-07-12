@@ -1,6 +1,6 @@
 import "."; // Import order
 
-import { LazySignal, makeSetterWithPatches, NotAvailable, Setter } from ".";
+import { LazySignal, makeSetterWithPatches, NotAvailable, OWLSignal, Setter } from ".";
 import { Signal } from "./Signal.js";
 import {
   chainMaybeShortCircuitedSignalFrom,
@@ -366,6 +366,38 @@ describe("SlicedSignal", () => {
 
     await expect(pullPromise).resolves.toEqual({ c: 1 });
     expect(slicedSignal.isStale()).toBe(false);
+    unsubscribe();
+  });
+
+  it("should remain stale when a stale OWLSignal emits an optimistic update", async () => {
+    const sourceValue = { a: { b: { c: 1 } } };
+    let emitUpstream!: Setter<typeof sourceValue>;
+    const sourceWritableSignal = OWLSignal.create(
+      sourceValue,
+      setDownstream => {
+        emitUpstream = setDownstream;
+        return () => {};
+      },
+      () => false,
+    );
+    const [slicedSignal] = makeSlicedSignalFrom(sourceWritableSignal)
+      .access("a")
+      .access("b")
+      .done();
+    const callback = jest.fn();
+    const unsubscribe = slicedSignal.subscribe(callback);
+
+    sourceWritableSignal[1].withProducer(draft => {
+      draft.a.b.c = 2;
+    });
+
+    expect(sourceWritableSignal[0].isStale()).toBe(true);
+    expect(slicedSignal.isStale()).toBe(true);
+    expect(slicedSignal.get()).toEqual({ c: 1 });
+    expect(callback).not.toHaveBeenCalled();
+
+    emitUpstream(sourceValue);
+    await new Promise(resolve => setTimeout(resolve, 0));
     unsubscribe();
   });
 
