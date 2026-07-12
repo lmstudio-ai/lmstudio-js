@@ -255,6 +255,65 @@ describe("flattenSignalOfSignal", () => {
     unsubscribe();
   });
 
+  it("should preserve patches and tags from an inner recovery update", () => {
+    const initialValue = { nested: { count: 0 } };
+    let emitInnerSignal!: Setter<typeof initialValue>;
+    let failInnerSignal: (error: Error) => void = () => {};
+    const innerSignal = LazySignal.create(initialValue, (setDownstream, errorListener) => {
+      emitInnerSignal = setDownstream;
+      failInnerSignal = errorListener;
+      return () => {};
+    });
+    const outerSignal = Signal.createReadonly(innerSignal);
+    const flattenedSignal = flattenSignalOfSignal(outerSignal);
+    const callbackFull = jest.fn();
+    const unsubscribe = flattenedSignal.subscribeFull(callbackFull);
+
+    emitInnerSignal(initialValue);
+    callbackFull.mockClear();
+    failInnerSignal(new Error("inner failed"));
+    expect(innerSignal.recoverFromError()).toBe(true);
+
+    emitInnerSignal.withProducer(
+      draft => {
+        draft.nested.count = 1;
+      },
+      ["fresh-tag"],
+    );
+
+    expect(callbackFull).toHaveBeenCalledWith(
+      { nested: { count: 1 } },
+      [{ op: "replace", path: ["nested", "count"], value: 1 }],
+      ["fresh-tag"],
+    );
+    unsubscribe();
+  });
+
+  it("should preserve a tag-only inner recovery update", () => {
+    const initialValue = { nested: { count: 0 } };
+    let emitInnerSignal!: Setter<typeof initialValue>;
+    let failInnerSignal: (error: Error) => void = () => {};
+    const innerSignal = LazySignal.create(initialValue, (setDownstream, errorListener) => {
+      emitInnerSignal = setDownstream;
+      failInnerSignal = errorListener;
+      return () => {};
+    });
+    const outerSignal = Signal.createReadonly(innerSignal);
+    const flattenedSignal = flattenSignalOfSignal(outerSignal);
+    const callbackFull = jest.fn();
+    const unsubscribe = flattenedSignal.subscribeFull(callbackFull);
+
+    emitInnerSignal(initialValue);
+    callbackFull.mockClear();
+    failInnerSignal(new Error("inner failed"));
+    expect(innerSignal.recoverFromError()).toBe(true);
+
+    emitInnerSignal.withValueAndPatches(initialValue, [], ["fresh-tag"]);
+
+    expect(callbackFull).toHaveBeenCalledWith(initialValue, [], ["fresh-tag"]);
+    unsubscribe();
+  });
+
   it("should accept a same-value snapshot from a stale inner signal as fresh", async () => {
     let emitInnerSignal: (value: string) => void = () => {};
     const innerSignal = LazySignal.create("cached", setDownstream => {
@@ -375,6 +434,67 @@ describe("flattenSignalOfWritableSignal", () => {
 
     await expect(pullPromise).resolves.toBe("fresh");
     expect(flattenedSignal.isStale()).toBe(false);
+    unsubscribe();
+  });
+
+  it("should preserve patches and tags from an inner writable recovery update", () => {
+    const initialValue = { nested: { count: 0 } };
+    let emitInnerSignal!: Setter<typeof initialValue>;
+    let failInnerSignal: (error: Error) => void = () => {};
+    const innerSignal = LazySignal.create(initialValue, (setDownstream, errorListener) => {
+      emitInnerSignal = setDownstream;
+      failInnerSignal = errorListener;
+      return () => {};
+    });
+    const [, unusedSetter] = Signal.create(initialValue);
+    const outerSignal = Signal.createReadonly([innerSignal, unusedSetter] as const);
+    const [flattenedSignal] = flattenSignalOfWritableSignal(outerSignal);
+    const callbackFull = jest.fn();
+    const unsubscribe = flattenedSignal.subscribeFull(callbackFull);
+
+    emitInnerSignal(initialValue);
+    callbackFull.mockClear();
+    failInnerSignal(new Error("inner failed"));
+    expect(innerSignal.recoverFromError()).toBe(true);
+
+    emitInnerSignal.withProducer(
+      draft => {
+        draft.nested.count = 1;
+      },
+      ["fresh-tag"],
+    );
+
+    expect(callbackFull).toHaveBeenCalledWith(
+      { nested: { count: 1 } },
+      [{ op: "replace", path: ["nested", "count"], value: 1 }],
+      ["fresh-tag"],
+    );
+    unsubscribe();
+  });
+
+  it("should preserve a tag-only inner writable recovery update", () => {
+    const initialValue = { nested: { count: 0 } };
+    let emitInnerSignal!: Setter<typeof initialValue>;
+    let failInnerSignal: (error: Error) => void = () => {};
+    const innerSignal = LazySignal.create(initialValue, (setDownstream, errorListener) => {
+      emitInnerSignal = setDownstream;
+      failInnerSignal = errorListener;
+      return () => {};
+    });
+    const [, unusedSetter] = Signal.create(initialValue);
+    const outerSignal = Signal.createReadonly([innerSignal, unusedSetter] as const);
+    const [flattenedSignal] = flattenSignalOfWritableSignal(outerSignal);
+    const callbackFull = jest.fn();
+    const unsubscribe = flattenedSignal.subscribeFull(callbackFull);
+
+    emitInnerSignal(initialValue);
+    callbackFull.mockClear();
+    failInnerSignal(new Error("inner failed"));
+    expect(innerSignal.recoverFromError()).toBe(true);
+
+    emitInnerSignal.withValueAndPatches(initialValue, [], ["fresh-tag"]);
+
+    expect(callbackFull).toHaveBeenCalledWith(initialValue, [], ["fresh-tag"]);
     unsubscribe();
   });
 

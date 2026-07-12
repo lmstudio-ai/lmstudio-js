@@ -369,6 +369,55 @@ describe("SlicedSignal", () => {
     unsubscribe();
   });
 
+  it("should preserve sliced patches and tags from a recovery update", () => {
+    const sourceValue = { a: { b: { c: 1 } } };
+    let emitUpstream!: Setter<typeof sourceValue>;
+    let failUpstream: (error: Error) => void = () => {};
+    const sourceSignal = LazySignal.create(sourceValue, (setDownstream, errorListener) => {
+      emitUpstream = setDownstream;
+      failUpstream = errorListener;
+      return () => {};
+    });
+    const sourceSetterUpdate = jest.fn();
+    const sourceSetter = makeSetterWithPatches<typeof sourceValue>(sourceSetterUpdate);
+    const [slicedSignal, setSliced] = makeSlicedSignalFrom([sourceSignal, sourceSetter])
+      .access("a")
+      .access("b")
+      .done();
+    const callbackFull = jest.fn();
+    const unsubscribe = slicedSignal.subscribeFull(callbackFull);
+
+    emitUpstream(sourceValue);
+    callbackFull.mockClear();
+    failUpstream(new Error("source failed"));
+
+    setSliced.withProducer(
+      draft => {
+        draft.c = 2;
+      },
+      ["fresh-tag"],
+    );
+    const [updater, tags] = sourceSetterUpdate.mock.calls[0];
+    expect(sourceSignal.recoverFromError()).toBe(true);
+    emitUpstream.withPatchUpdater(updater, tags);
+
+    expect(callbackFull).toHaveBeenCalledWith(
+      { c: 2 },
+      [{ op: "replace", path: ["c"], value: 2 }],
+      ["fresh-tag"],
+    );
+
+    callbackFull.mockClear();
+    failUpstream(new Error("source failed again"));
+    setSliced.withValueAndPatches({ c: 2 }, [], ["ack-tag"]);
+    const [tagOnlyUpdater, tagOnlyTags] = sourceSetterUpdate.mock.calls[1];
+    expect(sourceSignal.recoverFromError()).toBe(true);
+    emitUpstream.withPatchUpdater(tagOnlyUpdater, tagOnlyTags);
+
+    expect(callbackFull).toHaveBeenCalledWith({ c: 2 }, [], ["ack-tag"]);
+    unsubscribe();
+  });
+
   it("should be able to read with regular signal with arrays", () => {
     const [sourceSignal, setSource] = Signal.create({ a: [{ b: { c: 1 } }, { d: { e: 2 } }] });
     const [slicedSignal, _setSliced] = makeSlicedSignalFrom([sourceSignal, setSource])

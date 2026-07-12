@@ -46,9 +46,10 @@ export function flattenSignalOfSignal<TInner>(
           patches?: Array<Patch>,
           tags?: Array<WriteTag>,
         ) => {
+          // Full updates restore inner freshness and include patches, while get() snapshots do not.
           if (
             rootSignal.staleSignal?.get() === true ||
-            maybeInnerSignal.staleSignal?.get() === true
+            (patches === undefined && maybeInnerSignal.staleSignal?.get() === true)
           ) {
             markDownstreamStale();
             return;
@@ -158,9 +159,10 @@ export function flattenSignalOfWritableSignal<TInner>(
           patches?: Array<Patch>,
           tags?: Array<WriteTag>,
         ) => {
+          // Full updates restore inner freshness and include patches, while get() snapshots do not.
           if (
             rootSignal.staleSignal?.get() === true ||
-            maybeInnerSignal[0].staleSignal?.get() === true ||
+            (patches === undefined && maybeInnerSignal[0].staleSignal?.get() === true) ||
             !isAvailable(value)
           ) {
             innerSetter = null;

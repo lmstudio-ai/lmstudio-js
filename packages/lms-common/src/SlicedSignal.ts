@@ -310,10 +310,8 @@ class SlicedSignalBuilderImpl<
       };
 
       const unsubscribe = this.sourceSignal.subscribeFull((value, patches, tags) => {
-        if (this.sourceSignal.staleSignal?.get() === true) {
-          markDownstreamStale();
-          return;
-        }
+        // This update restores source freshness after recovery. Handle it before staleSignal changes
+        // so its patches and tags reach the sliced signal.
         const newPatches: Array<Patch> = [];
         // Transform patches
         for (const patch of patches) {
