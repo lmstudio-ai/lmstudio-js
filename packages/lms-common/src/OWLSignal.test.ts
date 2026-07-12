@@ -274,6 +274,35 @@ describe("OWLSignal Write Loop Error Recovery", () => {
       expect(signal.get()).toEqual({ count: 4 });
     });
 
+    it("should roll back a failed write while the inner signal remains fresh", async () => {
+      const mock = createMockUpstream<{ count: number }>();
+      const [signal, setter, emitWriteError] = OWLSignal.create(
+        { count: 0 },
+        mock.subscribeUpstream,
+        mock.writeUpstream,
+      );
+      const callbackFull = jest.fn();
+      signal.subscribeFull(callbackFull);
+
+      mock.simulateUpdate({ count: 0 });
+      callbackFull.mockClear();
+
+      setter({ count: 1 }, ["failed-write"]);
+      await new Promise(resolve => setTimeout(resolve, 0));
+      expect(signal.get()).toEqual({ count: 1 });
+
+      emitWriteError(mock.getLastWrite().tags, new Error("write rejected"));
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(signal.isStale()).toBe(false);
+      expect(signal.get()).toEqual({ count: 0 });
+      expect(callbackFull).toHaveBeenLastCalledWith(
+        { count: 0 },
+        [{ op: "replace", path: [], value: { count: 0 } }],
+        ["failed-write"],
+      );
+    });
+
     it("should flush pending write tags to full subscribers on transport error", async () => {
       const mock = createMockUpstream<{ count: number }>();
       const [signal, setter] = OWLSignal.create(

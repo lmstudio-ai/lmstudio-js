@@ -1,5 +1,6 @@
 import { LazySignal } from "./LazySignal.js";
-import { type WriteTag } from "./makeSetter.js";
+import { type Setter, type WriteTag } from "./makeSetter.js";
+import { OWLSignal } from "./OWLSignal.js";
 import { Signal } from "./Signal.js";
 
 describe("LazySignal", () => {
@@ -165,6 +166,40 @@ describe("LazySignal", () => {
     emitUpstream("updated");
 
     await expect(refreshedPullPromise).resolves.toBe("second:first:updated");
+  });
+
+  it("should derive once from the final value of a reentrant OWLSignal refresh", () => {
+    const initialValue = { count: 0 };
+    let emitUpstream!: Setter<typeof initialValue>;
+    const [sourceSignal, setSourceSignal] = OWLSignal.create(
+      initialValue,
+      setDownstream => {
+        emitUpstream = setDownstream;
+        return () => {};
+      },
+      () => true,
+    );
+    const unsubscribeReentrantUpdate = sourceSignal.subscribe(value => {
+      if (value.count === 1) {
+        emitUpstream({ count: 10 });
+      }
+    });
+    const derivedSignal = LazySignal.deriveFrom([sourceSignal], value => value.count);
+    const listener = jest.fn();
+    const unsubscribe = derivedSignal.subscribe(listener);
+
+    setSourceSignal.withProducer(draft => {
+      draft.count += 1;
+    });
+
+    expect(sourceSignal.isStale()).toBe(false);
+    expect(sourceSignal.get()).toEqual({ count: 11 });
+    expect(derivedSignal.isStale()).toBe(false);
+    expect(derivedSignal.get()).toBe(11);
+    expect(listener.mock.calls).toEqual([[11]]);
+
+    unsubscribe();
+    unsubscribeReentrantUpdate();
   });
 
   it("should wait for a same-value refresh from a stale source", async () => {

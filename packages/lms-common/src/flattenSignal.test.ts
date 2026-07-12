@@ -266,6 +266,76 @@ describe("flattenSignalOfSignal", () => {
     unsubscribe();
   });
 
+  it("should apply a fresh reentrant OWLSignal update after a stale optimistic update", async () => {
+    const initialValue = { count: 0 };
+    let emitUpstream!: Setter<typeof initialValue>;
+    let writeTags: Array<string> = [];
+    const [innerSignal, setInnerSignal] = OWLSignal.create(
+      initialValue,
+      setDownstream => {
+        emitUpstream = setDownstream;
+        return () => {};
+      },
+      (_value, _patches, tags) => {
+        writeTags = tags;
+        return true;
+      },
+    );
+    const unsubscribeReentrantUpdate = innerSignal.subscribe(value => {
+      if (value.count === 1) {
+        emitUpstream({ count: 10 });
+      }
+    });
+    const flattenedSignal = flattenSignalOfSignal(Signal.createReadonly(innerSignal));
+    const callback = jest.fn();
+    const unsubscribe = flattenedSignal.subscribe(callback);
+
+    setInnerSignal.withProducer(draft => {
+      draft.count += 1;
+    });
+
+    expect(innerSignal.isStale()).toBe(false);
+    expect(innerSignal.get()).toEqual({ count: 11 });
+    expect(flattenedSignal.isStale()).toBe(false);
+    expect(flattenedSignal.get()).toEqual({ count: 11 });
+    expect(callback).toHaveBeenCalledTimes(1);
+    expect(callback).toHaveBeenCalledWith({ count: 11 });
+
+    emitUpstream.withValueAndPatches({ count: 11 }, [], writeTags);
+    await waitForTick();
+    unsubscribe();
+    unsubscribeReentrantUpdate();
+  });
+
+  it("should forward stale OWLSignal tags without forwarding its optimistic value", () => {
+    const initialValue = { count: 0 };
+    let emitUpstream!: Setter<typeof initialValue>;
+    let failUpstream: (error: Error) => void = () => {};
+    const [innerSignal, setInnerSignal] = OWLSignal.create(
+      initialValue,
+      (setDownstream, errorListener) => {
+        emitUpstream = setDownstream;
+        failUpstream = errorListener;
+        return () => {};
+      },
+      () => true,
+    );
+    const flattenedSignal = flattenSignalOfSignal(Signal.createReadonly(innerSignal));
+    const callbackFull = jest.fn();
+    const unsubscribe = flattenedSignal.subscribeFull(callbackFull);
+
+    emitUpstream(initialValue);
+    callbackFull.mockClear();
+    failUpstream(new Error("transport failed"));
+    setInnerSignal(initialValue, ["dropped-write"]);
+
+    expect(innerSignal.isStale()).toBe(true);
+    expect(flattenedSignal.isStale()).toBe(true);
+    expect(flattenedSignal.get()).toEqual(initialValue);
+    expect(callbackFull).toHaveBeenCalledWith(initialValue, [], ["dropped-write"]);
+    unsubscribe();
+  });
+
   it("should become stale while its inner signal recovers", async () => {
     let emitInnerSignal: (value: string) => void = () => {};
     let failInnerSignal: (error: Error) => void = () => {};
