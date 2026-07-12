@@ -44,6 +44,13 @@ export {
   unwrapPromiseOfMaybeErrored,
   unwrapPromiseOfResult,
 } from "./resultTypes.js";
+export {
+  createRetryPolicy,
+  executeWithRetry,
+  predefinedRetryPolicies,
+  type RetryPolicyConfig,
+  type RetryStatistics,
+} from "./retryPolicy.js";
 export { runOnDispose } from "./runOnDispose.js";
 export { safeCallCallback } from "./safeCallCallback.js";
 export { Signal, SignalLike, WritableSignal } from "./Signal.js";
