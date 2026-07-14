@@ -354,11 +354,11 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
               min: 0,
               int: true,
               displayName: "Context Checkpoints",
-              hint:
-                "Maximum number of context checkpoints to keep per llama-server slot. 0 disables checkpoints.",
+              hint: "Maximum number of context checkpoints to keep per llama-server slot. 0 disables checkpoints.",
             },
             32,
           )
+          .field("reasoningBudgetMessage", "string", {}, "")
           .scope("speculativeDecoding", builder =>
             builder
               .field(

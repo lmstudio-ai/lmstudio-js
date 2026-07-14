@@ -24,6 +24,22 @@ describe("LLMLoadModelConfig schema", () => {
     expect(llmLoadModelConfigSchema.safeParse({ contextCheckpoints: -1 }).success).toBe(false);
     expect(llmLoadModelConfigSchema.safeParse({ contextCheckpoints: 1.5 }).success).toBe(false);
   });
+
+  it("accepts empty and nonempty reasoning budget messages", () => {
+    expect(llmLoadModelConfigSchema.safeParse({ reasoningBudgetMessage: "" }).success).toBe(true);
+    expect(
+      llmLoadModelConfigSchema.safeParse({
+        reasoningBudgetMessage: "I should answer now.",
+      }).success,
+    ).toBe(true);
+  });
+
+  it("rejects non-string reasoning budget messages", () => {
+    expect(llmLoadModelConfigSchema.safeParse({ reasoningBudgetMessage: null }).success).toBe(
+      false,
+    );
+    expect(llmLoadModelConfigSchema.safeParse({ reasoningBudgetMessage: 42 }).success).toBe(false);
+  });
 });
 
 describe("LLMLoad speculative decoding validation", () => {

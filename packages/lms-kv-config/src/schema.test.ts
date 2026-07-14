@@ -112,6 +112,42 @@ describe("llmLoadModelConfig conversion", () => {
     );
   });
 
+  it("round trips a reasoning budget message", () => {
+    const loadConfig = llmLoadModelConfigToKVConfig({
+      reasoningBudgetMessage: "I should answer now.",
+    });
+
+    expect(kvConfigToLLMLoadModelConfig(loadConfig).reasoningBudgetMessage).toBe(
+      "I should answer now.",
+    );
+  });
+
+  it("preserves absent reasoning budget message in partial conversion", () => {
+    const convertedConfig = kvConfigToLLMLoadModelConfig(makeKVConfigFromFields([]));
+
+    expect(convertedConfig.reasoningBudgetMessage).toBeUndefined();
+  });
+
+  it("materializes the empty reasoning budget message default", () => {
+    const convertedConfig = kvConfigToLLMLoadModelConfig(makeKVConfigFromFields([]), {
+      useDefaultsForMissingKeys: true,
+    });
+
+    expect(convertedConfig.reasoningBudgetMessage).toBe("");
+  });
+
+  it("does not report the llama reasoning budget message for MLX", () => {
+    const loadConfig = llmLoadModelConfigToKVConfig({
+      reasoningBudgetMessage: "I should answer now.",
+    });
+    const convertedConfig = kvConfigToLLMLoadModelConfig(loadConfig, {
+      modelFormat: "safetensors",
+      useDefaultsForMissingKeys: true,
+    });
+
+    expect(convertedConfig.reasoningBudgetMessage).toBeUndefined();
+  });
+
   it("preserves unspecified speculative decoding load config", () => {
     const loadConfig = llmLoadModelConfigToKVConfig({});
 
@@ -387,7 +423,6 @@ describe("globalConfigSchematics", () => {
       promptTemplate,
     );
   });
-
 
   it("rejects undefined as a load-time prompt template stored value", () => {
     expect(llmLoadSchematics.getSchemaForKey("promptTemplate").safeParse(undefined).success).toBe(
