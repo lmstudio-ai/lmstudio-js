@@ -32,6 +32,14 @@ export interface FindOrStartLlmsterOptions {
    * Interval in milliseconds between polling attempts. Defaults to 1000ms.
    */
   pollIntervalMs?: number;
+  /**
+   * Returns a preferred local API server port when the caller has a better discovery source.
+   *
+   * The callback is invoked again while polling so a newly started app can publish its port after
+   * this function begins waiting for it. Missing or stale preferred ports fall back to the legacy
+   * well-known port scan.
+   */
+  getLocalAPIServerPort?: () => number | null;
 }
 
 /**
@@ -48,7 +56,10 @@ export async function findOrStartLlmster(
   const logger: LoggerInterface = (options.logger ?? console) as LoggerInterface;
 
   // 1. Try to find an already running daemon.
-  const serverStatus = await tryFindLocalAPIServer(logger);
+  const serverStatus = await tryFindLocalAPIServer(
+    logger,
+    options.getLocalAPIServerPort?.() ?? null,
+  );
   if (serverStatus !== null) {
     logger.debug(`Found running LM Studio daemon at port ${serverStatus.port}`);
     logger.debug(`package=${serverStatus.package}, version=${serverStatus.version}`);
@@ -120,7 +131,10 @@ export async function findOrStartLlmster(
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     await new Promise(resolve => setTimeout(resolve, pollIntervalMs));
     logger.debug(`Polling LM Studio daemon... (attempt ${attempt})`);
-    const serverStatus = await tryFindLocalAPIServer(logger);
+    const serverStatus = await tryFindLocalAPIServer(
+      logger,
+      options.getLocalAPIServerPort?.() ?? null,
+    );
     if (serverStatus !== null) {
       logger.debug(`LM Studio daemon became available at port ${serverStatus}`);
       logger.debug(`package=${serverStatus.package}, version=${serverStatus.version}`);
@@ -198,15 +212,29 @@ async function getLocalServerStatusAtPortOrThrow(
   return { package: json.package, version: json.version, port };
 }
 
+/**
+ * Finds a local API server, preferring a caller-provided port before the legacy port scan.
+ *
+ * A preferred port is only a hint. The status endpoint still has to identify a live LM Studio
+ * server before the result is returned.
+ */
 export async function tryFindLocalAPIServer(
   logger: LoggerInterface,
+  preferredPort: number | null = null,
 ): Promise<APIServerStatus | null> {
+  if (preferredPort !== null) {
+    try {
+      return await getLocalServerStatusAtPortOrThrow(preferredPort, 3000);
+    } catch (error) {
+      logger.debug(`Failed to find local API server on preferred port ${preferredPort}:`, error);
+    }
+  }
   try {
     return await Promise.any(
       apiServerPorts.map(port => getLocalServerStatusAtPortOrThrow(port, 3000)),
     );
-  } catch (e) {
-    logger.debug("Failed to find local API server on known ports:", e);
+  } catch (error) {
+    logger.debug("Failed to find local API server on known ports:", error);
     return null;
   }
 }
