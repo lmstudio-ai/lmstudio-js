@@ -213,6 +213,16 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
             true,
           )
           .field(
+            "budgetTokens",
+            "checkboxNumeric",
+            {
+              min: 0,
+              int: true,
+              uncheckedHint: "config:reasoningBudgetUncheckedHint",
+            },
+            { checked: false, value: 1024 },
+          )
+          .field(
             "parsing",
             "llmReasoningParsing",
             {},

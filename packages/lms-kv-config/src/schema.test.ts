@@ -1,5 +1,6 @@
 import {
   llmLoadModelConfigSchema,
+  llmPredictionConfigInputSchema,
   serializedKVConfigSchematicsSchema,
 } from "@lmstudio/lms-shared-types";
 import {
@@ -12,6 +13,10 @@ import {
   kvConfigToLLMLoadModelConfig,
   llmLoadModelConfigToKVConfig,
 } from "./conversion/llmLoadModelConfig.js";
+import {
+  kvConfigToLLMPredictionConfig,
+  llmPredictionConfigToKVConfig,
+} from "./conversion/llmPredictionConfig.js";
 import {
   defaultLlmLoadPromptTemplate,
   globalConfigSchematics,
@@ -68,6 +73,32 @@ describe("KVConfig", () => {
       expect(parsed.get("a")).toBe(1);
       expect(parsed.get("b")).toBe(2);
     });
+  });
+});
+
+describe("llmPredictionConfig reasoning budget", () => {
+  it.each([false, 0, 1024] as const)("round trips %p", reasoningBudget => {
+    const kvConfig = llmPredictionConfigToKVConfig({ reasoningBudget });
+
+    expect(kvConfigToLLMPredictionConfig(kvConfig).reasoningBudget).toBe(reasoningBudget);
+  });
+
+  it("preserves absence in partial conversion and materializes the unchecked default", () => {
+    const emptyConfig = makeKVConfigFromFields([]);
+
+    expect(kvConfigToLLMPredictionConfig(emptyConfig).reasoningBudget).toBeUndefined();
+    expect(
+      kvConfigToLLMPredictionConfig(emptyConfig, { useDefaultsForMissingKeys: true })
+        .reasoningBudget,
+    ).toBe(false);
+  });
+
+  it("validates nonnegative integers and false", () => {
+    expect(llmPredictionConfigInputSchema.safeParse({ reasoningBudget: false }).success).toBe(true);
+    expect(llmPredictionConfigInputSchema.safeParse({ reasoningBudget: 0 }).success).toBe(true);
+    expect(llmPredictionConfigInputSchema.safeParse({ reasoningBudget: 1024 }).success).toBe(true);
+    expect(llmPredictionConfigInputSchema.safeParse({ reasoningBudget: -1 }).success).toBe(false);
+    expect(llmPredictionConfigInputSchema.safeParse({ reasoningBudget: 1.5 }).success).toBe(false);
   });
 });
 
