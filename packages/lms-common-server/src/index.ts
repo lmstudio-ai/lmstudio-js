@@ -3,6 +3,7 @@ export { findLMStudioHome } from "./findLMStudioHome.js";
 export {
   APIServerStatus,
   findOrStartLlmster,
+  getLocalAPIServerStatusAtPortOrThrow,
   tryFindLocalAPIServer,
   type FindOrStartLlmsterOptions,
 } from "./findOrStartLlmster.js";

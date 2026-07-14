@@ -173,14 +173,15 @@ function readInstallLocationFile(
   }
 }
 
-async function getLocalServerStatusAtPortOrThrow(
+/** Validates one exact local API server port and returns its advertised status. */
+export async function getLocalAPIServerStatusAtPortOrThrow(
   port: number,
   timeoutMs?: number,
 ): Promise<APIServerStatus> {
   const controller = new AbortController();
   const timeout =
     typeof timeoutMs === "number" ? setTimeout(() => controller.abort(), timeoutMs) : undefined;
-  let response: any;
+  let response: Response;
   try {
     response = await fetch(`http://127.0.0.1:${port}/lms-status`, {
       signal: controller.signal,
@@ -193,17 +194,17 @@ async function getLocalServerStatusAtPortOrThrow(
   if (response.status !== 200) {
     throw new Error("Status is not 200.");
   }
-  const json = await response.json();
+  const json: unknown = await response.json();
   if (json === null || typeof json !== "object") {
     throw new Error("Invalid JSON response.");
   }
-  if (!Object.prototype.hasOwnProperty.call(json, "package")) {
+  if (!("package" in json)) {
     throw new Error("Missing 'package' field in response.");
   }
   if (typeof json.package !== "string") {
     throw new Error("'package' field is not a string.");
   }
-  if (!Object.prototype.hasOwnProperty.call(json, "version")) {
+  if (!("version" in json)) {
     throw new Error("Missing 'version' field in response.");
   }
   if (typeof json.version !== "string") {
@@ -224,14 +225,14 @@ export async function tryFindLocalAPIServer(
 ): Promise<APIServerStatus | null> {
   if (preferredPort !== null) {
     try {
-      return await getLocalServerStatusAtPortOrThrow(preferredPort, 3000);
+      return await getLocalAPIServerStatusAtPortOrThrow(preferredPort, 3000);
     } catch (error) {
       logger.debug(`Failed to find local API server on preferred port ${preferredPort}:`, error);
     }
   }
   try {
     return await Promise.any(
-      apiServerPorts.map(port => getLocalServerStatusAtPortOrThrow(port, 3000)),
+      apiServerPorts.map(port => getLocalAPIServerStatusAtPortOrThrow(port, 3000)),
     );
   } catch (error) {
     logger.debug("Failed to find local API server on known ports:", error);
