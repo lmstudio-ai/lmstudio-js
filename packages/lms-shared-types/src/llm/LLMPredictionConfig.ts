@@ -66,6 +66,17 @@ export interface LLMPredictionConfigInput<TStructuredOutputType = unknown> {
    */
   maxTokens?: number | false;
   /**
+   * Maximum number of tokens the model may generate inside a reasoning section for one structured
+   * chat prediction. This is separate from `maxTokens`, which limits the complete generated
+   * response. Set to `false` for unrestricted reasoning.
+   *
+   * Requires a runtime and chat template that expose usable reasoning delimiters. This setting is
+   * not supported by raw text completion through `model.complete()`.
+   *
+   * @experimental
+   */
+  reasoningBudget?: number | false;
+  /**
    * The temperature parameter for the prediction model. A higher value makes the predictions more
    * random, while a lower value makes the predictions more deterministic. The value should be
    * between 0 and 1.
@@ -337,6 +348,7 @@ export interface LLMPredictionConfigInput<TStructuredOutputType = unknown> {
 }
 export const llmPredictionConfigInputSchema = z.object({
   maxTokens: z.number().int().min(-1).optional().or(z.literal(false)),
+  reasoningBudget: z.number().int().min(0).optional().or(z.literal(false)),
   temperature: z.number().min(0).optional(),
   stopStrings: z.array(z.string()).optional(),
   toolCallStopStrings: z.array(z.string()).optional(),

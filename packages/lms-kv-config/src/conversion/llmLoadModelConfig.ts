@@ -125,6 +125,11 @@ function kvConfigToLLMLlamaLoadModelConfig(
     result.contextCheckpoints = contextCheckpoints;
   }
 
+  const reasoningBudgetMessage = parsed.get("llama.reasoningBudgetMessage");
+  if (reasoningBudgetMessage !== undefined) {
+    result.reasoningBudgetMessage = reasoningBudgetMessage;
+  }
+
   const speculativeDraftMtp = parsed.get("llama.speculativeDecoding.draftMtp");
   if (speculativeDraftMtp !== undefined) {
     result.speculativeDraftMtp = speculativeDraftMtp;
@@ -279,6 +284,7 @@ export function llmLoadModelConfigToKVConfig(config: LLMLoadModelConfig): KVConf
     "llama.physicalBatchSize": config.physicalBatchSize,
     "llama.flashAttention": config.flashAttention,
     "llama.contextCheckpoints": config.contextCheckpoints,
+    "llama.reasoningBudgetMessage": config.reasoningBudgetMessage,
     "llama.speculativeDecoding.draftMtp": config.speculativeDraftMtp,
     "llama.speculativeDecoding.draftSimple": config.speculativeDraftSimple,
     "llama.speculativeDecoding.draftModel": config.speculativeDraftModel,

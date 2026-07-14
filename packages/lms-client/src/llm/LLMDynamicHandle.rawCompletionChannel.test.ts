@@ -128,6 +128,32 @@ describe("LLMDynamicHandle raw completion channel", () => {
     expect(harness.capturedChannelCreations).toEqual([]);
   });
 
+  test("complete rejects an explicitly enabled reasoning budget", () => {
+    const harness = createHandleHarness();
+
+    expect(() => harness.handle.complete("raw prompt", { reasoningBudget: 10 })).toThrow(
+      "Reasoning budgets are not supported in model.complete().",
+    );
+    expect(harness.capturedChannelCreations).toEqual([]);
+  });
+
+  test("complete accepts an explicitly disabled reasoning budget", async () => {
+    const harness = createHandleHarness();
+
+    await harness.handle.complete("raw prompt", { reasoningBudget: false });
+
+    expect(harness.capturedChannelCreations[0]?.endpointName).toBe("completeRawText");
+    const predictionConfigStack = getPredictionConfigStack(
+      harness.capturedChannelCreations[0]?.creationParameter,
+    );
+    expect(
+      globalConfigSchematics.access(
+        collapseKVStack(predictionConfigStack),
+        "llm.prediction.reasoning.budgetTokens",
+      ),
+    ).toEqual({ checked: false, value: 1024 });
+  });
+
   test("respond remains on predict", async () => {
     const harness = createHandleHarness();
 

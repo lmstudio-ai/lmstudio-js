@@ -25,6 +25,12 @@ export function kvConfigToLLMPredictionConfig(
   if (maxPredictedTokens !== undefined) {
     result.maxTokens = maxPredictedTokens.checked ? maxPredictedTokens.value : false;
   }
+
+  const reasoningBudget = parsed.get("reasoning.budgetTokens");
+  if (reasoningBudget !== undefined) {
+    result.reasoningBudget = reasoningBudget.checked ? reasoningBudget.value : false;
+  }
+
   const temperature = parsed.get("temperature");
   if (temperature !== undefined) {
     result.temperature = temperature;
@@ -175,6 +181,7 @@ export function llmPredictionConfigToKVConfig(config: LLMPredictionConfig): KVCo
     "temperature": config.temperature,
     "contextOverflowPolicy": config.contextOverflowPolicy,
     "maxPredictedTokens": maybeFalseValueToCheckboxValue(config.maxTokens, 1),
+    "reasoning.budgetTokens": maybeFalseValueToCheckboxValue(config.reasoningBudget, 1024),
     "stopStrings": config.stopStrings,
     "toolCallStopStrings": config.toolCallStopStrings,
     "structured": config.structured,

@@ -233,18 +233,20 @@ function splitPredictionOpts<TStructuredOutputType>(
   ];
 }
 
-function validateRawCompletionConfigDoesNotRequestTools(
-  config: LLMPredictionConfigInput,
-  stack: string,
-): void {
-  if (config.rawTools === undefined && config.toolChoice === undefined) {
-    return;
+function validateRawCompletionConfig(config: LLMPredictionConfigInput, stack: string): void {
+  if (config.rawTools !== undefined || config.toolChoice !== undefined) {
+    throw makePrettyError(
+      "Tools are not supported in model.complete(). Use model.respond() or model.act() for tool use.",
+      stack,
+    );
   }
 
-  throw makePrettyError(
-    "Tools are not supported in model.complete(). Use model.respond() or model.act() for tool use.",
-    stack,
-  );
+  if (config.reasoningBudget !== undefined && config.reasoningBudget !== false) {
+    throw makePrettyError(
+      "Reasoning budgets are not supported in model.complete(). Use model.respond() or model.act().",
+      stack,
+    );
+  }
 }
 
 /**
@@ -768,7 +770,7 @@ export class LLMDynamicHandle extends DynamicHandle<
       stack,
     );
     const [config, extraOpts] = splitPredictionOpts(opts);
-    validateRawCompletionConfigDoesNotRequestTools(config, stack);
+    validateRawCompletionConfig(config, stack);
     const [cancelEvent, emitCancelEvent] = BufferedEvent.create<void>();
 
     if (extraOpts.signal !== undefined) {

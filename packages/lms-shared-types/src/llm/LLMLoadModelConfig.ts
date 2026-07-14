@@ -589,6 +589,15 @@ export interface LLMLoadModelConfig {
   contextCheckpoints?: number;
 
   /**
+   * Text inserted immediately before the chat-template-derived end-of-reasoning sequence when
+   * llama.cpp ends reasoning because a reasoning budget is exhausted. The effective default is an
+   * empty string. Changing this setting requires reloading the model.
+   *
+   * @experimental
+   */
+  reasoningBudgetMessage?: string;
+
+  /**
    * Enables speculative decoding using bundled multi-token prediction heads when the loaded model
    * supports it.
    *
@@ -748,6 +757,7 @@ export const llmLoadModelConfigSchema = z
     physicalBatchSize: z.number().int().min(1).optional(),
     flashAttention: z.boolean().optional(),
     contextCheckpoints: z.number().int().min(0).optional(),
+    reasoningBudgetMessage: z.string().optional(),
     speculativeDraftMtp: speculativeDraftMtpSchema.optional(),
     speculativeDraftSimple: speculativeDraftSimpleSchema.optional(),
     speculativeDraftModel: speculativeDraftModelSchema.optional(),

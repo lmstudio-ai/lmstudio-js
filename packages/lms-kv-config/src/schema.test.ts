@@ -1,5 +1,6 @@
 import {
   llmLoadModelConfigSchema,
+  llmPredictionConfigInputSchema,
   serializedKVConfigSchematicsSchema,
 } from "@lmstudio/lms-shared-types";
 import {
@@ -12,6 +13,10 @@ import {
   kvConfigToLLMLoadModelConfig,
   llmLoadModelConfigToKVConfig,
 } from "./conversion/llmLoadModelConfig.js";
+import {
+  kvConfigToLLMPredictionConfig,
+  llmPredictionConfigToKVConfig,
+} from "./conversion/llmPredictionConfig.js";
 import {
   defaultLlmLoadPromptTemplate,
   globalConfigSchematics,
@@ -71,6 +76,32 @@ describe("KVConfig", () => {
   });
 });
 
+describe("llmPredictionConfig reasoning budget", () => {
+  it.each([false, 0, 1024] as const)("round trips %p", reasoningBudget => {
+    const kvConfig = llmPredictionConfigToKVConfig({ reasoningBudget });
+
+    expect(kvConfigToLLMPredictionConfig(kvConfig).reasoningBudget).toBe(reasoningBudget);
+  });
+
+  it("preserves absence in partial conversion and materializes the unchecked default", () => {
+    const emptyConfig = makeKVConfigFromFields([]);
+
+    expect(kvConfigToLLMPredictionConfig(emptyConfig).reasoningBudget).toBeUndefined();
+    expect(
+      kvConfigToLLMPredictionConfig(emptyConfig, { useDefaultsForMissingKeys: true })
+        .reasoningBudget,
+    ).toBe(false);
+  });
+
+  it("validates nonnegative integers and false", () => {
+    expect(llmPredictionConfigInputSchema.safeParse({ reasoningBudget: false }).success).toBe(true);
+    expect(llmPredictionConfigInputSchema.safeParse({ reasoningBudget: 0 }).success).toBe(true);
+    expect(llmPredictionConfigInputSchema.safeParse({ reasoningBudget: 1024 }).success).toBe(true);
+    expect(llmPredictionConfigInputSchema.safeParse({ reasoningBudget: -1 }).success).toBe(false);
+    expect(llmPredictionConfigInputSchema.safeParse({ reasoningBudget: 1.5 }).success).toBe(false);
+  });
+});
+
 describe("llmLoadModelConfig conversion", () => {
   it("round trips load-time prompt template config", () => {
     const promptTemplate = {
@@ -110,6 +141,42 @@ describe("llmLoadModelConfig conversion", () => {
     expect(globalConfigSchematics.access(emptyConfig, "llm.load.promptTemplate")).toEqual(
       defaultLlmLoadPromptTemplate,
     );
+  });
+
+  it("round trips a reasoning budget message", () => {
+    const loadConfig = llmLoadModelConfigToKVConfig({
+      reasoningBudgetMessage: "I should answer now.",
+    });
+
+    expect(kvConfigToLLMLoadModelConfig(loadConfig).reasoningBudgetMessage).toBe(
+      "I should answer now.",
+    );
+  });
+
+  it("preserves absent reasoning budget message in partial conversion", () => {
+    const convertedConfig = kvConfigToLLMLoadModelConfig(makeKVConfigFromFields([]));
+
+    expect(convertedConfig.reasoningBudgetMessage).toBeUndefined();
+  });
+
+  it("materializes the empty reasoning budget message default", () => {
+    const convertedConfig = kvConfigToLLMLoadModelConfig(makeKVConfigFromFields([]), {
+      useDefaultsForMissingKeys: true,
+    });
+
+    expect(convertedConfig.reasoningBudgetMessage).toBe("");
+  });
+
+  it("does not report the llama reasoning budget message for MLX", () => {
+    const loadConfig = llmLoadModelConfigToKVConfig({
+      reasoningBudgetMessage: "I should answer now.",
+    });
+    const convertedConfig = kvConfigToLLMLoadModelConfig(loadConfig, {
+      modelFormat: "safetensors",
+      useDefaultsForMissingKeys: true,
+    });
+
+    expect(convertedConfig.reasoningBudgetMessage).toBeUndefined();
   });
 
   it("preserves unspecified speculative decoding load config", () => {
@@ -387,7 +454,6 @@ describe("globalConfigSchematics", () => {
       promptTemplate,
     );
   });
-
 
   it("rejects undefined as a load-time prompt template stored value", () => {
     expect(llmLoadSchematics.getSchemaForKey("promptTemplate").safeParse(undefined).success).toBe(
