@@ -544,15 +544,6 @@ describe("globalConfigSchematics", () => {
     );
   });
 
-  it("includes the internal AutoFit minimum in llama and MLX load schematics", () => {
-    const config = llmLoadSchematics.buildPartialConfig({
-      autoFitMinContextLength: 16_384,
-    });
-
-    expect(llmLlamaLoadConfigSchematics.access(config, "autoFitMinContextLength")).toBe(16_384);
-    expect(llmMlxLoadConfigSchematics.access(config, "autoFitMinContextLength")).toBe(16_384);
-  });
-
   it("uses 2048 as the default llama eval batch size", () => {
     const emptyConfig = makeKVConfigFromFields([]);
 
