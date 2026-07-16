@@ -306,6 +306,12 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
         },
         2048,
       )
+      .field(
+        "autoFitMinContextLength",
+        "numeric",
+        { min: 0, int: true, machineDependent: true },
+        0,
+      )
       .field("numExperts", "numeric", { min: 0, int: true }, 0)
       .field(
         "seed",
@@ -605,6 +611,7 @@ export const llmLoadSchematics = globalConfigSchematics
 
 export const llmSharedLoadConfigSchematics = llmLoadSchematics.sliced(
   "contextLength",
+  "autoFitMinContextLength",
   "seed",
   "envVars",
 );
