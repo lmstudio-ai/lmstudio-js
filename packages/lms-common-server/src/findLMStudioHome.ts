@@ -1,12 +1,19 @@
 import { existsSync, readFileSync, realpathSync, writeFileSync } from "fs";
 import { homedir } from "os";
-import { join } from "path";
+import { join, resolve } from "path";
 
 let lmstudioHome: string | null = null;
 
 export function findLMStudioHome() {
   if (lmstudioHome !== null) {
     return lmstudioHome;
+  }
+
+  // LMSTUDIO_HOME environment variable takes precedence
+  const envHome = process.env.LMSTUDIO_HOME
+  if (envHome) {
+    lmstudioHome = resolve(envHome)
+    return lmstudioHome
   }
 
   // if applicable, convert relative path to absolute and follow the symlink
