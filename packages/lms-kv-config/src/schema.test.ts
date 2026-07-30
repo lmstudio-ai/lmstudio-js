@@ -186,20 +186,23 @@ describe("llmLoadModelConfig conversion", () => {
 
     expect(roundTrippedConfig.speculativeDraftMtp).toBeUndefined();
     expect(roundTrippedConfig.speculativeDraftSimple).toBeUndefined();
+    expect(roundTrippedConfig.speculativeDraftDflash).toBeUndefined();
     expect(roundTrippedConfig.speculativeDraftModel).toBeUndefined();
     expect(roundTrippedConfig.speculativeDraftMaxTokens).toBeUndefined();
     expect(roundTrippedConfig.speculativeDraftMinTokens).toBeUndefined();
     expect(roundTrippedConfig.speculativeDraftMinContinueProbability).toBeUndefined();
   });
 
-  it("round trips explicit Draft MTP off", () => {
+  it("round trips explicit draft selector off values", () => {
     const loadConfig = llmLoadModelConfigToKVConfig({
       speculativeDraftMtp: false,
+      speculativeDraftDflash: false,
     });
 
     const roundTrippedConfig = kvConfigToLLMLoadModelConfig(loadConfig);
 
     expect(roundTrippedConfig.speculativeDraftMtp).toBe(false);
+    expect(roundTrippedConfig.speculativeDraftDflash).toBe(false);
   });
 
   it("round trips Draft MTP load-time speculative decoding", () => {
@@ -236,6 +239,24 @@ describe("llmLoadModelConfig conversion", () => {
     expect(roundTrippedConfig.speculativeDraftMinContinueProbability).toBe(0.75);
   });
 
+  it("round trips DFlash load-time speculative decoding", () => {
+    const loadConfig = llmLoadModelConfigToKVConfig({
+      speculativeDraftDflash: true,
+      speculativeDraftModel: "publisher/dflash-draft-model",
+      speculativeDraftMaxTokens: 16,
+      speculativeDraftMinTokens: 0,
+      speculativeDraftMinContinueProbability: 0.75,
+    });
+
+    const roundTrippedConfig = kvConfigToLLMLoadModelConfig(loadConfig);
+
+    expect(roundTrippedConfig.speculativeDraftDflash).toBe(true);
+    expect(roundTrippedConfig.speculativeDraftModel).toBe("publisher/dflash-draft-model");
+    expect(roundTrippedConfig.speculativeDraftMaxTokens).toBe(16);
+    expect(roundTrippedConfig.speculativeDraftMinTokens).toBe(0);
+    expect(roundTrippedConfig.speculativeDraftMinContinueProbability).toBe(0.75);
+  });
+
   it("keeps undefined and false Draft MTP distinct", () => {
     const unspecifiedLoadConfig = llmLoadModelConfigToKVConfig({});
     const disabledLoadConfig = llmLoadModelConfigToKVConfig({
@@ -260,6 +281,7 @@ describe("llmLoadModelConfig conversion", () => {
 
     expect(convertedConfig.speculativeDraftMtp).toBe(true);
     expect(convertedConfig.speculativeDraftSimple).toBe(false);
+    expect(convertedConfig.speculativeDraftDflash).toBe(false);
     expect(convertedConfig.speculativeDraftModel).toBe("");
     expect(convertedConfig.speculativeDraftMaxTokens).toBe(16);
     expect(convertedConfig.speculativeDraftMinTokens).toBe(0);
@@ -273,6 +295,7 @@ describe("llmLoadModelConfig conversion", () => {
 
     expect(convertedConfig.speculativeDraftMtp).toBe(false);
     expect(convertedConfig.speculativeDraftSimple).toBe(false);
+    expect(convertedConfig.speculativeDraftDflash).toBe(false);
     expect(convertedConfig.speculativeDraftModel).toBe("");
   });
 
@@ -289,6 +312,7 @@ describe("llmLoadModelConfig conversion", () => {
 
     expect(convertedConfig.speculativeDraftMtp).toBe(false);
     expect(convertedConfig.speculativeDraftSimple).toBe(false);
+    expect(convertedConfig.speculativeDraftDflash).toBe(false);
     expect(convertedConfig.speculativeDraftModel).toBe("");
     expect(llmLoadModelConfigSchema.safeParse(convertedConfig).success).toBe(true);
   });
@@ -306,7 +330,25 @@ describe("llmLoadModelConfig conversion", () => {
 
     expect(convertedConfig.speculativeDraftMtp).toBe(false);
     expect(convertedConfig.speculativeDraftSimple).toBe(true);
+    expect(convertedConfig.speculativeDraftDflash).toBe(false);
     expect(convertedConfig.speculativeDraftModel).toBe("publisher/draft-model");
+    expect(llmLoadModelConfigSchema.safeParse(convertedConfig).success).toBe(true);
+  });
+
+  it("preserves materialized Draft Model resources when DFlash is active", () => {
+    const loadConfig = globalConfigSchematics.scoped("llm.load").buildPartialConfig({
+      "llama.speculativeDecoding.draftDflash": true,
+      "llama.speculativeDecoding.draftModel": "publisher/dflash-draft-model",
+    });
+
+    const convertedConfig = kvConfigToLLMLoadModelConfig(loadConfig, {
+      useDefaultsForMissingKeys: true,
+    });
+
+    expect(convertedConfig.speculativeDraftMtp).toBe(false);
+    expect(convertedConfig.speculativeDraftSimple).toBe(false);
+    expect(convertedConfig.speculativeDraftDflash).toBe(true);
+    expect(convertedConfig.speculativeDraftModel).toBe("publisher/dflash-draft-model");
     expect(llmLoadModelConfigSchema.safeParse(convertedConfig).success).toBe(true);
   });
 
@@ -331,6 +373,7 @@ describe("llmLoadModelConfig conversion", () => {
 
     expect(convertedConfig.speculativeDraftMtp).toBeUndefined();
     expect(convertedConfig.speculativeDraftSimple).toBeUndefined();
+    expect(convertedConfig.speculativeDraftDflash).toBeUndefined();
     expect(convertedConfig.speculativeDraftModel).toBeUndefined();
     expect(convertedConfig.speculativeDraftMaxTokens).toBe(8);
     expect(convertedConfig.speculativeDraftMinTokens).toBe(2);
@@ -396,8 +439,23 @@ describe("llmLoadModelConfig conversion", () => {
 
     expect(
       llmLoadModelConfigSchema.safeParse({
+        speculativeDraftDflash: true,
+        speculativeDraftModel: "",
+      }).success,
+    ).toBe(false);
+
+    expect(
+      llmLoadModelConfigSchema.safeParse({
         speculativeDraftMtp: true,
         speculativeDraftSimple: true,
+        speculativeDraftModel: "publisher/draft-model",
+      }).success,
+    ).toBe(false);
+
+    expect(
+      llmLoadModelConfigSchema.safeParse({
+        speculativeDraftMtp: true,
+        speculativeDraftDflash: true,
         speculativeDraftModel: "publisher/draft-model",
       }).success,
     ).toBe(false);

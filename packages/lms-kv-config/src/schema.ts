@@ -396,6 +396,15 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
                 false,
               )
               .field(
+                "draftDflash",
+                "boolean",
+                {
+                  displayName: "Draft DFlash",
+                  hint: "Use a DFlash sidecar draft model for speculative decoding.",
+                },
+                false,
+              )
+              .field(
                 "draftModel",
                 "string",
                 {

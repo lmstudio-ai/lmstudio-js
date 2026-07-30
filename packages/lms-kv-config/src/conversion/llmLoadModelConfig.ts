@@ -140,12 +140,19 @@ function kvConfigToLLMLlamaLoadModelConfig(
     result.speculativeDraftSimple = speculativeDraftSimple;
   }
 
+  const speculativeDraftDflash = parsed.get("llama.speculativeDecoding.draftDflash");
+  if (speculativeDraftDflash !== undefined) {
+    result.speculativeDraftDflash = speculativeDraftDflash;
+  }
+
   const speculativeDraftModel = parsed.get("llama.speculativeDecoding.draftModel");
   if (speculativeDraftModel !== undefined) {
     // Materialized public configs must be valid if passed back to client.llm.load(). Keep stale
     // draft-model resources internal unless Draft Simple currently consumes them.
     result.speculativeDraftModel =
-      useDefaultsForMissingKeys === true && speculativeDraftSimple !== true
+      useDefaultsForMissingKeys === true &&
+      speculativeDraftSimple !== true &&
+      speculativeDraftDflash !== true
         ? ""
         : speculativeDraftModel;
   }
@@ -287,6 +294,7 @@ export function llmLoadModelConfigToKVConfig(config: LLMLoadModelConfig): KVConf
     "llama.reasoningBudgetMessage": config.reasoningBudgetMessage,
     "llama.speculativeDecoding.draftMtp": config.speculativeDraftMtp,
     "llama.speculativeDecoding.draftSimple": config.speculativeDraftSimple,
+    "llama.speculativeDecoding.draftDflash": config.speculativeDraftDflash,
     "llama.speculativeDecoding.draftModel": config.speculativeDraftModel,
     "llama.speculativeDecoding.draftMaxTokens": config.speculativeDraftMaxTokens,
     "llama.speculativeDecoding.draftMinTokens": config.speculativeDraftMinTokens,

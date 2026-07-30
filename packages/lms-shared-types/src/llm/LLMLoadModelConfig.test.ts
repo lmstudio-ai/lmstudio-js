@@ -27,7 +27,7 @@ describe("LLMLoadModelConfig schema", () => {
 });
 
 describe("LLMLoad speculative decoding validation", () => {
-  it("rejects invalid Draft MTP values through the public helpers", () => {
+  it("rejects invalid draft selector values through the public helpers", () => {
     const invalidConfigCases: Array<{
       config: unknown;
       expectedMessage: string;
@@ -55,6 +55,18 @@ describe("LLMLoad speculative decoding validation", () => {
       {
         config: { speculativeDraftSimple: null },
         expectedMessage: "speculativeDraftSimple must be a boolean",
+      },
+      {
+        config: { speculativeDraftDflash: "true" },
+        expectedMessage: "speculativeDraftDflash must be a boolean",
+      },
+      {
+        config: { speculativeDraftDflash: 1 },
+        expectedMessage: "speculativeDraftDflash must be a boolean",
+      },
+      {
+        config: { speculativeDraftDflash: null },
+        expectedMessage: "speculativeDraftDflash must be a boolean",
       },
     ];
 
@@ -167,7 +179,7 @@ describe("LLMLoad speculative decoding validation", () => {
     expect(llmLoadModelConfigSchema.safeParse(draftModelConfig).success).toBe(true);
   });
 
-  it("keeps cross-field speculative decoding validation unchanged", () => {
+  it("rejects invalid cross-field speculative decoding combinations", () => {
     expectSpeculativeConfigRejectedByHelpers(
       {
         speculativeDraftMtp: true,
@@ -175,6 +187,24 @@ describe("LLMLoad speculative decoding validation", () => {
         speculativeDraftModel: "publisher/draft-model",
       },
       "speculativeDraftMtp and speculativeDraftSimple cannot both be enabled",
+    );
+
+    expectSpeculativeConfigRejectedByHelpers(
+      {
+        speculativeDraftMtp: true,
+        speculativeDraftDflash: true,
+        speculativeDraftModel: "publisher/draft-model",
+      },
+      "speculativeDraftDflash and speculativeDraftMtp cannot both be enabled",
+    );
+
+    expectSpeculativeConfigRejectedByHelpers(
+      {
+        speculativeDraftSimple: true,
+        speculativeDraftDflash: true,
+        speculativeDraftModel: "publisher/draft-model",
+      },
+      "speculativeDraftDflash and speculativeDraftSimple cannot both be enabled",
     );
 
     expectSpeculativeConfigRejectedByHelpers(
@@ -187,9 +217,17 @@ describe("LLMLoad speculative decoding validation", () => {
 
     expectSpeculativeConfigRejectedByHelpers(
       {
+        speculativeDraftDflash: true,
+        speculativeDraftModel: "",
+      },
+      "speculativeDraftDflash requires a non-empty speculativeDraftModel",
+    );
+
+    expectSpeculativeConfigRejectedByHelpers(
+      {
         speculativeDraftModel: "publisher/draft-model",
       },
-      "speculativeDraftModel requires an explicit supported draft type; use speculativeDraftSimple for Draft Simple",
+      "speculativeDraftModel requires an explicit supported draft type; use speculativeDraftSimple for Draft Simple or speculativeDraftDflash for DFlash",
     );
 
     expectSpeculativeConfigRejectedByHelpers(
@@ -214,6 +252,26 @@ describe("LLMLoad speculative decoding validation", () => {
     expect(resolveLLMLoadSpeculativeDecodingConfig(config)).toEqual({
       type: "draftSimple",
       speculativeDraftModel: "publisher/draft-model",
+      speculativeDraftMaxTokens: 16,
+      speculativeDraftMinTokens: 0,
+      speculativeDraftMinContinueProbability: 0.75,
+    });
+    expect(llmLoadModelConfigSchema.safeParse(config).success).toBe(true);
+  });
+
+  it("resolves valid explicit DFlash request config", () => {
+    const config: LLMLoadSpeculativeDecodingConfig = {
+      speculativeDraftDflash: true,
+      speculativeDraftModel: "publisher/dflash-draft-model",
+      speculativeDraftMaxTokens: 16,
+      speculativeDraftMinTokens: 0,
+      speculativeDraftMinContinueProbability: 0.75,
+    };
+
+    expect(() => validateLLMLoadSpeculativeDecodingConfig(config)).not.toThrow();
+    expect(resolveLLMLoadSpeculativeDecodingConfig(config)).toEqual({
+      type: "draftDflash",
+      speculativeDraftModel: "publisher/dflash-draft-model",
       speculativeDraftMaxTokens: 16,
       speculativeDraftMinTokens: 0,
       speculativeDraftMinContinueProbability: 0.75,

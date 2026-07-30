@@ -155,6 +155,7 @@ export const llmMlxKvCacheQuantizationSchema = z.object({
 export interface LLMLoadSpeculativeDecodingConfig {
   speculativeDraftMtp?: boolean;
   speculativeDraftSimple?: boolean;
+  speculativeDraftDflash?: boolean;
   speculativeDraftModel?: string;
   speculativeDraftMaxTokens?: number;
   speculativeDraftMinTokens?: number;
@@ -164,6 +165,7 @@ export interface LLMLoadSpeculativeDecodingConfig {
 const speculativeDraftModelSchema = z.string();
 const speculativeDraftMtpSchema = z.boolean();
 const speculativeDraftSimpleSchema = z.boolean();
+const speculativeDraftDflashSchema = z.boolean();
 const speculativeDraftTokenCountSchema = z.number().int().min(0);
 const speculativeDraftMinContinueProbabilitySchema = z.number().min(0).max(1);
 
@@ -193,6 +195,13 @@ export type LLMLoadSpeculativeDecodingResolution =
       speculativeDraftMaxTokens?: number;
       speculativeDraftMinTokens?: number;
       speculativeDraftMinContinueProbability?: number;
+    }
+  | {
+      type: "draftDflash";
+      speculativeDraftModel: string;
+      speculativeDraftMaxTokens?: number;
+      speculativeDraftMinTokens?: number;
+      speculativeDraftMinContinueProbability?: number;
     };
 
 interface LLMLoadSpeculativeDecodingValidationIssue {
@@ -203,6 +212,7 @@ interface LLMLoadSpeculativeDecodingValidationIssue {
 function getLLMLoadSpeculativeDecodingScalarValidationIssues({
   speculativeDraftMtp,
   speculativeDraftSimple,
+  speculativeDraftDflash,
   speculativeDraftModel,
   speculativeDraftMaxTokens,
   speculativeDraftMinTokens,
@@ -227,6 +237,16 @@ function getLLMLoadSpeculativeDecodingScalarValidationIssues({
     issues.push({
       message: "speculativeDraftSimple must be a boolean",
       path: ["speculativeDraftSimple"],
+    });
+  }
+
+  if (
+    speculativeDraftDflash !== undefined &&
+    !speculativeDraftDflashSchema.safeParse(speculativeDraftDflash).success
+  ) {
+    issues.push({
+      message: "speculativeDraftDflash must be a boolean",
+      path: ["speculativeDraftDflash"],
     });
   }
 
@@ -274,9 +294,43 @@ function getLLMLoadSpeculativeDecodingScalarValidationIssues({
   return issues;
 }
 
+function addMultipleDraftSelectorIssues({
+  issues,
+  speculativeDraftMtp,
+  speculativeDraftSimple,
+  speculativeDraftDflash,
+}: {
+  issues: Array<LLMLoadSpeculativeDecodingValidationIssue>;
+  speculativeDraftMtp?: boolean;
+  speculativeDraftSimple?: boolean;
+  speculativeDraftDflash?: boolean;
+}): void {
+  if (speculativeDraftMtp === true && speculativeDraftSimple === true) {
+    issues.push({
+      message: "speculativeDraftMtp and speculativeDraftSimple cannot both be enabled",
+      path: ["speculativeDraftSimple"],
+    });
+  }
+
+  if (speculativeDraftDflash === true && speculativeDraftMtp === true) {
+    issues.push({
+      message: "speculativeDraftDflash and speculativeDraftMtp cannot both be enabled",
+      path: ["speculativeDraftDflash"],
+    });
+  }
+
+  if (speculativeDraftDflash === true && speculativeDraftSimple === true) {
+    issues.push({
+      message: "speculativeDraftDflash and speculativeDraftSimple cannot both be enabled",
+      path: ["speculativeDraftDflash"],
+    });
+  }
+}
+
 function getLLMLoadSpeculativeDecodingCrossFieldValidationIssues({
   speculativeDraftMtp,
   speculativeDraftSimple,
+  speculativeDraftDflash,
   speculativeDraftModel,
   speculativeDraftMaxTokens,
   speculativeDraftMinTokens,
@@ -287,12 +341,12 @@ function getLLMLoadSpeculativeDecodingCrossFieldValidationIssues({
     speculativeDraftModel !== undefined &&
     speculativeDraftModel.length > 0;
 
-  if (speculativeDraftMtp === true && speculativeDraftSimple === true) {
-    issues.push({
-      message: "speculativeDraftMtp and speculativeDraftSimple cannot both be enabled",
-      path: ["speculativeDraftSimple"],
-    });
-  }
+  addMultipleDraftSelectorIssues({
+    issues,
+    speculativeDraftMtp,
+    speculativeDraftSimple,
+    speculativeDraftDflash,
+  });
 
   if (speculativeDraftSimple === true && !hasDraftModel) {
     issues.push({
@@ -301,10 +355,17 @@ function getLLMLoadSpeculativeDecodingCrossFieldValidationIssues({
     });
   }
 
-  if (hasDraftModel && speculativeDraftSimple !== true) {
+  if (speculativeDraftDflash === true && !hasDraftModel) {
+    issues.push({
+      message: "speculativeDraftDflash requires a non-empty speculativeDraftModel",
+      path: ["speculativeDraftModel"],
+    });
+  }
+
+  if (hasDraftModel && speculativeDraftSimple !== true && speculativeDraftDflash !== true) {
     issues.push({
       message:
-        "speculativeDraftModel requires an explicit supported draft type; use speculativeDraftSimple for Draft Simple",
+        "speculativeDraftModel requires an explicit supported draft type; use speculativeDraftSimple for Draft Simple or speculativeDraftDflash for DFlash",
       path: ["speculativeDraftModel"],
     });
   }
@@ -326,6 +387,7 @@ function getLLMLoadSpeculativeDecodingCrossFieldValidationIssues({
 function getLLMLoadSpeculativeDecodingEffectiveCrossFieldValidationIssues({
   speculativeDraftMtp,
   speculativeDraftSimple,
+  speculativeDraftDflash,
   speculativeDraftModel,
   speculativeDraftMaxTokens,
   speculativeDraftMinTokens,
@@ -336,16 +398,23 @@ function getLLMLoadSpeculativeDecodingEffectiveCrossFieldValidationIssues({
     speculativeDraftModel !== undefined &&
     speculativeDraftModel.length > 0;
 
-  if (speculativeDraftMtp === true && speculativeDraftSimple === true) {
-    issues.push({
-      message: "speculativeDraftMtp and speculativeDraftSimple cannot both be enabled",
-      path: ["speculativeDraftSimple"],
-    });
-  }
+  addMultipleDraftSelectorIssues({
+    issues,
+    speculativeDraftMtp,
+    speculativeDraftSimple,
+    speculativeDraftDflash,
+  });
 
   if (speculativeDraftSimple === true && !hasDraftModel) {
     issues.push({
       message: "speculativeDraftSimple requires a non-empty speculativeDraftModel",
+      path: ["speculativeDraftModel"],
+    });
+  }
+
+  if (speculativeDraftDflash === true && !hasDraftModel) {
+    issues.push({
+      message: "speculativeDraftDflash requires a non-empty speculativeDraftModel",
       path: ["speculativeDraftModel"],
     });
   }
@@ -420,7 +489,19 @@ export function resolveLLMLoadSpeculativeDecodingConfig(
     };
   }
 
-  if (config.speculativeDraftMtp === false && config.speculativeDraftSimple === false) {
+  if (config.speculativeDraftDflash === true) {
+    return {
+      type: "draftDflash",
+      speculativeDraftModel: config.speculativeDraftModel ?? "",
+      ...tuningFields,
+    };
+  }
+
+  if (
+    config.speculativeDraftMtp === false &&
+    config.speculativeDraftSimple === false &&
+    (config.speculativeDraftDflash === false || config.speculativeDraftDflash === undefined)
+  ) {
     return { type: "off", ...tuningFields };
   }
 
@@ -466,7 +547,19 @@ export function resolveEffectiveLLMLoadSpeculativeDecodingConfig(
     };
   }
 
-  if (config.speculativeDraftMtp === false && config.speculativeDraftSimple === false) {
+  if (config.speculativeDraftDflash === true) {
+    return {
+      type: "draftDflash",
+      speculativeDraftModel: config.speculativeDraftModel ?? "",
+      ...tuningFields,
+    };
+  }
+
+  if (
+    config.speculativeDraftMtp === false &&
+    config.speculativeDraftSimple === false &&
+    (config.speculativeDraftDflash === false || config.speculativeDraftDflash === undefined)
+  ) {
     return { type: "off", ...tuningFields };
   }
 
@@ -611,6 +704,13 @@ export interface LLMLoadModelConfig {
    * @experimental
    */
   speculativeDraftSimple?: boolean;
+
+  /**
+   * Enables llama.cpp DFlash speculative decoding using a separate sidecar draft model.
+   *
+   * @experimental
+   */
+  speculativeDraftDflash?: boolean;
 
   /**
    * Separate draft model resource to use for load-time speculative decoding.
@@ -760,6 +860,7 @@ export const llmLoadModelConfigSchema = z
     reasoningBudgetMessage: z.string().optional(),
     speculativeDraftMtp: speculativeDraftMtpSchema.optional(),
     speculativeDraftSimple: speculativeDraftSimpleSchema.optional(),
+    speculativeDraftDflash: speculativeDraftDflashSchema.optional(),
     speculativeDraftModel: speculativeDraftModelSchema.optional(),
     speculativeDraftMaxTokens: speculativeDraftTokenCountSchema.optional(),
     speculativeDraftMinTokens: speculativeDraftTokenCountSchema.optional(),
