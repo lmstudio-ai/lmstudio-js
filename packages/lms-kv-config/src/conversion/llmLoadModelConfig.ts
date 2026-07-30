@@ -148,9 +148,10 @@ function kvConfigToLLMLlamaLoadModelConfig(
   const speculativeDraftModel = parsed.get("llama.speculativeDecoding.draftModel");
   if (speculativeDraftModel !== undefined) {
     // Materialized public configs must be valid if passed back to client.llm.load(). Keep stale
-    // draft-model resources internal unless Draft Simple currently consumes them.
+    // draft-model resources internal unless an active draft type currently consumes them.
     result.speculativeDraftModel =
       useDefaultsForMissingKeys === true &&
+      speculativeDraftMtp !== true &&
       speculativeDraftSimple !== true &&
       speculativeDraftDflash !== true
         ? ""

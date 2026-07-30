@@ -185,6 +185,7 @@ export type LLMLoadSpeculativeDecodingResolution =
     }
   | {
       type: "draftMtp";
+      speculativeDraftModel?: string;
       speculativeDraftMaxTokens?: number;
       speculativeDraftMinTokens?: number;
       speculativeDraftMinContinueProbability?: number;
@@ -362,10 +363,15 @@ function getLLMLoadSpeculativeDecodingCrossFieldValidationIssues({
     });
   }
 
-  if (hasDraftModel && speculativeDraftSimple !== true && speculativeDraftDflash !== true) {
+  if (
+    hasDraftModel &&
+    speculativeDraftMtp !== true &&
+    speculativeDraftSimple !== true &&
+    speculativeDraftDflash !== true
+  ) {
     issues.push({
       message:
-        "speculativeDraftModel requires an explicit supported draft type; use speculativeDraftSimple for Draft Simple or speculativeDraftDflash for DFlash",
+        "speculativeDraftModel requires speculativeDraftMtp, speculativeDraftSimple, or speculativeDraftDflash to be enabled",
       path: ["speculativeDraftModel"],
     });
   }
@@ -478,7 +484,13 @@ export function resolveLLMLoadSpeculativeDecodingConfig(
   };
 
   if (config.speculativeDraftMtp === true) {
-    return { type: "draftMtp", ...tuningFields };
+    return {
+      type: "draftMtp",
+      ...(config.speculativeDraftModel !== undefined && config.speculativeDraftModel.length > 0
+        ? { speculativeDraftModel: config.speculativeDraftModel }
+        : {}),
+      ...tuningFields,
+    };
   }
 
   if (config.speculativeDraftSimple === true) {
@@ -536,7 +548,13 @@ export function resolveEffectiveLLMLoadSpeculativeDecodingConfig(
   };
 
   if (config.speculativeDraftMtp === true) {
-    return { type: "draftMtp", ...tuningFields };
+    return {
+      type: "draftMtp",
+      ...(config.speculativeDraftModel !== undefined && config.speculativeDraftModel.length > 0
+        ? { speculativeDraftModel: config.speculativeDraftModel }
+        : {}),
+      ...tuningFields,
+    };
   }
 
   if (config.speculativeDraftSimple === true) {

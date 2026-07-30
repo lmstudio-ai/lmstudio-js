@@ -227,7 +227,7 @@ describe("LLMLoad speculative decoding validation", () => {
       {
         speculativeDraftModel: "publisher/draft-model",
       },
-      "speculativeDraftModel requires an explicit supported draft type; use speculativeDraftSimple for Draft Simple or speculativeDraftDflash for DFlash",
+      "speculativeDraftModel requires speculativeDraftMtp, speculativeDraftSimple, or speculativeDraftDflash to be enabled",
     );
 
     expectSpeculativeConfigRejectedByHelpers(
@@ -237,6 +237,39 @@ describe("LLMLoad speculative decoding validation", () => {
       },
       "speculativeDraftMinTokens must be less than or equal to speculativeDraftMaxTokens",
     );
+  });
+
+  it("resolves valid explicit path-backed Draft MTP request config", () => {
+    const config: LLMLoadSpeculativeDecodingConfig = {
+      speculativeDraftMtp: true,
+      speculativeDraftModel: "publisher/mtp-assistant-model",
+      speculativeDraftMaxTokens: 16,
+      speculativeDraftMinTokens: 0,
+      speculativeDraftMinContinueProbability: 0.75,
+    };
+
+    expect(() => validateLLMLoadSpeculativeDecodingConfig(config)).not.toThrow();
+    expect(resolveLLMLoadSpeculativeDecodingConfig(config)).toEqual({
+      type: "draftMtp",
+      speculativeDraftModel: "publisher/mtp-assistant-model",
+      speculativeDraftMaxTokens: 16,
+      speculativeDraftMinTokens: 0,
+      speculativeDraftMinContinueProbability: 0.75,
+    });
+    expect(llmLoadModelConfigSchema.safeParse(config).success).toBe(true);
+  });
+
+  it("resolves valid explicit bundled Draft MTP request config", () => {
+    const config: LLMLoadSpeculativeDecodingConfig = {
+      speculativeDraftMtp: true,
+      speculativeDraftModel: "",
+    };
+
+    expect(() => validateLLMLoadSpeculativeDecodingConfig(config)).not.toThrow();
+    expect(resolveLLMLoadSpeculativeDecodingConfig(config)).toEqual({
+      type: "draftMtp",
+    });
+    expect(llmLoadModelConfigSchema.safeParse(config).success).toBe(true);
   });
 
   it("resolves valid explicit Draft Simple request config", () => {
@@ -296,6 +329,7 @@ describe("LLMLoad speculative decoding validation", () => {
     });
     expect(resolveEffectiveLLMLoadSpeculativeDecodingConfig(draftMtpConfig)).toEqual({
       type: "draftMtp",
+      speculativeDraftModel: "publisher/draft-model",
     });
   });
 

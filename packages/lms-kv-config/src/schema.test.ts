@@ -219,6 +219,25 @@ describe("llmLoadModelConfig conversion", () => {
     expect(roundTrippedConfig.speculativeDraftMinTokens).toBe(0);
   });
 
+  it("round trips path-backed Draft MTP load-time speculative decoding", () => {
+    const loadConfig = llmLoadModelConfigToKVConfig({
+      speculativeDraftMtp: true,
+      speculativeDraftModel: "publisher/mtp-assistant-model",
+      speculativeDraftMaxTokens: 16,
+      speculativeDraftMinTokens: 0,
+      speculativeDraftMinContinueProbability: 0.75,
+    });
+
+    const roundTrippedConfig = kvConfigToLLMLoadModelConfig(loadConfig);
+
+    expect(roundTrippedConfig.speculativeDraftMtp).toBe(true);
+    expect(roundTrippedConfig.speculativeDraftModel).toBe("publisher/mtp-assistant-model");
+    expect(roundTrippedConfig.speculativeDraftMaxTokens).toBe(16);
+    expect(roundTrippedConfig.speculativeDraftMinTokens).toBe(0);
+    expect(roundTrippedConfig.speculativeDraftMinContinueProbability).toBe(0.75);
+    expect(llmLoadModelConfigSchema.safeParse(roundTrippedConfig).success).toBe(true);
+  });
+
   it("round trips Draft Model load-time speculative decoding", () => {
     const loadConfig = llmLoadModelConfigToKVConfig({
       speculativeDraftMtp: false,
@@ -314,6 +333,23 @@ describe("llmLoadModelConfig conversion", () => {
     expect(convertedConfig.speculativeDraftSimple).toBe(false);
     expect(convertedConfig.speculativeDraftDflash).toBe(false);
     expect(convertedConfig.speculativeDraftModel).toBe("");
+    expect(llmLoadModelConfigSchema.safeParse(convertedConfig).success).toBe(true);
+  });
+
+  it("preserves materialized Draft Model resources when path-backed Draft MTP is active", () => {
+    const loadConfig = globalConfigSchematics.scoped("llm.load").buildPartialConfig({
+      "llama.speculativeDecoding.draftMtp": true,
+      "llama.speculativeDecoding.draftModel": "publisher/mtp-assistant-model",
+    });
+
+    const convertedConfig = kvConfigToLLMLoadModelConfig(loadConfig, {
+      useDefaultsForMissingKeys: true,
+    });
+
+    expect(convertedConfig.speculativeDraftMtp).toBe(true);
+    expect(convertedConfig.speculativeDraftSimple).toBe(false);
+    expect(convertedConfig.speculativeDraftDflash).toBe(false);
+    expect(convertedConfig.speculativeDraftModel).toBe("publisher/mtp-assistant-model");
     expect(llmLoadModelConfigSchema.safeParse(convertedConfig).success).toBe(true);
   });
 
@@ -419,6 +455,13 @@ describe("llmLoadModelConfig conversion", () => {
         speculativeDraftModel: "",
       }).success,
     ).toBe(false);
+
+    expect(
+      llmLoadModelConfigSchema.safeParse({
+        speculativeDraftMtp: true,
+        speculativeDraftModel: "publisher/mtp-assistant-model",
+      }).success,
+    ).toBe(true);
 
     expect(
       llmLoadModelConfigSchema.safeParse({
