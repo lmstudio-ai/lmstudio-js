@@ -400,7 +400,7 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
                 "boolean",
                 {
                   displayName: "Draft DFlash",
-                  hint: "Use a DFlash sidecar draft model for speculative decoding.",
+                  hint: "Use a DFlash drafter model for speculative decoding.",
                 },
                 false,
               )

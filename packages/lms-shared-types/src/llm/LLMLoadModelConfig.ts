@@ -724,7 +724,7 @@ export interface LLMLoadModelConfig {
   speculativeDraftSimple?: boolean;
 
   /**
-   * Enables llama.cpp DFlash speculative decoding using a separate sidecar draft model.
+   * Enables llama.cpp DFlash speculative decoding using a separate drafter model.
    *
    * @experimental
    */
