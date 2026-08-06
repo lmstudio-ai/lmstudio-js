@@ -21,6 +21,7 @@ function createInstanceInfo(): LLMInstanceInfo {
     sizeBytes: 0,
     indexedModelIdentifier: "test/model",
     deviceIdentifier: null,
+    isDraftOnly: false,
     identifier: "test-instance",
     instanceReference: "test-instance",
     ttlMs: null,
