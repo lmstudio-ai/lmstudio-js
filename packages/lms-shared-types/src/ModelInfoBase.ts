@@ -99,7 +99,7 @@ export const modelInfoBaseSchema = z.object({
   sizeBytes: z.number().int(),
   indexedModelIdentifier: z.string(),
   deviceIdentifier: z.string().nullable(),
-  isDraftOnly: z.boolean(),
+  isDraftOnly: z.boolean().default(false),
   paramsString: z.string().optional(),
   architecture: z.string().optional(),
   quantization: quantizationSchema.optional(),
