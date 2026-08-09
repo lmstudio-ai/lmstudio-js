@@ -328,14 +328,17 @@ function addMultipleDraftSelectorIssues({
   }
 }
 
-function getLLMLoadSpeculativeDecodingCrossFieldValidationIssues({
-  speculativeDraftMtp,
-  speculativeDraftSimple,
-  speculativeDraftDflash,
-  speculativeDraftModel,
-  speculativeDraftMaxTokens,
-  speculativeDraftMinTokens,
-}: LLMLoadSpeculativeDecodingConfig): Array<LLMLoadSpeculativeDecodingValidationIssue> {
+function getLLMLoadSpeculativeDecodingCrossFieldValidationIssues(
+  {
+    speculativeDraftMtp,
+    speculativeDraftSimple,
+    speculativeDraftDflash,
+    speculativeDraftModel,
+    speculativeDraftMaxTokens,
+    speculativeDraftMinTokens,
+  }: LLMLoadSpeculativeDecodingConfig,
+  { allowInertDraftModel }: { allowInertDraftModel: boolean },
+): Array<LLMLoadSpeculativeDecodingValidationIssue> {
   const issues: Array<LLMLoadSpeculativeDecodingValidationIssue> = [];
   const hasDraftModel =
     speculativeDraftModelSchema.safeParse(speculativeDraftModel).success &&
@@ -364,6 +367,7 @@ function getLLMLoadSpeculativeDecodingCrossFieldValidationIssues({
   }
 
   if (
+    !allowInertDraftModel &&
     hasDraftModel &&
     speculativeDraftMtp !== true &&
     speculativeDraftSimple !== true &&
@@ -390,61 +394,14 @@ function getLLMLoadSpeculativeDecodingCrossFieldValidationIssues({
   return issues;
 }
 
-function getLLMLoadSpeculativeDecodingEffectiveCrossFieldValidationIssues({
-  speculativeDraftMtp,
-  speculativeDraftSimple,
-  speculativeDraftDflash,
-  speculativeDraftModel,
-  speculativeDraftMaxTokens,
-  speculativeDraftMinTokens,
-}: LLMLoadSpeculativeDecodingConfig): Array<LLMLoadSpeculativeDecodingValidationIssue> {
-  const issues: Array<LLMLoadSpeculativeDecodingValidationIssue> = [];
-  const hasDraftModel =
-    speculativeDraftModelSchema.safeParse(speculativeDraftModel).success &&
-    speculativeDraftModel !== undefined &&
-    speculativeDraftModel.length > 0;
-
-  addMultipleDraftSelectorIssues({
-    issues,
-    speculativeDraftMtp,
-    speculativeDraftSimple,
-    speculativeDraftDflash,
-  });
-
-  if (speculativeDraftSimple === true && !hasDraftModel) {
-    issues.push({
-      message: "speculativeDraftSimple requires a non-empty speculativeDraftModel",
-      path: ["speculativeDraftModel"],
-    });
-  }
-
-  if (speculativeDraftDflash === true && !hasDraftModel) {
-    issues.push({
-      message: "speculativeDraftDflash requires a non-empty speculativeDraftModel",
-      path: ["speculativeDraftModel"],
-    });
-  }
-
-  if (
-    speculativeDraftMinTokens !== undefined &&
-    speculativeDraftMaxTokens !== undefined &&
-    speculativeDraftMinTokens > speculativeDraftMaxTokens
-  ) {
-    issues.push({
-      message: "speculativeDraftMinTokens must be less than or equal to speculativeDraftMaxTokens",
-      path: ["speculativeDraftMinTokens"],
-    });
-  }
-
-  return issues;
-}
-
 function getLLMLoadSpeculativeDecodingValidationIssues(
   config: LLMLoadSpeculativeDecodingConfig,
 ): Array<LLMLoadSpeculativeDecodingValidationIssue> {
   return [
     ...getLLMLoadSpeculativeDecodingScalarValidationIssues(config),
-    ...getLLMLoadSpeculativeDecodingCrossFieldValidationIssues(config),
+    ...getLLMLoadSpeculativeDecodingCrossFieldValidationIssues(config, {
+      allowInertDraftModel: false,
+    }),
   ];
 }
 
@@ -535,7 +492,9 @@ export function resolveEffectiveLLMLoadSpeculativeDecodingConfig(
 ): LLMLoadSpeculativeDecodingResolution {
   const issues = [
     ...getLLMLoadSpeculativeDecodingScalarValidationIssues(config),
-    ...getLLMLoadSpeculativeDecodingEffectiveCrossFieldValidationIssues(config),
+    ...getLLMLoadSpeculativeDecodingCrossFieldValidationIssues(config, {
+      allowInertDraftModel: true,
+    }),
   ];
   if (issues.length > 0) {
     throw new Error(issues.map(issue => issue.message).join("; "));
@@ -900,7 +859,9 @@ export const llmLoadModelConfigSchema = z
     mlxKvCacheQuantization: llmMlxKvCacheQuantizationSchema.or(z.literal(false)).optional(),
   })
   .superRefine((config, context) => {
-    for (const issue of getLLMLoadSpeculativeDecodingCrossFieldValidationIssues(config)) {
+    for (const issue of getLLMLoadSpeculativeDecodingCrossFieldValidationIssues(config, {
+      allowInertDraftModel: false,
+    })) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
         message: issue.message,
