@@ -645,6 +645,22 @@ describe("globalConfigSchematics", () => {
     );
   });
 
+  it("keeps MLX AutoFit internal to KV config", () => {
+    const emptyConfig = makeKVConfigFromFields([]);
+    const disabledAutoFitConfig = llmMlxLoadConfigSchematics.buildPartialConfig({
+      "mlx.autoFit": false,
+    });
+
+    expect(globalConfigSchematics.access(emptyConfig, "llm.load.mlx.autoFit")).toBe(true);
+    expect(llmMlxLoadConfigSchematics.obtainField("mlx.autoFit").fullKey).toBe(
+      "llm.load.mlx.autoFit",
+    );
+    expect(llmMlxLoadConfigSchematics.access(disabledAutoFitConfig, "mlx.autoFit")).toBe(false);
+    expect(
+      kvConfigToLLMLoadModelConfig(disabledAutoFitConfig, { modelFormat: "safetensors" }),
+    ).not.toHaveProperty("autoFit");
+  });
+
   it("uses 2048 as the default llama eval batch size", () => {
     const emptyConfig = makeKVConfigFromFields([]);
 
