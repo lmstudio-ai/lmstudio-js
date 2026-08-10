@@ -405,6 +405,15 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
                 false,
               )
               .field(
+                "draftDspark",
+                "boolean",
+                {
+                  displayName: "Draft DSpark",
+                  hint: "Use a DSpark drafter model for speculative decoding.",
+                },
+                false,
+              )
+              .field(
                 "draftModel",
                 "string",
                 {

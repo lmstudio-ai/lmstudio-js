@@ -156,6 +156,7 @@ export interface LLMLoadSpeculativeDecodingConfig {
   speculativeDraftMtp?: boolean;
   speculativeDraftSimple?: boolean;
   speculativeDraftDflash?: boolean;
+  speculativeDraftDspark?: boolean;
   speculativeDraftModel?: string;
   speculativeDraftMaxTokens?: number;
   speculativeDraftMinTokens?: number;
@@ -166,6 +167,7 @@ const speculativeDraftModelSchema = z.string();
 const speculativeDraftMtpSchema = z.boolean();
 const speculativeDraftSimpleSchema = z.boolean();
 const speculativeDraftDflashSchema = z.boolean();
+const speculativeDraftDsparkSchema = z.boolean();
 const speculativeDraftTokenCountSchema = z.number().int().min(0);
 const speculativeDraftMinContinueProbabilitySchema = z.number().min(0).max(1);
 
@@ -203,6 +205,13 @@ export type LLMLoadSpeculativeDecodingResolution =
       speculativeDraftMaxTokens?: number;
       speculativeDraftMinTokens?: number;
       speculativeDraftMinContinueProbability?: number;
+    }
+  | {
+      type: "draftDspark";
+      speculativeDraftModel: string;
+      speculativeDraftMaxTokens?: number;
+      speculativeDraftMinTokens?: number;
+      speculativeDraftMinContinueProbability?: number;
     };
 
 interface LLMLoadSpeculativeDecodingValidationIssue {
@@ -214,6 +223,7 @@ function getLLMLoadSpeculativeDecodingScalarValidationIssues({
   speculativeDraftMtp,
   speculativeDraftSimple,
   speculativeDraftDflash,
+  speculativeDraftDspark,
   speculativeDraftModel,
   speculativeDraftMaxTokens,
   speculativeDraftMinTokens,
@@ -248,6 +258,16 @@ function getLLMLoadSpeculativeDecodingScalarValidationIssues({
     issues.push({
       message: "speculativeDraftDflash must be a boolean",
       path: ["speculativeDraftDflash"],
+    });
+  }
+
+  if (
+    speculativeDraftDspark !== undefined &&
+    !speculativeDraftDsparkSchema.safeParse(speculativeDraftDspark).success
+  ) {
+    issues.push({
+      message: "speculativeDraftDspark must be a boolean",
+      path: ["speculativeDraftDspark"],
     });
   }
 
@@ -300,11 +320,13 @@ function addMultipleDraftSelectorIssues({
   speculativeDraftMtp,
   speculativeDraftSimple,
   speculativeDraftDflash,
+  speculativeDraftDspark,
 }: {
   issues: Array<LLMLoadSpeculativeDecodingValidationIssue>;
   speculativeDraftMtp?: boolean;
   speculativeDraftSimple?: boolean;
   speculativeDraftDflash?: boolean;
+  speculativeDraftDspark?: boolean;
 }): void {
   if (speculativeDraftMtp === true && speculativeDraftSimple === true) {
     issues.push({
@@ -326,6 +348,27 @@ function addMultipleDraftSelectorIssues({
       path: ["speculativeDraftDflash"],
     });
   }
+
+  if (speculativeDraftDspark === true && speculativeDraftMtp === true) {
+    issues.push({
+      message: "speculativeDraftDspark and speculativeDraftMtp cannot both be enabled",
+      path: ["speculativeDraftDspark"],
+    });
+  }
+
+  if (speculativeDraftDspark === true && speculativeDraftSimple === true) {
+    issues.push({
+      message: "speculativeDraftDspark and speculativeDraftSimple cannot both be enabled",
+      path: ["speculativeDraftDspark"],
+    });
+  }
+
+  if (speculativeDraftDspark === true && speculativeDraftDflash === true) {
+    issues.push({
+      message: "speculativeDraftDspark and speculativeDraftDflash cannot both be enabled",
+      path: ["speculativeDraftDspark"],
+    });
+  }
 }
 
 function getLLMLoadSpeculativeDecodingCrossFieldValidationIssues(
@@ -333,6 +376,7 @@ function getLLMLoadSpeculativeDecodingCrossFieldValidationIssues(
     speculativeDraftMtp,
     speculativeDraftSimple,
     speculativeDraftDflash,
+    speculativeDraftDspark,
     speculativeDraftModel,
     speculativeDraftMaxTokens,
     speculativeDraftMinTokens,
@@ -350,6 +394,7 @@ function getLLMLoadSpeculativeDecodingCrossFieldValidationIssues(
     speculativeDraftMtp,
     speculativeDraftSimple,
     speculativeDraftDflash,
+    speculativeDraftDspark,
   });
 
   if (speculativeDraftSimple === true && !hasDraftModel) {
@@ -366,16 +411,24 @@ function getLLMLoadSpeculativeDecodingCrossFieldValidationIssues(
     });
   }
 
+  if (speculativeDraftDspark === true && !hasDraftModel) {
+    issues.push({
+      message: "speculativeDraftDspark requires a non-empty speculativeDraftModel",
+      path: ["speculativeDraftModel"],
+    });
+  }
+
   if (
     !allowInertDraftModel &&
     hasDraftModel &&
     speculativeDraftMtp !== true &&
     speculativeDraftSimple !== true &&
-    speculativeDraftDflash !== true
+    speculativeDraftDflash !== true &&
+    speculativeDraftDspark !== true
   ) {
     issues.push({
       message:
-        "speculativeDraftModel requires speculativeDraftMtp, speculativeDraftSimple, or speculativeDraftDflash to be enabled",
+        "speculativeDraftModel requires speculativeDraftMtp, speculativeDraftSimple, speculativeDraftDflash, or speculativeDraftDspark to be enabled",
       path: ["speculativeDraftModel"],
     });
   }
@@ -466,10 +519,19 @@ export function resolveLLMLoadSpeculativeDecodingConfig(
     };
   }
 
+  if (config.speculativeDraftDspark === true) {
+    return {
+      type: "draftDspark",
+      speculativeDraftModel: config.speculativeDraftModel ?? "",
+      ...tuningFields,
+    };
+  }
+
   if (
     config.speculativeDraftMtp === false &&
     config.speculativeDraftSimple === false &&
-    (config.speculativeDraftDflash === false || config.speculativeDraftDflash === undefined)
+    (config.speculativeDraftDflash === false || config.speculativeDraftDflash === undefined) &&
+    (config.speculativeDraftDspark === false || config.speculativeDraftDspark === undefined)
   ) {
     return { type: "off", ...tuningFields };
   }
@@ -532,10 +594,19 @@ export function resolveEffectiveLLMLoadSpeculativeDecodingConfig(
     };
   }
 
+  if (config.speculativeDraftDspark === true) {
+    return {
+      type: "draftDspark",
+      speculativeDraftModel: config.speculativeDraftModel ?? "",
+      ...tuningFields,
+    };
+  }
+
   if (
     config.speculativeDraftMtp === false &&
     config.speculativeDraftSimple === false &&
-    (config.speculativeDraftDflash === false || config.speculativeDraftDflash === undefined)
+    (config.speculativeDraftDflash === false || config.speculativeDraftDflash === undefined) &&
+    (config.speculativeDraftDspark === false || config.speculativeDraftDspark === undefined)
   ) {
     return { type: "off", ...tuningFields };
   }
@@ -690,6 +761,13 @@ export interface LLMLoadModelConfig {
   speculativeDraftDflash?: boolean;
 
   /**
+   * Enables llama.cpp DSpark speculative decoding using a separate drafter model.
+   *
+   * @experimental
+   */
+  speculativeDraftDspark?: boolean;
+
+  /**
    * Separate draft model resource to use for load-time speculative decoding.
    *
    * @experimental
@@ -838,6 +916,7 @@ export const llmLoadModelConfigSchema = z
     speculativeDraftMtp: speculativeDraftMtpSchema.optional(),
     speculativeDraftSimple: speculativeDraftSimpleSchema.optional(),
     speculativeDraftDflash: speculativeDraftDflashSchema.optional(),
+    speculativeDraftDspark: speculativeDraftDsparkSchema.optional(),
     speculativeDraftModel: speculativeDraftModelSchema.optional(),
     speculativeDraftMaxTokens: speculativeDraftTokenCountSchema.optional(),
     speculativeDraftMinTokens: speculativeDraftTokenCountSchema.optional(),

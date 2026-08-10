@@ -68,6 +68,18 @@ describe("LLMLoad speculative decoding validation", () => {
         config: { speculativeDraftDflash: null },
         expectedMessage: "speculativeDraftDflash must be a boolean",
       },
+      {
+        config: { speculativeDraftDspark: "true" },
+        expectedMessage: "speculativeDraftDspark must be a boolean",
+      },
+      {
+        config: { speculativeDraftDspark: 1 },
+        expectedMessage: "speculativeDraftDspark must be a boolean",
+      },
+      {
+        config: { speculativeDraftDspark: null },
+        expectedMessage: "speculativeDraftDspark must be a boolean",
+      },
     ];
 
     for (const invalidConfigCase of invalidConfigCases) {
@@ -209,6 +221,33 @@ describe("LLMLoad speculative decoding validation", () => {
 
     expectSpeculativeConfigRejectedByHelpers(
       {
+        speculativeDraftDflash: true,
+        speculativeDraftDspark: true,
+        speculativeDraftModel: "publisher/draft-model",
+      },
+      "speculativeDraftDspark and speculativeDraftDflash cannot both be enabled",
+    );
+
+    expectSpeculativeConfigRejectedByHelpers(
+      {
+        speculativeDraftMtp: true,
+        speculativeDraftDspark: true,
+        speculativeDraftModel: "publisher/draft-model",
+      },
+      "speculativeDraftDspark and speculativeDraftMtp cannot both be enabled",
+    );
+
+    expectSpeculativeConfigRejectedByHelpers(
+      {
+        speculativeDraftSimple: true,
+        speculativeDraftDspark: true,
+        speculativeDraftModel: "publisher/draft-model",
+      },
+      "speculativeDraftDspark and speculativeDraftSimple cannot both be enabled",
+    );
+
+    expectSpeculativeConfigRejectedByHelpers(
+      {
         speculativeDraftSimple: true,
         speculativeDraftModel: "",
       },
@@ -225,9 +264,17 @@ describe("LLMLoad speculative decoding validation", () => {
 
     expectSpeculativeConfigRejectedByHelpers(
       {
+        speculativeDraftDspark: true,
+        speculativeDraftModel: "",
+      },
+      "speculativeDraftDspark requires a non-empty speculativeDraftModel",
+    );
+
+    expectSpeculativeConfigRejectedByHelpers(
+      {
         speculativeDraftModel: "publisher/draft-model",
       },
-      "speculativeDraftModel requires speculativeDraftMtp, speculativeDraftSimple, or speculativeDraftDflash to be enabled",
+      "speculativeDraftModel requires speculativeDraftMtp, speculativeDraftSimple, speculativeDraftDflash, or speculativeDraftDspark to be enabled",
     );
 
     expectSpeculativeConfigRejectedByHelpers(
@@ -305,6 +352,26 @@ describe("LLMLoad speculative decoding validation", () => {
     expect(resolveLLMLoadSpeculativeDecodingConfig(config)).toEqual({
       type: "draftDflash",
       speculativeDraftModel: "publisher/dflash-draft-model",
+      speculativeDraftMaxTokens: 16,
+      speculativeDraftMinTokens: 0,
+      speculativeDraftMinContinueProbability: 0.75,
+    });
+    expect(llmLoadModelConfigSchema.safeParse(config).success).toBe(true);
+  });
+
+  it("resolves valid explicit DSpark request config", () => {
+    const config: LLMLoadSpeculativeDecodingConfig = {
+      speculativeDraftDspark: true,
+      speculativeDraftModel: "publisher/dspark-draft-model",
+      speculativeDraftMaxTokens: 16,
+      speculativeDraftMinTokens: 0,
+      speculativeDraftMinContinueProbability: 0.75,
+    };
+
+    expect(() => validateLLMLoadSpeculativeDecodingConfig(config)).not.toThrow();
+    expect(resolveLLMLoadSpeculativeDecodingConfig(config)).toEqual({
+      type: "draftDspark",
+      speculativeDraftModel: "publisher/dspark-draft-model",
       speculativeDraftMaxTokens: 16,
       speculativeDraftMinTokens: 0,
       speculativeDraftMinContinueProbability: 0.75,
