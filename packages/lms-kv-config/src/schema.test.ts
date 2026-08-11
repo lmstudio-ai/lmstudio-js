@@ -560,6 +560,17 @@ describe("globalConfigSchematics", () => {
     ).not.toHaveProperty("autoFit");
   });
 
+  it("defaults MLX prompt disk caching on and preserves explicit overrides", () => {
+    const emptyConfig = makeKVConfigFromFields([]);
+    const disabledDiskCacheConfig = llmLoadModelConfigToKVConfig({ mlxDiskCache: false });
+
+    expect(globalConfigSchematics.access(emptyConfig, "llm.load.mlx.diskCache")).toBe(true);
+    expect(llmMlxLoadConfigSchematics.access(disabledDiskCacheConfig, "mlx.diskCache")).toBe(false);
+    expect(
+      kvConfigToLLMLoadModelConfig(disabledDiskCacheConfig, { modelFormat: "safetensors" }),
+    ).toMatchObject({ mlxDiskCache: false });
+  });
+
   it("uses 2048 as the default llama eval batch size", () => {
     const emptyConfig = makeKVConfigFromFields([]);
 

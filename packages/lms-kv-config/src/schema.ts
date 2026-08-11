@@ -472,6 +472,7 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
       .scope("mlx", builder =>
         builder
           .field("autoFit", "boolean", { machineDependent: true }, true)
+          .field("diskCache", "boolean", {}, true)
           .field(
             "kvCacheQuantization",
             "mlxKvCacheQuantizationType",
