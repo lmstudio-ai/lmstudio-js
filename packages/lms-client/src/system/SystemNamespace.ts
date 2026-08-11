@@ -9,6 +9,7 @@ import { type SystemPort } from "@lmstudio/lms-external-backend-interfaces";
 import {
   backendNotificationSchema,
   type BackendNotification,
+  type DrafterModelInfo,
   type EmbeddingModelInfo,
   type LLMInfo,
   type ModelInfo,
@@ -87,13 +88,16 @@ export class SystemNamespace {
   public async listDownloadedModels(): Promise<Array<ModelInfo>>;
   public async listDownloadedModels(domain: "llm"): Promise<Array<LLMInfo>>;
   public async listDownloadedModels(domain: "embedding"): Promise<Array<EmbeddingModelInfo>>;
-  public async listDownloadedModels(domain?: "llm" | "embedding"): Promise<Array<ModelInfo>> {
+  public async listDownloadedModels(domain: "drafter"): Promise<Array<DrafterModelInfo>>;
+  public async listDownloadedModels(
+    domain?: "llm" | "embedding" | "drafter",
+  ): Promise<Array<ModelInfo>> {
     const stack = getCurrentStack(1);
     domain = this.validator.validateMethodParamOrThrow(
       "client.system",
       "listDownloadedModels",
       "domain",
-      z.union([z.literal("llm"), z.literal("embedding"), z.undefined()]),
+      z.union([z.literal("llm"), z.literal("embedding"), z.literal("drafter"), z.undefined()]),
       domain,
       stack,
     );
