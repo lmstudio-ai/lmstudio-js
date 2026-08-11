@@ -195,6 +195,8 @@ export {
   validateLLMLoadSpeculativeDecodingConfig,
 } from "./llm/LLMLoadModelConfig.js";
 export {
+  DrafterModelInfo,
+  drafterModelInfoSchema,
   LLMAdditionalInfo,
   llmAdditionalInfoSchema,
   LLMInfo,

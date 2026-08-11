@@ -57,6 +57,20 @@ export const llmInfoSchema = z
   .extend(llmAdditionalInfoSchema.shape) as ZodSchema<LLMInfo>;
 
 /**
+ * Info of a speculative-decoding drafter model. Drafters are addressable model resources for use
+ * with compatible LLM loads, but they are not standalone-loadable LLMs.
+ *
+ * @public
+ */
+export type DrafterModelInfo = { type: "drafter" } & ModelInfoBase & LLMAdditionalInfo;
+export const drafterModelInfoSchema = z
+  .object({
+    type: z.literal("drafter"),
+  })
+  .extend(modelInfoBaseSchema.shape)
+  .extend(llmAdditionalInfoSchema.shape) as ZodSchema<DrafterModelInfo>;
+
+/**
  * Info of a loaded LLM instance. It is a combination of {@link ModelInstanceInfoBase},
  * {@link LLMAdditionalInfo} and {@link LLMInstanceAdditionalInfo}.
  *
