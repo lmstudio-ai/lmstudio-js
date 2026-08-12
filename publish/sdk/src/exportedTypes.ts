@@ -172,6 +172,7 @@ export type {
   DownloadableRuntimeExtensionInfoAdditionalFields,
   DownloadableRuntimeFrameworkExtension,
   DownloadProgressUpdate,
+  DrafterModelInfo,
   EmbeddingLoadModelConfig,
   EmbeddingModelAdditionalInfo,
   EmbeddingModelInfo,
