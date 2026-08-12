@@ -9,7 +9,6 @@ const baseModelInfo = {
   sizeBytes: 123,
   indexedModelIdentifier: "test/drafter/model.gguf",
   deviceIdentifier: null,
-  isDraftOnly: true,
   vision: false,
   trainedForToolUse: false,
   maxContextLength: 4096,

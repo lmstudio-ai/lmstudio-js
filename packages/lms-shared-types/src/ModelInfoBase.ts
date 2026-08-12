@@ -51,11 +51,7 @@ export interface ModelInfoBase {
    * If the model is available locally, this field is `null`.
    */
   deviceIdentifier: string | null;
-  /**
-   * Whether this model is only valid as a speculative decoding draft model. Draft-only models are
-   * indexed and addressable, but cannot be loaded as standalone models.
-   */
-  isDraftOnly: boolean;
+
   /**
    * A string that represents the number of params in the model. May not always be available.
    */
@@ -99,7 +95,6 @@ export const modelInfoBaseSchema = z.object({
   sizeBytes: z.number().int(),
   indexedModelIdentifier: z.string(),
   deviceIdentifier: z.string().nullable(),
-  isDraftOnly: z.boolean().default(false),
   paramsString: z.string().optional(),
   architecture: z.string().optional(),
   quantization: quantizationSchema.optional(),
