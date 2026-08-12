@@ -3,11 +3,17 @@ import { type InferClientPort } from "@lmstudio/lms-communication-client";
 import { backendNotificationSchema, modelInfoSchema } from "@lmstudio/lms-shared-types";
 import { z } from "zod";
 
+const listDownloadedModelsOptsSchema = z
+  .object({
+    includeDrafters: z.boolean().optional(),
+  })
+  .optional();
+
 export function createSystemBackendInterface() {
   return (
     new BackendInterface()
       .addRpcEndpoint("listDownloadedModels", {
-        parameter: z.void(),
+        parameter: listDownloadedModelsOptsSchema,
         returns: z.array(modelInfoSchema),
       })
       /**

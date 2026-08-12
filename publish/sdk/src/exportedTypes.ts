@@ -49,6 +49,7 @@ export type {
   LLMPredictionOpts,
   LLMRespondOpts,
   LMStudioClientConstructorOpts,
+  ListDownloadedModelsOpts,
   LoginWithPreAuthenticatedKeysOpts,
   LoginWithPreAuthenticatedKeysResult,
   ModelNamespace,
