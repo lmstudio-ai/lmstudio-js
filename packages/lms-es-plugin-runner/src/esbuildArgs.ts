@@ -10,6 +10,7 @@ const alwaysArgs = [
   "--sourcemap=inline",
   "--tree-shaking=true",
   "--bundle",
+  "--format=esm",
   // Don't bundle node_modules as they are not necessarily designed to be bundled.
   "--packages=external",
 ];
