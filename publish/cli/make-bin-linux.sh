@@ -32,7 +32,7 @@ elif [ "${ARCH}" = "x86_64" ]; then
   if [ ! -x "${LOCAL_BUN_DIR}/${LOCAL_BUN_RELATIVE_BINARY}" ]; then
     echo "${BUN_TAG} not present. Downloading..."
     mkdir -p "${LOCAL_BUN_DIR}"
-    curl -fsSL "https://github.com/oven-sh/bun/releases/download/${BUN_TAG}/${BUN_PLATFORM}.zip" -o "${LOCAL_BUN_DIR}/bun.zip"
+    curl -fsSL --retry 3 --retry-all-errors "https://github.com/oven-sh/bun/releases/download/${BUN_TAG}/${BUN_PLATFORM}.zip" -o "${LOCAL_BUN_DIR}/bun.zip"
     unzip -o "${LOCAL_BUN_DIR}/bun.zip" -d "${LOCAL_BUN_DIR}"
     chmod +x "${LOCAL_BUN_DIR}/${LOCAL_BUN_RELATIVE_BINARY}"
     rm -f "${LOCAL_BUN_DIR}/bun.zip"
