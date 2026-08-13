@@ -57,6 +57,7 @@ const fuzzyFindStaffPickResultSchema = z.object({
   exact: z.boolean(),
 });
 
+/** Defines the validated repository contract shared by external clients and LM Studio. */
 export function createRepositoryBackendInterface() {
   return (
     new BackendInterface()
@@ -143,6 +144,15 @@ export function createRepositoryBackendInterface() {
         }),
         returns: z.object({
           fileList: localArtifactFileListSchema,
+        }),
+      })
+      /**
+       * Returns the user and organizations under which the authenticated account can publish.
+       */
+      .addRpcEndpoint("getWritableArtifactOwners", {
+        parameter: z.void(),
+        returns: z.object({
+          owners: z.array(kebabCaseSchema),
         }),
       })
       .addChannelEndpoint("pushArtifact", {
