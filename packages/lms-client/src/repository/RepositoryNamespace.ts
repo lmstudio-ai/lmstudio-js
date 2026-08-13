@@ -749,6 +749,17 @@ export class UnstableRepositoryNamespace {
   }
 
   /**
+   * Returns the Hub users and organizations under which the authenticated account can publish.
+   *
+   * @experimental [EXP-HUB-PUBLISH-OWNERS] This function may change in the future.
+   */
+  public async getWritableArtifactOwners(): Promise<Array<string>> {
+    const stack = getCurrentStack(1);
+    return (await this.repositoryPort.callRpc("getWritableArtifactOwners", undefined, { stack }))
+      .owners;
+  }
+
+  /**
    * @deprecated [DEP-HUB-API-ACCESS] LM Studio Hub API access is still in active development
    * and will change. Not recommended for public adoption.
    */
