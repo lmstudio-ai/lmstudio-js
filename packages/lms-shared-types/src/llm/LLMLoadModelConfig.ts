@@ -154,16 +154,20 @@ export const llmMlxKvCacheQuantizationSchema = z.object({
  */
 export interface LLMLoadSpeculativeDecodingConfig {
   speculativeDraftMtp?: boolean;
+  /**
+   * @deprecated External draft-model speculative decoding is now activated by
+   * `speculativeDraftModel`. This field is accepted for compatibility and ignored by the resolver.
+   */
   speculativeDraftSimple?: boolean;
   speculativeDraftDflash?: boolean;
   speculativeDraftDspark?: boolean;
-  speculativeDraftModel?: string;
+  speculativeDraftModel?: string | false;
   speculativeDraftMaxTokens?: number;
   speculativeDraftMinTokens?: number;
   speculativeDraftMinContinueProbability?: number;
 }
 
-const speculativeDraftModelSchema = z.string();
+const speculativeDraftModelSchema = z.string().or(z.literal(false));
 const speculativeDraftMtpSchema = z.boolean();
 const speculativeDraftSimpleSchema = z.boolean();
 const speculativeDraftDflashSchema = z.boolean();
@@ -199,7 +203,7 @@ const speculativeDecodingScalarValidationSpecs: Array<{
   {
     field: "speculativeDraftModel",
     schema: speculativeDraftModelSchema,
-    message: "speculativeDraftModel must be a string",
+    message: "speculativeDraftModel must be a string or false",
   },
   {
     field: "speculativeDraftMaxTokens",
@@ -218,8 +222,7 @@ const speculativeDecodingScalarValidationSpecs: Array<{
   },
 ];
 
-const speculativeDecodingSelectorSpecs = [
-  { field: "speculativeDraftMtp", name: "speculativeDraftMtp" },
+const transientExternalDraftSelectorSpecs = [
   { field: "speculativeDraftSimple", name: "speculativeDraftSimple" },
   { field: "speculativeDraftDflash", name: "speculativeDraftDflash" },
   { field: "speculativeDraftDspark", name: "speculativeDraftDspark" },
@@ -288,27 +291,16 @@ function getLLMLoadSpeculativeDecodingScalarValidationIssues(
   return issues;
 }
 
-function addMultipleDraftSelectorIssues(
-  issues: Array<LLMLoadSpeculativeDecodingValidationIssue>,
-  config: LLMLoadSpeculativeDecodingConfig,
-): void {
-  const enabledSelectors = speculativeDecodingSelectorSpecs.filter(
-    ({ field }) => config[field] === true,
-  );
-  if (enabledSelectors.length <= 1) {
-    return;
-  }
+function hasActiveExternalDraftModel(
+  speculativeDraftModel: LLMLoadSpeculativeDecodingConfig["speculativeDraftModel"],
+): speculativeDraftModel is string {
+  return typeof speculativeDraftModel === "string" && speculativeDraftModel.length > 0;
+}
 
-  const firstSelector = enabledSelectors[0];
-  const secondSelector = enabledSelectors[1];
-  const messageSelectors =
-    firstSelector.field === "speculativeDraftMtp" && secondSelector.field === "speculativeDraftSimple"
-      ? [firstSelector, secondSelector]
-      : [secondSelector, firstSelector];
-  issues.push({
-    message: `${messageSelectors[0].name} and ${messageSelectors[1].name} cannot both be enabled`,
-    path: [secondSelector.field],
-  });
+function getTransientExternalDraftSelectorName(
+  config: LLMLoadSpeculativeDecodingConfig,
+): string | undefined {
+  return transientExternalDraftSelectorSpecs.find(({ field }) => config[field] === true)?.name;
 }
 
 function getLLMLoadSpeculativeDecodingCrossFieldValidationIssues(
@@ -321,53 +313,22 @@ function getLLMLoadSpeculativeDecodingCrossFieldValidationIssues(
     speculativeDraftMaxTokens,
     speculativeDraftMinTokens,
   }: LLMLoadSpeculativeDecodingConfig,
-  { allowInertDraftModel }: { allowInertDraftModel: boolean },
+  { rejectMtpExternalDraftConflict }: { rejectMtpExternalDraftConflict: boolean },
 ): Array<LLMLoadSpeculativeDecodingValidationIssue> {
   const issues: Array<LLMLoadSpeculativeDecodingValidationIssue> = [];
-  const hasDraftModel =
-    speculativeDraftModelSchema.safeParse(speculativeDraftModel).success &&
-    speculativeDraftModel !== undefined &&
-    speculativeDraftModel.length > 0;
+  const hasDraftModel = hasActiveExternalDraftModel(speculativeDraftModel);
 
-  addMultipleDraftSelectorIssues(issues, {
-    speculativeDraftMtp,
-    speculativeDraftSimple,
-    speculativeDraftDflash,
-    speculativeDraftDspark,
-  });
-
-  if (speculativeDraftSimple === true && !hasDraftModel) {
-    issues.push({
-      message: "speculativeDraftSimple requires a non-empty speculativeDraftModel",
-      path: ["speculativeDraftModel"],
+  if (rejectMtpExternalDraftConflict && speculativeDraftMtp === true && hasDraftModel) {
+    const transientSelectorName = getTransientExternalDraftSelectorName({
+      speculativeDraftSimple,
+      speculativeDraftDflash,
+      speculativeDraftDspark,
     });
-  }
-
-  if (speculativeDraftDflash === true && !hasDraftModel) {
-    issues.push({
-      message: "speculativeDraftDflash requires a non-empty speculativeDraftModel",
-      path: ["speculativeDraftModel"],
-    });
-  }
-
-  if (speculativeDraftDspark === true && !hasDraftModel) {
-    issues.push({
-      message: "speculativeDraftDspark requires a non-empty speculativeDraftModel",
-      path: ["speculativeDraftModel"],
-    });
-  }
-
-  if (
-    !allowInertDraftModel &&
-    hasDraftModel &&
-    speculativeDraftMtp !== true &&
-    speculativeDraftSimple !== true &&
-    speculativeDraftDflash !== true &&
-    speculativeDraftDspark !== true
-  ) {
     issues.push({
       message:
-        "speculativeDraftModel requires speculativeDraftMtp, speculativeDraftSimple, speculativeDraftDflash, or speculativeDraftDspark to be enabled",
+        transientSelectorName === undefined
+          ? "speculativeDraftMtp and speculativeDraftModel cannot both be enabled"
+          : `speculativeDraftMtp and ${transientSelectorName} cannot both be enabled`,
       path: ["speculativeDraftModel"],
     });
   }
@@ -392,7 +353,7 @@ function getLLMLoadSpeculativeDecodingValidationIssues(
   return [
     ...getLLMLoadSpeculativeDecodingScalarValidationIssues(config),
     ...getLLMLoadSpeculativeDecodingCrossFieldValidationIssues(config, {
-      allowInertDraftModel: false,
+      rejectMtpExternalDraftConflict: true,
     }),
   ];
 }
@@ -414,12 +375,12 @@ export function validateLLMLoadSpeculativeDecodingConfig(
 
 function resolveLLMLoadSpeculativeDecodingConfigInternal(
   config: LLMLoadSpeculativeDecodingConfig,
-  { allowInertDraftModel }: { allowInertDraftModel: boolean },
+  { rejectMtpExternalDraftConflict }: { rejectMtpExternalDraftConflict: boolean },
 ): LLMLoadSpeculativeDecodingResolution {
   const issues = [
     ...getLLMLoadSpeculativeDecodingScalarValidationIssues(config),
     ...getLLMLoadSpeculativeDecodingCrossFieldValidationIssues(config, {
-      allowInertDraftModel,
+      rejectMtpExternalDraftConflict,
     }),
   ];
   if (issues.length > 0) {
@@ -435,43 +396,33 @@ function resolveLLMLoadSpeculativeDecodingConfigInternal(
   if (config.speculativeDraftMtp === true) {
     return {
       type: "draftMtp",
-      ...(config.speculativeDraftModel !== undefined && config.speculativeDraftModel.length > 0
-        ? { speculativeDraftModel: config.speculativeDraftModel }
-        : {}),
       ...tuningFields,
     };
   }
 
-  if (config.speculativeDraftSimple === true) {
+  if (hasActiveExternalDraftModel(config.speculativeDraftModel)) {
+    if (config.speculativeDraftDflash === true) {
+      return {
+        type: "draftDflash",
+        speculativeDraftModel: config.speculativeDraftModel,
+        ...tuningFields,
+      };
+    }
+    if (config.speculativeDraftDspark === true) {
+      return {
+        type: "draftDspark",
+        speculativeDraftModel: config.speculativeDraftModel,
+        ...tuningFields,
+      };
+    }
     return {
       type: "draftSimple",
-      speculativeDraftModel: config.speculativeDraftModel ?? "",
+      speculativeDraftModel: config.speculativeDraftModel,
       ...tuningFields,
     };
   }
 
-  if (config.speculativeDraftDflash === true) {
-    return {
-      type: "draftDflash",
-      speculativeDraftModel: config.speculativeDraftModel ?? "",
-      ...tuningFields,
-    };
-  }
-
-  if (config.speculativeDraftDspark === true) {
-    return {
-      type: "draftDspark",
-      speculativeDraftModel: config.speculativeDraftModel ?? "",
-      ...tuningFields,
-    };
-  }
-
-  if (
-    config.speculativeDraftMtp === false &&
-    config.speculativeDraftSimple === false &&
-    (config.speculativeDraftDflash === false || config.speculativeDraftDflash === undefined) &&
-    (config.speculativeDraftDspark === false || config.speculativeDraftDspark === undefined)
-  ) {
+  if (config.speculativeDraftModel === false) {
     return { type: "off", ...tuningFields };
   }
 
@@ -491,7 +442,7 @@ export function resolveLLMLoadSpeculativeDecodingConfig(
   config: LLMLoadSpeculativeDecodingConfig,
 ): LLMLoadSpeculativeDecodingResolution {
   return resolveLLMLoadSpeculativeDecodingConfigInternal(config, {
-    allowInertDraftModel: false,
+    rejectMtpExternalDraftConflict: true,
   });
 }
 
@@ -509,7 +460,7 @@ export function resolveEffectiveLLMLoadSpeculativeDecodingConfig(
   config: LLMLoadSpeculativeDecodingConfig,
 ): LLMLoadSpeculativeDecodingResolution {
   return resolveLLMLoadSpeculativeDecodingConfigInternal(config, {
-    allowInertDraftModel: true,
+    rejectMtpExternalDraftConflict: false,
   });
 }
 
@@ -646,32 +597,37 @@ export interface LLMLoadModelConfig {
   speculativeDraftMtp?: boolean;
 
   /**
-   * Enables llama.cpp Draft Simple speculative decoding using a separate draft model.
+   * Deprecated compatibility flag for the previous Draft Simple selector. External draft-model
+   * speculative decoding is now activated by `speculativeDraftModel`.
    *
    * @experimental
+   * @deprecated Use `speculativeDraftModel` instead.
    */
   speculativeDraftSimple?: boolean;
 
   /**
-   * Enables llama.cpp DFlash speculative decoding using a separate drafter model.
+   * Temporary feature-branch compatibility flag. External DFlash mode is inferred from
+   * `speculativeDraftModel` and indexed model metadata.
    *
    * @experimental
    */
   speculativeDraftDflash?: boolean;
 
   /**
-   * Enables llama.cpp DSpark speculative decoding using a separate drafter model.
+   * Temporary feature-branch compatibility flag. External DSpark mode is inferred from
+   * `speculativeDraftModel` and indexed model metadata.
    *
    * @experimental
    */
   speculativeDraftDspark?: boolean;
 
   /**
-   * Separate draft model resource to use for load-time speculative decoding.
+   * Separate draft model resource to use for load-time speculative decoding. Set to `false` to
+   * explicitly disable external draft-model speculative decoding.
    *
    * @experimental
    */
-  speculativeDraftModel?: string;
+  speculativeDraftModel?: string | false;
 
   /**
    * Maximum number of draft tokens to generate.
@@ -838,7 +794,7 @@ export const llmLoadModelConfigSchema = z
   })
   .superRefine((config, context) => {
     for (const issue of getLLMLoadSpeculativeDecodingCrossFieldValidationIssues(config, {
-      allowInertDraftModel: false,
+      rejectMtpExternalDraftConflict: true,
     })) {
       context.addIssue({
         code: z.ZodIssueCode.custom,

@@ -152,16 +152,7 @@ function kvConfigToLLMLlamaLoadModelConfig(
 
   const speculativeDraftModel = parsed.get("llama.speculativeDecoding.draftModel");
   if (speculativeDraftModel !== undefined) {
-    // Materialized public configs must be valid if passed back to client.llm.load(). Keep stale
-    // draft-model resources internal unless an active draft type currently consumes them.
-    result.speculativeDraftModel =
-      useDefaultsForMissingKeys === true &&
-      speculativeDraftMtp !== true &&
-      speculativeDraftSimple !== true &&
-      speculativeDraftDflash !== true &&
-      speculativeDraftDspark !== true
-        ? ""
-        : speculativeDraftModel;
+    result.speculativeDraftModel = speculativeDraftModel;
   }
 
   const speculativeDraftMaxTokens = parsed.get("llama.speculativeDecoding.draftMaxTokens");
@@ -282,6 +273,15 @@ export function kvConfigToLLMLoadModelConfig(
 }
 
 export function llmLoadModelConfigToKVConfig(config: LLMLoadModelConfig): KVConfig {
+  const activeExternalDraftModel =
+    typeof config.speculativeDraftModel === "string" && config.speculativeDraftModel.length > 0;
+  const explicitExternalDraftModelDisabled = config.speculativeDraftModel === false;
+  const speculativeDraftMtp =
+    (activeExternalDraftModel || explicitExternalDraftModelDisabled) &&
+    config.speculativeDraftMtp === undefined
+      ? false
+      : config.speculativeDraftMtp;
+
   const top = llmLoadSchematics.buildPartialConfig({
     "gpuSplitConfig": convertGPUSettingToGPUSplitConfig(config.gpu),
     "gpuStrictVramCap": config.gpuStrictVramCap,
@@ -299,7 +299,7 @@ export function llmLoadModelConfigToKVConfig(config: LLMLoadModelConfig): KVConf
     "llama.flashAttention": config.flashAttention,
     "llama.contextCheckpoints": config.contextCheckpoints,
     "llama.reasoningBudgetMessage": config.reasoningBudgetMessage,
-    "llama.speculativeDecoding.draftMtp": config.speculativeDraftMtp,
+    "llama.speculativeDecoding.draftMtp": speculativeDraftMtp,
     "llama.speculativeDecoding.draftSimple": config.speculativeDraftSimple,
     "llama.speculativeDecoding.draftDflash": config.speculativeDraftDflash,
     "llama.speculativeDecoding.draftDspark": config.speculativeDraftDspark,

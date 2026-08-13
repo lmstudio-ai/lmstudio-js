@@ -219,10 +219,9 @@ describe("llmLoadModelConfig conversion", () => {
     expect(roundTrippedConfig.speculativeDraftMinTokens).toBe(0);
   });
 
-  it("round trips path-backed Draft MTP load-time speculative decoding", () => {
+  it("normalizes external draft model load-time speculative decoding", () => {
     const loadConfig = llmLoadModelConfigToKVConfig({
-      speculativeDraftMtp: true,
-      speculativeDraftModel: "publisher/mtp-assistant-model",
+      speculativeDraftModel: "publisher/draft-model",
       speculativeDraftMaxTokens: 16,
       speculativeDraftMinTokens: 0,
       speculativeDraftMinContinueProbability: 0.75,
@@ -230,8 +229,8 @@ describe("llmLoadModelConfig conversion", () => {
 
     const roundTrippedConfig = kvConfigToLLMLoadModelConfig(loadConfig);
 
-    expect(roundTrippedConfig.speculativeDraftMtp).toBe(true);
-    expect(roundTrippedConfig.speculativeDraftModel).toBe("publisher/mtp-assistant-model");
+    expect(roundTrippedConfig.speculativeDraftMtp).toBe(false);
+    expect(roundTrippedConfig.speculativeDraftModel).toBe("publisher/draft-model");
     expect(roundTrippedConfig.speculativeDraftMaxTokens).toBe(16);
     expect(roundTrippedConfig.speculativeDraftMinTokens).toBe(0);
     expect(roundTrippedConfig.speculativeDraftMinContinueProbability).toBe(0.75);
@@ -307,6 +306,18 @@ describe("llmLoadModelConfig conversion", () => {
     expect(disabledRoundTrip.speculativeDraftMtp).toBe(false);
   });
 
+  it("normalizes explicit external draft model off to disable bundled MTP too", () => {
+    const loadConfig = llmLoadModelConfigToKVConfig({
+      speculativeDraftModel: false,
+    });
+
+    const roundTrippedConfig = kvConfigToLLMLoadModelConfig(loadConfig);
+
+    expect(roundTrippedConfig.speculativeDraftModel).toBe(false);
+    expect(roundTrippedConfig.speculativeDraftMtp).toBe(false);
+    expect(llmLoadModelConfigSchema.safeParse(roundTrippedConfig).success).toBe(true);
+  });
+
   it("uses shared draft tuning defaults when defaults are requested", () => {
     const loadConfig = globalConfigSchematics.scoped("llm.load").buildPartialConfig({
       "llama.speculativeDecoding.draftMtp": true,
@@ -338,11 +349,11 @@ describe("llmLoadModelConfig conversion", () => {
     expect(convertedConfig.speculativeDraftModel).toBe("");
   });
 
-  it("normalizes inert materialized Draft Model resources for public round trips", () => {
+  it("preserves materialized external Draft Model resources for public round trips", () => {
     const loadConfig = globalConfigSchematics.scoped("llm.load").buildPartialConfig({
       "llama.speculativeDecoding.draftMtp": false,
       "llama.speculativeDecoding.draftSimple": false,
-      "llama.speculativeDecoding.draftModel": "publisher/stale-draft-model",
+      "llama.speculativeDecoding.draftModel": "publisher/draft-model",
     });
 
     const convertedConfig = kvConfigToLLMLoadModelConfig(loadConfig, {
@@ -353,7 +364,7 @@ describe("llmLoadModelConfig conversion", () => {
     expect(convertedConfig.speculativeDraftSimple).toBe(false);
     expect(convertedConfig.speculativeDraftDflash).toBe(false);
     expect(convertedConfig.speculativeDraftDspark).toBe(false);
-    expect(convertedConfig.speculativeDraftModel).toBe("");
+    expect(convertedConfig.speculativeDraftModel).toBe("publisher/draft-model");
     expect(llmLoadModelConfigSchema.safeParse(convertedConfig).success).toBe(true);
   });
 
@@ -372,7 +383,7 @@ describe("llmLoadModelConfig conversion", () => {
     expect(convertedConfig.speculativeDraftDflash).toBe(false);
     expect(convertedConfig.speculativeDraftDspark).toBe(false);
     expect(convertedConfig.speculativeDraftModel).toBe("publisher/mtp-assistant-model");
-    expect(llmLoadModelConfigSchema.safeParse(convertedConfig).success).toBe(true);
+    expect(llmLoadModelConfigSchema.safeParse(convertedConfig).success).toBe(false);
   });
 
   it("preserves materialized Draft Model resources when Draft Simple is active", () => {
@@ -490,19 +501,25 @@ describe("llmLoadModelConfig conversion", () => {
       llmLoadModelConfigSchema.safeParse({
         speculativeDraftModel: "publisher/draft-model",
       }).success,
-    ).toBe(false);
+    ).toBe(true);
 
     expect(
       llmLoadModelConfigSchema.safeParse({
         speculativeDraftSimple: true,
         speculativeDraftModel: "",
       }).success,
-    ).toBe(false);
+    ).toBe(true);
 
     expect(
       llmLoadModelConfigSchema.safeParse({
         speculativeDraftMtp: true,
         speculativeDraftModel: "publisher/mtp-assistant-model",
+      }).success,
+    ).toBe(false);
+
+    expect(
+      llmLoadModelConfigSchema.safeParse({
+        speculativeDraftModel: false,
       }).success,
     ).toBe(true);
 
@@ -528,14 +545,14 @@ describe("llmLoadModelConfig conversion", () => {
         speculativeDraftDflash: true,
         speculativeDraftModel: "",
       }).success,
-    ).toBe(false);
+    ).toBe(true);
 
     expect(
       llmLoadModelConfigSchema.safeParse({
         speculativeDraftDspark: true,
         speculativeDraftModel: "",
       }).success,
-    ).toBe(false);
+    ).toBe(true);
 
     expect(
       llmLoadModelConfigSchema.safeParse({
@@ -559,7 +576,7 @@ describe("llmLoadModelConfig conversion", () => {
         speculativeDraftDspark: true,
         speculativeDraftModel: "publisher/draft-model",
       }).success,
-    ).toBe(false);
+    ).toBe(true);
   });
 
   it("round trips llama physical batch size", () => {
