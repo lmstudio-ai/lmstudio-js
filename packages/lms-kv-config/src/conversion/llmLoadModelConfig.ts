@@ -140,16 +140,6 @@ function kvConfigToLLMLlamaLoadModelConfig(
     result.speculativeDraftSimple = speculativeDraftSimple;
   }
 
-  const speculativeDraftDflash = parsed.get("llama.speculativeDecoding.draftDflash");
-  if (speculativeDraftDflash !== undefined) {
-    result.speculativeDraftDflash = speculativeDraftDflash;
-  }
-
-  const speculativeDraftDspark = parsed.get("llama.speculativeDecoding.draftDspark");
-  if (speculativeDraftDspark !== undefined) {
-    result.speculativeDraftDspark = speculativeDraftDspark;
-  }
-
   const speculativeDraftModel = parsed.get("llama.speculativeDecoding.draftModel");
   if (speculativeDraftModel !== undefined) {
     result.speculativeDraftModel = speculativeDraftModel;
@@ -301,8 +291,6 @@ export function llmLoadModelConfigToKVConfig(config: LLMLoadModelConfig): KVConf
     "llama.reasoningBudgetMessage": config.reasoningBudgetMessage,
     "llama.speculativeDecoding.draftMtp": speculativeDraftMtp,
     "llama.speculativeDecoding.draftSimple": config.speculativeDraftSimple,
-    "llama.speculativeDecoding.draftDflash": config.speculativeDraftDflash,
-    "llama.speculativeDecoding.draftDspark": config.speculativeDraftDspark,
     "llama.speculativeDecoding.draftModel": config.speculativeDraftModel,
     "llama.speculativeDecoding.draftMaxTokens": config.speculativeDraftMaxTokens,
     "llama.speculativeDecoding.draftMinTokens": config.speculativeDraftMinTokens,

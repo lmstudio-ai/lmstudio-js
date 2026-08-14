@@ -159,8 +159,6 @@ export interface LLMLoadSpeculativeDecodingConfig {
    * `speculativeDraftModel`. This field is accepted for compatibility and ignored by the resolver.
    */
   speculativeDraftSimple?: boolean;
-  speculativeDraftDflash?: boolean;
-  speculativeDraftDspark?: boolean;
   speculativeDraftModel?: string | false;
   speculativeDraftMaxTokens?: number;
   speculativeDraftMinTokens?: number;
@@ -170,8 +168,6 @@ export interface LLMLoadSpeculativeDecodingConfig {
 const speculativeDraftModelSchema = z.string().or(z.literal(false));
 const speculativeDraftMtpSchema = z.boolean();
 const speculativeDraftSimpleSchema = z.boolean();
-const speculativeDraftDflashSchema = z.boolean();
-const speculativeDraftDsparkSchema = z.boolean();
 const speculativeDraftTokenCountSchema = z.number().int().min(0);
 const speculativeDraftMinContinueProbabilitySchema = z.number().min(0).max(1);
 
@@ -189,16 +185,6 @@ const speculativeDecodingScalarValidationSpecs: Array<{
     field: "speculativeDraftSimple",
     schema: speculativeDraftSimpleSchema,
     message: "speculativeDraftSimple must be a boolean",
-  },
-  {
-    field: "speculativeDraftDflash",
-    schema: speculativeDraftDflashSchema,
-    message: "speculativeDraftDflash must be a boolean",
-  },
-  {
-    field: "speculativeDraftDspark",
-    schema: speculativeDraftDsparkSchema,
-    message: "speculativeDraftDspark must be a boolean",
   },
   {
     field: "speculativeDraftModel",
@@ -221,12 +207,6 @@ const speculativeDecodingScalarValidationSpecs: Array<{
     message: "speculativeDraftMinContinueProbability must be between 0 and 1",
   },
 ];
-
-const transientExternalDraftSelectorSpecs = [
-  { field: "speculativeDraftSimple", name: "speculativeDraftSimple" },
-  { field: "speculativeDraftDflash", name: "speculativeDraftDflash" },
-  { field: "speculativeDraftDspark", name: "speculativeDraftDspark" },
-] as const;
 
 /** @public @experimental */
 export type LLMLoadSpeculativeDecodingResolution =
@@ -251,20 +231,6 @@ export type LLMLoadSpeculativeDecodingResolution =
     }
   | {
       type: "draftSimple";
-      speculativeDraftModel: string;
-      speculativeDraftMaxTokens?: number;
-      speculativeDraftMinTokens?: number;
-      speculativeDraftMinContinueProbability?: number;
-    }
-  | {
-      type: "draftDflash";
-      speculativeDraftModel: string;
-      speculativeDraftMaxTokens?: number;
-      speculativeDraftMinTokens?: number;
-      speculativeDraftMinContinueProbability?: number;
-    }
-  | {
-      type: "draftDspark";
       speculativeDraftModel: string;
       speculativeDraftMaxTokens?: number;
       speculativeDraftMinTokens?: number;
@@ -297,18 +263,9 @@ function hasActiveExternalDraftModel(
   return typeof speculativeDraftModel === "string" && speculativeDraftModel.length > 0;
 }
 
-function getTransientExternalDraftSelectorName(
-  config: LLMLoadSpeculativeDecodingConfig,
-): string | undefined {
-  return transientExternalDraftSelectorSpecs.find(({ field }) => config[field] === true)?.name;
-}
-
 function getLLMLoadSpeculativeDecodingCrossFieldValidationIssues(
   {
     speculativeDraftMtp,
-    speculativeDraftSimple,
-    speculativeDraftDflash,
-    speculativeDraftDspark,
     speculativeDraftModel,
     speculativeDraftMaxTokens,
     speculativeDraftMinTokens,
@@ -319,16 +276,8 @@ function getLLMLoadSpeculativeDecodingCrossFieldValidationIssues(
   const hasDraftModel = hasActiveExternalDraftModel(speculativeDraftModel);
 
   if (rejectMtpExternalDraftConflict && speculativeDraftMtp === true && hasDraftModel) {
-    const transientSelectorName = getTransientExternalDraftSelectorName({
-      speculativeDraftSimple,
-      speculativeDraftDflash,
-      speculativeDraftDspark,
-    });
     issues.push({
-      message:
-        transientSelectorName === undefined
-          ? "speculativeDraftMtp and speculativeDraftModel cannot both be enabled"
-          : `speculativeDraftMtp and ${transientSelectorName} cannot both be enabled`,
+      message: "speculativeDraftMtp and speculativeDraftModel cannot both be enabled",
       path: ["speculativeDraftModel"],
     });
   }
@@ -401,20 +350,6 @@ function resolveLLMLoadSpeculativeDecodingConfigInternal(
   }
 
   if (hasActiveExternalDraftModel(config.speculativeDraftModel)) {
-    if (config.speculativeDraftDflash === true) {
-      return {
-        type: "draftDflash",
-        speculativeDraftModel: config.speculativeDraftModel,
-        ...tuningFields,
-      };
-    }
-    if (config.speculativeDraftDspark === true) {
-      return {
-        type: "draftDspark",
-        speculativeDraftModel: config.speculativeDraftModel,
-        ...tuningFields,
-      };
-    }
     return {
       type: "draftSimple",
       speculativeDraftModel: config.speculativeDraftModel,
@@ -606,22 +541,6 @@ export interface LLMLoadModelConfig {
   speculativeDraftSimple?: boolean;
 
   /**
-   * Temporary feature-branch compatibility flag. External DFlash mode is inferred from
-   * `speculativeDraftModel` and indexed model metadata.
-   *
-   * @experimental
-   */
-  speculativeDraftDflash?: boolean;
-
-  /**
-   * Temporary feature-branch compatibility flag. External DSpark mode is inferred from
-   * `speculativeDraftModel` and indexed model metadata.
-   *
-   * @experimental
-   */
-  speculativeDraftDspark?: boolean;
-
-  /**
    * Separate draft model resource to use for load-time speculative decoding. Set to `false` to
    * explicitly disable external draft-model speculative decoding.
    *
@@ -770,8 +689,6 @@ export const llmLoadModelConfigSchema = z
     reasoningBudgetMessage: z.string().optional(),
     speculativeDraftMtp: speculativeDraftMtpSchema.optional(),
     speculativeDraftSimple: speculativeDraftSimpleSchema.optional(),
-    speculativeDraftDflash: speculativeDraftDflashSchema.optional(),
-    speculativeDraftDspark: speculativeDraftDsparkSchema.optional(),
     speculativeDraftModel: speculativeDraftModelSchema.optional(),
     speculativeDraftMaxTokens: speculativeDraftTokenCountSchema.optional(),
     speculativeDraftMinTokens: speculativeDraftTokenCountSchema.optional(),

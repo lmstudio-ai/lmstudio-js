@@ -306,12 +306,7 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
         },
         2048,
       )
-      .field(
-        "autoFitMinContextLength",
-        "numeric",
-        { min: 0, int: true, machineDependent: true },
-        0,
-      )
+      .field("autoFitMinContextLength", "numeric", { min: 0, int: true, machineDependent: true }, 0)
       .field("numExperts", "numeric", { min: 0, int: true }, 0)
       .field(
         "seed",
@@ -392,24 +387,6 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
                 {
                   displayName: "Draft Simple",
                   hint: "Use a separate draft model for speculative decoding.",
-                },
-                false,
-              )
-              .field(
-                "draftDflash",
-                "boolean",
-                {
-                  displayName: "Draft DFlash",
-                  hint: "Use a DFlash drafter model for speculative decoding.",
-                },
-                false,
-              )
-              .field(
-                "draftDspark",
-                "boolean",
-                {
-                  displayName: "Draft DSpark",
-                  hint: "Use a DSpark drafter model for speculative decoding.",
                 },
                 false,
               )
