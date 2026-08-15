@@ -8,12 +8,16 @@ import os from "node:os";
 import { join } from "node:path";
 import { type InstallCliOpts } from ".";
 
+import { getZshConfigPath } from "./zshConfigPath.js";
+
 interface ShellInstallationInfo {
   shellName: string;
   configFileName: string;
   commandToAddComment: string;
   commandToAddPath: string;
 }
+
+const zshConfigPath = JSON.stringify(getZshConfigPath());
 
 const shellInstallationInfo: Array<ShellInstallationInfo> = [
   {
@@ -41,8 +45,8 @@ const shellInstallationInfo: Array<ShellInstallationInfo> = [
     shellName: "zsh",
     configFileName: ".zshrc",
     commandToAddComment:
-      "echo '' >> ~/.zshrc && echo '# Added by LM Studio CLI tool (lms)' >> ~/.zshrc",
-    commandToAddPath: "echo 'export PATH=\"$PATH:<TARGET>\"' >> ~/.zshrc",
+      `echo '' >> ${zshConfigPath} && echo '# Added by LM Studio CLI tool (lms)' >> ${zshConfigPath}`,
+    commandToAddPath: `echo 'export PATH="$PATH:<TARGET>"' >> ${zshConfigPath}`,
   },
   {
     shellName: "fish",
@@ -67,11 +71,27 @@ const shellInstallationInfo: Array<ShellInstallationInfo> = [
   },
 ];
 
+function getShellConfigPath(shell: ShellInstallationInfo) {
+  if (shell.shellName === "zsh") {
+    return getZshConfigPath();
+  }
+  return join(os.homedir(), shell.configFileName);
+}
+
+function formatShellConfigPath(shell: ShellInstallationInfo) {
+  const configPath = getShellConfigPath(shell);
+  const homeDir = os.homedir();
+  if (configPath.startsWith(`${homeDir}/`)) {
+    return `~/${configPath.slice(homeDir.length + 1)}`;
+  }
+  return configPath;
+}
+
 export async function installCliDarwinOrLinux(path: string, { skipConfirmation }: InstallCliOpts) {
   const detectedShells: Array<ShellInstallationInfo> = [];
   const detectedAlreadyInstalledShells: Array<ShellInstallationInfo> = [];
   for (const shell of shellInstallationInfo) {
-    const configPath = join(os.homedir(), shell.configFileName);
+    const configPath = getShellConfigPath(shell);
     try {
       await access(configPath);
     } catch (e) {
@@ -90,7 +110,7 @@ export async function installCliDarwinOrLinux(path: string, { skipConfirmation }
       throw makeTitledPrettyError(
         "Unable to find any shell configuration files",
         text`
-          We couldn't find any shell configuration file in your home directory.
+          We couldn't find any supported shell configuration file.
 
           To complete the installation manually, please try to add the following directory to the
           PATH environment variable:
@@ -108,7 +128,7 @@ export async function installCliDarwinOrLinux(path: string, { skipConfirmation }
           ${detectedAlreadyInstalledShells
             .map(shell =>
               chalk.cyanBright(
-                `    · ${shell.shellName} ${chalk.gray(`(~/${shell.configFileName})`)}`,
+                `    · ${shell.shellName} ${chalk.gray(`(${formatShellConfigPath(shell)})`)}`,
               ),
             )
             .join("\n")}
