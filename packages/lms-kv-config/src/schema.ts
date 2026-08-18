@@ -392,12 +392,12 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
               )
               .field(
                 "draftModel",
-                "stringOrFalse",
+                "checkboxString",
                 {
                   displayName: "Speculative Decoding",
                   hint: "Configure load-time speculative decoding.",
                 },
-                "",
+                { checked: false, value: "" },
               )
               .field(
                 "draftMaxTokens",

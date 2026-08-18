@@ -142,7 +142,9 @@ function kvConfigToLLMLlamaLoadModelConfig(
 
   const speculativeDraftModel = parsed.get("llama.speculativeDecoding.draftModel");
   if (speculativeDraftModel !== undefined) {
-    result.speculativeDraftModel = speculativeDraftModel;
+    result.speculativeDraftModel = speculativeDraftModel.checked
+      ? speculativeDraftModel.value
+      : false;
   }
 
   const speculativeDraftMaxTokens = parsed.get("llama.speculativeDecoding.draftMaxTokens");
@@ -291,7 +293,10 @@ export function llmLoadModelConfigToKVConfig(config: LLMLoadModelConfig): KVConf
     "llama.reasoningBudgetMessage": config.reasoningBudgetMessage,
     "llama.speculativeDecoding.draftMtp": speculativeDraftMtp,
     "llama.speculativeDecoding.draftSimple": config.speculativeDraftSimple,
-    "llama.speculativeDecoding.draftModel": config.speculativeDraftModel,
+    "llama.speculativeDecoding.draftModel": maybeFalseValueToCheckboxValue(
+      config.speculativeDraftModel,
+      "",
+    ),
     "llama.speculativeDecoding.draftMaxTokens": config.speculativeDraftMaxTokens,
     "llama.speculativeDecoding.draftMinTokens": config.speculativeDraftMinTokens,
     "llama.speculativeDecoding.draftMinContinueProbability":

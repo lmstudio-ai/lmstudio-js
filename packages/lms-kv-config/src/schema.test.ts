@@ -322,27 +322,30 @@ describe("llmLoadModelConfig conversion", () => {
 
     expect(convertedConfig.speculativeDraftMtp).toBe(true);
     expect(convertedConfig.speculativeDraftSimple).toBe(false);
-    expect(convertedConfig.speculativeDraftModel).toBe("");
+    expect(convertedConfig.speculativeDraftModel).toBe(false);
     expect(convertedConfig.speculativeDraftMaxTokens).toBe(16);
     expect(convertedConfig.speculativeDraftMinTokens).toBe(0);
     expect(convertedConfig.speculativeDraftMinContinueProbability).toBe(0.75);
   });
 
-  it("materializes empty default Draft Model when defaults are requested", () => {
+  it("materializes default Draft Model as off when defaults are requested", () => {
     const convertedConfig = kvConfigToLLMLoadModelConfig(makeKVConfigFromFields([]), {
       useDefaultsForMissingKeys: true,
     });
 
     expect(convertedConfig.speculativeDraftMtp).toBe(false);
     expect(convertedConfig.speculativeDraftSimple).toBe(false);
-    expect(convertedConfig.speculativeDraftModel).toBe("");
+    expect(convertedConfig.speculativeDraftModel).toBe(false);
   });
 
   it("preserves materialized external Draft Model resources for public round trips", () => {
     const loadConfig = globalConfigSchematics.scoped("llm.load").buildPartialConfig({
       "llama.speculativeDecoding.draftMtp": false,
       "llama.speculativeDecoding.draftSimple": false,
-      "llama.speculativeDecoding.draftModel": "publisher/draft-model",
+      "llama.speculativeDecoding.draftModel": {
+        checked: true,
+        value: "publisher/draft-model",
+      },
     });
 
     const convertedConfig = kvConfigToLLMLoadModelConfig(loadConfig, {
@@ -358,7 +361,10 @@ describe("llmLoadModelConfig conversion", () => {
   it("preserves materialized Draft Model resources when path-backed Draft MTP is active", () => {
     const loadConfig = globalConfigSchematics.scoped("llm.load").buildPartialConfig({
       "llama.speculativeDecoding.draftMtp": true,
-      "llama.speculativeDecoding.draftModel": "publisher/mtp-assistant-model",
+      "llama.speculativeDecoding.draftModel": {
+        checked: true,
+        value: "publisher/mtp-assistant-model",
+      },
     });
 
     const convertedConfig = kvConfigToLLMLoadModelConfig(loadConfig, {
@@ -375,7 +381,10 @@ describe("llmLoadModelConfig conversion", () => {
     const loadConfig = globalConfigSchematics.scoped("llm.load").buildPartialConfig({
       "llama.speculativeDecoding.draftMtp": false,
       "llama.speculativeDecoding.draftSimple": true,
-      "llama.speculativeDecoding.draftModel": "publisher/draft-model",
+      "llama.speculativeDecoding.draftModel": {
+        checked: true,
+        value: "publisher/draft-model",
+      },
     });
 
     const convertedConfig = kvConfigToLLMLoadModelConfig(loadConfig, {
@@ -388,14 +397,27 @@ describe("llmLoadModelConfig conversion", () => {
     expect(llmLoadModelConfigSchema.safeParse(convertedConfig).success).toBe(true);
   });
 
-  it("preserves an explicitly empty Draft Model from KV config", () => {
+  it("preserves a checked empty Draft Model from KV config", () => {
     const loadConfig = globalConfigSchematics.scoped("llm.load").buildPartialConfig({
-      "llama.speculativeDecoding.draftModel": "",
+      "llama.speculativeDecoding.draftModel": { checked: true, value: "" },
     });
 
     const convertedConfig = kvConfigToLLMLoadModelConfig(loadConfig);
 
     expect(convertedConfig.speculativeDraftModel).toBe("");
+  });
+
+  it("preserves an unchecked remembered Draft Model as public off", () => {
+    const loadConfig = globalConfigSchematics.scoped("llm.load").buildPartialConfig({
+      "llama.speculativeDecoding.draftModel": {
+        checked: false,
+        value: "publisher/draft-model",
+      },
+    });
+
+    const convertedConfig = kvConfigToLLMLoadModelConfig(loadConfig);
+
+    expect(convertedConfig.speculativeDraftModel).toBe(false);
   });
 
   it("preserves orphan draft tuning fields without enabling speculative decoding", () => {
@@ -771,6 +793,39 @@ describe("globalConfigSchematics", () => {
           { checked: false, value: 1 },
         ),
       ).toBe(true);
+    });
+  });
+  describe("checkboxString", () => {
+    it("compares unchecked remembered values as effectively equal", () => {
+      expect(
+        globalConfigSchematics.fieldEffectiveEquals(
+          "llm.load.llama.speculativeDecoding.draftModel",
+          { checked: false, value: "draft-a" },
+          { checked: false, value: "draft-b" },
+        ),
+      ).toBe(true);
+      expect(
+        globalConfigSchematics.fieldEffectiveEquals(
+          "llm.load.llama.speculativeDecoding.draftModel",
+          { checked: true, value: "draft-a" },
+          { checked: true, value: "draft-b" },
+        ),
+      ).toBe(false);
+    });
+
+    it("stringifies checked and unchecked values", () => {
+      expect(
+        globalConfigSchematics.stringifyField("llm.load.llama.speculativeDecoding.draftModel", {
+          checked: true,
+          value: "draft-a",
+        }),
+      ).toBe('"draft-a"');
+      expect(
+        globalConfigSchematics.stringifyField("llm.load.llama.speculativeDecoding.draftModel", {
+          checked: false,
+          value: "draft-a",
+        }),
+      ).toBe("OFF");
     });
   });
   describe("stringify", () => {
