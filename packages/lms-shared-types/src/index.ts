@@ -410,6 +410,7 @@ export {
 } from "./PluginManifest.js";
 export { PresetManifest, presetManifestSchema } from "./PresetManifest.js";
 export { ProjectManifest, projectManifestSchema } from "./ProjectManifest.js";
+export { SkillManifest, skillManifestSchema } from "./SkillManifest.js";
 export {
   ProjectYaml,
   ProjectYamlArtifactEntry,
