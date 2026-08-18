@@ -94,7 +94,13 @@ export class SystemNamespace {
    * List all downloaded models.
    * @public
    */
-  public async listDownloadedModels(): Promise<Array<ModelInfo>>;
+  public async listDownloadedModels(): Promise<Array<LLMInfo | EmbeddingModelInfo>>;
+  public async listDownloadedModels(opts: {
+    includeDrafters?: false;
+  }): Promise<Array<LLMInfo | EmbeddingModelInfo>>;
+  public async listDownloadedModels(opts: {
+    includeDrafters: true;
+  }): Promise<Array<ModelInfo>>;
   public async listDownloadedModels(opts: ListDownloadedModelsOpts): Promise<Array<ModelInfo>>;
   public async listDownloadedModels(domain: "llm"): Promise<Array<LLMInfo>>;
   public async listDownloadedModels(domain: "embedding"): Promise<Array<EmbeddingModelInfo>>;
