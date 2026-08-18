@@ -199,6 +199,44 @@ const baseKVValueTypesLibraryBuilder = new KVFieldValueTypesLibraryBuilder({
       }
     },
   })
+  .valueType("stringOrFalse", {
+    paramType: {
+      minLength: z.number().optional(),
+      maxLength: z.number().optional(),
+      isProtected: z.boolean().optional(),
+      placeholder: z.string().optional(),
+    },
+    schemaMaker: ({ minLength, maxLength }) => {
+      let schema = z.string();
+      if (minLength !== undefined) {
+        schema = schema.min(minLength);
+      }
+      if (maxLength !== undefined) {
+        schema = schema.max(maxLength);
+      }
+      return schema.or(z.literal(false));
+    },
+    effectiveEquals: (a, b) => {
+      return a === b;
+    },
+    stringify: (value, { isProtected }, { t, desiredLength }) => {
+      if (value === false) {
+        return t("config:customInputs.stringOrFalse.false", "OFF");
+      }
+      if (isProtected) {
+        return "********";
+      }
+      const quoted = quoteString(value);
+      if (desiredLength === undefined || quoted.length <= desiredLength) {
+        return quoted;
+      }
+      return (
+        quoted.slice(0, Math.floor(desiredLength / 2)) +
+        "..." +
+        quoted.slice(-Math.ceil(desiredLength / 2))
+      );
+    },
+  })
   .valueType("select", {
     paramType: {
       options: z
