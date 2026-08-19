@@ -91,6 +91,7 @@ export function createBaseModelBackendInterface<
     .addRpcEndpoint("getLoadConfig", {
       parameter: z.object({
         specifier: modelSpecifierSchema,
+        supportsCheckboxStringLoadConfig: z.boolean().optional(),
       }),
       returns: kvConfigSchema,
     })
