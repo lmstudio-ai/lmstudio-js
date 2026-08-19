@@ -208,35 +208,6 @@ const speculativeDecodingScalarValidationSpecs: Array<{
   },
 ];
 
-/** @public @experimental */
-export type LLMLoadSpeculativeDecodingResolution =
-  | {
-      type: "none";
-      speculativeDraftMaxTokens?: number;
-      speculativeDraftMinTokens?: number;
-      speculativeDraftMinContinueProbability?: number;
-    }
-  | {
-      type: "off";
-      speculativeDraftMaxTokens?: number;
-      speculativeDraftMinTokens?: number;
-      speculativeDraftMinContinueProbability?: number;
-    }
-  | {
-      type: "draftMtp";
-      speculativeDraftModel?: string;
-      speculativeDraftMaxTokens?: number;
-      speculativeDraftMinTokens?: number;
-      speculativeDraftMinContinueProbability?: number;
-    }
-  | {
-      type: "draftSimple";
-      speculativeDraftModel: string;
-      speculativeDraftMaxTokens?: number;
-      speculativeDraftMinTokens?: number;
-      speculativeDraftMinContinueProbability?: number;
-    };
-
 interface LLMLoadSpeculativeDecodingValidationIssue {
   message: string;
   path: Array<string>;
@@ -298,11 +269,12 @@ function getLLMLoadSpeculativeDecodingCrossFieldValidationIssues(
 
 function getLLMLoadSpeculativeDecodingValidationIssues(
   config: LLMLoadSpeculativeDecodingConfig,
+  { rejectMtpExternalDraftConflict }: { rejectMtpExternalDraftConflict: boolean },
 ): Array<LLMLoadSpeculativeDecodingValidationIssue> {
   return [
     ...getLLMLoadSpeculativeDecodingScalarValidationIssues(config),
     ...getLLMLoadSpeculativeDecodingCrossFieldValidationIssues(config, {
-      rejectMtpExternalDraftConflict: true,
+      rejectMtpExternalDraftConflict,
     }),
   ];
 }
@@ -316,87 +288,32 @@ function getLLMLoadSpeculativeDecodingValidationIssues(
 export function validateLLMLoadSpeculativeDecodingConfig(
   config: LLMLoadSpeculativeDecodingConfig,
 ): void {
-  const issues = getLLMLoadSpeculativeDecodingValidationIssues(config);
-  if (issues.length > 0) {
-    throw new Error(issues.map(issue => issue.message).join("; "));
-  }
-}
-
-function resolveLLMLoadSpeculativeDecodingConfigInternal(
-  config: LLMLoadSpeculativeDecodingConfig,
-  { rejectMtpExternalDraftConflict }: { rejectMtpExternalDraftConflict: boolean },
-): LLMLoadSpeculativeDecodingResolution {
-  const issues = [
-    ...getLLMLoadSpeculativeDecodingScalarValidationIssues(config),
-    ...getLLMLoadSpeculativeDecodingCrossFieldValidationIssues(config, {
-      rejectMtpExternalDraftConflict,
-    }),
-  ];
-  if (issues.length > 0) {
-    throw new Error(issues.map(issue => issue.message).join("; "));
-  }
-
-  const tuningFields = {
-    speculativeDraftMaxTokens: config.speculativeDraftMaxTokens,
-    speculativeDraftMinTokens: config.speculativeDraftMinTokens,
-    speculativeDraftMinContinueProbability: config.speculativeDraftMinContinueProbability,
-  };
-
-  if (config.speculativeDraftMtp === true) {
-    return {
-      type: "draftMtp",
-      ...tuningFields,
-    };
-  }
-
-  if (hasActiveExternalDraftModel(config.speculativeDraftModel)) {
-    return {
-      type: "draftSimple",
-      speculativeDraftModel: config.speculativeDraftModel,
-      ...tuningFields,
-    };
-  }
-
-  if (config.speculativeDraftModel === false) {
-    return { type: "off", ...tuningFields };
-  }
-
-  return { type: "none", ...tuningFields };
-}
-
-/**
- * Resolve flat load-time speculative decoding fields into the effective local mode.
- *
- * This only interprets the fields present in the supplied config. It does not apply model defaults
- * or runtime-specific support checks.
- *
- * @public
- * @experimental
- */
-export function resolveLLMLoadSpeculativeDecodingConfig(
-  config: LLMLoadSpeculativeDecodingConfig,
-): LLMLoadSpeculativeDecodingResolution {
-  return resolveLLMLoadSpeculativeDecodingConfigInternal(config, {
+  const issues = getLLMLoadSpeculativeDecodingValidationIssues(config, {
     rejectMtpExternalDraftConflict: true,
   });
+  if (issues.length > 0) {
+    throw new Error(issues.map(issue => issue.message).join("; "));
+  }
 }
 
 /**
- * Resolve already-collapsed effective load-time speculative decoding fields.
+ * Validate already-collapsed effective load-time speculative decoding fields.
  *
- * Unlike the public request helper, this tolerates inert draft-model resource state when no
- * draft-family type is active. Runtime callers use this after config collapse, where provenance is
- * intentionally unavailable.
+ * Unlike request-boundary validation, this tolerates collapsed configs where an active MTP selector
+ * and a remembered/external draft model string are both present. Final speculative mode selection
+ * requires model metadata and is handled by runtime-specific code.
  *
- * @public
- * @experimental
+ * @internal
  */
-export function resolveEffectiveLLMLoadSpeculativeDecodingConfig(
+export function validateEffectiveLLMLoadSpeculativeDecodingConfig(
   config: LLMLoadSpeculativeDecodingConfig,
-): LLMLoadSpeculativeDecodingResolution {
-  return resolveLLMLoadSpeculativeDecodingConfigInternal(config, {
+): void {
+  const issues = getLLMLoadSpeculativeDecodingValidationIssues(config, {
     rejectMtpExternalDraftConflict: false,
   });
+  if (issues.length > 0) {
+    throw new Error(issues.map(issue => issue.message).join("; "));
+  }
 }
 
 /** @public */

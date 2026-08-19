@@ -202,7 +202,6 @@ export type {
   LLMLlamaCacheQuantizationType,
   LLMLoadModelConfig,
   LLMLoadSpeculativeDecodingConfig,
-  LLMLoadSpeculativeDecodingResolution,
   LLMManualPromptTemplate,
   LLMMlxKvCacheBitsType,
   LLMMlxKvCacheGroupSizeType,
