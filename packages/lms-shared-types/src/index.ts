@@ -368,6 +368,8 @@ export {
   modelInfoSchema,
   ModelInstanceInfo,
   modelInstanceInfoSchema,
+  ModelVariantInfo,
+  modelVariantInfoSchema,
 } from "./ModelInfo.js";
 export {
   ModelInfoBase,

@@ -241,6 +241,7 @@ export type {
   ModelInfoBase,
   ModelInstanceInfo,
   ModelInstanceInfoBase,
+  ModelVariantInfo,
   ModelProcessingState,
   ModelProcessingStatus,
   ModelQuery,

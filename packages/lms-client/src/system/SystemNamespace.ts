@@ -13,6 +13,7 @@ import {
   type EmbeddingModelInfo,
   type LLMInfo,
   type ModelInfo,
+  type ModelVariantInfo,
 } from "@lmstudio/lms-shared-types";
 import { z } from "zod";
 
@@ -145,7 +146,7 @@ export class SystemNamespace {
    *
    * If the modelKey does not have any variants, will throw.
    */
-  public async listDownloadedModelVariants(modelKey: string): Promise<Array<ModelInfo>> {
+  public async listDownloadedModelVariants(modelKey: string): Promise<Array<ModelVariantInfo>> {
     const stack = getCurrentStack(1);
     modelKey = this.validator.validateMethodParamOrThrow(
       "client.system",
