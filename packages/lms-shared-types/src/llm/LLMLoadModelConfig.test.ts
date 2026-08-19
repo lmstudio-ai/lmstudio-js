@@ -1,7 +1,6 @@
 import {
   llmLoadModelConfigSchema,
   type LLMLoadSpeculativeDecodingConfig,
-  validateEffectiveLLMLoadSpeculativeDecodingConfig,
   validateLLMLoadSpeculativeDecodingConfig,
 } from "./LLMLoadModelConfig.js";
 
@@ -217,32 +216,6 @@ describe("LLMLoad speculative decoding validation", () => {
 
     expect(() => validateLLMLoadSpeculativeDecodingConfig(config)).not.toThrow();
     expect(llmLoadModelConfigSchema.safeParse(config).success).toBe(true);
-  });
-
-  it("allows collapsed effective configs with MTP and a preserved draft model string", () => {
-    const config: LLMLoadSpeculativeDecodingConfig = {
-      speculativeDraftMtp: true,
-      speculativeDraftSimple: false,
-      speculativeDraftModel: "publisher/draft-model",
-    };
-
-    expect(() => validateLLMLoadSpeculativeDecodingConfig(config)).toThrow(
-      "speculativeDraftMtp and speculativeDraftModel cannot both be enabled",
-    );
-    expect(() => validateEffectiveLLMLoadSpeculativeDecodingConfig(config)).not.toThrow();
-  });
-
-  it("effective validation still rejects invalid scalar values", () => {
-    const config: LLMLoadSpeculativeDecodingConfig = {
-      speculativeDraftMtp: true,
-      speculativeDraftModel: "publisher/draft-model",
-      speculativeDraftMinTokens: 2,
-      speculativeDraftMaxTokens: 1,
-    };
-
-    expect(() => validateEffectiveLLMLoadSpeculativeDecodingConfig(config)).toThrow(
-      "speculativeDraftMinTokens must be less than or equal to speculativeDraftMaxTokens",
-    );
   });
 
   it("does not duplicate full schema scalar validation issues", () => {

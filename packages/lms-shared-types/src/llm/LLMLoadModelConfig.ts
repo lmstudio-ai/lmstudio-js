@@ -269,12 +269,11 @@ function getLLMLoadSpeculativeDecodingCrossFieldValidationIssues(
 
 function getLLMLoadSpeculativeDecodingValidationIssues(
   config: LLMLoadSpeculativeDecodingConfig,
-  { rejectMtpExternalDraftConflict }: { rejectMtpExternalDraftConflict: boolean },
 ): Array<LLMLoadSpeculativeDecodingValidationIssue> {
   return [
     ...getLLMLoadSpeculativeDecodingScalarValidationIssues(config),
     ...getLLMLoadSpeculativeDecodingCrossFieldValidationIssues(config, {
-      rejectMtpExternalDraftConflict,
+      rejectMtpExternalDraftConflict: true,
     }),
   ];
 }
@@ -288,29 +287,7 @@ function getLLMLoadSpeculativeDecodingValidationIssues(
 export function validateLLMLoadSpeculativeDecodingConfig(
   config: LLMLoadSpeculativeDecodingConfig,
 ): void {
-  const issues = getLLMLoadSpeculativeDecodingValidationIssues(config, {
-    rejectMtpExternalDraftConflict: true,
-  });
-  if (issues.length > 0) {
-    throw new Error(issues.map(issue => issue.message).join("; "));
-  }
-}
-
-/**
- * Validate already-collapsed effective load-time speculative decoding fields.
- *
- * Unlike request-boundary validation, this tolerates collapsed configs where an active MTP selector
- * and a remembered/external draft model string are both present. Final speculative mode selection
- * requires model metadata and is handled by runtime-specific code.
- *
- * @internal
- */
-export function validateEffectiveLLMLoadSpeculativeDecodingConfig(
-  config: LLMLoadSpeculativeDecodingConfig,
-): void {
-  const issues = getLLMLoadSpeculativeDecodingValidationIssues(config, {
-    rejectMtpExternalDraftConflict: false,
-  });
+  const issues = getLLMLoadSpeculativeDecodingValidationIssues(config);
   if (issues.length > 0) {
     throw new Error(issues.map(issue => issue.message).join("; "));
   }
