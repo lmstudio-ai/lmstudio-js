@@ -1,13 +1,23 @@
 import { BackendInterface } from "@lmstudio/lms-communication";
 import { type InferClientPort } from "@lmstudio/lms-communication-client";
-import { backendNotificationSchema, modelInfoSchema } from "@lmstudio/lms-shared-types";
+import {
+  backendNotificationSchema,
+  modelInfoSchema,
+  modelVariantInfoSchema,
+} from "@lmstudio/lms-shared-types";
 import { z } from "zod";
+
+const listDownloadedModelsOptsSchema = z
+  .object({
+    includeDrafters: z.boolean().optional(),
+  })
+  .optional();
 
 export function createSystemBackendInterface() {
   return (
     new BackendInterface()
       .addRpcEndpoint("listDownloadedModels", {
-        parameter: z.void(),
+        parameter: listDownloadedModelsOptsSchema,
         returns: z.array(modelInfoSchema),
       })
       /**
@@ -17,7 +27,7 @@ export function createSystemBackendInterface() {
         parameter: z.object({
           modelKey: z.string(),
         }),
-        returns: z.array(modelInfoSchema),
+        returns: z.array(modelVariantInfoSchema),
       })
       .addChannelEndpoint("alive", {
         creationParameter: z.void(),

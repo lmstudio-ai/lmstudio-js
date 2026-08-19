@@ -147,6 +147,7 @@ export type {
 } from "./runtime/RuntimeExtensionsNamespace.js";
 export type { RuntimeEngineNamespace, RuntimeNamespace } from "./runtime/RuntimeNamespace.js";
 export type {
+  ListDownloadedModelsOpts,
   ServiceInfo,
   StartHttpServerOpts,
   SystemNamespace,

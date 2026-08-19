@@ -154,198 +154,101 @@ export const llmMlxKvCacheQuantizationSchema = z.object({
  */
 export interface LLMLoadSpeculativeDecodingConfig {
   speculativeDraftMtp?: boolean;
+  /**
+   * @deprecated External draft-model speculative decoding is now activated by
+   * `speculativeDraftModel`. This field is accepted for compatibility and ignored by the resolver.
+   */
   speculativeDraftSimple?: boolean;
-  speculativeDraftModel?: string;
+  speculativeDraftModel?: string | false;
   speculativeDraftMaxTokens?: number;
   speculativeDraftMinTokens?: number;
   speculativeDraftMinContinueProbability?: number;
 }
 
-const speculativeDraftModelSchema = z.string();
+const speculativeDraftModelSchema = z.string().or(z.literal(false));
 const speculativeDraftMtpSchema = z.boolean();
 const speculativeDraftSimpleSchema = z.boolean();
 const speculativeDraftTokenCountSchema = z.number().int().min(0);
 const speculativeDraftMinContinueProbabilitySchema = z.number().min(0).max(1);
 
-/** @public @experimental */
-export type LLMLoadSpeculativeDecodingResolution =
-  | {
-      type: "none";
-      speculativeDraftMaxTokens?: number;
-      speculativeDraftMinTokens?: number;
-      speculativeDraftMinContinueProbability?: number;
-    }
-  | {
-      type: "off";
-      speculativeDraftMaxTokens?: number;
-      speculativeDraftMinTokens?: number;
-      speculativeDraftMinContinueProbability?: number;
-    }
-  | {
-      type: "draftMtp";
-      speculativeDraftMaxTokens?: number;
-      speculativeDraftMinTokens?: number;
-      speculativeDraftMinContinueProbability?: number;
-    }
-  | {
-      type: "draftSimple";
-      speculativeDraftModel: string;
-      speculativeDraftMaxTokens?: number;
-      speculativeDraftMinTokens?: number;
-      speculativeDraftMinContinueProbability?: number;
-    };
+const speculativeDecodingScalarValidationSpecs: Array<{
+  field: keyof LLMLoadSpeculativeDecodingConfig;
+  schema: z.ZodTypeAny;
+  message: string;
+}> = [
+  {
+    field: "speculativeDraftMtp",
+    schema: speculativeDraftMtpSchema,
+    message: "speculativeDraftMtp must be a boolean",
+  },
+  {
+    field: "speculativeDraftSimple",
+    schema: speculativeDraftSimpleSchema,
+    message: "speculativeDraftSimple must be a boolean",
+  },
+  {
+    field: "speculativeDraftModel",
+    schema: speculativeDraftModelSchema,
+    message: "speculativeDraftModel must be a string or false",
+  },
+  {
+    field: "speculativeDraftMaxTokens",
+    schema: speculativeDraftTokenCountSchema,
+    message: "speculativeDraftMaxTokens must be an integer greater than or equal to 0",
+  },
+  {
+    field: "speculativeDraftMinTokens",
+    schema: speculativeDraftTokenCountSchema,
+    message: "speculativeDraftMinTokens must be an integer greater than or equal to 0",
+  },
+  {
+    field: "speculativeDraftMinContinueProbability",
+    schema: speculativeDraftMinContinueProbabilitySchema,
+    message: "speculativeDraftMinContinueProbability must be between 0 and 1",
+  },
+];
 
 interface LLMLoadSpeculativeDecodingValidationIssue {
   message: string;
   path: Array<string>;
 }
 
-function getLLMLoadSpeculativeDecodingScalarValidationIssues({
-  speculativeDraftMtp,
-  speculativeDraftSimple,
-  speculativeDraftModel,
-  speculativeDraftMaxTokens,
-  speculativeDraftMinTokens,
-  speculativeDraftMinContinueProbability,
-}: LLMLoadSpeculativeDecodingConfig): Array<LLMLoadSpeculativeDecodingValidationIssue> {
+function getLLMLoadSpeculativeDecodingScalarValidationIssues(
+  config: LLMLoadSpeculativeDecodingConfig,
+): Array<LLMLoadSpeculativeDecodingValidationIssue> {
   const issues: Array<LLMLoadSpeculativeDecodingValidationIssue> = [];
 
-  if (
-    speculativeDraftMtp !== undefined &&
-    !speculativeDraftMtpSchema.safeParse(speculativeDraftMtp).success
-  ) {
-    issues.push({
-      message: "speculativeDraftMtp must be a boolean",
-      path: ["speculativeDraftMtp"],
-    });
-  }
-
-  if (
-    speculativeDraftSimple !== undefined &&
-    !speculativeDraftSimpleSchema.safeParse(speculativeDraftSimple).success
-  ) {
-    issues.push({
-      message: "speculativeDraftSimple must be a boolean",
-      path: ["speculativeDraftSimple"],
-    });
-  }
-
-  if (
-    speculativeDraftModel !== undefined &&
-    !speculativeDraftModelSchema.safeParse(speculativeDraftModel).success
-  ) {
-    issues.push({
-      message: "speculativeDraftModel must be a string",
-      path: ["speculativeDraftModel"],
-    });
-  }
-
-  if (
-    speculativeDraftMaxTokens !== undefined &&
-    !speculativeDraftTokenCountSchema.safeParse(speculativeDraftMaxTokens).success
-  ) {
-    issues.push({
-      message: "speculativeDraftMaxTokens must be an integer greater than or equal to 0",
-      path: ["speculativeDraftMaxTokens"],
-    });
-  }
-
-  if (
-    speculativeDraftMinTokens !== undefined &&
-    !speculativeDraftTokenCountSchema.safeParse(speculativeDraftMinTokens).success
-  ) {
-    issues.push({
-      message: "speculativeDraftMinTokens must be an integer greater than or equal to 0",
-      path: ["speculativeDraftMinTokens"],
-    });
-  }
-
-  if (
-    speculativeDraftMinContinueProbability !== undefined &&
-    !speculativeDraftMinContinueProbabilitySchema.safeParse(speculativeDraftMinContinueProbability)
-      .success
-  ) {
-    issues.push({
-      message: "speculativeDraftMinContinueProbability must be between 0 and 1",
-      path: ["speculativeDraftMinContinueProbability"],
-    });
+  for (const { field, schema, message } of speculativeDecodingScalarValidationSpecs) {
+    const value = config[field];
+    if (value !== undefined && !schema.safeParse(value).success) {
+      issues.push({ message, path: [field] });
+    }
   }
 
   return issues;
 }
 
-function getLLMLoadSpeculativeDecodingCrossFieldValidationIssues({
-  speculativeDraftMtp,
-  speculativeDraftSimple,
-  speculativeDraftModel,
-  speculativeDraftMaxTokens,
-  speculativeDraftMinTokens,
-}: LLMLoadSpeculativeDecodingConfig): Array<LLMLoadSpeculativeDecodingValidationIssue> {
-  const issues: Array<LLMLoadSpeculativeDecodingValidationIssue> = [];
-  const hasDraftModel =
-    speculativeDraftModelSchema.safeParse(speculativeDraftModel).success &&
-    speculativeDraftModel !== undefined &&
-    speculativeDraftModel.length > 0;
-
-  if (speculativeDraftMtp === true && speculativeDraftSimple === true) {
-    issues.push({
-      message: "speculativeDraftMtp and speculativeDraftSimple cannot both be enabled",
-      path: ["speculativeDraftSimple"],
-    });
-  }
-
-  if (speculativeDraftSimple === true && !hasDraftModel) {
-    issues.push({
-      message: "speculativeDraftSimple requires a non-empty speculativeDraftModel",
-      path: ["speculativeDraftModel"],
-    });
-  }
-
-  if (hasDraftModel && speculativeDraftSimple !== true) {
-    issues.push({
-      message:
-        "speculativeDraftModel requires an explicit supported draft type; use speculativeDraftSimple for Draft Simple",
-      path: ["speculativeDraftModel"],
-    });
-  }
-
-  if (
-    speculativeDraftMinTokens !== undefined &&
-    speculativeDraftMaxTokens !== undefined &&
-    speculativeDraftMinTokens > speculativeDraftMaxTokens
-  ) {
-    issues.push({
-      message: "speculativeDraftMinTokens must be less than or equal to speculativeDraftMaxTokens",
-      path: ["speculativeDraftMinTokens"],
-    });
-  }
-
-  return issues;
+function hasActiveExternalDraftModel(
+  speculativeDraftModel: LLMLoadSpeculativeDecodingConfig["speculativeDraftModel"],
+): speculativeDraftModel is string {
+  return typeof speculativeDraftModel === "string" && speculativeDraftModel.length > 0;
 }
 
-function getLLMLoadSpeculativeDecodingEffectiveCrossFieldValidationIssues({
-  speculativeDraftMtp,
-  speculativeDraftSimple,
-  speculativeDraftModel,
-  speculativeDraftMaxTokens,
-  speculativeDraftMinTokens,
-}: LLMLoadSpeculativeDecodingConfig): Array<LLMLoadSpeculativeDecodingValidationIssue> {
+function getLLMLoadSpeculativeDecodingCrossFieldValidationIssues(
+  {
+    speculativeDraftMtp,
+    speculativeDraftModel,
+    speculativeDraftMaxTokens,
+    speculativeDraftMinTokens,
+  }: LLMLoadSpeculativeDecodingConfig,
+  { rejectMtpExternalDraftConflict }: { rejectMtpExternalDraftConflict: boolean },
+): Array<LLMLoadSpeculativeDecodingValidationIssue> {
   const issues: Array<LLMLoadSpeculativeDecodingValidationIssue> = [];
-  const hasDraftModel =
-    speculativeDraftModelSchema.safeParse(speculativeDraftModel).success &&
-    speculativeDraftModel !== undefined &&
-    speculativeDraftModel.length > 0;
+  const hasDraftModel = hasActiveExternalDraftModel(speculativeDraftModel);
 
-  if (speculativeDraftMtp === true && speculativeDraftSimple === true) {
+  if (rejectMtpExternalDraftConflict && speculativeDraftMtp === true && hasDraftModel) {
     issues.push({
-      message: "speculativeDraftMtp and speculativeDraftSimple cannot both be enabled",
-      path: ["speculativeDraftSimple"],
-    });
-  }
-
-  if (speculativeDraftSimple === true && !hasDraftModel) {
-    issues.push({
-      message: "speculativeDraftSimple requires a non-empty speculativeDraftModel",
+      message: "speculativeDraftMtp and speculativeDraftModel cannot both be enabled",
       path: ["speculativeDraftModel"],
     });
   }
@@ -369,7 +272,9 @@ function getLLMLoadSpeculativeDecodingValidationIssues(
 ): Array<LLMLoadSpeculativeDecodingValidationIssue> {
   return [
     ...getLLMLoadSpeculativeDecodingScalarValidationIssues(config),
-    ...getLLMLoadSpeculativeDecodingCrossFieldValidationIssues(config),
+    ...getLLMLoadSpeculativeDecodingCrossFieldValidationIssues(config, {
+      rejectMtpExternalDraftConflict: true,
+    }),
   ];
 }
 
@@ -386,91 +291,6 @@ export function validateLLMLoadSpeculativeDecodingConfig(
   if (issues.length > 0) {
     throw new Error(issues.map(issue => issue.message).join("; "));
   }
-}
-
-/**
- * Resolve flat load-time speculative decoding fields into the effective local mode.
- *
- * This only interprets the fields present in the supplied config. It does not apply model defaults
- * or runtime-specific support checks.
- *
- * @public
- * @experimental
- */
-export function resolveLLMLoadSpeculativeDecodingConfig(
-  config: LLMLoadSpeculativeDecodingConfig,
-): LLMLoadSpeculativeDecodingResolution {
-  validateLLMLoadSpeculativeDecodingConfig(config);
-
-  const tuningFields = {
-    speculativeDraftMaxTokens: config.speculativeDraftMaxTokens,
-    speculativeDraftMinTokens: config.speculativeDraftMinTokens,
-    speculativeDraftMinContinueProbability: config.speculativeDraftMinContinueProbability,
-  };
-
-  if (config.speculativeDraftMtp === true) {
-    return { type: "draftMtp", ...tuningFields };
-  }
-
-  if (config.speculativeDraftSimple === true) {
-    return {
-      type: "draftSimple",
-      speculativeDraftModel: config.speculativeDraftModel ?? "",
-      ...tuningFields,
-    };
-  }
-
-  if (config.speculativeDraftMtp === false && config.speculativeDraftSimple === false) {
-    return { type: "off", ...tuningFields };
-  }
-
-  return { type: "none", ...tuningFields };
-}
-
-/**
- * Resolve already-collapsed effective load-time speculative decoding fields.
- *
- * Unlike the public request helper, this tolerates inert draft-model resource state when no
- * draft-family type is active. Runtime callers use this after config collapse, where provenance is
- * intentionally unavailable.
- *
- * @public
- * @experimental
- */
-export function resolveEffectiveLLMLoadSpeculativeDecodingConfig(
-  config: LLMLoadSpeculativeDecodingConfig,
-): LLMLoadSpeculativeDecodingResolution {
-  const issues = [
-    ...getLLMLoadSpeculativeDecodingScalarValidationIssues(config),
-    ...getLLMLoadSpeculativeDecodingEffectiveCrossFieldValidationIssues(config),
-  ];
-  if (issues.length > 0) {
-    throw new Error(issues.map(issue => issue.message).join("; "));
-  }
-
-  const tuningFields = {
-    speculativeDraftMaxTokens: config.speculativeDraftMaxTokens,
-    speculativeDraftMinTokens: config.speculativeDraftMinTokens,
-    speculativeDraftMinContinueProbability: config.speculativeDraftMinContinueProbability,
-  };
-
-  if (config.speculativeDraftMtp === true) {
-    return { type: "draftMtp", ...tuningFields };
-  }
-
-  if (config.speculativeDraftSimple === true) {
-    return {
-      type: "draftSimple",
-      speculativeDraftModel: config.speculativeDraftModel ?? "",
-      ...tuningFields,
-    };
-  }
-
-  if (config.speculativeDraftMtp === false && config.speculativeDraftSimple === false) {
-    return { type: "off", ...tuningFields };
-  }
-
-  return { type: "none", ...tuningFields };
 }
 
 /** @public */
@@ -606,18 +426,21 @@ export interface LLMLoadModelConfig {
   speculativeDraftMtp?: boolean;
 
   /**
-   * Enables llama.cpp Draft Simple speculative decoding using a separate draft model.
+   * Deprecated compatibility flag for the previous Draft Simple selector. External draft-model
+   * speculative decoding is now activated by `speculativeDraftModel`.
    *
    * @experimental
+   * @deprecated Use `speculativeDraftModel` instead.
    */
   speculativeDraftSimple?: boolean;
 
   /**
-   * Separate draft model resource to use for load-time speculative decoding.
+   * Separate draft model resource to use for load-time speculative decoding. Set to `false` to
+   * explicitly disable external draft-model speculative decoding.
    *
    * @experimental
    */
-  speculativeDraftModel?: string;
+  speculativeDraftModel?: string | false;
 
   /**
    * Maximum number of draft tokens to generate.
@@ -781,7 +604,9 @@ export const llmLoadModelConfigSchema = z
     mlxKvCacheQuantization: llmMlxKvCacheQuantizationSchema.or(z.literal(false)).optional(),
   })
   .superRefine((config, context) => {
-    for (const issue of getLLMLoadSpeculativeDecodingCrossFieldValidationIssues(config)) {
+    for (const issue of getLLMLoadSpeculativeDecodingCrossFieldValidationIssues(config, {
+      rejectMtpExternalDraftConflict: true,
+    })) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
         message: issue.message,

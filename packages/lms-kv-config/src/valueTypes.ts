@@ -333,6 +333,53 @@ export const basicKVValueTypesLibrary = baseKVValueTypesLibraryBuilder.build();
  * @public
  */
 export const kvValueTypesLibrary = baseKVValueTypesLibraryBuilder
+  .valueType("checkboxString", {
+    paramType: {
+      minLength: z.number().optional(),
+      maxLength: z.number().optional(),
+      isProtected: z.boolean().optional(),
+      placeholder: z.string().optional(),
+    },
+    schemaMaker: ({ minLength, maxLength }) => {
+      let stringSchema = z.string();
+      if (minLength !== undefined) {
+        stringSchema = stringSchema.min(minLength);
+      }
+      if (maxLength !== undefined) {
+        stringSchema = stringSchema.max(maxLength);
+      }
+      return z.object({
+        checked: z.boolean(),
+        value: stringSchema,
+      });
+    },
+    effectiveEquals: (a, b) => {
+      if (a.checked !== b.checked) {
+        return false;
+      }
+      if (!a.checked) {
+        return true;
+      }
+      return a.value === b.value;
+    },
+    stringify: (value, { isProtected }, { t, desiredLength }) => {
+      if (!value.checked) {
+        return t("config:customInputs.checkboxString.off", "OFF");
+      }
+      if (isProtected) {
+        return "********";
+      }
+      const quoted = quoteString(value.value);
+      if (desiredLength === undefined || quoted.length <= desiredLength) {
+        return quoted;
+      }
+      return (
+        quoted.slice(0, Math.floor(desiredLength / 2)) +
+        "..." +
+        quoted.slice(-Math.ceil(desiredLength / 2))
+      );
+    },
+  })
   .valueType("checkboxNumeric", {
     paramType: {
       min: z.number().optional(),

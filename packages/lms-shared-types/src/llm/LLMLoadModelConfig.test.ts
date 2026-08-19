@@ -1,17 +1,14 @@
 import {
   llmLoadModelConfigSchema,
-  resolveEffectiveLLMLoadSpeculativeDecodingConfig,
-  resolveLLMLoadSpeculativeDecodingConfig,
   type LLMLoadSpeculativeDecodingConfig,
   validateLLMLoadSpeculativeDecodingConfig,
 } from "./LLMLoadModelConfig.js";
 
-function expectSpeculativeConfigRejectedByHelpers(
+function expectSpeculativeConfigRejectedByPublicValidator(
   config: LLMLoadSpeculativeDecodingConfig,
   expectedMessage: string,
 ) {
   expect(() => validateLLMLoadSpeculativeDecodingConfig(config)).toThrow(expectedMessage);
-  expect(() => resolveLLMLoadSpeculativeDecodingConfig(config)).toThrow(expectedMessage);
 }
 
 describe("LLMLoadModelConfig schema", () => {
@@ -27,7 +24,7 @@ describe("LLMLoadModelConfig schema", () => {
 });
 
 describe("LLMLoad speculative decoding validation", () => {
-  it("rejects invalid Draft MTP values through the public helpers", () => {
+  it("rejects invalid draft selector values through the public validator", () => {
     const invalidConfigCases: Array<{
       config: unknown;
       expectedMessage: string;
@@ -59,7 +56,7 @@ describe("LLMLoad speculative decoding validation", () => {
     ];
 
     for (const invalidConfigCase of invalidConfigCases) {
-      expectSpeculativeConfigRejectedByHelpers(
+      expectSpeculativeConfigRejectedByPublicValidator(
         invalidConfigCase.config as LLMLoadSpeculativeDecodingConfig,
         invalidConfigCase.expectedMessage,
       );
@@ -67,23 +64,23 @@ describe("LLMLoad speculative decoding validation", () => {
     }
   });
 
-  it("rejects invalid draft model values through the public helpers", () => {
+  it("rejects invalid draft model values through the public validator", () => {
     const invalidConfigCases: Array<{
       config: unknown;
       expectedMessage: string;
     }> = [
       {
         config: { speculativeDraftModel: null },
-        expectedMessage: "speculativeDraftModel must be a string",
+        expectedMessage: "speculativeDraftModel must be a string or false",
       },
       {
         config: { speculativeDraftModel: 42 },
-        expectedMessage: "speculativeDraftModel must be a string",
+        expectedMessage: "speculativeDraftModel must be a string or false",
       },
     ];
 
     for (const invalidConfigCase of invalidConfigCases) {
-      expectSpeculativeConfigRejectedByHelpers(
+      expectSpeculativeConfigRejectedByPublicValidator(
         invalidConfigCase.config as LLMLoadSpeculativeDecodingConfig,
         invalidConfigCase.expectedMessage,
       );
@@ -91,7 +88,7 @@ describe("LLMLoad speculative decoding validation", () => {
     }
   });
 
-  it("rejects invalid scalar values through the public helpers", () => {
+  it("rejects invalid scalar values through the public validator", () => {
     const invalidConfigCases: Array<{
       config: LLMLoadSpeculativeDecodingConfig;
       expectedMessage: string;
@@ -123,7 +120,7 @@ describe("LLMLoad speculative decoding validation", () => {
     ];
 
     for (const invalidConfigCase of invalidConfigCases) {
-      expectSpeculativeConfigRejectedByHelpers(
+      expectSpeculativeConfigRejectedByPublicValidator(
         invalidConfigCase.config,
         invalidConfigCase.expectedMessage,
       );
@@ -139,60 +136,47 @@ describe("LLMLoad speculative decoding validation", () => {
     };
 
     expect(() => validateLLMLoadSpeculativeDecodingConfig(config)).not.toThrow();
-    expect(resolveLLMLoadSpeculativeDecodingConfig(config)).toEqual({
-      type: "none",
-      speculativeDraftMaxTokens: 8,
-      speculativeDraftMinTokens: 2,
-      speculativeDraftMinContinueProbability: 0.5,
-    });
     expect(llmLoadModelConfigSchema.safeParse(config).success).toBe(true);
   });
 
-  it("allows absent and empty draft model values", () => {
+  it("allows absent, empty, and disabled draft model values", () => {
     const absentDraftModelConfig: LLMLoadSpeculativeDecodingConfig = {};
-    const draftModelConfig: LLMLoadSpeculativeDecodingConfig = {
+    const emptyDraftModelConfig: LLMLoadSpeculativeDecodingConfig = {
       speculativeDraftModel: "",
+    };
+    const disabledDraftModelConfig: LLMLoadSpeculativeDecodingConfig = {
+      speculativeDraftModel: false,
     };
 
     expect(() => validateLLMLoadSpeculativeDecodingConfig(absentDraftModelConfig)).not.toThrow();
-    expect(resolveLLMLoadSpeculativeDecodingConfig(absentDraftModelConfig)).toEqual({
-      type: "none",
-    });
     expect(llmLoadModelConfigSchema.safeParse(absentDraftModelConfig).success).toBe(true);
 
-    expect(() => validateLLMLoadSpeculativeDecodingConfig(draftModelConfig)).not.toThrow();
-    expect(resolveLLMLoadSpeculativeDecodingConfig(draftModelConfig)).toEqual({
-      type: "none",
-    });
-    expect(llmLoadModelConfigSchema.safeParse(draftModelConfig).success).toBe(true);
+    expect(() => validateLLMLoadSpeculativeDecodingConfig(emptyDraftModelConfig)).not.toThrow();
+    expect(llmLoadModelConfigSchema.safeParse(emptyDraftModelConfig).success).toBe(true);
+
+    expect(() => validateLLMLoadSpeculativeDecodingConfig(disabledDraftModelConfig)).not.toThrow();
+    expect(llmLoadModelConfigSchema.safeParse(disabledDraftModelConfig).success).toBe(true);
   });
 
-  it("keeps cross-field speculative decoding validation unchanged", () => {
-    expectSpeculativeConfigRejectedByHelpers(
+  it("tolerates deprecated Draft Simple selector without a draft model", () => {
+    const config: LLMLoadSpeculativeDecodingConfig = {
+      speculativeDraftSimple: true,
+    };
+
+    expect(() => validateLLMLoadSpeculativeDecodingConfig(config)).not.toThrow();
+    expect(llmLoadModelConfigSchema.safeParse(config).success).toBe(true);
+  });
+
+  it("rejects invalid public cross-field speculative decoding combinations", () => {
+    expectSpeculativeConfigRejectedByPublicValidator(
       {
         speculativeDraftMtp: true,
-        speculativeDraftSimple: true,
         speculativeDraftModel: "publisher/draft-model",
       },
-      "speculativeDraftMtp and speculativeDraftSimple cannot both be enabled",
+      "speculativeDraftMtp and speculativeDraftModel cannot both be enabled",
     );
 
-    expectSpeculativeConfigRejectedByHelpers(
-      {
-        speculativeDraftSimple: true,
-        speculativeDraftModel: "",
-      },
-      "speculativeDraftSimple requires a non-empty speculativeDraftModel",
-    );
-
-    expectSpeculativeConfigRejectedByHelpers(
-      {
-        speculativeDraftModel: "publisher/draft-model",
-      },
-      "speculativeDraftModel requires an explicit supported draft type; use speculativeDraftSimple for Draft Simple",
-    );
-
-    expectSpeculativeConfigRejectedByHelpers(
+    expectSpeculativeConfigRejectedByPublicValidator(
       {
         speculativeDraftMaxTokens: 1,
         speculativeDraftMinTokens: 2,
@@ -201,9 +185,8 @@ describe("LLMLoad speculative decoding validation", () => {
     );
   });
 
-  it("resolves valid explicit Draft Simple request config", () => {
+  it("allows valid inferred external draft model request config", () => {
     const config: LLMLoadSpeculativeDecodingConfig = {
-      speculativeDraftSimple: true,
       speculativeDraftModel: "publisher/draft-model",
       speculativeDraftMaxTokens: 16,
       speculativeDraftMinTokens: 0,
@@ -211,34 +194,28 @@ describe("LLMLoad speculative decoding validation", () => {
     };
 
     expect(() => validateLLMLoadSpeculativeDecodingConfig(config)).not.toThrow();
-    expect(resolveLLMLoadSpeculativeDecodingConfig(config)).toEqual({
-      type: "draftSimple",
-      speculativeDraftModel: "publisher/draft-model",
-      speculativeDraftMaxTokens: 16,
-      speculativeDraftMinTokens: 0,
-      speculativeDraftMinContinueProbability: 0.75,
-    });
     expect(llmLoadModelConfigSchema.safeParse(config).success).toBe(true);
   });
 
-  it("allows inert draft model resource state in effective config resolution", () => {
-    const inactiveConfig: LLMLoadSpeculativeDecodingConfig = {
-      speculativeDraftMtp: false,
-      speculativeDraftSimple: false,
-      speculativeDraftModel: "publisher/draft-model",
-    };
-    const draftMtpConfig: LLMLoadSpeculativeDecodingConfig = {
+  it("allows valid explicit bundled Draft MTP request config", () => {
+    const config: LLMLoadSpeculativeDecodingConfig = {
       speculativeDraftMtp: true,
-      speculativeDraftSimple: false,
-      speculativeDraftModel: "publisher/draft-model",
+      speculativeDraftModel: "",
     };
 
-    expect(resolveEffectiveLLMLoadSpeculativeDecodingConfig(inactiveConfig)).toEqual({
-      type: "off",
-    });
-    expect(resolveEffectiveLLMLoadSpeculativeDecodingConfig(draftMtpConfig)).toEqual({
-      type: "draftMtp",
-    });
+    expect(() => validateLLMLoadSpeculativeDecodingConfig(config)).not.toThrow();
+    expect(llmLoadModelConfigSchema.safeParse(config).success).toBe(true);
+  });
+
+  it("keeps deprecated Draft Simple inert as a distinct selector", () => {
+    const config: LLMLoadSpeculativeDecodingConfig = {
+      speculativeDraftSimple: true,
+      speculativeDraftModel: "publisher/draft-model",
+      speculativeDraftMaxTokens: 16,
+    };
+
+    expect(() => validateLLMLoadSpeculativeDecodingConfig(config)).not.toThrow();
+    expect(llmLoadModelConfigSchema.safeParse(config).success).toBe(true);
   });
 
   it("does not duplicate full schema scalar validation issues", () => {
@@ -257,7 +234,7 @@ describe("LLMLoad speculative decoding validation", () => {
 
   it("does not duplicate full schema draft model field validation issues", () => {
     const parsedConfig = llmLoadModelConfigSchema.safeParse({
-      speculativeDraftModel: "publisher/draft-model",
+      speculativeDraftModel: 42,
     });
 
     expect(parsedConfig.success).toBe(false);

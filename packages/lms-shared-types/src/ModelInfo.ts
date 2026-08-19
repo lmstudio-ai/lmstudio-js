@@ -6,6 +6,8 @@ import {
   embeddingModelInstanceInfoSchema,
 } from "./embedding/EmbeddingModelInfo.js";
 import {
+  type DrafterModelInfo,
+  drafterModelInfoSchema,
   type LLMInfo,
   llmInfoSchema,
   type LLMInstanceInfo,
@@ -13,14 +15,28 @@ import {
 } from "./llm/LLMModelInfo.js";
 
 /**
+ * Information about a model variant.
+ *
+ * Drafters are sidecar resources, not standalone model variants.
+ *
+ * @public
+ */
+export type ModelVariantInfo = LLMInfo | EmbeddingModelInfo;
+export const modelVariantInfoSchema = z.discriminatedUnion("type", [
+  llmInfoSchema as any,
+  embeddingModelInfoSchema as any,
+]) as z.ZodSchema<ModelVariantInfo>;
+
+/**
  * Information about a model.
  *
  * @public
  */
-export type ModelInfo = LLMInfo | EmbeddingModelInfo;
+export type ModelInfo = ModelVariantInfo | DrafterModelInfo;
 export const modelInfoSchema = z.discriminatedUnion("type", [
   llmInfoSchema as any,
   embeddingModelInfoSchema as any,
+  drafterModelInfoSchema as any,
 ]) as z.ZodSchema<ModelInfo>;
 
 /**

@@ -9,9 +9,11 @@ import { type SystemPort } from "@lmstudio/lms-external-backend-interfaces";
 import {
   backendNotificationSchema,
   type BackendNotification,
+  type DrafterModelInfo,
   type EmbeddingModelInfo,
   type LLMInfo,
   type ModelInfo,
+  type ModelVariantInfo,
 } from "@lmstudio/lms-shared-types";
 import { z } from "zod";
 
@@ -69,6 +71,15 @@ export interface ServiceInfo {
 }
 
 /** @public */
+export interface ListDownloadedModelsOpts {
+  /**
+   * Include drafter resources in the returned list. Defaults to false to preserve compatibility
+   * with clients that only understand standalone model domains.
+   */
+  includeDrafters?: boolean;
+}
+
+/** @public */
 export class SystemNamespace {
   /** @internal */
   private readonly logger: SimpleLogger;
@@ -84,22 +95,45 @@ export class SystemNamespace {
    * List all downloaded models.
    * @public
    */
-  public async listDownloadedModels(): Promise<Array<ModelInfo>>;
+  public async listDownloadedModels(): Promise<Array<LLMInfo | EmbeddingModelInfo>>;
+  public async listDownloadedModels(opts: {
+    includeDrafters?: false;
+  }): Promise<Array<LLMInfo | EmbeddingModelInfo>>;
+  public async listDownloadedModels(opts: {
+    includeDrafters: true;
+  }): Promise<Array<ModelInfo>>;
+  public async listDownloadedModels(opts: ListDownloadedModelsOpts): Promise<Array<ModelInfo>>;
   public async listDownloadedModels(domain: "llm"): Promise<Array<LLMInfo>>;
   public async listDownloadedModels(domain: "embedding"): Promise<Array<EmbeddingModelInfo>>;
-  public async listDownloadedModels(domain?: "llm" | "embedding"): Promise<Array<ModelInfo>> {
+  public async listDownloadedModels(domain: "drafter"): Promise<Array<DrafterModelInfo>>;
+  public async listDownloadedModels(
+    domainOrOpts?: "llm" | "embedding" | "drafter" | ListDownloadedModelsOpts,
+  ): Promise<Array<ModelInfo>> {
     const stack = getCurrentStack(1);
-    domain = this.validator.validateMethodParamOrThrow(
+    domainOrOpts = this.validator.validateMethodParamOrThrow(
       "client.system",
       "listDownloadedModels",
-      "domain",
-      z.union([z.literal("llm"), z.literal("embedding"), z.undefined()]),
-      domain,
+      "domainOrOpts",
+      z.union([
+        z.literal("llm"),
+        z.literal("embedding"),
+        z.literal("drafter"),
+        z.object({ includeDrafters: z.boolean().optional() }),
+        z.undefined(),
+      ]),
+      domainOrOpts,
       stack,
     );
-    const models = await this.systemPort.callRpc("listDownloadedModels", undefined, {
-      stack: getCurrentStack(1),
-    });
+
+    const domain = typeof domainOrOpts === "string" ? domainOrOpts : undefined;
+    const includeDrafters =
+      domain === "drafter" ||
+      (typeof domainOrOpts === "object" && domainOrOpts?.includeDrafters === true);
+    const models = await this.systemPort.callRpc(
+      "listDownloadedModels",
+      includeDrafters ? { includeDrafters: true } : undefined,
+      { stack },
+    );
     if (domain === undefined) {
       return models;
     }
@@ -112,7 +146,7 @@ export class SystemNamespace {
    *
    * If the modelKey does not have any variants, will throw.
    */
-  public async listDownloadedModelVariants(modelKey: string): Promise<Array<ModelInfo>> {
+  public async listDownloadedModelVariants(modelKey: string): Promise<Array<ModelVariantInfo>> {
     const stack = getCurrentStack(1);
     modelKey = this.validator.validateMethodParamOrThrow(
       "client.system",

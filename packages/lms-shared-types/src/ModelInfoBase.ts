@@ -51,6 +51,7 @@ export interface ModelInfoBase {
    * If the model is available locally, this field is `null`.
    */
   deviceIdentifier: string | null;
+
   /**
    * A string that represents the number of params in the model. May not always be available.
    */
