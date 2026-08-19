@@ -67,7 +67,7 @@ export abstract class DynamicHandle<
   protected async getLoadKVConfig(stack: string): Promise<KVConfig> {
     const loadConfig = await this.port.callRpc(
       "getLoadConfig",
-      { specifier: this.specifier, supportsCheckboxStringLoadConfig: true },
+      { specifier: this.specifier },
       { stack },
     );
     return loadConfig;

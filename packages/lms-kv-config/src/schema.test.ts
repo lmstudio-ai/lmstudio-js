@@ -397,45 +397,6 @@ describe("llmLoadModelConfig conversion", () => {
     expect(llmLoadModelConfigSchema.safeParse(convertedConfig).success).toBe(true);
   });
 
-  it("normalizes legacy Draft Simple string draft model load configs", () => {
-    const convertedConfig = kvConfigToLLMLoadModelConfig(
-      makeKVConfigFromFields([
-        kvConfigField("llm.load.llama.speculativeDecoding.draftSimple", true),
-        kvConfigField("llm.load.llama.speculativeDecoding.draftModel", "publisher/draft-model"),
-      ]),
-      { useDefaultsForMissingKeys: true },
-    );
-
-    expect(convertedConfig.speculativeDraftSimple).toBe(true);
-    expect(convertedConfig.speculativeDraftModel).toBe("publisher/draft-model");
-  });
-
-  it("normalizes empty legacy Draft Simple draft model strings as remembered only", () => {
-    const convertedConfig = kvConfigToLLMLoadModelConfig(
-      makeKVConfigFromFields([
-        kvConfigField("llm.load.llama.speculativeDecoding.draftSimple", true),
-        kvConfigField("llm.load.llama.speculativeDecoding.draftModel", ""),
-      ]),
-      { useDefaultsForMissingKeys: true },
-    );
-
-    expect(convertedConfig.speculativeDraftSimple).toBe(true);
-    expect(convertedConfig.speculativeDraftModel).toBe(false);
-  });
-
-  it("normalizes legacy MTP string draft model load configs as remembered only", () => {
-    const convertedConfig = kvConfigToLLMLoadModelConfig(
-      makeKVConfigFromFields([
-        kvConfigField("llm.load.llama.speculativeDecoding.draftMtp", true),
-        kvConfigField("llm.load.llama.speculativeDecoding.draftModel", "publisher/draft-model"),
-      ]),
-      { useDefaultsForMissingKeys: true },
-    );
-
-    expect(convertedConfig.speculativeDraftMtp).toBe(true);
-    expect(convertedConfig.speculativeDraftModel).toBe(false);
-  });
-
   it("preserves a checked empty Draft Model from KV config", () => {
     const loadConfig = globalConfigSchematics.scoped("llm.load").buildPartialConfig({
       "llama.speculativeDecoding.draftModel": { checked: true, value: "" },

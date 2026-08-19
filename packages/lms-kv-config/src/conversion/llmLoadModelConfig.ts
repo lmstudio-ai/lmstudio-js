@@ -22,49 +22,16 @@ interface KvConfigToLLMLoadModelConfigOpts {
   modelFormat?: ModelCompatibilityType;
 }
 
-const draftSimpleKey = "llm.load.llama.speculativeDecoding.draftSimple";
-const draftModelKey = "llm.load.llama.speculativeDecoding.draftModel";
-
-function getKVConfigFieldValue(config: KVConfig, key: string): unknown {
-  for (let index = config.fields.length - 1; index >= 0; index -= 1) {
-    const field = config.fields[index];
-    if (field.key === key) {
-      return field.value;
-    }
-  }
-  return undefined;
-}
-
-function normalizeLegacyLlamaSpeculativeDraftModelKVConfig(config: KVConfig): KVConfig {
-  if (typeof getKVConfigFieldValue(config, draftModelKey) !== "string") {
-    return config;
-  }
-
-  const draftSimpleEnabled = getKVConfigFieldValue(config, draftSimpleKey) === true;
-  return {
-    fields: config.fields.map(field => {
-      if (field.key !== draftModelKey || typeof field.value !== "string") {
-        return field;
-      }
-      return {
-        key: field.key,
-        value: { checked: draftSimpleEnabled && field.value.length > 0, value: field.value },
-      };
-    }),
-  };
-}
-
 function kvConfigToLLMLlamaLoadModelConfig(
   config: KVConfig,
   { useDefaultsForMissingKeys }: Omit<KvConfigToLLMLoadModelConfigOpts, "modelFormat"> = {},
 ): LLMLoadModelConfig {
   const result: LLMLoadModelConfig = {};
 
-  const normalizedConfig = normalizeLegacyLlamaSpeculativeDraftModelKVConfig(config);
   let parsed;
-  const partialParsed = llmLlamaMoeLoadConfigSchematics.parsePartial(normalizedConfig);
+  const partialParsed = llmLlamaMoeLoadConfigSchematics.parsePartial(config);
   if (useDefaultsForMissingKeys === true) {
-    parsed = llmLlamaMoeLoadConfigSchematics.parse(normalizedConfig);
+    parsed = llmLlamaMoeLoadConfigSchematics.parse(config);
   } else {
     parsed = partialParsed;
   }
