@@ -1,0 +1,44 @@
+================================================================================
+[2026-08-19T07:18:45.465Z] AI-Ley Extension Session Started
+[2026-08-19T07:18:45.465Z] Workspace: t:\copilot-worktrees\lmstudio-js\carasen12-issue-631-lmstudio-9905d1
+[2026-08-19T07:18:45.465Z] Log File: t:\copilot-worktrees\lmstudio-js\carasen12-issue-631-lmstudio-9905d1\ai-ley.log
+================================================================================
+[2026-08-19T07:18:45.466Z] Logging initialized successfully
+[2026-08-19T07:18:45.467Z] 
+================================================================================
+[2026-08-19T07:18:45.467Z] Processing workspace: t:\copilot-worktrees\lmstudio-js\carasen12-issue-631-lmstudio-9905d1
+[2026-08-19T07:18:45.487Z] Project name: carasen12-issue-631-lmstudio-9905d1
+[2026-08-19T07:18:45.488Z] Configuration - Cache Directory: .cache/ai-ley
+[2026-08-19T07:18:45.488Z] Configuration - Auto-init New Projects: false
+[2026-08-19T07:18:45.488Z] Configuration - Auto-init Existing Projects: false
+[2026-08-19T07:18:45.488Z] Configuration - Project Pattern: .*
+[2026-08-19T07:18:50.809Z] Is parent ai-ley repository: false
+[2026-08-19T07:18:50.810Z] === shouldAutoInitialize START ===
+[2026-08-19T07:18:50.810Z] Workspace: t:\copilot-worktrees\lmstudio-js\carasen12-issue-631-lmstudio-9905d1
+[2026-08-19T07:18:50.810Z] Project Name: carasen12-issue-631-lmstudio-9905d1
+[2026-08-19T07:18:50.811Z] Cache directory check: t:\copilot-worktrees\lmstudio-js\carasen12-issue-631-lmstudio-9905d1\.cache\ai-ley - Exists: false
+[2026-08-19T07:18:50.811Z] Is Initialized (.ai-ley exists): false
+[2026-08-19T07:18:50.811Z] Has Cache: false
+[2026-08-19T07:18:50.812Z] Auto-init for new projects: false
+[2026-08-19T07:18:50.812Z] ✗ SHOULD NOT INITIALIZE: New project but auto-init disabled
+[2026-08-19T07:18:50.812Z] === shouldAutoInitialize END ===
+[2026-08-19T07:18:50.812Z] Should auto-initialize: false
+[2026-08-19T07:18:50.813Z] === initializeManagers START ===
+[2026-08-19T07:18:50.813Z] Force initial sync: false
+[2026-08-19T07:18:50.813Z] Repository URL: https://github.com/armoin2018/ai-ley.git
+[2026-08-19T07:18:50.814Z] Repository Branch: main
+[2026-08-19T07:18:50.814Z] Cache Directory (configured): .cache/ai-ley
+[2026-08-19T07:18:50.814Z] Cache Path (resolved): t:\copilot-worktrees\lmstudio-js\carasen12-issue-631-lmstudio-9905d1\.cache\ai-ley
+[2026-08-19T07:18:50.814Z] Cache exists: false
+[2026-08-19T07:18:50.816Z] Managers initialized
+[2026-08-19T07:18:50.817Z] Update scheduler started
+[2026-08-19T07:18:50.818Z] === initializeManagers END ===
+[2026-08-19T07:18:50.818Z] AI-Ley managers initialized successfully
+[2026-08-19T07:18:50.821Z] Performing immediate cache check on activation
+[2026-08-19T07:18:50.822Z] 
+Checking workspace: t:\copilot-worktrees\lmstudio-js\carasen12-issue-631-lmstudio-9905d1
+[2026-08-19T07:18:50.823Z] Project Name: carasen12-issue-631-lmstudio-9905d1
+[2026-08-19T07:18:51.728Z] Is parent repository: false
+[2026-08-19T07:18:51.728Z] Auto-init for existing projects: false
+[2026-08-19T07:18:51.729Z] Auto-init for existing projects is disabled
+[2026-08-19T07:18:51.729Z] Finished processing workspace: t:\copilot-worktrees\lmstudio-js\carasen12-issue-631-lmstudio-9905d1
