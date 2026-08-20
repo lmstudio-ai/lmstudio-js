@@ -183,6 +183,7 @@ describe("llmLoadModelConfig conversion", () => {
     const loadConfig = llmLoadModelConfigToKVConfig({});
 
     const roundTrippedConfig = kvConfigToLLMLoadModelConfig(loadConfig);
+    const fieldKeys = loadConfig.fields.map(field => field.key);
 
     expect(roundTrippedConfig.speculativeDraftMtp).toBeUndefined();
     expect(roundTrippedConfig.speculativeDraftSimple).toBeUndefined();
@@ -190,6 +191,76 @@ describe("llmLoadModelConfig conversion", () => {
     expect(roundTrippedConfig.speculativeDraftMaxTokens).toBeUndefined();
     expect(roundTrippedConfig.speculativeDraftMinTokens).toBeUndefined();
     expect(roundTrippedConfig.speculativeDraftMinContinueProbability).toBeUndefined();
+    expect(fieldKeys).not.toContain("llm.load.llama.speculativeDecoding.draftDflash");
+    expect(fieldKeys).not.toContain("llm.load.llama.speculativeDecoding.draftDspark");
+    expect(fieldKeys).not.toContain("llm.load.llama.speculativeDecoding.draftMtpAssistant");
+  });
+
+  it("adds GUI-only speculative decoding fields as boolean defaults", () => {
+    const emptyConfig = makeKVConfigFromFields([]);
+    const loadConfig = llmLoadSchematics.buildPartialConfig({
+      "llama.speculativeDecoding.draftDflash": true,
+      "llama.speculativeDecoding.draftDspark": true,
+      "llama.speculativeDecoding.draftMtpAssistant": true,
+    });
+
+    expect(
+      llmLoadSchematics.access(emptyConfig, "llama.speculativeDecoding.draftDflash"),
+    ).toBe(false);
+    expect(
+      llmLoadSchematics.access(emptyConfig, "llama.speculativeDecoding.draftDspark"),
+    ).toBe(false);
+    expect(
+      llmLoadSchematics.access(emptyConfig, "llama.speculativeDecoding.draftMtpAssistant"),
+    ).toBe(false);
+    expect(llmLoadSchematics.access(loadConfig, "llama.speculativeDecoding.draftDflash")).toBe(
+      true,
+    );
+    expect(llmLoadSchematics.access(loadConfig, "llama.speculativeDecoding.draftDspark")).toBe(
+      true,
+    );
+    expect(
+      llmLoadSchematics.access(loadConfig, "llama.speculativeDecoding.draftMtpAssistant"),
+    ).toBe(true);
+  });
+
+  it("rejects non-boolean GUI-only speculative decoding field values", () => {
+    for (const key of [
+      "llama.speculativeDecoding.draftDflash",
+      "llama.speculativeDecoding.draftDspark",
+      "llama.speculativeDecoding.draftMtpAssistant",
+    ] as const) {
+      expect(llmLoadSchematics.getSchemaForKey(key).safeParse("true").success).toBe(false);
+      expect(llmLoadSchematics.getSchemaForKey(key).safeParse(1).success).toBe(false);
+    }
+  });
+
+  it("does not expose GUI-only speculative decoding fields through public conversion", () => {
+    const loadConfig = globalConfigSchematics.scoped("llm.load").buildPartialConfig({
+      "llama.speculativeDecoding.draftDflash": true,
+      "llama.speculativeDecoding.draftDspark": true,
+      "llama.speculativeDecoding.draftMtpAssistant": true,
+    });
+
+    const convertedConfig = kvConfigToLLMLoadModelConfig(loadConfig, {
+      useDefaultsForMissingKeys: true,
+    }) as Record<string, unknown>;
+
+    expect(convertedConfig.speculativeDraftDflash).toBeUndefined();
+    expect(convertedConfig.speculativeDraftDspark).toBeUndefined();
+    expect(convertedConfig.speculativeDraftMtpAssistant).toBeUndefined();
+  });
+
+  it("clears GUI-only speculative decoding fields for explicit public selectors", () => {
+    const loadConfig = llmLoadModelConfigToKVConfig({
+      speculativeDraftSimple: true,
+      speculativeDraftModel: "publisher/draft-model",
+    });
+    const fieldMap = new Map(loadConfig.fields.map(field => [field.key, field.value]));
+
+    expect(fieldMap.get("llm.load.llama.speculativeDecoding.draftDflash")).toBe(false);
+    expect(fieldMap.get("llm.load.llama.speculativeDecoding.draftDspark")).toBe(false);
+    expect(fieldMap.get("llm.load.llama.speculativeDecoding.draftMtpAssistant")).toBe(false);
   });
 
   it("round trips explicit Draft MTP off", () => {

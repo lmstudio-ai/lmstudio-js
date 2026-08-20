@@ -268,6 +268,11 @@ export function kvConfigToLLMLoadModelConfig(
 }
 
 export function llmLoadModelConfigToKVConfig(config: LLMLoadModelConfig): KVConfig {
+  const publicSpeculativeSelectorIsSpecified =
+    config.speculativeDraftMtp !== undefined ||
+    config.speculativeDraftSimple !== undefined ||
+    config.speculativeDraftModel !== undefined;
+
   const top = llmLoadSchematics.buildPartialConfig({
     "gpuSplitConfig": convertGPUSettingToGPUSplitConfig(config.gpu),
     "gpuStrictVramCap": config.gpuStrictVramCap,
@@ -287,6 +292,13 @@ export function llmLoadModelConfigToKVConfig(config: LLMLoadModelConfig): KVConf
     "llama.reasoningBudgetMessage": config.reasoningBudgetMessage,
     "llama.speculativeDecoding.draftMtp": config.speculativeDraftMtp,
     "llama.speculativeDecoding.draftSimple": config.speculativeDraftSimple,
+    ...(publicSpeculativeSelectorIsSpecified
+      ? {
+          "llama.speculativeDecoding.draftDflash": false,
+          "llama.speculativeDecoding.draftDspark": false,
+          "llama.speculativeDecoding.draftMtpAssistant": false,
+        }
+      : {}),
     "llama.speculativeDecoding.draftModel": config.speculativeDraftModel,
     "llama.speculativeDecoding.draftMaxTokens": config.speculativeDraftMaxTokens,
     "llama.speculativeDecoding.draftMinTokens": config.speculativeDraftMinTokens,
