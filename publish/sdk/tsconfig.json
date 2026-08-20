@@ -3,8 +3,9 @@
   "compilerOptions": {
     "strict": true,
     "module": "esnext",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "target": "ES2021",
+    "rootDir": "src",
     "declaration": true,
     "noImplicitOverride": true,
     "skipLibCheck": true,
