@@ -191,44 +191,44 @@ describe("llmLoadModelConfig conversion", () => {
     expect(roundTrippedConfig.speculativeDraftMaxTokens).toBeUndefined();
     expect(roundTrippedConfig.speculativeDraftMinTokens).toBeUndefined();
     expect(roundTrippedConfig.speculativeDraftMinContinueProbability).toBeUndefined();
-    expect(fieldKeys).not.toContain("llm.load.llama.speculativeDecoding.draftDflash");
-    expect(fieldKeys).not.toContain("llm.load.llama.speculativeDecoding.draftDspark");
-    expect(fieldKeys).not.toContain("llm.load.llama.speculativeDecoding.draftMtpAssistant");
+    expect(fieldKeys).not.toContain("llm.load.llama.speculativeDecoding.draftDflashSidecar");
+    expect(fieldKeys).not.toContain("llm.load.llama.speculativeDecoding.draftDsparkSidecar");
+    expect(fieldKeys).not.toContain("llm.load.llama.speculativeDecoding.draftMtpSidecar");
   });
 
   it("adds GUI-only speculative decoding fields as boolean defaults", () => {
     const emptyConfig = makeKVConfigFromFields([]);
     const loadConfig = llmLoadSchematics.buildPartialConfig({
-      "llama.speculativeDecoding.draftDflash": true,
-      "llama.speculativeDecoding.draftDspark": true,
-      "llama.speculativeDecoding.draftMtpAssistant": true,
+      "llama.speculativeDecoding.draftDflashSidecar": true,
+      "llama.speculativeDecoding.draftDsparkSidecar": true,
+      "llama.speculativeDecoding.draftMtpSidecar": true,
     });
 
     expect(
-      llmLoadSchematics.access(emptyConfig, "llama.speculativeDecoding.draftDflash"),
+      llmLoadSchematics.access(emptyConfig, "llama.speculativeDecoding.draftDflashSidecar"),
     ).toBe(false);
     expect(
-      llmLoadSchematics.access(emptyConfig, "llama.speculativeDecoding.draftDspark"),
+      llmLoadSchematics.access(emptyConfig, "llama.speculativeDecoding.draftDsparkSidecar"),
     ).toBe(false);
     expect(
-      llmLoadSchematics.access(emptyConfig, "llama.speculativeDecoding.draftMtpAssistant"),
+      llmLoadSchematics.access(emptyConfig, "llama.speculativeDecoding.draftMtpSidecar"),
     ).toBe(false);
-    expect(llmLoadSchematics.access(loadConfig, "llama.speculativeDecoding.draftDflash")).toBe(
+    expect(llmLoadSchematics.access(loadConfig, "llama.speculativeDecoding.draftDflashSidecar")).toBe(
       true,
     );
-    expect(llmLoadSchematics.access(loadConfig, "llama.speculativeDecoding.draftDspark")).toBe(
+    expect(llmLoadSchematics.access(loadConfig, "llama.speculativeDecoding.draftDsparkSidecar")).toBe(
       true,
     );
     expect(
-      llmLoadSchematics.access(loadConfig, "llama.speculativeDecoding.draftMtpAssistant"),
+      llmLoadSchematics.access(loadConfig, "llama.speculativeDecoding.draftMtpSidecar"),
     ).toBe(true);
   });
 
   it("rejects non-boolean GUI-only speculative decoding field values", () => {
     for (const key of [
-      "llama.speculativeDecoding.draftDflash",
-      "llama.speculativeDecoding.draftDspark",
-      "llama.speculativeDecoding.draftMtpAssistant",
+      "llama.speculativeDecoding.draftDflashSidecar",
+      "llama.speculativeDecoding.draftDsparkSidecar",
+      "llama.speculativeDecoding.draftMtpSidecar",
     ] as const) {
       expect(llmLoadSchematics.getSchemaForKey(key).safeParse("true").success).toBe(false);
       expect(llmLoadSchematics.getSchemaForKey(key).safeParse(1).success).toBe(false);
@@ -237,9 +237,9 @@ describe("llmLoadModelConfig conversion", () => {
 
   it("does not expose GUI-only speculative decoding fields through public conversion", () => {
     const loadConfig = globalConfigSchematics.scoped("llm.load").buildPartialConfig({
-      "llama.speculativeDecoding.draftDflash": true,
-      "llama.speculativeDecoding.draftDspark": true,
-      "llama.speculativeDecoding.draftMtpAssistant": true,
+      "llama.speculativeDecoding.draftDflashSidecar": true,
+      "llama.speculativeDecoding.draftDsparkSidecar": true,
+      "llama.speculativeDecoding.draftMtpSidecar": true,
     });
 
     const convertedConfig = kvConfigToLLMLoadModelConfig(loadConfig, {
@@ -258,9 +258,9 @@ describe("llmLoadModelConfig conversion", () => {
     });
     const fieldMap = new Map(loadConfig.fields.map(field => [field.key, field.value]));
 
-    expect(fieldMap.get("llm.load.llama.speculativeDecoding.draftDflash")).toBe(false);
-    expect(fieldMap.get("llm.load.llama.speculativeDecoding.draftDspark")).toBe(false);
-    expect(fieldMap.get("llm.load.llama.speculativeDecoding.draftMtpAssistant")).toBe(false);
+    expect(fieldMap.get("llm.load.llama.speculativeDecoding.draftDflashSidecar")).toBe(false);
+    expect(fieldMap.get("llm.load.llama.speculativeDecoding.draftDsparkSidecar")).toBe(false);
+    expect(fieldMap.get("llm.load.llama.speculativeDecoding.draftMtpSidecar")).toBe(false);
   });
 
   it("round trips explicit Draft MTP off", () => {

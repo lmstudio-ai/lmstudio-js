@@ -298,9 +298,9 @@ export function llmLoadModelConfigToKVConfig(config: LLMLoadModelConfig): KVConf
     "llama.speculativeDecoding.draftSimple": config.speculativeDraftSimple,
     ...(publicSpeculativeSelectorIsSpecified
       ? {
-          "llama.speculativeDecoding.draftDflash": false,
-          "llama.speculativeDecoding.draftDspark": false,
-          "llama.speculativeDecoding.draftMtpAssistant": false,
+          "llama.speculativeDecoding.draftDflashSidecar": false,
+          "llama.speculativeDecoding.draftDsparkSidecar": false,
+          "llama.speculativeDecoding.draftMtpSidecar": false,
         }
       : {}),
     "llama.speculativeDecoding.draftModel": config.speculativeDraftModel,

@@ -396,29 +396,29 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
                 false,
               )
               .field(
-                "draftDflash",
+                "draftDflashSidecar",
                 "boolean",
                 {
-                  displayName: "DFlash",
-                  hint: "Use a DFlash drafter model for speculative decoding.",
+                  displayName: "DFlash Sidecar",
+                  hint: "Use a DFlash sidecar drafter model for speculative decoding.",
                 },
                 false,
               )
               .field(
-                "draftDspark",
+                "draftDsparkSidecar",
                 "boolean",
                 {
-                  displayName: "DSpark",
-                  hint: "Use a DSpark drafter model for speculative decoding.",
+                  displayName: "DSpark Sidecar",
+                  hint: "Use a DSpark sidecar drafter model for speculative decoding.",
                 },
                 false,
               )
               .field(
-                "draftMtpAssistant",
+                "draftMtpSidecar",
                 "boolean",
                 {
-                  displayName: "MTP Assistant",
-                  hint: "Use an MTP assistant drafter model for speculative decoding.",
+                  displayName: "MTP Sidecar",
+                  hint: "Use an MTP sidecar drafter model for speculative decoding.",
                 },
                 false,
               )
