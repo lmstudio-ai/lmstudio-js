@@ -268,6 +268,10 @@ export function kvConfigToLLMLoadModelConfig(
 }
 
 export function llmLoadModelConfigToKVConfig(config: LLMLoadModelConfig): KVConfig {
+  // This conversion currently exposes only the existing speculative selectors. Support for
+  // the new drafter modes will be added to public load config separately. Until then, when a public
+  // caller explicitly writes one of the public selectors, clear the new internal selectors in the same
+  // KV layer so that request stays atomic and cannot inherit lower-layer modes after KV collapse.
   const publicSpeculativeSelectorIsSpecified =
     config.speculativeDraftMtp !== undefined ||
     config.speculativeDraftSimple !== undefined ||
