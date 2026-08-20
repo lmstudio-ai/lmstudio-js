@@ -30,5 +30,5 @@
   ],
   "rewrap.wrappingColumn": 100,
   "jest.runMode": "on-demand",
-  "typescript.tsdk": "node_modules\\typescript\\lib"
+  "typescript.tsdk": "node_modules/@typescript/old/lib"
 }
