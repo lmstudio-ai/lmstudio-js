@@ -560,10 +560,13 @@ describe("globalConfigSchematics", () => {
     ).not.toHaveProperty("autoFit");
   });
 
-  it("defaults MLX prompt disk caching on and preserves explicit overrides", () => {
+  it("marks MLX prompt disk caching as machine-dependent and preserves explicit overrides", () => {
     const emptyConfig = makeKVConfigFromFields([]);
     const disabledDiskCacheConfig = llmLoadModelConfigToKVConfig({ mlxDiskCache: false });
 
+    expect(
+      globalConfigSchematics.getValueTypeParamByFullKey("llm.load.mlx.diskCache").machineDependent,
+    ).toBe(true);
     expect(globalConfigSchematics.access(emptyConfig, "llm.load.mlx.diskCache")).toBe(true);
     expect(llmMlxLoadConfigSchematics.access(disabledDiskCacheConfig, "mlx.diskCache")).toBe(false);
     expect(
