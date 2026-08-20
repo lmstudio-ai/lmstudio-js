@@ -196,7 +196,7 @@ describe("llmLoadModelConfig conversion", () => {
     expect(fieldKeys).not.toContain("llm.load.llama.speculativeDecoding.draftMtpSidecar");
   });
 
-  it("adds GUI-only speculative decoding fields as boolean defaults", () => {
+  it("adds internal sidecar speculative decoding fields as boolean defaults", () => {
     const emptyConfig = makeKVConfigFromFields([]);
     const loadConfig = llmLoadSchematics.buildPartialConfig({
       "llama.speculativeDecoding.draftDflashSidecar": true,
@@ -224,7 +224,7 @@ describe("llmLoadModelConfig conversion", () => {
     ).toBe(true);
   });
 
-  it("rejects non-boolean GUI-only speculative decoding field values", () => {
+  it("rejects non-boolean internal sidecar speculative decoding field values", () => {
     for (const key of [
       "llama.speculativeDecoding.draftDflashSidecar",
       "llama.speculativeDecoding.draftDsparkSidecar",
@@ -235,7 +235,7 @@ describe("llmLoadModelConfig conversion", () => {
     }
   });
 
-  it("does not expose GUI-only speculative decoding fields through public conversion", () => {
+  it("does not expose internal sidecar speculative decoding fields through public conversion", () => {
     const loadConfig = globalConfigSchematics.scoped("llm.load").buildPartialConfig({
       "llama.speculativeDecoding.draftDflashSidecar": true,
       "llama.speculativeDecoding.draftDsparkSidecar": true,
@@ -251,7 +251,7 @@ describe("llmLoadModelConfig conversion", () => {
     expect(convertedConfig.speculativeDraftMtpAssistant).toBeUndefined();
   });
 
-  it("clears GUI-only speculative decoding fields for explicit public selectors", () => {
+  it("clears internal sidecar speculative decoding fields for explicit public selectors", () => {
     const loadConfig = llmLoadModelConfigToKVConfig({
       speculativeDraftSimple: true,
       speculativeDraftModel: "publisher/draft-model",
