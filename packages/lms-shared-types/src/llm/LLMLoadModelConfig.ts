@@ -727,6 +727,12 @@ export interface LLMLoadModelConfig {
   llamaVCacheQuantizationType?: LLMLlamaCacheQuantizationType | false;
 
   /**
+   * Whether MLX should store reusable prompt states on disk. Disable this to keep prompt caching
+   * in memory only.
+   */
+  mlxDiskCache?: boolean;
+
+  /**
    * Quantization settings for the MLX model's key-value cache.
    *
    * Similar to Llama cache quantization, this option allows for reducing the precision of the
@@ -778,6 +784,7 @@ export const llmLoadModelConfigSchema = z
       .enum(llmLlamaCacheQuantizationTypes)
       .or(z.literal(false))
       .optional(),
+    mlxDiskCache: z.boolean().optional(),
     mlxKvCacheQuantization: llmMlxKvCacheQuantizationSchema.or(z.literal(false)).optional(),
   })
   .superRefine((config, context) => {
