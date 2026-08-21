@@ -332,9 +332,9 @@ describe("llmLoadModelConfig conversion", () => {
     expect(convertedConfig.speculativeDraftMtp).toBe(true);
     expect(convertedConfig.speculativeDraftSimple).toBe(false);
     expect(convertedConfig.speculativeDraftModel).toBe("");
-    expect(convertedConfig.speculativeDraftMaxTokens).toBe(16);
+    expect(convertedConfig.speculativeDraftMaxTokens).toBe(3);
     expect(convertedConfig.speculativeDraftMinTokens).toBe(0);
-    expect(convertedConfig.speculativeDraftMinContinueProbability).toBe(0.75);
+    expect(convertedConfig.speculativeDraftMinContinueProbability).toBe(0);
   });
 
   it("materializes empty default Draft Model when defaults are requested", () => {

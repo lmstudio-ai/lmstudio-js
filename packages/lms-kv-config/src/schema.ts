@@ -440,7 +440,7 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
                   displayName: "Max Draft Tokens",
                   hint: "Maximum number of draft tokens to generate.",
                 },
-                16,
+                3,
               )
               .field(
                 "draftMinTokens",
@@ -464,7 +464,7 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
                   displayName: "Drafting Probability Cutoff",
                   hint: "Continue drafting while token probability is at or above this threshold.",
                 },
-                0.75,
+                0,
               ),
           )
           .field(
