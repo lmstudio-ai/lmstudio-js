@@ -183,6 +183,7 @@ describe("llmLoadModelConfig conversion", () => {
     const loadConfig = llmLoadModelConfigToKVConfig({});
 
     const roundTrippedConfig = kvConfigToLLMLoadModelConfig(loadConfig);
+    const fieldKeys = loadConfig.fields.map(field => field.key);
 
     expect(roundTrippedConfig.speculativeDraftMtp).toBeUndefined();
     expect(roundTrippedConfig.speculativeDraftSimple).toBeUndefined();
@@ -190,6 +191,76 @@ describe("llmLoadModelConfig conversion", () => {
     expect(roundTrippedConfig.speculativeDraftMaxTokens).toBeUndefined();
     expect(roundTrippedConfig.speculativeDraftMinTokens).toBeUndefined();
     expect(roundTrippedConfig.speculativeDraftMinContinueProbability).toBeUndefined();
+    expect(fieldKeys).not.toContain("llm.load.llama.speculativeDecoding.draftDflashSidecar");
+    expect(fieldKeys).not.toContain("llm.load.llama.speculativeDecoding.draftDsparkSidecar");
+    expect(fieldKeys).not.toContain("llm.load.llama.speculativeDecoding.draftMtpSidecar");
+  });
+
+  it("adds internal sidecar speculative decoding fields as boolean defaults", () => {
+    const emptyConfig = makeKVConfigFromFields([]);
+    const loadConfig = llmLoadSchematics.buildPartialConfig({
+      "llama.speculativeDecoding.draftDflashSidecar": true,
+      "llama.speculativeDecoding.draftDsparkSidecar": true,
+      "llama.speculativeDecoding.draftMtpSidecar": true,
+    });
+
+    expect(
+      llmLoadSchematics.access(emptyConfig, "llama.speculativeDecoding.draftDflashSidecar"),
+    ).toBe(false);
+    expect(
+      llmLoadSchematics.access(emptyConfig, "llama.speculativeDecoding.draftDsparkSidecar"),
+    ).toBe(false);
+    expect(
+      llmLoadSchematics.access(emptyConfig, "llama.speculativeDecoding.draftMtpSidecar"),
+    ).toBe(false);
+    expect(llmLoadSchematics.access(loadConfig, "llama.speculativeDecoding.draftDflashSidecar")).toBe(
+      true,
+    );
+    expect(llmLoadSchematics.access(loadConfig, "llama.speculativeDecoding.draftDsparkSidecar")).toBe(
+      true,
+    );
+    expect(
+      llmLoadSchematics.access(loadConfig, "llama.speculativeDecoding.draftMtpSidecar"),
+    ).toBe(true);
+  });
+
+  it("rejects non-boolean internal sidecar speculative decoding field values", () => {
+    for (const key of [
+      "llama.speculativeDecoding.draftDflashSidecar",
+      "llama.speculativeDecoding.draftDsparkSidecar",
+      "llama.speculativeDecoding.draftMtpSidecar",
+    ] as const) {
+      expect(llmLoadSchematics.getSchemaForKey(key).safeParse("true").success).toBe(false);
+      expect(llmLoadSchematics.getSchemaForKey(key).safeParse(1).success).toBe(false);
+    }
+  });
+
+  it("does not expose internal sidecar speculative decoding fields through public conversion", () => {
+    const loadConfig = globalConfigSchematics.scoped("llm.load").buildPartialConfig({
+      "llama.speculativeDecoding.draftDflashSidecar": true,
+      "llama.speculativeDecoding.draftDsparkSidecar": true,
+      "llama.speculativeDecoding.draftMtpSidecar": true,
+    });
+
+    const convertedConfig = kvConfigToLLMLoadModelConfig(loadConfig, {
+      useDefaultsForMissingKeys: true,
+    }) as Record<string, unknown>;
+
+    expect(convertedConfig.speculativeDraftDflash).toBeUndefined();
+    expect(convertedConfig.speculativeDraftDspark).toBeUndefined();
+    expect(convertedConfig.speculativeDraftMtpAssistant).toBeUndefined();
+  });
+
+  it("clears internal sidecar speculative decoding fields for explicit public selectors", () => {
+    const loadConfig = llmLoadModelConfigToKVConfig({
+      speculativeDraftSimple: true,
+      speculativeDraftModel: "publisher/draft-model",
+    });
+    const fieldMap = new Map(loadConfig.fields.map(field => [field.key, field.value]));
+
+    expect(fieldMap.get("llm.load.llama.speculativeDecoding.draftDflashSidecar")).toBe(false);
+    expect(fieldMap.get("llm.load.llama.speculativeDecoding.draftDsparkSidecar")).toBe(false);
+    expect(fieldMap.get("llm.load.llama.speculativeDecoding.draftMtpSidecar")).toBe(false);
   });
 
   it("round trips explicit Draft MTP off", () => {
@@ -261,9 +332,9 @@ describe("llmLoadModelConfig conversion", () => {
     expect(convertedConfig.speculativeDraftMtp).toBe(true);
     expect(convertedConfig.speculativeDraftSimple).toBe(false);
     expect(convertedConfig.speculativeDraftModel).toBe("");
-    expect(convertedConfig.speculativeDraftMaxTokens).toBe(16);
+    expect(convertedConfig.speculativeDraftMaxTokens).toBe(3);
     expect(convertedConfig.speculativeDraftMinTokens).toBe(0);
-    expect(convertedConfig.speculativeDraftMinContinueProbability).toBe(0.75);
+    expect(convertedConfig.speculativeDraftMinContinueProbability).toBe(0);
   });
 
   it("materializes empty default Draft Model when defaults are requested", () => {

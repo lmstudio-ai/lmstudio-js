@@ -272,6 +272,15 @@ export function kvConfigToLLMLoadModelConfig(
 }
 
 export function llmLoadModelConfigToKVConfig(config: LLMLoadModelConfig): KVConfig {
+  // This conversion currently exposes only the existing speculative selectors. Support for
+  // the new drafter modes will be added to public load config separately. Until then, when a public
+  // caller explicitly writes one of the public selectors, clear the new internal selectors in the same
+  // KV layer so that request stays atomic and cannot inherit lower-layer modes after KV collapse.
+  const publicSpeculativeSelectorIsSpecified =
+    config.speculativeDraftMtp !== undefined ||
+    config.speculativeDraftSimple !== undefined ||
+    config.speculativeDraftModel !== undefined;
+
   const top = llmLoadSchematics.buildPartialConfig({
     "gpuSplitConfig": convertGPUSettingToGPUSplitConfig(config.gpu),
     "gpuStrictVramCap": config.gpuStrictVramCap,
@@ -291,6 +300,13 @@ export function llmLoadModelConfigToKVConfig(config: LLMLoadModelConfig): KVConf
     "llama.reasoningBudgetMessage": config.reasoningBudgetMessage,
     "llama.speculativeDecoding.draftMtp": config.speculativeDraftMtp,
     "llama.speculativeDecoding.draftSimple": config.speculativeDraftSimple,
+    ...(publicSpeculativeSelectorIsSpecified
+      ? {
+          "llama.speculativeDecoding.draftDflashSidecar": false,
+          "llama.speculativeDecoding.draftDsparkSidecar": false,
+          "llama.speculativeDecoding.draftMtpSidecar": false,
+        }
+      : {}),
     "llama.speculativeDecoding.draftModel": config.speculativeDraftModel,
     "llama.speculativeDecoding.draftMaxTokens": config.speculativeDraftMaxTokens,
     "llama.speculativeDecoding.draftMinTokens": config.speculativeDraftMinTokens,

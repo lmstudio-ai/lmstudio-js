@@ -396,6 +396,33 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
                 false,
               )
               .field(
+                "draftDflashSidecar",
+                "boolean",
+                {
+                  displayName: "DFlash Sidecar",
+                  hint: "Use a DFlash sidecar drafter model for speculative decoding.",
+                },
+                false,
+              )
+              .field(
+                "draftDsparkSidecar",
+                "boolean",
+                {
+                  displayName: "DSpark Sidecar",
+                  hint: "Use a DSpark sidecar drafter model for speculative decoding.",
+                },
+                false,
+              )
+              .field(
+                "draftMtpSidecar",
+                "boolean",
+                {
+                  displayName: "MTP Sidecar",
+                  hint: "Use an MTP sidecar drafter model for speculative decoding.",
+                },
+                false,
+              )
+              .field(
                 "draftModel",
                 "string",
                 {
@@ -413,7 +440,7 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
                   displayName: "Max Draft Tokens",
                   hint: "Maximum number of draft tokens to generate.",
                 },
-                16,
+                3,
               )
               .field(
                 "draftMinTokens",
@@ -437,7 +464,7 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
                   displayName: "Drafting Probability Cutoff",
                   hint: "Continue drafting while token probability is at or above this threshold.",
                 },
-                0.75,
+                0,
               ),
           )
           .field(
