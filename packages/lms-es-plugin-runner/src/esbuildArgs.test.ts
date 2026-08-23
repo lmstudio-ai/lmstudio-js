@@ -8,4 +8,7 @@ test("Node plugin builds use ESM output", () => {
   });
 
   expect(args).toContain("--format=esm");
+  expect(args).toContain(
+    '--banner:js=import { createRequire } from "module"; const require = createRequire(import.meta.url);',
+  );
 });

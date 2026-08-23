@@ -11,6 +11,8 @@ const alwaysArgs = [
   "--tree-shaking=true",
   "--bundle",
   "--format=esm",
+  // Keep CommonJS plugin sources that use require() working in the ESM bundle.
+  '--banner:js=import { createRequire } from "module"; const require = createRequire(import.meta.url);',
   // Don't bundle node_modules as they are not necessarily designed to be bundled.
   "--packages=external",
 ];
