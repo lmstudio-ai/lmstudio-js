@@ -1,5 +1,5 @@
 import { mkdir, writeFile } from "fs/promises";
-import { dirname } from "path";
+import { dirname, join } from "path";
 
 const template = `\
 import { LMStudioClient, type PluginContext } from "@lmstudio/sdk";
@@ -106,4 +106,9 @@ export async function generateEntryFileAt(path: string, _opts: GenerateEntryFile
   const directoryPath = dirname(path);
   await mkdir(directoryPath, { recursive: true });
   await writeFile(path, template, "utf-8");
+  await writeFile(
+    join(directoryPath, "package.json"),
+    JSON.stringify({ type: "module" }) + "\n",
+    "utf-8",
+  );
 }
