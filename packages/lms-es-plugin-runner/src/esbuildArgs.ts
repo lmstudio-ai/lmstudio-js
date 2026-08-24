@@ -11,8 +11,8 @@ const alwaysArgs = [
   "--tree-shaking=true",
   "--bundle",
   "--format=esm",
-  // Keep CommonJS plugin sources that use require() working in the ESM bundle.
-  '--banner:js=import { createRequire } from "module"; const require = createRequire(import.meta.url);',
+  // Keep CommonJS plugin sources that use Node's module and file globals working in the ESM bundle.
+  '--banner:js=import { createRequire as __lmsCreateRequire } from "module"; import { fileURLToPath as __lmsFileURLToPath } from "url"; import { dirname as __lmsDirname } from "path"; const require = __lmsCreateRequire(import.meta.url); const __filename = __lmsFileURLToPath(import.meta.url); const __dirname = __lmsDirname(__filename);',
   // Don't bundle node_modules as they are not necessarily designed to be bundled.
   "--packages=external",
 ];
