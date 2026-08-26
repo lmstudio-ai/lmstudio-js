@@ -473,6 +473,33 @@ export function resolveEffectiveLLMLoadSpeculativeDecodingConfig(
   return { type: "none", ...tuningFields };
 }
 
+/**
+ * Controls which LM Studio-generated llama.cpp arguments are emitted and appends custom arguments.
+ *
+ * Each custom parameter is passed as one key token followed by one value token. An empty value
+ * emits only the key. Keys are matched exactly and duplicate arguments are allowed.
+ *
+ * @public
+ * @experimental
+ */
+export interface LLMLlamaCppArgumentsOverride {
+  enabled: boolean;
+  disabledParameters: Array<string>;
+  overrideParameters: Array<{ key: string; value: string }>;
+  excludeAllConfig: boolean;
+}
+export const llmLlamaCppArgumentsOverrideSchema = z.object({
+  enabled: z.boolean(),
+  disabledParameters: z.array(z.string()),
+  overrideParameters: z.array(
+    z.object({
+      key: z.string(),
+      value: z.string(),
+    }),
+  ),
+  excludeAllConfig: z.boolean(),
+}) as z.Schema<LLMLlamaCppArgumentsOverride>;
+
 /** @public */
 export interface LLMLoadModelConfig {
   /**
@@ -689,6 +716,17 @@ export interface LLMLoadModelConfig {
   tryDirectIO?: boolean;
 
   /**
+   * Controls the arguments passed to the llama.cpp server process.
+   *
+   * This applies to GGUF models loaded through LM Studio's llama-server engine protocol. Disabled
+   * parameters match LM Studio-generated argument keys exactly. Custom parameters are appended in
+   * order without validation, deduplication, or shell parsing.
+   *
+   * @experimental
+   */
+  llamaCppArgumentsOverride?: LLMLlamaCppArgumentsOverride;
+
+  /**
    * Specifies the number of experts to use for models with Mixture of Experts (MoE) architecture.
    *
    * MoE models contain multiple "expert" networks that specialize in different aspects of the task.
@@ -775,6 +813,7 @@ export const llmLoadModelConfigSchema = z
     useFp16ForKVCache: z.boolean().optional(),
     tryMmap: z.boolean().optional(),
     tryDirectIO: z.boolean().optional(),
+    llamaCppArgumentsOverride: llmLlamaCppArgumentsOverrideSchema.optional(),
     numExperts: z.number().int().optional(),
     llamaKCacheQuantizationType: z
       .enum(llmLlamaCacheQuantizationTypes)

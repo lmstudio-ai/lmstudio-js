@@ -22,6 +22,7 @@ interface KvConfigToLLMLoadModelConfigOpts {
   modelFormat?: ModelCompatibilityType;
 }
 
+/** Converts GGUF load fields back to the public SDK shape, optionally materializing defaults. */
 function kvConfigToLLMLlamaLoadModelConfig(
   config: KVConfig,
   { useDefaultsForMissingKeys }: Omit<KvConfigToLLMLoadModelConfigOpts, "modelFormat"> = {},
@@ -192,6 +193,11 @@ function kvConfigToLLMLlamaLoadModelConfig(
     result.tryDirectIO = tryDirectIO;
   }
 
+  const llamaCppArgumentsOverride = parsed.get("llama.argumentsOverride");
+  if (llamaCppArgumentsOverride !== undefined) {
+    result.llamaCppArgumentsOverride = llamaCppArgumentsOverride;
+  }
+
   const numExperts = parsed.get("numExperts");
   if (numExperts !== undefined) {
     result.numExperts = numExperts;
@@ -271,6 +277,7 @@ export function kvConfigToLLMLoadModelConfig(
   }
 }
 
+/** Converts a public SDK load request into the KV layer consumed by model loading. */
 export function llmLoadModelConfigToKVConfig(config: LLMLoadModelConfig): KVConfig {
   // This conversion currently exposes only the existing speculative selectors. Support for
   // the new drafter modes will be added to public load config separately. Until then, when a public
@@ -317,6 +324,7 @@ export function llmLoadModelConfigToKVConfig(config: LLMLoadModelConfig): KVConf
     "llama.useFp16ForKVCache": config.useFp16ForKVCache,
     "llama.tryMmap": config.tryMmap,
     "llama.tryDirectIO": config.tryDirectIO,
+    "llama.argumentsOverride": config.llamaCppArgumentsOverride,
     "numExperts": config.numExperts,
     "llama.kCacheQuantizationType": maybeFalseValueToCheckboxValue(
       config.llamaKCacheQuantizationType,

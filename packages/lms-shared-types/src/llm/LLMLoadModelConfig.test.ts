@@ -24,6 +24,45 @@ describe("LLMLoadModelConfig schema", () => {
     expect(llmLoadModelConfigSchema.safeParse({ contextCheckpoints: -1 }).success).toBe(false);
     expect(llmLoadModelConfigSchema.safeParse({ contextCheckpoints: 1.5 }).success).toBe(false);
   });
+
+  it("accepts permissive llama.cpp argument overrides", () => {
+    const value = {
+      enabled: true,
+      disabledParameters: ["--batch-size", "--batch-size", ""],
+      overrideParameters: [
+        { key: "--threads", value: "8" },
+        { key: "--no-context-shift", value: "" },
+        { key: "", value: "" },
+      ],
+      excludeAllConfig: false,
+    };
+
+    expect(llmLoadModelConfigSchema.parse({ llamaCppArgumentsOverride: value })).toEqual({
+      llamaCppArgumentsOverride: value,
+    });
+  });
+
+  it("requires the complete llama.cpp argument override shape", () => {
+    expect(
+      llmLoadModelConfigSchema.safeParse({
+        llamaCppArgumentsOverride: {
+          enabled: true,
+          disabledParameters: [],
+          overrideParameters: [],
+        },
+      }).success,
+    ).toBe(false);
+    expect(
+      llmLoadModelConfigSchema.safeParse({
+        llamaCppArgumentsOverride: {
+          enabled: true,
+          disabledParameters: [],
+          overrideParameters: [{ key: "--threads", value: 8 }],
+          excludeAllConfig: false,
+        },
+      }).success,
+    ).toBe(false);
+  });
 });
 
 describe("LLMLoad speculative decoding validation", () => {

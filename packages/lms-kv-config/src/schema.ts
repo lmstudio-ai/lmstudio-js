@@ -484,6 +484,17 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
           .field("tryMmap", "boolean", {}, true)
           .field("tryDirectIO", "boolean", {}, false)
           .field(
+            "argumentsOverride",
+            "llamaCppArgumentsOverride",
+            { isExperimental: true },
+            {
+              enabled: false,
+              disabledParameters: [],
+              overrideParameters: [],
+              excludeAllConfig: false,
+            },
+          )
+          .field(
             "kCacheQuantizationType",
             "llamaCacheQuantizationType",
             { isExperimental: true },

@@ -176,6 +176,8 @@ export {
   LLMLlamaCacheQuantizationType,
   llmLlamaCacheQuantizationTypes,
   llmLlamaCacheQuantizationTypeSchema,
+  LLMLlamaCppArgumentsOverride,
+  llmLlamaCppArgumentsOverrideSchema,
   LLMLoadSpeculativeDecodingConfig,
   LLMLoadSpeculativeDecodingResolution,
   LLMLoadModelConfig,
