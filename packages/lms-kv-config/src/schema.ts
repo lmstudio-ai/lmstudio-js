@@ -486,7 +486,7 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
           .field(
             "argumentsOverride",
             "llamaCppArgumentsOverride",
-            { isExperimental: true },
+            {},
             {
               enabled: false,
               disabledParameters: [],
