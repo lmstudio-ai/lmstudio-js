@@ -46,6 +46,16 @@ const predictionPromptTemplate: NonNullable<LLMPredictionConfig["promptTemplate"
   stopStrings: ["<prediction-stop>"],
 };
 
+const llamaCppArgumentsOverride: NonNullable<LLMLoadModelConfig["llamaCppArgumentsOverride"]> = {
+  enabled: true,
+  disabledParameters: ["--batch-size"],
+  overrideParameters: [
+    { key: "--threads", value: "8" },
+    { key: "--no-context-shift", value: "" },
+  ],
+  excludeAllConfig: false,
+};
+
 function createInstanceInfo(): LLMInstanceInfo {
   return {
     type: "llm",
@@ -227,6 +237,36 @@ describe("SDK load prompt template config", () => {
         useDefaultsForMissingKeys: true,
       }).promptTemplate,
     ).toBeUndefined();
+  });
+
+  test("client.llm.load maps llama.cpp argument overrides to load config", async () => {
+    const harness = createNamespaceHarness();
+
+    await harness.namespace.load("test/model", {
+      verbose: false,
+      config: { llamaCppArgumentsOverride },
+    });
+
+    const capturedCreation = harness.capturedChannelCreations[0];
+    expect(capturedCreation?.endpointName).toBe("loadModel");
+    expect(
+      globalConfigSchematics.access(
+        collapseKVStack(extractLoadConfigStack(capturedCreation?.creationParameter)),
+        "llm.load.llama.argumentsOverride",
+      ),
+    ).toEqual(llamaCppArgumentsOverride);
+  });
+
+  test("getLoadConfig round-trips llama.cpp argument overrides", async () => {
+    const harness = createNamespaceHarness();
+    harness.setLoadConfigResponse(
+      llmLoadModelConfigToKVConfig({ llamaCppArgumentsOverride }),
+    );
+    const model = await harness.namespace.load("test/model", { verbose: false });
+
+    expect((await model.getLoadConfig()).llamaCppArgumentsOverride).toEqual(
+      llamaCppArgumentsOverride,
+    );
   });
 
   test("SDK prediction-time promptTemplate remains a client-side prediction config", () => {
