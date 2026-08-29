@@ -6,6 +6,7 @@ import {
   llmContextReferenceSchema,
   llmLlamaAccelerationOffloadRatioSchema,
   llmLlamaCacheQuantizationTypeSchema,
+  llmLlamaCppArgumentsOverrideSchema,
   llmLlamaLogitBiasConfigSchema,
   llmLlamaMirostatSamplingConfigSchema,
   llmLoadPromptTemplateSchema,
@@ -554,6 +555,18 @@ export const kvValueTypesLibrary = baseKVValueTypesLibraryBuilder
           throw new Error("Unknown template type: " + exhaustiveCheck);
         }
       }
+    },
+  })
+  .valueType("llamaCppArgumentsOverride", {
+    paramType: {},
+    schemaMaker: () => {
+      return llmLlamaCppArgumentsOverrideSchema;
+    },
+    effectiveEquals: (a, b) => {
+      return deepEquals(a, b);
+    },
+    stringify: value => {
+      return JSON.stringify(value, null, 2);
     },
   })
   .valueType("llmLoadPromptTemplate", {

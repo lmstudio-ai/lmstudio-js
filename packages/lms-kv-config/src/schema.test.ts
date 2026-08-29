@@ -103,6 +103,59 @@ describe("llmPredictionConfig reasoning budget", () => {
 });
 
 describe("llmLoadModelConfig conversion", () => {
+  it("round trips llama.cpp argument overrides", () => {
+    const llamaCppArgumentsOverride = {
+      enabled: true,
+      disabledParameters: ["--batch-size"],
+      overrideParameters: [
+        { key: "--threads", value: "8" },
+        { key: "--no-context-shift", value: "" },
+      ],
+      excludeAllConfig: false,
+    };
+    const loadConfig = llmLoadModelConfigToKVConfig({ llamaCppArgumentsOverride });
+
+    expect(
+      globalConfigSchematics.access(loadConfig, "llm.load.llama.argumentsOverride"),
+    ).toEqual(llamaCppArgumentsOverride);
+    expect(kvConfigToLLMLoadModelConfig(loadConfig).llamaCppArgumentsOverride).toEqual(
+      llamaCppArgumentsOverride,
+    );
+  });
+
+  it("preserves absence and materializes the disabled llama.cpp argument default", () => {
+    const emptyConfig = makeKVConfigFromFields([]);
+
+    expect(kvConfigToLLMLoadModelConfig(emptyConfig).llamaCppArgumentsOverride).toBeUndefined();
+    expect(
+      kvConfigToLLMLoadModelConfig(emptyConfig, { useDefaultsForMissingKeys: true })
+        .llamaCppArgumentsOverride,
+    ).toEqual({
+      enabled: false,
+      disabledParameters: [],
+      overrideParameters: [],
+      excludeAllConfig: false,
+    });
+  });
+
+  it("does not expose llama.cpp argument overrides for MLX", () => {
+    const loadConfig = llmLoadModelConfigToKVConfig({
+      llamaCppArgumentsOverride: {
+        enabled: true,
+        disabledParameters: [],
+        overrideParameters: [{ key: "--threads", value: "8" }],
+        excludeAllConfig: true,
+      },
+    });
+
+    expect(
+      kvConfigToLLMLoadModelConfig(loadConfig, {
+        modelFormat: "safetensors",
+        useDefaultsForMissingKeys: true,
+      }).llamaCppArgumentsOverride,
+    ).toBeUndefined();
+  });
+
   it("round trips load-time prompt template config", () => {
     const promptTemplate = {
       type: "jinja" as const,

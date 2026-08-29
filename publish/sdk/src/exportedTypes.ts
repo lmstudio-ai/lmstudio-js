@@ -198,6 +198,7 @@ export type {
   LLMJinjaPromptTemplate,
   LLMLlamaAccelerationOffloadRatio,
   LLMLlamaCacheQuantizationType,
+  LLMLlamaCppArgumentsOverride,
   LLMLoadModelConfig,
   LLMLoadSpeculativeDecodingConfig,
   LLMLoadSpeculativeDecodingResolution,
