@@ -47,7 +47,8 @@ function kvConfigToLLMLlamaLoadModelConfig(
   const gpuSplitConfig = parsed.get("load.gpuSplitConfig");
   if (gpuSplitConfig !== undefined) {
     const convertedGPUSetting = convertGPUSplitConfigToGPUSetting(gpuSplitConfig);
-    if (autoFit === true) {
+    // Without explicit manual mode, the KV strategy may only be a default added for GPU filters.
+    if (autoFit !== false) {
       if (convertedGPUSetting.disabledGpus !== undefined) {
         gpuFields = { disabledGpus: convertedGPUSetting.disabledGpus };
         result.gpu = gpuFields;

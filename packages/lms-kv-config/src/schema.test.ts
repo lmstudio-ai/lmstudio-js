@@ -157,12 +157,22 @@ describe("llmLoadModelConfig conversion", () => {
     expect(llmLoadModelConfigSchema.safeParse(convertedMlxConfig).success).toBe(true);
   });
 
-  it("leaves AutoFit unspecified for GPU filtering", () => {
-    const loadConfig = llmLoadModelConfigToKVConfig({ gpu: { disabledGpus: [1] } });
+  it("preserves inherited AutoFit when GPU filtering round trips", () => {
+    const config = { gpu: { disabledGpus: [1] } };
+    const loadConfig = llmLoadModelConfigToKVConfig(config);
     const fieldKeys = loadConfig.fields.map(field => field.key);
 
     expect(fieldKeys).not.toContain("llm.load.llama.autoFit");
     expect(fieldKeys).not.toContain("llm.load.mlx.autoFit");
+
+    const roundTrippedConfig = kvConfigToLLMLoadModelConfig(loadConfig);
+    expect(roundTrippedConfig).toEqual(config);
+
+    const reappliedFieldKeys = llmLoadModelConfigToKVConfig(roundTrippedConfig).fields.map(
+      field => field.key,
+    );
+    expect(reappliedFieldKeys).not.toContain("llm.load.llama.autoFit");
+    expect(reappliedFieldKeys).not.toContain("llm.load.mlx.autoFit");
   });
 
   it("round trips llama.cpp argument overrides", () => {
