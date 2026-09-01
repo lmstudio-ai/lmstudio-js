@@ -219,6 +219,19 @@ describe("llmLoadModelConfig conversion", () => {
     expect(reappliedFieldKeys).not.toContain("llm.load.mlx.autoFit");
   });
 
+  it.each([{ gpu: {} }, { gpu: { disabledGpus: [] } }] as Array<LLMLoadModelConfig>)(
+    "does not serialize empty GPU setting %j as manual placement",
+    config => {
+      const loadConfig = llmLoadModelConfigToKVConfig(config);
+      const fieldKeys = loadConfig.fields.map(field => field.key);
+
+      expect(fieldKeys).not.toContain("llm.load.gpuSplitConfig");
+      expect(fieldKeys).not.toContain("llm.load.llama.autoFit");
+      expect(fieldKeys).not.toContain("llm.load.mlx.autoFit");
+      expect(kvConfigToLLMLoadModelConfig(loadConfig)).toEqual({});
+    },
+  );
+
   it("round trips llama.cpp argument overrides", () => {
     const llamaCppArgumentsOverride = {
       enabled: true,

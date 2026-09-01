@@ -332,11 +332,17 @@ export function llmLoadModelConfigToKVConfig(config: LLMLoadModelConfig): KVConf
     config.gpu?.splitStrategy !== undefined ||
     config.gpuStrictVramCap !== undefined;
   const autoFit = config.autoFit ?? (hasManualLoadSetting ? false : undefined);
+  const hasGpuSplitSetting =
+    (config.gpu?.disabledGpus !== undefined && config.gpu.disabledGpus.length > 0) ||
+    config.gpu?.mainGpu !== undefined ||
+    config.gpu?.splitStrategy !== undefined;
 
   const top = llmLoadSchematics.buildPartialConfig({
     "llama.autoFit": autoFit,
     "mlx.autoFit": autoFit,
-    "gpuSplitConfig": convertGPUSettingToGPUSplitConfig(config.gpu),
+    "gpuSplitConfig": hasGpuSplitSetting
+      ? convertGPUSettingToGPUSplitConfig(config.gpu)
+      : undefined,
     "gpuStrictVramCap": config.gpuStrictVramCap,
     "llama.acceleration.offloadRatio": config.gpu?.ratio,
     "numCpuExpertLayersRatio": config.gpu?.numCpuExpertLayersRatio,
