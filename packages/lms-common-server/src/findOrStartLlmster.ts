@@ -188,12 +188,9 @@ export async function getAPIServerStatusOrThrow({
   const controller = new AbortController();
   const timeout =
     typeof timeoutMs === "number" ? setTimeout(() => controller.abort(), timeoutMs) : undefined;
-  // IPv6 literals need brackets when combined with a port.
-  const urlHost =
-    host.includes(":") && !(host.startsWith("[") && host.endsWith("]")) ? `[${host}]` : host;
   let response: Response;
   try {
-    response = await fetch(`http://${urlHost}:${port}/lms-status`, {
+    response = await fetch(`http://${host}:${port}/lms-status`, {
       signal: controller.signal,
     });
   } finally {
