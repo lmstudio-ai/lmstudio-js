@@ -178,6 +178,29 @@ describe("llmLoadModelConfig conversion", () => {
     },
   );
 
+  it("preserves legacy manual evenly GPU placement", () => {
+    const legacyConfig = llmLoadSchematics.buildPartialConfig({
+      gpuSplitConfig: {
+        strategy: "evenly",
+        disabledGpus: [],
+        priority: [],
+        customRatio: [],
+      },
+    });
+    const convertedConfig = kvConfigToLLMLoadModelConfig(legacyConfig, {
+      useDefaultsForMissingKeys: true,
+    });
+
+    expect(convertedConfig.autoFit).toBe(false);
+    expect(convertedConfig.gpu?.splitStrategy).toBe("evenly");
+
+    const reappliedConfig = kvConfigToLLMLoadModelConfig(
+      llmLoadModelConfigToKVConfig(convertedConfig),
+    );
+    expect(reappliedConfig.autoFit).toBe(false);
+    expect(reappliedConfig.gpu?.splitStrategy).toBe("evenly");
+  });
+
   it("preserves inherited AutoFit when GPU filtering round trips", () => {
     const config = { gpu: { disabledGpus: [1] } };
     const loadConfig = llmLoadModelConfigToKVConfig(config);

@@ -48,6 +48,7 @@ function kvConfigToLLMLlamaLoadModelConfig(
       partialParsed.get("numCpuExpertLayersRatio") !== undefined ||
       (explicitGpuSplitConfig !== undefined &&
         (explicitGpuSplitConfig.strategy !== "evenly" ||
+          explicitGpuSplitConfig.disabledGpus.length === 0 ||
           explicitGpuSplitConfig.priority.length > 0 ||
           explicitGpuSplitConfig.customRatio.length > 0)));
   const autoFit = hasLegacyManualLoadSetting ? false : parsed.get("llama.autoFit");
