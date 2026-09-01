@@ -37,7 +37,20 @@ function kvConfigToLLMLlamaLoadModelConfig(
     parsed = partialParsed;
   }
 
-  const autoFit = parsed.get("llama.autoFit");
+  const explicitAutoFit = partialParsed.get("llama.autoFit");
+  const explicitGpuSplitConfig = partialParsed.get("load.gpuSplitConfig");
+  // Older SDKs wrote manual fields without disabling AutoFit, so inspect them before defaults fill it.
+  const hasManualLoadSetting =
+    explicitAutoFit === undefined &&
+    (partialParsed.get("contextLength") !== undefined ||
+      partialParsed.get("load.gpuStrictVramCap") !== undefined ||
+      partialParsed.get("llama.acceleration.offloadRatio") !== undefined ||
+      partialParsed.get("numCpuExpertLayersRatio") !== undefined ||
+      (explicitGpuSplitConfig !== undefined &&
+        (explicitGpuSplitConfig.strategy !== "evenly" ||
+          explicitGpuSplitConfig.priority.length > 0 ||
+          explicitGpuSplitConfig.customRatio.length > 0)));
+  const autoFit = hasManualLoadSetting ? false : parsed.get("llama.autoFit");
   if (autoFit !== undefined) {
     result.autoFit = autoFit;
   }
@@ -239,13 +252,19 @@ function kvConfigToLLMMlxLoadModelConfig(
   const result: LLMLoadModelConfig = {};
 
   let parsed;
+  const partialParsed = llmMlxLoadConfigSchematics.parsePartial(config);
   if (useDefaultsForMissingKeys === true) {
     parsed = llmMlxLoadConfigSchematics.parse(config);
   } else {
-    parsed = llmMlxLoadConfigSchematics.parsePartial(config);
+    parsed = partialParsed;
   }
 
-  const autoFit = parsed.get("mlx.autoFit");
+  // Older SDKs wrote a manual context without disabling AutoFit.
+  const autoFit =
+    partialParsed.get("mlx.autoFit") === undefined &&
+    partialParsed.get("contextLength") !== undefined
+      ? false
+      : parsed.get("mlx.autoFit");
   if (autoFit !== undefined) {
     result.autoFit = autoFit;
   }

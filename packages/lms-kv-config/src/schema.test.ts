@@ -157,6 +157,27 @@ describe("llmLoadModelConfig conversion", () => {
     expect(llmLoadModelConfigSchema.safeParse(convertedMlxConfig).success).toBe(true);
   });
 
+  it.each(["gguf", "safetensors"] as const)(
+    "preserves legacy manual context for %s",
+    modelFormat => {
+      const legacyConfig = llmLoadSchematics.buildPartialConfig({ contextLength: 4096 });
+      const convertedConfig = kvConfigToLLMLoadModelConfig(legacyConfig, {
+        modelFormat,
+        useDefaultsForMissingKeys: true,
+      });
+
+      expect(convertedConfig.autoFit).toBe(false);
+      expect(convertedConfig.contextLength).toBe(4096);
+
+      const reappliedFields = new Map(
+        llmLoadModelConfigToKVConfig(convertedConfig).fields.map(field => [field.key, field.value]),
+      );
+      expect(reappliedFields.get("llm.load.contextLength")).toBe(4096);
+      expect(reappliedFields.get("llm.load.llama.autoFit")).toBe(false);
+      expect(reappliedFields.get("llm.load.mlx.autoFit")).toBe(false);
+    },
+  );
+
   it("preserves inherited AutoFit when GPU filtering round trips", () => {
     const config = { gpu: { disabledGpus: [1] } };
     const loadConfig = llmLoadModelConfigToKVConfig(config);
