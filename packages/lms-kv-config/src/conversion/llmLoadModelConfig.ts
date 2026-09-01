@@ -40,7 +40,7 @@ function kvConfigToLLMLlamaLoadModelConfig(
   const explicitAutoFit = partialParsed.get("llama.autoFit");
   const explicitGpuSplitConfig = partialParsed.get("load.gpuSplitConfig");
   // Older SDKs wrote manual fields without disabling AutoFit, so inspect them before defaults fill it.
-  const hasManualLoadSetting =
+  const hasLegacyManualLoadSetting =
     explicitAutoFit === undefined &&
     (partialParsed.get("contextLength") !== undefined ||
       partialParsed.get("load.gpuStrictVramCap") !== undefined ||
@@ -50,7 +50,7 @@ function kvConfigToLLMLlamaLoadModelConfig(
         (explicitGpuSplitConfig.strategy !== "evenly" ||
           explicitGpuSplitConfig.priority.length > 0 ||
           explicitGpuSplitConfig.customRatio.length > 0)));
-  const autoFit = hasManualLoadSetting ? false : parsed.get("llama.autoFit");
+  const autoFit = hasLegacyManualLoadSetting ? false : parsed.get("llama.autoFit");
   if (autoFit !== undefined) {
     result.autoFit = autoFit;
   }
