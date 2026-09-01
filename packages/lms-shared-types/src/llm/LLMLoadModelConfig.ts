@@ -504,7 +504,7 @@ export const llmLlamaCppArgumentsOverrideSchema = z.object({
 export interface LLMLoadModelConfig {
   /**
    * Whether LM Studio should automatically choose context length and model placement based on
-   * available resources.
+   * available resources. This option is only available when using Bionic.
    */
   autoFit?: boolean;
 
