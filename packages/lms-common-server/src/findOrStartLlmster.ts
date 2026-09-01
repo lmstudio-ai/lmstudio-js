@@ -173,24 +173,17 @@ function readInstallLocationFile(
   }
 }
 
-export interface GetAPIServerStatusOrThrowOpts {
-  host: string;
-  port: number;
-  timeoutMs?: number;
-}
-
-/** Validates one API server address and returns its advertised status. */
-export async function getAPIServerStatusOrThrow({
-  host,
-  port,
-  timeoutMs,
-}: GetAPIServerStatusOrThrowOpts): Promise<APIServerStatus> {
+/** Validates one exact local API server port and returns its advertised status. */
+export async function getLocalAPIServerStatusAtPortOrThrow(
+  port: number,
+  timeoutMs?: number,
+): Promise<APIServerStatus> {
   const controller = new AbortController();
   const timeout =
     typeof timeoutMs === "number" ? setTimeout(() => controller.abort(), timeoutMs) : undefined;
   let response: Response;
   try {
-    response = await fetch(`http://${host}:${port}/lms-status`, {
+    response = await fetch(`http://127.0.0.1:${port}/lms-status`, {
       signal: controller.signal,
     });
   } finally {
@@ -218,14 +211,6 @@ export async function getAPIServerStatusOrThrow({
     throw new Error("'version' field is not a string.");
   }
   return { package: json.package, version: json.version, port };
-}
-
-/** Validates one exact local API server port and returns its advertised status. */
-export async function getLocalAPIServerStatusAtPortOrThrow(
-  port: number,
-  timeoutMs?: number,
-): Promise<APIServerStatus> {
-  return await getAPIServerStatusOrThrow({ host: "127.0.0.1", port, timeoutMs });
 }
 
 /**

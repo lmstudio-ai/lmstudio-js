@@ -1,5 +1,5 @@
 import { type LoggerInterface } from "@lmstudio/lms-common";
-import { getAPIServerStatusOrThrow, tryFindLocalAPIServer } from "./findOrStartLlmster.js";
+import { tryFindLocalAPIServer } from "./findOrStartLlmster.js";
 
 const logger: LoggerInterface = {
   debug: jest.fn(),
@@ -19,22 +19,6 @@ function statusResponse(): Response {
 describe("tryFindLocalAPIServer", () => {
   afterEach(() => {
     jest.restoreAllMocks();
-  });
-
-  test("checks a specified API server host", async () => {
-    const fetchMock = jest.spyOn(global, "fetch").mockResolvedValue(statusResponse());
-
-    await expect(
-      getAPIServerStatusOrThrow({ host: "bionic.example", port: 45678, timeoutMs: 3000 }),
-    ).resolves.toEqual({
-      package: "lmstudio",
-      port: 45678,
-      version: "1.2.3",
-    });
-    expect(fetchMock).toHaveBeenCalledWith(
-      "http://bionic.example:45678/lms-status",
-      expect.objectContaining({ signal: expect.any(AbortSignal) }),
-    );
   });
 
   test("uses a live preferred port without scanning the legacy ports", async () => {
