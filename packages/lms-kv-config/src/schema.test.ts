@@ -1,6 +1,7 @@
 import {
   llmLoadModelConfigSchema,
   llmPredictionConfigInputSchema,
+  type LLMLoadModelConfig,
   serializedKVConfigSchematicsSchema,
 } from "@lmstudio/lms-shared-types";
 import {
@@ -103,6 +104,67 @@ describe("llmPredictionConfig reasoning budget", () => {
 });
 
 describe("llmLoadModelConfig conversion", () => {
+  it("round trips explicit AutoFit for GGUF and MLX", () => {
+    const loadConfig = llmLoadModelConfigToKVConfig({ autoFit: true });
+    const fieldMap = new Map(loadConfig.fields.map(field => [field.key, field.value]));
+
+    expect(fieldMap.get("llm.load.llama.autoFit")).toBe(true);
+    expect(fieldMap.get("llm.load.mlx.autoFit")).toBe(true);
+    expect(kvConfigToLLMLoadModelConfig(loadConfig).autoFit).toBe(true);
+    expect(kvConfigToLLMLoadModelConfig(loadConfig, { modelFormat: "safetensors" }).autoFit).toBe(
+      true,
+    );
+  });
+
+  it("disables AutoFit for explicit manual settings", () => {
+    const manualLoadConfigs: Array<LLMLoadModelConfig> = [
+      { contextLength: 4096 },
+      { gpu: { ratio: 0 } },
+      { gpu: { numCpuExpertLayersRatio: 0.5 } },
+      { gpu: { mainGpu: 0 } },
+      { gpu: { splitStrategy: "evenly" } },
+      { gpuStrictVramCap: false },
+    ];
+
+    for (const manualLoadConfig of manualLoadConfigs) {
+      const loadConfig = llmLoadModelConfigToKVConfig(manualLoadConfig);
+
+      expect(globalConfigSchematics.access(loadConfig, "llm.load.llama.autoFit")).toBe(false);
+      expect(globalConfigSchematics.access(loadConfig, "llm.load.mlx.autoFit")).toBe(false);
+      expect(kvConfigToLLMLoadModelConfig(loadConfig).autoFit).toBe(false);
+      expect(kvConfigToLLMLoadModelConfig(loadConfig, { modelFormat: "safetensors" }).autoFit).toBe(
+        false,
+      );
+    }
+  });
+
+  it("keeps materialized AutoFit configs valid public load configs", () => {
+    const convertedConfig = kvConfigToLLMLoadModelConfig(makeKVConfigFromFields([]), {
+      useDefaultsForMissingKeys: true,
+    });
+    const convertedMlxConfig = kvConfigToLLMLoadModelConfig(makeKVConfigFromFields([]), {
+      modelFormat: "safetensors",
+      useDefaultsForMissingKeys: true,
+    });
+
+    expect(convertedConfig.autoFit).toBe(true);
+    expect(convertedConfig.contextLength).toBeUndefined();
+    expect(convertedConfig.gpuStrictVramCap).toBeUndefined();
+    expect(convertedConfig.gpu?.ratio).toBeUndefined();
+    expect(llmLoadModelConfigSchema.safeParse(convertedConfig).success).toBe(true);
+    expect(convertedMlxConfig.autoFit).toBe(true);
+    expect(convertedMlxConfig.contextLength).toBeUndefined();
+    expect(llmLoadModelConfigSchema.safeParse(convertedMlxConfig).success).toBe(true);
+  });
+
+  it("leaves AutoFit unspecified for GPU filtering", () => {
+    const loadConfig = llmLoadModelConfigToKVConfig({ gpu: { disabledGpus: [1] } });
+    const fieldKeys = loadConfig.fields.map(field => field.key);
+
+    expect(fieldKeys).not.toContain("llm.load.llama.autoFit");
+    expect(fieldKeys).not.toContain("llm.load.mlx.autoFit");
+  });
+
   it("round trips llama.cpp argument overrides", () => {
     const llamaCppArgumentsOverride = {
       enabled: true,
@@ -668,7 +730,7 @@ describe("globalConfigSchematics", () => {
     );
   });
 
-  it("keeps MLX AutoFit internal to KV config", () => {
+  it("exposes MLX AutoFit through public load config", () => {
     const emptyConfig = makeKVConfigFromFields([]);
     const disabledAutoFitConfig = llmMlxLoadConfigSchematics.buildPartialConfig({
       "mlx.autoFit": false,
@@ -681,7 +743,7 @@ describe("globalConfigSchematics", () => {
     expect(llmMlxLoadConfigSchematics.access(disabledAutoFitConfig, "mlx.autoFit")).toBe(false);
     expect(
       kvConfigToLLMLoadModelConfig(disabledAutoFitConfig, { modelFormat: "safetensors" }),
-    ).not.toHaveProperty("autoFit");
+    ).toMatchObject({ autoFit: false });
   });
 
   it("marks MLX prompt disk caching as machine-dependent and preserves explicit overrides", () => {

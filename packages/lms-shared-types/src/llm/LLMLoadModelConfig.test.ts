@@ -15,6 +15,42 @@ function expectSpeculativeConfigRejectedByHelpers(
 }
 
 describe("LLMLoadModelConfig schema", () => {
+  it("rejects AutoFit with explicit manual load settings", () => {
+    const manualLoadConfigs = [
+      { contextLength: 4096 },
+      { gpu: { ratio: 0 } },
+      { gpu: { numCpuExpertLayersRatio: 0.5 } },
+      { gpu: { mainGpu: 0 } },
+      { gpu: { splitStrategy: "evenly" } },
+      { gpuStrictVramCap: false },
+    ];
+
+    for (const manualLoadConfig of manualLoadConfigs) {
+      expect(
+        llmLoadModelConfigSchema.safeParse({ autoFit: true, ...manualLoadConfig }).success,
+      ).toBe(false);
+    }
+  });
+
+  it("allows AutoFit with disabled GPUs", () => {
+    expect(
+      llmLoadModelConfigSchema.safeParse({
+        autoFit: true,
+        gpu: { disabledGpus: [1] },
+      }).success,
+    ).toBe(true);
+  });
+
+  it("allows explicit manual mode with manual settings", () => {
+    expect(
+      llmLoadModelConfigSchema.safeParse({
+        autoFit: false,
+        contextLength: 4096,
+        gpu: { ratio: 0.5 },
+      }).success,
+    ).toBe(true);
+  });
+
   it("accepts llama context checkpoints including 0", () => {
     expect(llmLoadModelConfigSchema.safeParse({ contextCheckpoints: 0 }).success).toBe(true);
     expect(llmLoadModelConfigSchema.safeParse({ contextCheckpoints: 32 }).success).toBe(true);
