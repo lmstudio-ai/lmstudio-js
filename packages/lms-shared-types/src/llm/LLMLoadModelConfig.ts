@@ -503,6 +503,12 @@ export const llmLlamaCppArgumentsOverrideSchema = z.object({
 /** @public */
 export interface LLMLoadModelConfig {
   /**
+   * Whether LM Studio should automatically choose context length and model placement based on
+   * available resources. This option is only available when using Bionic.
+   */
+  autoFit?: boolean;
+
+  /**
    * How to distribute the work to your GPUs. See {@link GPUSetting} for more information.
    *
    * @public
@@ -788,6 +794,7 @@ export interface LLMLoadModelConfig {
 }
 export const llmLoadModelConfigSchema = z
   .object({
+    autoFit: z.boolean().optional(),
     gpu: gpuSettingSchema.optional(),
     maxParallelPredictions: z.number().int().min(1).optional(),
     useUnifiedKvCache: z.boolean().optional(),
@@ -827,6 +834,22 @@ export const llmLoadModelConfigSchema = z
     mlxKvCacheQuantization: llmMlxKvCacheQuantizationSchema.or(z.literal(false)).optional(),
   })
   .superRefine((config, context) => {
+    if (
+      config.autoFit === true &&
+      (config.contextLength !== undefined ||
+        config.gpu?.ratio !== undefined ||
+        config.gpu?.numCpuExpertLayersRatio !== undefined ||
+        config.gpu?.mainGpu !== undefined ||
+        config.gpu?.splitStrategy !== undefined ||
+        config.gpuStrictVramCap !== undefined)
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "autoFit cannot be enabled with manual context, placement, or memory settings",
+        path: ["autoFit"],
+      });
+    }
+
     for (const issue of getLLMLoadSpeculativeDecodingCrossFieldValidationIssues(config)) {
       context.addIssue({
         code: z.ZodIssueCode.custom,

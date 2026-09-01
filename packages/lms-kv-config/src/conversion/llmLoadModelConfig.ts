@@ -37,24 +37,49 @@ function kvConfigToLLMLlamaLoadModelConfig(
     parsed = partialParsed;
   }
 
+  const explicitAutoFit = partialParsed.get("llama.autoFit");
+  const explicitGpuSplitConfig = partialParsed.get("load.gpuSplitConfig");
+  // Older SDKs wrote manual fields without disabling AutoFit, so inspect them before defaults fill it.
+  const hasLegacyManualLoadSetting =
+    explicitAutoFit === undefined &&
+    (partialParsed.get("contextLength") !== undefined ||
+      partialParsed.get("load.gpuStrictVramCap") !== undefined ||
+      partialParsed.get("llama.acceleration.offloadRatio") !== undefined ||
+      partialParsed.get("numCpuExpertLayersRatio") !== undefined ||
+      (explicitGpuSplitConfig !== undefined &&
+        (explicitGpuSplitConfig.strategy !== "evenly" ||
+          explicitGpuSplitConfig.disabledGpus.length === 0 ||
+          explicitGpuSplitConfig.priority.length > 0 ||
+          explicitGpuSplitConfig.customRatio.length > 0)));
+  const autoFit = hasLegacyManualLoadSetting ? false : parsed.get("llama.autoFit");
+  if (autoFit !== undefined) {
+    result.autoFit = autoFit;
+  }
+
   let gpuFields: GPUSetting = {};
 
   const gpuSplitConfig = parsed.get("load.gpuSplitConfig");
   if (gpuSplitConfig !== undefined) {
-    gpuFields = {
-      ...gpuFields,
-      ...convertGPUSplitConfigToGPUSetting(gpuSplitConfig),
-    };
-    result.gpu = gpuFields;
+    const convertedGPUSetting = convertGPUSplitConfigToGPUSetting(gpuSplitConfig);
+    // Without explicit manual mode, the KV strategy may only be a default added for GPU filters.
+    if (autoFit !== false) {
+      if (convertedGPUSetting.disabledGpus !== undefined) {
+        gpuFields = { disabledGpus: convertedGPUSetting.disabledGpus };
+        result.gpu = gpuFields;
+      }
+    } else {
+      gpuFields = { ...gpuFields, ...convertedGPUSetting };
+      result.gpu = gpuFields;
+    }
   }
 
   const gpuStrictVramCap = parsed.get("load.gpuStrictVramCap");
-  if (gpuStrictVramCap !== undefined) {
+  if (autoFit !== true && gpuStrictVramCap !== undefined) {
     result.gpuStrictVramCap = gpuStrictVramCap;
   }
 
   const llamaAccelerationOffloadRatio = parsed.get("llama.acceleration.offloadRatio");
-  if (llamaAccelerationOffloadRatio !== undefined) {
+  if (autoFit !== true && llamaAccelerationOffloadRatio !== undefined) {
     gpuFields = {
       ...gpuFields,
       ratio: llamaAccelerationOffloadRatio,
@@ -63,7 +88,7 @@ function kvConfigToLLMLlamaLoadModelConfig(
   }
 
   const numCpuExpertLayersRatio = parsed.get("numCpuExpertLayersRatio");
-  if (numCpuExpertLayersRatio !== undefined) {
+  if (autoFit !== true && numCpuExpertLayersRatio !== undefined) {
     gpuFields = {
       ...gpuFields,
       numCpuExpertLayersRatio,
@@ -87,7 +112,7 @@ function kvConfigToLLMLlamaLoadModelConfig(
   }
 
   const contextLength = parsed.get("contextLength");
-  if (contextLength !== undefined) {
+  if (autoFit !== true && contextLength !== undefined) {
     result.contextLength = contextLength;
   }
 
@@ -220,6 +245,7 @@ function kvConfigToLLMLlamaLoadModelConfig(
   return result;
 }
 
+/** Converts MLX load fields back to the public SDK shape, optionally materializing defaults. */
 function kvConfigToLLMMlxLoadModelConfig(
   config: KVConfig,
   { useDefaultsForMissingKeys }: Omit<KvConfigToLLMLoadModelConfigOpts, "modelFormat"> = {},
@@ -227,14 +253,25 @@ function kvConfigToLLMMlxLoadModelConfig(
   const result: LLMLoadModelConfig = {};
 
   let parsed;
+  const partialParsed = llmMlxLoadConfigSchematics.parsePartial(config);
   if (useDefaultsForMissingKeys === true) {
     parsed = llmMlxLoadConfigSchematics.parse(config);
   } else {
-    parsed = llmMlxLoadConfigSchematics.parsePartial(config);
+    parsed = partialParsed;
+  }
+
+  // Older SDKs wrote a manual context without disabling AutoFit.
+  const autoFit =
+    partialParsed.get("mlx.autoFit") === undefined &&
+    partialParsed.get("contextLength") !== undefined
+      ? false
+      : parsed.get("mlx.autoFit");
+  if (autoFit !== undefined) {
+    result.autoFit = autoFit;
   }
 
   const contextLength = parsed.get("contextLength");
-  if (contextLength !== undefined) {
+  if (autoFit !== true && contextLength !== undefined) {
     result.contextLength = contextLength;
   }
 
@@ -287,9 +324,25 @@ export function llmLoadModelConfigToKVConfig(config: LLMLoadModelConfig): KVConf
     config.speculativeDraftMtp !== undefined ||
     config.speculativeDraftSimple !== undefined ||
     config.speculativeDraftModel !== undefined;
+  const hasManualLoadSetting =
+    config.contextLength !== undefined ||
+    config.gpu?.ratio !== undefined ||
+    config.gpu?.numCpuExpertLayersRatio !== undefined ||
+    config.gpu?.mainGpu !== undefined ||
+    config.gpu?.splitStrategy !== undefined ||
+    config.gpuStrictVramCap !== undefined;
+  const autoFit = config.autoFit ?? (hasManualLoadSetting ? false : undefined);
+  const hasGpuSplitSetting =
+    (config.gpu?.disabledGpus !== undefined && config.gpu.disabledGpus.length > 0) ||
+    config.gpu?.mainGpu !== undefined ||
+    config.gpu?.splitStrategy !== undefined;
 
   const top = llmLoadSchematics.buildPartialConfig({
-    "gpuSplitConfig": convertGPUSettingToGPUSplitConfig(config.gpu),
+    "llama.autoFit": autoFit,
+    "mlx.autoFit": autoFit,
+    "gpuSplitConfig": hasGpuSplitSetting
+      ? convertGPUSettingToGPUSplitConfig(config.gpu)
+      : undefined,
     "gpuStrictVramCap": config.gpuStrictVramCap,
     "llama.acceleration.offloadRatio": config.gpu?.ratio,
     "numCpuExpertLayersRatio": config.gpu?.numCpuExpertLayersRatio,
