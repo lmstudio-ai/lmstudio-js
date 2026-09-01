@@ -21,18 +21,22 @@ describe("tryFindLocalAPIServer", () => {
     jest.restoreAllMocks();
   });
 
-  test("checks a specified API server host", async () => {
+  test.each([
+    ["bionic.example", "bionic.example"],
+    ["::1", "[::1]"],
+    ["[::1]", "[::1]"],
+  ])("checks API server host %s", async (host, urlHost) => {
     const fetchMock = jest.spyOn(global, "fetch").mockResolvedValue(statusResponse());
 
     await expect(
-      getAPIServerStatusOrThrow({ host: "bionic.example", port: 45678, timeoutMs: 3000 }),
+      getAPIServerStatusOrThrow({ host, port: 45678, timeoutMs: 3000 }),
     ).resolves.toEqual({
       package: "lmstudio",
       port: 45678,
       version: "1.2.3",
     });
     expect(fetchMock).toHaveBeenCalledWith(
-      "http://bionic.example:45678/lms-status",
+      `http://${urlHost}:45678/lms-status`,
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
     );
   });
