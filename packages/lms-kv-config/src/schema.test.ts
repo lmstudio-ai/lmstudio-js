@@ -24,6 +24,7 @@ import {
   llmLlamaLoadConfigSchematics,
   llmLoadSchematics,
   llmMlxLoadConfigSchematics,
+  llmVllmLoadConfigSchematics,
 } from "./schema.js";
 import { kvValueTypesLibrary } from "./valueTypes.js";
 
@@ -795,6 +796,34 @@ describe("globalConfigSchematics", () => {
     expect(() => llmMlxLoadConfigSchematics.obtainField("promptTemplate")).toThrow(
       "Cannot access key promptTemplate",
     );
+  });
+
+  it("defines internal vLLM load fields with bounded GPU memory utilization", () => {
+    const config = llmVllmLoadConfigSchematics.buildPartialConfig({
+      "vllm.gpuMemoryUtilization": 0.73,
+      "vllm.reasoningParser": "deepseek_r1",
+      "vllm.toolCallParser": "hermes",
+    });
+
+    expect(llmVllmLoadConfigSchematics.access(config, "vllm.gpuMemoryUtilization")).toBe(0.73);
+    expect(llmVllmLoadConfigSchematics.access(config, "vllm.reasoningParser")).toBe("deepseek_r1");
+    expect(llmVllmLoadConfigSchematics.access(config, "vllm.toolCallParser")).toBe("hermes");
+    expect(llmVllmLoadConfigSchematics.obtainField("vllm.gpuMemoryUtilization").fullKey).toBe(
+      "llm.load.vllm.gpuMemoryUtilization",
+    );
+
+    const gpuMemoryUtilizationSchema = llmVllmLoadConfigSchematics.getSchemaForKey(
+      "vllm.gpuMemoryUtilization",
+    );
+    expect(gpuMemoryUtilizationSchema.safeParse(0).success).toBe(true);
+    expect(gpuMemoryUtilizationSchema.safeParse(1).success).toBe(true);
+    expect(gpuMemoryUtilizationSchema.safeParse(-0.01).success).toBe(false);
+    expect(gpuMemoryUtilizationSchema.safeParse(1.01).success).toBe(false);
+
+    const emptyConfig = makeKVConfigFromFields([]);
+    expect(llmVllmLoadConfigSchematics.access(emptyConfig, "vllm.gpuMemoryUtilization")).toBe(0.92);
+    expect(llmVllmLoadConfigSchematics.access(emptyConfig, "vllm.reasoningParser")).toBe("");
+    expect(llmVllmLoadConfigSchematics.access(emptyConfig, "vllm.toolCallParser")).toBe("");
   });
 
   it("exposes MLX AutoFit through public load config", () => {
