@@ -25,6 +25,7 @@ import {
   llmLoadSchematics,
   llmMlxLoadConfigSchematics,
   llmVllmLoadConfigSchematics,
+  llmVllmPredictionConfigSchematics,
 } from "./schema.js";
 import { kvValueTypesLibrary } from "./valueTypes.js";
 
@@ -796,6 +797,68 @@ describe("globalConfigSchematics", () => {
     expect(() => llmMlxLoadConfigSchematics.obtainField("promptTemplate")).toThrow(
       "Cannot access key promptTemplate",
     );
+  });
+
+  it("exposes the vLLM load-time controls needed to configure a single-GPU process", () => {
+    expect(Array.from(llmVllmLoadConfigSchematics.fullKeys())).toEqual(
+      expect.arrayContaining([
+        "llm.load.contextLength",
+        "llm.load.numParallelSessions",
+        "llm.load.seed",
+        "llm.load.promptTemplate",
+        "llm.load.vllm.gpuMemoryUtilization",
+        "llm.load.vllm.reasoningParser",
+        "llm.load.vllm.toolCallParser",
+        "load.gpuSplitConfig",
+      ]),
+    );
+  });
+
+  it("exposes only the approved vLLM prediction controls", () => {
+    const config = llmVllmPredictionConfigSchematics.buildPartialConfig({
+      "temperature": 0.63,
+      "topKSampling": 17,
+      "topPSampling": { checked: true, value: 0.88 },
+      "minPSampling": { checked: true, value: 0.07 },
+      "repeatPenalty": { checked: true, value: 1.04 },
+      "reasoning.budgetTokens": { checked: true, value: 768 },
+      "llama.presencePenalty": { checked: true, value: 0.2 },
+    });
+
+    expect(llmVllmPredictionConfigSchematics.access(config, "temperature")).toBe(0.63);
+    expect(llmVllmPredictionConfigSchematics.access(config, "topKSampling")).toBe(17);
+    expect(llmVllmPredictionConfigSchematics.access(config, "reasoning.budgetTokens")).toEqual({
+      checked: true,
+      value: 768,
+    });
+    expect(Array.from(llmVllmPredictionConfigSchematics.fullKeys())).toEqual(
+      expect.arrayContaining([
+        "llm.prediction.maxPredictedTokens",
+        "llm.prediction.contextOverflowPolicy",
+        "llm.prediction.stopStrings",
+        "llm.prediction.structured",
+        "llm.prediction.tools",
+        "llm.prediction.toolChoice",
+        "llm.prediction.reasoning.enableThinking",
+        "llm.prediction.logProbs",
+        "llm.prediction.llama.frequencyPenalty",
+        "llm.prediction.llama.logitBias",
+      ]),
+    );
+    expect(llmVllmPredictionConfigSchematics.hasFullKey("llm.prediction.promptTemplate")).toBe(
+      false,
+    );
+    expect(llmVllmPredictionConfigSchematics.hasFullKey("llm.prediction.reasoning.parsing")).toBe(
+      false,
+    );
+    expect(
+      llmVllmPredictionConfigSchematics.hasFullKey("llm.prediction.speculativeDecoding.draftModel"),
+    ).toBe(false);
+    expect(
+      llmVllmPredictionConfigSchematics.hasFullKey(
+        "llm.prediction.vision.userMaxImageDimensionPixels",
+      ),
+    ).toBe(false);
   });
 
   it("defines internal vLLM load fields with bounded GPU memory utilization", () => {

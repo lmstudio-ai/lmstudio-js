@@ -653,6 +653,30 @@ export const llmMlxPredictionConfigSchematics = llmSharedPredictionConfigSchemat
   ),
 );
 
+export const llmVllmPredictionConfigSchematics = llmPredictionConfigSchematics.sliced(
+  "temperature",
+  "maxPredictedTokens",
+  "contextOverflowPolicy",
+  "stopStrings",
+  "structured",
+  "tools",
+  "toolChoice",
+  "toolNaming",
+  "systemPrompt",
+  "seed",
+  "contextPrefill",
+  "topKSampling",
+  "repeatPenalty",
+  "minPSampling",
+  "topPSampling",
+  "logProbs",
+  "reasoning.enableThinking",
+  "reasoning.budgetTokens",
+  "llama.presencePenalty",
+  "llama.frequencyPenalty",
+  "llama.logitBias",
+);
+
 export const llmTransformersPredictionConfigSchematics = llmSharedPredictionConfigSchematics.union(
   llmPredictionConfigSchematics.sliced("transformers.*"),
 );
@@ -694,9 +718,9 @@ export const llmMlxLoadConfigSchematics = llmSharedLoadConfigSchematics.union(
   llmLoadSchematics.sliced("mlx.*", "numParallelSessions"),
 );
 
-export const llmVllmLoadConfigSchematics = llmSharedLoadConfigSchematics.union(
-  llmLoadSchematics.sliced("vllm.*", "numParallelSessions", "load.*"),
-);
+export const llmVllmLoadConfigSchematics = llmSharedLoadConfigSchematics
+  .union(llmLoadSchematics.sliced("vllm.*", "numParallelSessions", "promptTemplate"))
+  .union(globalConfigSchematics.sliced("load.gpuSplitConfig"));
 
 export const llmTransformersLoadConfigSchematics = llmSharedLoadConfigSchematics.union(
   llmLoadSchematics.sliced("transformers.*"),
