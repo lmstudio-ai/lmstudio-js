@@ -303,6 +303,24 @@ describe("llmLoadModelConfig conversion", () => {
     expect(roundTrippedConfig.promptTemplate).toEqual(promptTemplate);
   });
 
+  it("round trips public vLLM load config for Torch SafeTensors", () => {
+    const config: LLMLoadModelConfig = {
+      contextLength: 4096,
+      maxParallelPredictions: 256,
+      seed: 42,
+      promptTemplate: {
+        type: "jinja",
+        jinjaPromptTemplate: { template: "{{ messages }}" },
+      },
+    };
+
+    const convertedConfig = kvConfigToLLMLoadModelConfig(llmLoadModelConfigToKVConfig(config), {
+      modelFormat: "torch_safetensors",
+    });
+
+    expect(convertedConfig).toEqual(config);
+  });
+
   it("keeps absent load-time prompt template absent even with load defaults", () => {
     const emptyConfig = makeKVConfigFromFields([]);
 

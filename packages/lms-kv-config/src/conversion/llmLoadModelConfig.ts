@@ -11,6 +11,7 @@ import {
   llmLlamaMoeLoadConfigSchematics,
   llmLoadSchematics,
   llmMlxLoadConfigSchematics,
+  llmVllmLoadConfigSchematics,
 } from "../schema.js";
 import { maybeFalseValueToCheckboxValue, maybeFalseValueToValue } from "./utils.js";
 
@@ -295,6 +296,44 @@ function kvConfigToLLMMlxLoadModelConfig(
   return result;
 }
 
+/** Converts vLLM load fields back to the public SDK shape, optionally materializing defaults. */
+function kvConfigToLLMVllmLoadModelConfig(
+  config: KVConfig,
+  { useDefaultsForMissingKeys }: Omit<KvConfigToLLMLoadModelConfigOpts, "modelFormat"> = {},
+): LLMLoadModelConfig {
+  const result: LLMLoadModelConfig = {};
+  const partialParsed = llmVllmLoadConfigSchematics.parsePartial(config);
+  const parsed =
+    useDefaultsForMissingKeys === true ? llmVllmLoadConfigSchematics.parse(config) : partialParsed;
+
+  const gpuSplitConfig = partialParsed.get("load.gpuSplitConfig");
+  if (gpuSplitConfig !== undefined) {
+    result.gpu = convertGPUSplitConfigToGPUSetting(gpuSplitConfig);
+  }
+
+  const maxParallelPredictions = parsed.get("numParallelSessions");
+  if (maxParallelPredictions !== undefined) {
+    result.maxParallelPredictions = maxParallelPredictions;
+  }
+
+  const contextLength = parsed.get("contextLength");
+  if (contextLength !== undefined) {
+    result.contextLength = contextLength;
+  }
+
+  const promptTemplate = partialParsed.get("promptTemplate");
+  if (promptTemplate !== undefined) {
+    result.promptTemplate = promptTemplate;
+  }
+
+  const seed = parsed.get("seed");
+  if (seed !== undefined) {
+    result.seed = seed.checked ? seed.value : false;
+  }
+
+  return result;
+}
+
 export function kvConfigToLLMLoadModelConfig(
   config: KVConfig,
   // Default to gguf for backward compatibility
@@ -307,6 +346,10 @@ export function kvConfigToLLMLoadModelConfig(
       });
     case "safetensors":
       return kvConfigToLLMMlxLoadModelConfig(config, {
+        useDefaultsForMissingKeys,
+      });
+    case "torch_safetensors":
+      return kvConfigToLLMVllmLoadModelConfig(config, {
         useDefaultsForMissingKeys,
       });
     default:
