@@ -348,6 +348,34 @@ describe("llmLoadModelConfig conversion", () => {
     });
   });
 
+  it("skips disabled GPUs in vLLM priority-order readback", () => {
+    const rawConfig = llmLoadSchematics.buildPartialConfig({
+      gpuSplitConfig: {
+        strategy: "priorityOrder",
+        customRatio: [],
+        disabledGpus: [2],
+        priority: [2, 0],
+      },
+    });
+
+    const publicConfig = kvConfigToLLMLoadModelConfig(rawConfig, {
+      modelFormat: "torch_safetensors",
+    });
+    expect(publicConfig.gpu).toEqual({
+      splitStrategy: "favorMainGpu",
+      disabledGpus: [2],
+      mainGpu: 0,
+    });
+
+    const reappliedConfig = llmLoadModelConfigToKVConfig(publicConfig);
+    expect(globalConfigSchematics.access(reappliedConfig, "load.gpuSplitConfig")).toEqual({
+      strategy: "priorityOrder",
+      customRatio: [],
+      disabledGpus: [2],
+      priority: [0],
+    });
+  });
+
   it("omits custom vLLM splits that the public config cannot represent", () => {
     const rawConfig = llmLoadSchematics.buildPartialConfig({
       gpuSplitConfig: {
