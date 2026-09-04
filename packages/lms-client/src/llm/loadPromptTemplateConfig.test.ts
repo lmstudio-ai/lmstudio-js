@@ -16,6 +16,7 @@ import {
   llmLoadModelConfigSchema,
   type LLMInstanceInfo,
   type LLMPredictionConfig,
+  type ModelCompatibilityType,
 } from "@lmstudio/lms-shared-types";
 import { type LMStudioClient } from "../LMStudioClient.js";
 import { LLMNamespace } from "./LLMNamespace.js";
@@ -56,11 +57,11 @@ const llamaCppArgumentsOverride: NonNullable<LLMLoadModelConfig["llamaCppArgumen
   excludeAllConfig: false,
 };
 
-function createInstanceInfo(): LLMInstanceInfo {
+function createInstanceInfo(format: ModelCompatibilityType = "gguf"): LLMInstanceInfo {
   return {
     type: "llm",
     modelKey: "test/model",
-    format: "gguf",
+    format,
     displayName: "Test Model",
     publisher: "test",
     path: "/test/model.gguf",
@@ -87,7 +88,7 @@ function createSilentLogger(): SimpleLogger {
   });
 }
 
-function createNamespaceHarness(): LLMNamespaceHarness {
+function createNamespaceHarness(modelFormat: ModelCompatibilityType = "gguf"): LLMNamespaceHarness {
   const capturedChannelCreations: Array<CapturedChannelCreation> = [];
   let loadConfigResponse: KVConfig = emptyKVConfig;
   const port = {
@@ -101,14 +102,14 @@ function createNamespaceHarness(): LLMNamespaceHarness {
         if (endpointName === "loadModel") {
           onMessage({
             type: "success",
-            info: createInstanceInfo(),
+            info: createInstanceInfo(modelFormat),
           });
           return;
         }
         if (endpointName === "getOrLoad") {
           onMessage({
             type: "loadSuccess",
-            info: createInstanceInfo(),
+            info: createInstanceInfo(modelFormat),
           });
           return;
         }
@@ -126,7 +127,7 @@ function createNamespaceHarness(): LLMNamespaceHarness {
         return loadConfigResponse;
       }
       if (endpointName === "getModelInfo") {
-        return createInstanceInfo();
+        return createInstanceInfo(modelFormat);
       }
       throw new Error(`Unexpected RPC endpoint: ${endpointName}`);
     },
@@ -219,6 +220,14 @@ describe("SDK load prompt template config", () => {
     const loadConfig = await model.getLoadConfig();
 
     expect(loadConfig.promptTemplate).toEqual(customLoadPromptTemplate);
+  });
+
+  test("getLoadConfig supports Torch SafeTensors models", async () => {
+    const harness = createNamespaceHarness("torch_safetensors");
+    harness.setLoadConfigResponse(llmLoadModelConfigToKVConfig({ maxParallelPredictions: 256 }));
+    const model = await harness.namespace.load("test/model", { verbose: false });
+
+    expect((await model.getLoadConfig()).maxParallelPredictions).toBe(256);
   });
 
   test("getLoadConfig does not synthesize prompt templates when absent", async () => {

@@ -24,6 +24,8 @@ import {
   llmLlamaLoadConfigSchematics,
   llmLoadSchematics,
   llmMlxLoadConfigSchematics,
+  llmVllmLoadConfigSchematics,
+  llmVllmPredictionConfigSchematics,
 } from "./schema.js";
 import { kvValueTypesLibrary } from "./valueTypes.js";
 
@@ -299,6 +301,95 @@ describe("llmLoadModelConfig conversion", () => {
     const roundTrippedConfig = kvConfigToLLMLoadModelConfig(loadConfig);
 
     expect(roundTrippedConfig.promptTemplate).toEqual(promptTemplate);
+  });
+
+  it("round trips public vLLM load config for Torch SafeTensors", () => {
+    const config: LLMLoadModelConfig = {
+      contextLength: 4096,
+      maxParallelPredictions: 256,
+      seed: 42,
+      promptTemplate: {
+        type: "jinja",
+        jinjaPromptTemplate: { template: "{{ messages }}" },
+      },
+    };
+
+    const convertedConfig = kvConfigToLLMLoadModelConfig(llmLoadModelConfigToKVConfig(config), {
+      modelFormat: "torch_safetensors",
+    });
+
+    expect(convertedConfig).toEqual(config);
+  });
+
+  it("preserves a single-GPU custom vLLM split through public readback", () => {
+    const rawConfig = llmLoadSchematics.buildPartialConfig({
+      gpuSplitConfig: {
+        strategy: "custom",
+        customRatio: [0, 3, 0],
+        disabledGpus: [1],
+        priority: [0],
+      },
+    });
+
+    const publicConfig = kvConfigToLLMLoadModelConfig(rawConfig, {
+      modelFormat: "torch_safetensors",
+    });
+    expect(publicConfig.gpu).toEqual({
+      splitStrategy: "favorMainGpu",
+      mainGpu: 1,
+    });
+
+    const reappliedConfig = llmLoadModelConfigToKVConfig(publicConfig);
+    expect(globalConfigSchematics.access(reappliedConfig, "load.gpuSplitConfig")).toEqual({
+      strategy: "priorityOrder",
+      customRatio: [],
+      disabledGpus: [],
+      priority: [1],
+    });
+  });
+
+  it("skips disabled GPUs in vLLM priority-order readback", () => {
+    const rawConfig = llmLoadSchematics.buildPartialConfig({
+      gpuSplitConfig: {
+        strategy: "priorityOrder",
+        customRatio: [],
+        disabledGpus: [2],
+        priority: [2, 0],
+      },
+    });
+
+    const publicConfig = kvConfigToLLMLoadModelConfig(rawConfig, {
+      modelFormat: "torch_safetensors",
+    });
+    expect(publicConfig.gpu).toEqual({
+      splitStrategy: "favorMainGpu",
+      disabledGpus: [2],
+      mainGpu: 0,
+    });
+
+    const reappliedConfig = llmLoadModelConfigToKVConfig(publicConfig);
+    expect(globalConfigSchematics.access(reappliedConfig, "load.gpuSplitConfig")).toEqual({
+      strategy: "priorityOrder",
+      customRatio: [],
+      disabledGpus: [2],
+      priority: [0],
+    });
+  });
+
+  it("omits custom vLLM splits that the public config cannot represent", () => {
+    const rawConfig = llmLoadSchematics.buildPartialConfig({
+      gpuSplitConfig: {
+        strategy: "custom",
+        customRatio: [1, 1],
+        disabledGpus: [],
+        priority: [],
+      },
+    });
+
+    const publicConfig = kvConfigToLLMLoadModelConfig(rawConfig, {
+      modelFormat: "torch_safetensors",
+    });
+    expect(publicConfig.gpu).toBeUndefined();
   });
 
   it("keeps absent load-time prompt template absent even with load defaults", () => {
@@ -795,6 +886,98 @@ describe("globalConfigSchematics", () => {
     expect(() => llmMlxLoadConfigSchematics.obtainField("promptTemplate")).toThrow(
       "Cannot access key promptTemplate",
     );
+  });
+
+  it("exposes the vLLM load-time controls needed to configure a single-GPU process", () => {
+    expect(Array.from(llmVllmLoadConfigSchematics.fullKeys())).toEqual(
+      expect.arrayContaining([
+        "llm.load.contextLength",
+        "llm.load.numParallelSessions",
+        "llm.load.seed",
+        "llm.load.promptTemplate",
+        "llm.load.vllm.gpuMemoryUtilization",
+        "llm.load.vllm.reasoningParser",
+        "llm.load.vllm.toolCallParser",
+        "load.gpuSplitConfig",
+      ]),
+    );
+  });
+
+  it("exposes only the approved vLLM prediction controls", () => {
+    const config = llmVllmPredictionConfigSchematics.buildPartialConfig({
+      "temperature": 0.63,
+      "topKSampling": 17,
+      "topPSampling": { checked: true, value: 0.88 },
+      "minPSampling": { checked: true, value: 0.07 },
+      "repeatPenalty": { checked: true, value: 1.04 },
+      "reasoning.budgetTokens": { checked: true, value: 768 },
+      "llama.presencePenalty": { checked: true, value: 0.2 },
+    });
+
+    expect(llmVllmPredictionConfigSchematics.access(config, "temperature")).toBe(0.63);
+    expect(llmVllmPredictionConfigSchematics.access(config, "topKSampling")).toBe(17);
+    expect(llmVllmPredictionConfigSchematics.access(config, "reasoning.budgetTokens")).toEqual({
+      checked: true,
+      value: 768,
+    });
+    expect(Array.from(llmVllmPredictionConfigSchematics.fullKeys())).toEqual(
+      expect.arrayContaining([
+        "llm.prediction.maxPredictedTokens",
+        "llm.prediction.stopStrings",
+        "llm.prediction.structured",
+        "llm.prediction.tools",
+        "llm.prediction.toolChoice",
+        "llm.prediction.reasoning.enableThinking",
+        "llm.prediction.logProbs",
+        "llm.prediction.llama.frequencyPenalty",
+        "llm.prediction.llama.logitBias",
+      ]),
+    );
+    expect(
+      llmVllmPredictionConfigSchematics.hasFullKey("llm.prediction.contextOverflowPolicy"),
+    ).toBe(false);
+    expect(llmVllmPredictionConfigSchematics.hasFullKey("llm.prediction.promptTemplate")).toBe(
+      false,
+    );
+    expect(llmVllmPredictionConfigSchematics.hasFullKey("llm.prediction.reasoning.parsing")).toBe(
+      false,
+    );
+    expect(
+      llmVllmPredictionConfigSchematics.hasFullKey("llm.prediction.speculativeDecoding.draftModel"),
+    ).toBe(false);
+    expect(
+      llmVllmPredictionConfigSchematics.hasFullKey(
+        "llm.prediction.vision.userMaxImageDimensionPixels",
+      ),
+    ).toBe(false);
+  });
+
+  it("defines internal vLLM load fields with bounded GPU memory utilization", () => {
+    const config = llmVllmLoadConfigSchematics.buildPartialConfig({
+      "vllm.gpuMemoryUtilization": 0.73,
+      "vllm.reasoningParser": "deepseek_r1",
+      "vllm.toolCallParser": "hermes",
+    });
+
+    expect(llmVllmLoadConfigSchematics.access(config, "vllm.gpuMemoryUtilization")).toBe(0.73);
+    expect(llmVllmLoadConfigSchematics.access(config, "vllm.reasoningParser")).toBe("deepseek_r1");
+    expect(llmVllmLoadConfigSchematics.access(config, "vllm.toolCallParser")).toBe("hermes");
+    expect(llmVllmLoadConfigSchematics.obtainField("vllm.gpuMemoryUtilization").fullKey).toBe(
+      "llm.load.vllm.gpuMemoryUtilization",
+    );
+
+    const gpuMemoryUtilizationSchema = llmVllmLoadConfigSchematics.getSchemaForKey(
+      "vllm.gpuMemoryUtilization",
+    );
+    expect(gpuMemoryUtilizationSchema.safeParse(0).success).toBe(true);
+    expect(gpuMemoryUtilizationSchema.safeParse(1).success).toBe(true);
+    expect(gpuMemoryUtilizationSchema.safeParse(-0.01).success).toBe(false);
+    expect(gpuMemoryUtilizationSchema.safeParse(1.01).success).toBe(false);
+
+    const emptyConfig = makeKVConfigFromFields([]);
+    expect(llmVllmLoadConfigSchematics.access(emptyConfig, "vllm.gpuMemoryUtilization")).toBe(0.92);
+    expect(llmVllmLoadConfigSchematics.access(emptyConfig, "vllm.reasoningParser")).toBe("");
+    expect(llmVllmLoadConfigSchematics.access(emptyConfig, "vllm.toolCallParser")).toBe("");
   });
 
   it("exposes MLX AutoFit through public load config", () => {

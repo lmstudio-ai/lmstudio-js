@@ -68,6 +68,11 @@ export function convertGPUSettingToGPUSplitConfig(
 }
 
 export function convertGPUSplitConfigToGPUSetting(splitConfig: GPUSplitConfig): GPUSetting {
+  const mainGpu =
+    splitConfig.strategy === "priorityOrder"
+      ? splitConfig.priority.find(gpuId => !splitConfig.disabledGpus.includes(gpuId))
+      : splitConfig.priority[0];
+
   return {
     splitStrategy:
       splitConfig.strategy === "priorityOrder"
@@ -76,6 +81,6 @@ export function convertGPUSplitConfigToGPUSetting(splitConfig: GPUSplitConfig): 
           ? "evenly"
           : undefined,
     disabledGpus: splitConfig.disabledGpus,
-    mainGpu: splitConfig.priority.length > 0 ? splitConfig.priority[0] : undefined,
+    ...(mainGpu === undefined ? {} : { mainGpu }),
   };
 }
