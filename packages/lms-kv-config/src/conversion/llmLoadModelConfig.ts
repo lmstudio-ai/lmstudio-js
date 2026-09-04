@@ -1,6 +1,7 @@
 import {
   convertGPUSettingToGPUSplitConfig,
   convertGPUSplitConfigToGPUSetting,
+  type GPUSplitConfig,
   type GPUSetting,
   type KVConfig,
   type LLMLoadModelConfig,
@@ -296,6 +297,27 @@ function kvConfigToLLMMlxLoadModelConfig(
   return result;
 }
 
+function convertVllmGPUSplitConfigToGPUSetting(
+  splitConfig: GPUSplitConfig,
+): GPUSetting | undefined {
+  if (splitConfig.strategy !== "custom") {
+    return convertGPUSplitConfigToGPUSetting(splitConfig);
+  }
+
+  const selectedGpuIds = splitConfig.customRatio.flatMap((ratio, gpuId) =>
+    ratio > 0 ? [gpuId] : [],
+  );
+  const selectedGpuId = selectedGpuIds[0];
+  if (selectedGpuIds.length !== 1 || selectedGpuId === undefined) {
+    return undefined;
+  }
+
+  return {
+    splitStrategy: "favorMainGpu",
+    mainGpu: selectedGpuId,
+  };
+}
+
 /** Converts vLLM load fields back to the public SDK shape, optionally materializing defaults. */
 function kvConfigToLLMVllmLoadModelConfig(
   config: KVConfig,
@@ -308,7 +330,10 @@ function kvConfigToLLMVllmLoadModelConfig(
 
   const gpuSplitConfig = partialParsed.get("load.gpuSplitConfig");
   if (gpuSplitConfig !== undefined) {
-    result.gpu = convertGPUSplitConfigToGPUSetting(gpuSplitConfig);
+    const gpuSetting = convertVllmGPUSplitConfigToGPUSetting(gpuSplitConfig);
+    if (gpuSetting !== undefined) {
+      result.gpu = gpuSetting;
+    }
   }
 
   const maxParallelPredictions = parsed.get("numParallelSessions");

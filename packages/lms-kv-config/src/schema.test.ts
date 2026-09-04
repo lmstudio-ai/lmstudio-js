@@ -321,6 +321,49 @@ describe("llmLoadModelConfig conversion", () => {
     expect(convertedConfig).toEqual(config);
   });
 
+  it("preserves a single-GPU custom vLLM split through public readback", () => {
+    const rawConfig = llmLoadSchematics.buildPartialConfig({
+      gpuSplitConfig: {
+        strategy: "custom",
+        customRatio: [0, 3, 0],
+        disabledGpus: [1],
+        priority: [0],
+      },
+    });
+
+    const publicConfig = kvConfigToLLMLoadModelConfig(rawConfig, {
+      modelFormat: "torch_safetensors",
+    });
+    expect(publicConfig.gpu).toEqual({
+      splitStrategy: "favorMainGpu",
+      mainGpu: 1,
+    });
+
+    const reappliedConfig = llmLoadModelConfigToKVConfig(publicConfig);
+    expect(globalConfigSchematics.access(reappliedConfig, "load.gpuSplitConfig")).toEqual({
+      strategy: "priorityOrder",
+      customRatio: [],
+      disabledGpus: [],
+      priority: [1],
+    });
+  });
+
+  it("omits custom vLLM splits that the public config cannot represent", () => {
+    const rawConfig = llmLoadSchematics.buildPartialConfig({
+      gpuSplitConfig: {
+        strategy: "custom",
+        customRatio: [1, 1],
+        disabledGpus: [],
+        priority: [],
+      },
+    });
+
+    const publicConfig = kvConfigToLLMLoadModelConfig(rawConfig, {
+      modelFormat: "torch_safetensors",
+    });
+    expect(publicConfig.gpu).toBeUndefined();
+  });
+
   it("keeps absent load-time prompt template absent even with load defaults", () => {
     const emptyConfig = makeKVConfigFromFields([]);
 
