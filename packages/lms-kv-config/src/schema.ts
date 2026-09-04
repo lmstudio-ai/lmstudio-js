@@ -656,7 +656,6 @@ export const llmMlxPredictionConfigSchematics = llmSharedPredictionConfigSchemat
 export const llmVllmPredictionConfigSchematics = llmPredictionConfigSchematics.sliced(
   "temperature",
   "maxPredictedTokens",
-  "contextOverflowPolicy",
   "stopStrings",
   "structured",
   "tools",

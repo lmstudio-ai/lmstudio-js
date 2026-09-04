@@ -834,7 +834,6 @@ describe("globalConfigSchematics", () => {
     expect(Array.from(llmVllmPredictionConfigSchematics.fullKeys())).toEqual(
       expect.arrayContaining([
         "llm.prediction.maxPredictedTokens",
-        "llm.prediction.contextOverflowPolicy",
         "llm.prediction.stopStrings",
         "llm.prediction.structured",
         "llm.prediction.tools",
@@ -845,6 +844,9 @@ describe("globalConfigSchematics", () => {
         "llm.prediction.llama.logitBias",
       ]),
     );
+    expect(
+      llmVllmPredictionConfigSchematics.hasFullKey("llm.prediction.contextOverflowPolicy"),
+    ).toBe(false);
     expect(llmVllmPredictionConfigSchematics.hasFullKey("llm.prediction.promptTemplate")).toBe(
       false,
     );
