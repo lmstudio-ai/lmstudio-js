@@ -5,8 +5,9 @@ import inquirer from "inquirer";
 import { execSync } from "node:child_process";
 import { access, readFile } from "node:fs/promises";
 import os from "node:os";
-import { join } from "node:path";
+import { isAbsolute, join } from "node:path";
 import { type InstallCliOpts } from ".";
+import { applyFishInstallation, prepareFishInstallation } from "./fish.js";
 
 interface ShellInstallationInfo {
   shellName: string;
@@ -45,13 +46,6 @@ const shellInstallationInfo: Array<ShellInstallationInfo> = [
     commandToAddPath: "echo 'export PATH=\"$PATH:<TARGET>\"' >> ~/.zshrc",
   },
   {
-    shellName: "fish",
-    configFileName: ".config/fish/config.fish",
-    commandToAddComment:
-      "echo '' >> ~/.config/fish/config.fish && echo '# Added by LM Studio CLI tool (lms)' >> ~/.config/fish/config.fish",
-    commandToAddPath: "echo 'set -gx PATH $PATH <TARGET>' >> ~/.config/fish/config.fish",
-  },
-  {
     shellName: "csh",
     configFileName: ".cshrc",
     commandToAddComment:
@@ -69,7 +63,9 @@ const shellInstallationInfo: Array<ShellInstallationInfo> = [
 
 export async function installCliDarwinOrLinux(path: string, { skipConfirmation }: InstallCliOpts) {
   const detectedShells: Array<ShellInstallationInfo> = [];
-  const detectedAlreadyInstalledShells: Array<ShellInstallationInfo> = [];
+  const detectedAlreadyInstalledShells: Array<
+    Pick<ShellInstallationInfo, "shellName" | "configFileName">
+  > = [];
   for (const shell of shellInstallationInfo) {
     const configPath = join(os.homedir(), shell.configFileName);
     try {
@@ -85,7 +81,15 @@ export async function installCliDarwinOrLinux(path: string, { skipConfirmation }
     }
   }
 
-  if (detectedShells.length === 0) {
+  const fishInstallation = await prepareFishInstallation(path);
+  if (fishInstallation?.updates.length === 0) {
+    detectedAlreadyInstalledShells.push({
+      shellName: "fish",
+      configFileName: fishInstallation.configPath,
+    });
+  }
+
+  if (detectedShells.length === 0 && !fishInstallation?.updates.length) {
     if (detectedAlreadyInstalledShells.length === 0) {
       throw makeTitledPrettyError(
         "Unable to find any shell configuration files",
@@ -106,11 +110,12 @@ export async function installCliDarwinOrLinux(path: string, { skipConfirmation }
           LM Studio CLI tool is already installed for the following shells:
 
           ${detectedAlreadyInstalledShells
-            .map(shell =>
-              chalk.cyanBright(
-                `    · ${shell.shellName} ${chalk.gray(`(~/${shell.configFileName})`)}`,
-              ),
-            )
+            .map(shell => {
+              const configPath = isAbsolute(shell.configFileName)
+                ? shell.configFileName
+                : `~/${shell.configFileName}`;
+              return chalk.cyanBright(`    · ${shell.shellName} ${chalk.gray(`(${configPath})`)}`);
+            })
             .join("\n")}
 
           If your shell is not listed above, please try to add the following directory to the PATH
@@ -137,11 +142,14 @@ export async function installCliDarwinOrLinux(path: string, { skipConfirmation }
     commandsToRun.push(command);
     commandsToRunFormatted.push(`    ${command} ${chalk.gray(`# for ${shell.shellName}`)}`);
   }
+  for (const update of fishInstallation?.updates ?? []) {
+    commandsToRunFormatted.push(`    Update ${update.path} ${chalk.gray("# for fish")}`);
+  }
 
   if (!skipConfirmation) {
     console.info(
       text`
-        We are about to run the following commands to install the LM Studio CLI tool
+        We are about to make the following changes to install the LM Studio CLI tool
         (lms).
 
         ${chalk.cyanBright(commandsToRunFormatted.join("\n"))}
@@ -167,7 +175,13 @@ export async function installCliDarwinOrLinux(path: string, { skipConfirmation }
     }
   }
 
-  execSync(commandsToRun.join(" && "));
+  if (commandsToRun.length > 0) {
+    execSync(commandsToRun.join(" && "));
+  }
+  if (fishInstallation) {
+    await applyFishInstallation(fishInstallation);
+    console.info(`Fish configuration: ${fishInstallation.configPath}`);
+  }
 
   console.info(
     text`
