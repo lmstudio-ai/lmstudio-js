@@ -328,11 +328,22 @@ function kvConfigToLLMVllmLoadModelConfig(
   const parsed =
     useDefaultsForMissingKeys === true ? llmVllmLoadConfigSchematics.parse(config) : partialParsed;
 
+  // Preserve legacy manual requests before schema defaults fill in AutoFit.
+  const autoFit =
+    partialParsed.get("vllm.autoFit") === undefined &&
+    partialParsed.get("contextLength") !== undefined
+      ? false
+      : parsed.get("vllm.autoFit");
+  if (autoFit !== undefined) {
+    result.autoFit = autoFit;
+  }
+
   const gpuSplitConfig = partialParsed.get("load.gpuSplitConfig");
   if (gpuSplitConfig !== undefined) {
     const gpuSetting = convertVllmGPUSplitConfigToGPUSetting(gpuSplitConfig);
     if (gpuSetting !== undefined) {
-      result.gpu = gpuSetting;
+      // The public AutoFit contract only permits GPU filters alongside AutoFit.
+      result.gpu = autoFit === true ? { disabledGpus: gpuSetting.disabledGpus } : gpuSetting;
     }
   }
 
@@ -342,7 +353,7 @@ function kvConfigToLLMVllmLoadModelConfig(
   }
 
   const contextLength = parsed.get("contextLength");
-  if (contextLength !== undefined) {
+  if (autoFit !== true && contextLength !== undefined) {
     result.contextLength = contextLength;
   }
 
@@ -408,6 +419,7 @@ export function llmLoadModelConfigToKVConfig(config: LLMLoadModelConfig): KVConf
   const top = llmLoadSchematics.buildPartialConfig({
     "llama.autoFit": autoFit,
     "mlx.autoFit": autoFit,
+    "vllm.autoFit": autoFit,
     "gpuSplitConfig": hasGpuSplitSetting
       ? convertGPUSettingToGPUSplitConfig(config.gpu)
       : undefined,

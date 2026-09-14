@@ -503,8 +503,9 @@ export const llmLlamaCppArgumentsOverrideSchema = z.object({
 /** @public */
 export interface LLMLoadModelConfig {
   /**
-   * Whether LM Studio should automatically choose context length and model placement based on
-   * available resources. This option is only available when using Bionic.
+   * Whether LM Studio should automatically choose context length based on available resources.
+   * For llama.cpp, this also chooses model placement. For vLLM, context is fitted within the
+   * configured GPU memory budget. This option is only available when using Bionic.
    */
   autoFit?: boolean;
 
