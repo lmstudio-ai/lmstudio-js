@@ -275,13 +275,16 @@ describe("llmPredictionConfig reasoning budget", () => {
 });
 
 describe("llmLoadModelConfig conversion", () => {
-  it("round trips explicit AutoFit for GGUF, MLX, and Yuzu", () => {
+  it("round trips explicit AutoFit for GGUF, MLX, and vLLM", () => {
     const loadConfig = llmLoadModelConfigToKVConfig({ autoFit: true });
     const fieldMap = new Map(loadConfig.fields.map(field => [field.key, field.value]));
 
     expect(fieldMap.get("llm.load.llama.autoFit")).toBe(true);
     expect(fieldMap.get("llm.load.mlx.autoFit")).toBe(true);
-    expect(fieldMap.get("llm.load.yuzu.autoFit")).toBe(true);
+    expect(fieldMap.get("llm.load.vllm.autoFit")).toBe(true);
+    expect(
+      kvConfigToLLMLoadModelConfig(loadConfig, { modelFormat: "torch_safetensors" }).autoFit,
+    ).toBe(true);
     expect(kvConfigToLLMLoadModelConfig(loadConfig).autoFit).toBe(true);
     expect(kvConfigToLLMLoadModelConfig(loadConfig, { modelFormat: "safetensors" }).autoFit).toBe(
       true,
@@ -304,13 +307,49 @@ describe("llmLoadModelConfig conversion", () => {
 
       expect(globalConfigSchematics.access(loadConfig, "llm.load.llama.autoFit")).toBe(false);
       expect(globalConfigSchematics.access(loadConfig, "llm.load.mlx.autoFit")).toBe(false);
-      expect(globalConfigSchematics.access(loadConfig, "llm.load.yuzu.autoFit")).toBe(false);
+      expect(globalConfigSchematics.access(loadConfig, "llm.load.vllm.autoFit")).toBe(false);
       expect(kvConfigToLLMLoadModelConfig(loadConfig).autoFit).toBe(false);
       expect(kvConfigToLLMLoadModelConfig(loadConfig, { modelFormat: "safetensors" }).autoFit).toBe(
         false,
       );
       expect(kvConfigToLLMLoadModelConfig(loadConfig, { modelFormat: "yuzu" }).autoFit).toBe(false);
     }
+  });
+
+  it.each([true, false])("round trips vLLM AutoFit=%s without exposing stale context", autoFit => {
+    const config = llmVllmLoadConfigSchematics.buildPartialConfig({
+      "vllm.autoFit": autoFit,
+      "contextLength": 8192,
+    });
+    const converted = kvConfigToLLMLoadModelConfig(config, { modelFormat: "torch_safetensors" });
+    expect(converted).toEqual(
+      autoFit ? { autoFit: true } : { autoFit: false, contextLength: 8192 },
+    );
+    expect(
+      llmVllmLoadConfigSchematics.access(llmLoadModelConfigToKVConfig(converted), "vllm.autoFit"),
+    ).toBe(autoFit);
+  });
+
+  it("keeps materialized vLLM AutoFit defaults valid public load configs", () => {
+    const config = llmVllmLoadConfigSchematics.buildPartialConfig({
+      "load.gpuSplitConfig": {
+        strategy: "evenly",
+        disabledGpus: [1],
+        priority: [],
+        customRatio: [],
+      },
+    });
+    const converted = kvConfigToLLMLoadModelConfig(config, {
+      modelFormat: "torch_safetensors",
+      useDefaultsForMissingKeys: true,
+    });
+    expect(converted.autoFit).toBe(true);
+    expect(converted.contextLength).toBeUndefined();
+    expect(converted.gpu).toEqual({ disabledGpus: [1] });
+    expect(llmLoadModelConfigSchema.safeParse(converted).success).toBe(true);
+    expect(
+      llmVllmLoadConfigSchematics.getValueTypeParamByFullKey("llm.load.vllm.autoFit"),
+    ).toMatchObject({ machineDependent: true });
   });
 
   it("keeps materialized AutoFit configs valid public load configs", () => {
@@ -332,7 +371,7 @@ describe("llmLoadModelConfig conversion", () => {
     expect(llmLoadModelConfigSchema.safeParse(convertedMlxConfig).success).toBe(true);
   });
 
-  it.each(["gguf", "safetensors"] as const)(
+  it.each(["gguf", "safetensors", "torch_safetensors"] as const)(
     "preserves legacy manual context for %s",
     modelFormat => {
       const legacyConfig = llmLoadSchematics.buildPartialConfig({ contextLength: 4096 });
@@ -350,6 +389,7 @@ describe("llmLoadModelConfig conversion", () => {
       expect(reappliedFields.get("llm.load.contextLength")).toBe(4096);
       expect(reappliedFields.get("llm.load.llama.autoFit")).toBe(false);
       expect(reappliedFields.get("llm.load.mlx.autoFit")).toBe(false);
+      expect(reappliedFields.get("llm.load.vllm.autoFit")).toBe(false);
     },
   );
 
@@ -419,9 +459,9 @@ describe("llmLoadModelConfig conversion", () => {
     };
     const loadConfig = llmLoadModelConfigToKVConfig({ llamaCppArgumentsOverride });
 
-    expect(
-      globalConfigSchematics.access(loadConfig, "llm.load.llama.argumentsOverride"),
-    ).toEqual(llamaCppArgumentsOverride);
+    expect(globalConfigSchematics.access(loadConfig, "llm.load.llama.argumentsOverride")).toEqual(
+      llamaCppArgumentsOverride,
+    );
     expect(kvConfigToLLMLoadModelConfig(loadConfig).llamaCppArgumentsOverride).toEqual(
       llamaCppArgumentsOverride,
     );
@@ -491,7 +531,7 @@ describe("llmLoadModelConfig conversion", () => {
       modelFormat: "torch_safetensors",
     });
 
-    expect(convertedConfig).toEqual(config);
+    expect(convertedConfig).toEqual({ ...config, autoFit: false });
   });
 
   it("preserves a single-GPU custom vLLM split through public readback", () => {
@@ -656,18 +696,18 @@ describe("llmLoadModelConfig conversion", () => {
     expect(
       llmLoadSchematics.access(emptyConfig, "llama.speculativeDecoding.draftDsparkSidecar"),
     ).toBe(false);
-    expect(
-      llmLoadSchematics.access(emptyConfig, "llama.speculativeDecoding.draftMtpSidecar"),
-    ).toBe(false);
-    expect(llmLoadSchematics.access(loadConfig, "llama.speculativeDecoding.draftDflashSidecar")).toBe(
-      true,
-    );
-    expect(llmLoadSchematics.access(loadConfig, "llama.speculativeDecoding.draftDsparkSidecar")).toBe(
-      true,
+    expect(llmLoadSchematics.access(emptyConfig, "llama.speculativeDecoding.draftMtpSidecar")).toBe(
+      false,
     );
     expect(
-      llmLoadSchematics.access(loadConfig, "llama.speculativeDecoding.draftMtpSidecar"),
+      llmLoadSchematics.access(loadConfig, "llama.speculativeDecoding.draftDflashSidecar"),
     ).toBe(true);
+    expect(
+      llmLoadSchematics.access(loadConfig, "llama.speculativeDecoding.draftDsparkSidecar"),
+    ).toBe(true);
+    expect(llmLoadSchematics.access(loadConfig, "llama.speculativeDecoding.draftMtpSidecar")).toBe(
+      true,
+    );
   });
 
   it("rejects non-boolean internal sidecar speculative decoding field values", () => {
