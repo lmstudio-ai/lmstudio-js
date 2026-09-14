@@ -347,8 +347,12 @@ function kvConfigToLLMVllmLoadModelConfig(
   if (gpuSplitConfig !== undefined) {
     const gpuSetting = convertVllmGPUSplitConfigToGPUSetting(gpuSplitConfig);
     if (gpuSetting !== undefined) {
-      // Without explicit manual mode, the KV strategy may only be a default added for GPU filters.
-      result.gpu = autoFit !== false ? { disabledGpus: gpuSetting.disabledGpus } : gpuSetting;
+      // vLLM AutoFit owns context, not GPU selection. Strip only the default strategy added for
+      // GPU filters; keep an explicit main GPU (including normalized single-GPU custom splits).
+      result.gpu =
+        autoFit !== false && gpuSetting.mainGpu === undefined
+          ? { disabledGpus: gpuSetting.disabledGpus }
+          : gpuSetting;
     }
   }
 

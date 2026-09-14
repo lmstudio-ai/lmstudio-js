@@ -20,8 +20,6 @@ describe("LLMLoadModelConfig schema", () => {
       { contextLength: 4096 },
       { gpu: { ratio: 0 } },
       { gpu: { numCpuExpertLayersRatio: 0.5 } },
-      { gpu: { mainGpu: 0 } },
-      { gpu: { splitStrategy: "evenly" } },
       { gpuStrictVramCap: false },
     ];
 
@@ -30,6 +28,15 @@ describe("LLMLoadModelConfig schema", () => {
         llmLoadModelConfigSchema.safeParse({ autoFit: true, ...manualLoadConfig }).success,
       ).toBe(false);
     }
+  });
+
+  it.each([
+    { mainGpu: 0 },
+    { splitStrategy: "evenly" },
+    { mainGpu: 1, splitStrategy: "favorMainGpu", disabledGpus: [2] },
+  ])("allows AutoFit with GPU selection %j", gpu => {
+    const config = { autoFit: true, gpu };
+    expect(llmLoadModelConfigSchema.parse(config)).toEqual(config);
   });
 
   it("allows AutoFit with disabled GPUs", () => {

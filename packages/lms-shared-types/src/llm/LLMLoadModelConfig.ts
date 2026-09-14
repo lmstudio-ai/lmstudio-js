@@ -504,8 +504,11 @@ export const llmLlamaCppArgumentsOverrideSchema = z.object({
 export interface LLMLoadModelConfig {
   /**
    * Whether LM Studio should automatically choose context length based on available resources.
-   * For llama.cpp, this also chooses model placement. For vLLM, context is fitted within the
-   * configured GPU memory budget. This option is only available when using Bionic.
+   * For llama.cpp, this also chooses model placement, ignoring `gpu.mainGpu` and `gpu.splitStrategy`.
+   * For vLLM, context is fitted within the configured GPU memory budget without changing GPU
+   * selection, so `gpu.mainGpu` and `gpu.splitStrategy` can be used with AutoFit.
+   * Manual context length, GPU offload ratios, and `gpuStrictVramCap` cannot be combined with AutoFit.
+   * This option is only available when using Bionic.
    */
   autoFit?: boolean;
 
@@ -840,13 +843,11 @@ export const llmLoadModelConfigSchema = z
       (config.contextLength !== undefined ||
         config.gpu?.ratio !== undefined ||
         config.gpu?.numCpuExpertLayersRatio !== undefined ||
-        config.gpu?.mainGpu !== undefined ||
-        config.gpu?.splitStrategy !== undefined ||
         config.gpuStrictVramCap !== undefined)
     ) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "autoFit cannot be enabled with manual context, placement, or memory settings",
+        message: "autoFit cannot be enabled with manual context, offload, or memory settings",
         path: ["autoFit"],
       });
     }
