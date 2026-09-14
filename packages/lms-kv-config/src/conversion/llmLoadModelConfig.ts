@@ -329,22 +329,27 @@ function kvConfigToLLMVllmLoadModelConfig(
   const parsed =
     useDefaultsForMissingKeys === true ? llmVllmLoadConfigSchematics.parse(config) : partialParsed;
 
+  const gpuSplitConfig = partialParsed.get("load.gpuSplitConfig");
   // Preserve legacy manual requests before schema defaults fill in AutoFit.
   const autoFit =
     partialParsed.get("vllm.autoFit") === undefined &&
-    partialParsed.get("contextLength") !== undefined
+    (partialParsed.get("contextLength") !== undefined ||
+      (gpuSplitConfig !== undefined &&
+        (gpuSplitConfig.strategy !== "evenly" ||
+          gpuSplitConfig.disabledGpus.length === 0 ||
+          gpuSplitConfig.priority.length > 0 ||
+          gpuSplitConfig.customRatio.length > 0)))
       ? false
       : parsed.get("vllm.autoFit");
   if (autoFit !== undefined) {
     result.autoFit = autoFit;
   }
 
-  const gpuSplitConfig = partialParsed.get("load.gpuSplitConfig");
   if (gpuSplitConfig !== undefined) {
     const gpuSetting = convertVllmGPUSplitConfigToGPUSetting(gpuSplitConfig);
     if (gpuSetting !== undefined) {
-      // The public AutoFit contract only permits GPU filters alongside AutoFit.
-      result.gpu = autoFit === true ? { disabledGpus: gpuSetting.disabledGpus } : gpuSetting;
+      // Without explicit manual mode, the KV strategy may only be a default added for GPU filters.
+      result.gpu = autoFit !== false ? { disabledGpus: gpuSetting.disabledGpus } : gpuSetting;
     }
   }
 

@@ -423,15 +423,19 @@ describe("llmLoadModelConfig conversion", () => {
 
     expect(fieldKeys).not.toContain("llm.load.llama.autoFit");
     expect(fieldKeys).not.toContain("llm.load.mlx.autoFit");
+    expect(fieldKeys).not.toContain("llm.load.vllm.autoFit");
 
-    const roundTrippedConfig = kvConfigToLLMLoadModelConfig(loadConfig);
-    expect(roundTrippedConfig).toEqual(config);
+    for (const modelFormat of ["gguf", "torch_safetensors"] as const) {
+      const roundTrippedConfig = kvConfigToLLMLoadModelConfig(loadConfig, { modelFormat });
+      expect(roundTrippedConfig).toEqual(config);
 
-    const reappliedFieldKeys = llmLoadModelConfigToKVConfig(roundTrippedConfig).fields.map(
-      field => field.key,
-    );
-    expect(reappliedFieldKeys).not.toContain("llm.load.llama.autoFit");
-    expect(reappliedFieldKeys).not.toContain("llm.load.mlx.autoFit");
+      const reappliedFieldKeys = llmLoadModelConfigToKVConfig(roundTrippedConfig).fields.map(
+        field => field.key,
+      );
+      expect(reappliedFieldKeys).not.toContain("llm.load.llama.autoFit");
+      expect(reappliedFieldKeys).not.toContain("llm.load.mlx.autoFit");
+      expect(reappliedFieldKeys).not.toContain("llm.load.vllm.autoFit");
+    }
   });
 
   it.each([{ gpu: {} }, { gpu: { disabledGpus: [] } }] as Array<LLMLoadModelConfig>)(
@@ -534,7 +538,7 @@ describe("llmLoadModelConfig conversion", () => {
     expect(convertedConfig).toEqual({ ...config, autoFit: false });
   });
 
-  it("preserves a single-GPU custom vLLM split through public readback", () => {
+  it.each([false, true])("preserves a single-GPU custom vLLM split (defaults=%s)", defaults => {
     const rawConfig = llmLoadSchematics.buildPartialConfig({
       gpuSplitConfig: {
         strategy: "custom",
@@ -546,7 +550,9 @@ describe("llmLoadModelConfig conversion", () => {
 
     const publicConfig = kvConfigToLLMLoadModelConfig(rawConfig, {
       modelFormat: "torch_safetensors",
+      useDefaultsForMissingKeys: defaults,
     });
+    expect(publicConfig.autoFit).toBe(false);
     expect(publicConfig.gpu).toEqual({
       splitStrategy: "favorMainGpu",
       mainGpu: 1,
@@ -561,7 +567,7 @@ describe("llmLoadModelConfig conversion", () => {
     });
   });
 
-  it("skips disabled GPUs in vLLM priority-order readback", () => {
+  it.each([false, true])("skips disabled GPUs in vLLM priority order (defaults=%s)", defaults => {
     const rawConfig = llmLoadSchematics.buildPartialConfig({
       gpuSplitConfig: {
         strategy: "priorityOrder",
@@ -573,7 +579,9 @@ describe("llmLoadModelConfig conversion", () => {
 
     const publicConfig = kvConfigToLLMLoadModelConfig(rawConfig, {
       modelFormat: "torch_safetensors",
+      useDefaultsForMissingKeys: defaults,
     });
+    expect(publicConfig.autoFit).toBe(false);
     expect(publicConfig.gpu).toEqual({
       splitStrategy: "favorMainGpu",
       disabledGpus: [2],
