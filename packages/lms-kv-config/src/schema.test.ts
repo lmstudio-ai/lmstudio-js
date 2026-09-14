@@ -174,7 +174,7 @@ describe("llmLoadModelConfig conversion", () => {
     });
     expect(converted.autoFit).toBe(true);
     expect(converted.contextLength).toBeUndefined();
-    expect(converted.gpu).toEqual({ disabledGpus: [1] });
+    expect(converted.gpu).toEqual({ splitStrategy: "evenly", disabledGpus: [1] });
     expect(llmLoadModelConfigSchema.safeParse(converted).success).toBe(true);
     expect(
       llmVllmLoadConfigSchematics.getValueTypeParamByFullKey("llm.load.vllm.autoFit"),
@@ -213,6 +213,33 @@ describe("llmLoadModelConfig conversion", () => {
       expect(llamaConfig.gpu?.splitStrategy).toBeUndefined();
       expect(llamaConfig.gpu?.disabledGpus).toEqual([2]);
       expect(llmLoadModelConfigSchema.parse(llamaConfig)).toEqual(llamaConfig);
+    },
+  );
+
+  describe.each([false, true])(
+    "vLLM GPU strategy readback (defaults=%s)",
+    useDefaultsForMissingKeys => {
+      it.each<NonNullable<LLMLoadModelConfig["gpu"]>>([
+        { splitStrategy: "favorMainGpu" },
+        { splitStrategy: "favorMainGpu", disabledGpus: [2] },
+        { splitStrategy: "evenly" },
+        { splitStrategy: "evenly", disabledGpus: [2] },
+      ])("preserves AutoFit GPU strategy without a main GPU: %j", gpu => {
+        const loadConfig = llmLoadModelConfigToKVConfig({ autoFit: true, gpu });
+        const converted = kvConfigToLLMLoadModelConfig(loadConfig, {
+          modelFormat: "torch_safetensors",
+          useDefaultsForMissingKeys,
+        });
+        expect(converted.autoFit).toBe(true);
+        expect(converted.gpu).toEqual({ ...gpu, disabledGpus: gpu.disabledGpus ?? [] });
+        expect(llmLoadModelConfigSchema.parse(converted)).toEqual(converted);
+
+        const reapplied = llmLoadModelConfigToKVConfig(converted);
+        expect(globalConfigSchematics.accessPartial(reapplied, "load.gpuSplitConfig")).toEqual(
+          globalConfigSchematics.accessPartial(loadConfig, "load.gpuSplitConfig"),
+        );
+        expect(globalConfigSchematics.accessPartial(reapplied, "llm.load.vllm.autoFit")).toBe(true);
+      });
     },
   );
 

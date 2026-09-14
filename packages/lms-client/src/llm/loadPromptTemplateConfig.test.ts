@@ -265,6 +265,32 @@ describe("SDK load prompt template config", () => {
     expect(reapplied.fields.map(field => field.key)).not.toContain("llm.load.contextLength");
   });
 
+  test.each<NonNullable<LLMLoadModelConfig["gpu"]>>([
+    { splitStrategy: "favorMainGpu" },
+    { splitStrategy: "favorMainGpu", disabledGpus: [2] },
+    { splitStrategy: "evenly" },
+    { splitStrategy: "evenly", disabledGpus: [2] },
+  ])("round trips vLLM AutoFit GPU strategy without a main GPU: %j", async gpu => {
+    const harness = createNamespaceHarness("torch_safetensors");
+    const original = llmLoadModelConfigToKVConfig({ autoFit: true, gpu });
+    harness.setLoadConfigResponse(original);
+    const model = await harness.namespace.load("test/model", { verbose: false });
+    const loadConfig = await model.getLoadConfig();
+    expect(loadConfig.autoFit).toBe(true);
+    expect(loadConfig.contextLength).toBeUndefined();
+    expect(loadConfig.gpu).toEqual({ ...gpu, disabledGpus: gpu.disabledGpus ?? [] });
+
+    await harness.namespace.load("test/model", { verbose: false, config: loadConfig });
+    const reapplied = collapseKVStack(
+      extractLoadConfigStack(harness.capturedChannelCreations[1]?.creationParameter),
+    );
+    expect(globalConfigSchematics.accessPartial(reapplied, "llm.load.vllm.autoFit")).toBe(true);
+    expect(globalConfigSchematics.accessPartial(reapplied, "load.gpuSplitConfig")).toEqual(
+      globalConfigSchematics.accessPartial(original, "load.gpuSplitConfig"),
+    );
+    expect(reapplied.fields.map(field => field.key)).not.toContain("llm.load.contextLength");
+  });
+
   test("getLoadConfig does not synthesize prompt templates when absent", async () => {
     const harness = createNamespaceHarness();
     harness.setLoadConfigResponse(emptyKVConfig);
