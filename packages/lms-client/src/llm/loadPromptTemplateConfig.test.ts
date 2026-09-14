@@ -10,6 +10,7 @@ import {
   llmPredictionConfigToKVConfig,
 } from "@lmstudio/lms-kv-config";
 import {
+  type GPUSplitConfig,
   type KVConfig,
   type KVConfigStack,
   type LLMLoadModelConfig,
@@ -228,6 +229,40 @@ describe("SDK load prompt template config", () => {
     const model = await harness.namespace.load("test/model", { verbose: false });
 
     expect((await model.getLoadConfig()).maxParallelPredictions).toBe(256);
+  });
+
+  test.each<GPUSplitConfig>([
+    { strategy: "priorityOrder", priority: [2, 1], disabledGpus: [2], customRatio: [] },
+    { strategy: "custom", priority: [0], disabledGpus: [1], customRatio: [0, 3, 0] },
+  ])("round trips vLLM AutoFit GPU selection %j through the SDK", async gpuSplitConfig => {
+    const harness = createNamespaceHarness("torch_safetensors");
+    harness.setLoadConfigResponse(
+      globalConfigSchematics.buildPartialConfig({
+        "llm.load.vllm.autoFit": true,
+        "llm.load.contextLength": 8192,
+        "load.gpuSplitConfig": gpuSplitConfig,
+      }),
+    );
+    const model = await harness.namespace.load("test/model", { verbose: false });
+    const loadConfig = await model.getLoadConfig();
+    expect(loadConfig.autoFit).toBe(true);
+    expect(loadConfig.contextLength).toBeUndefined();
+    expect(loadConfig.gpu?.mainGpu).toBe(1);
+    expect(loadConfig.gpu?.splitStrategy).toBe("favorMainGpu");
+
+    // Exercise SDK validation as well as conversion when reusing the readback.
+    await harness.namespace.load("test/model", { verbose: false, config: loadConfig });
+    const reapplied = collapseKVStack(
+      extractLoadConfigStack(harness.capturedChannelCreations[1]?.creationParameter),
+    );
+    expect(globalConfigSchematics.access(reapplied, "llm.load.vllm.autoFit")).toBe(true);
+    expect(globalConfigSchematics.access(reapplied, "load.gpuSplitConfig")).toEqual({
+      strategy: "priorityOrder",
+      priority: [1],
+      disabledGpus: gpuSplitConfig.strategy === "custom" ? [] : [2],
+      customRatio: [],
+    });
+    expect(reapplied.fields.map(field => field.key)).not.toContain("llm.load.contextLength");
   });
 
   test("getLoadConfig does not synthesize prompt templates when absent", async () => {

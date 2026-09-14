@@ -352,6 +352,41 @@ describe("llmLoadModelConfig conversion", () => {
     ).toMatchObject({ machineDependent: true });
   });
 
+  it.each([false, true])(
+    "preserves explicit vLLM AutoFit GPU selection (defaults=%s)",
+    useDefaultsForMissingKeys => {
+      const config: LLMLoadModelConfig = {
+        autoFit: true,
+        gpu: { mainGpu: 0, splitStrategy: "favorMainGpu", disabledGpus: [2] },
+      };
+      const loadConfig = llmLoadModelConfigToKVConfig(config);
+      const converted = kvConfigToLLMLoadModelConfig(loadConfig, {
+        modelFormat: "torch_safetensors",
+        useDefaultsForMissingKeys,
+      });
+      expect(converted.autoFit).toBe(true);
+      expect(converted.gpu).toEqual(config.gpu);
+      expect(converted.contextLength).toBeUndefined();
+      expect(llmLoadModelConfigSchema.parse(converted)).toEqual(converted);
+      const reapplied = llmLoadModelConfigToKVConfig(converted);
+      expect(globalConfigSchematics.access(reapplied, "load.gpuSplitConfig")).toEqual(
+        globalConfigSchematics.access(loadConfig, "load.gpuSplitConfig"),
+      );
+      expect(globalConfigSchematics.access(reapplied, "llm.load.vllm.autoFit")).toBe(true);
+
+      // llama.cpp AutoFit still owns placement, unlike vLLM's context-only fitting.
+      const llamaConfig = kvConfigToLLMLoadModelConfig(loadConfig, {
+        modelFormat: "gguf",
+        useDefaultsForMissingKeys,
+      });
+      expect(llamaConfig.autoFit).toBe(true);
+      expect(llamaConfig.gpu?.mainGpu).toBeUndefined();
+      expect(llamaConfig.gpu?.splitStrategy).toBeUndefined();
+      expect(llamaConfig.gpu?.disabledGpus).toEqual([2]);
+      expect(llmLoadModelConfigSchema.parse(llamaConfig)).toEqual(llamaConfig);
+    },
+  );
+
   it("keeps materialized AutoFit configs valid public load configs", () => {
     const convertedConfig = kvConfigToLLMLoadModelConfig(makeKVConfigFromFields([]), {
       useDefaultsForMissingKeys: true,
