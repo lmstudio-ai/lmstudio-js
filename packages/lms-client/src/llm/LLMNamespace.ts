@@ -1,5 +1,6 @@
 import { type SimpleLogger, type Validator } from "@lmstudio/lms-common";
 import { type LLMPort } from "@lmstudio/lms-external-backend-interfaces";
+import { resolveAbsolutePath } from "@lmstudio/lms-isomorphic";
 import { llmLoadModelConfigToKVConfig } from "@lmstudio/lms-kv-config";
 import {
   llmLoadModelConfigSchema,
@@ -29,7 +30,15 @@ export class LLMNamespace extends ModelNamespace<
   /** @internal */
   protected override readonly loadModelConfigSchema = llmLoadModelConfigSchema;
   /** @internal */
-  protected override loadConfigToKVConfig = llmLoadModelConfigToKVConfig;
+  protected override loadConfigToKVConfig(config: LLMLoadModelConfig) {
+    return llmLoadModelConfigToKVConfig({
+      ...config,
+      engineCwd:
+        config.engineCwd === undefined || config.engineCwd === ""
+          ? config.engineCwd
+          : resolveAbsolutePath(config.engineCwd),
+    });
+  }
   /** @internal */
   protected override createDomainSpecificModel(
     port: LLMPort,

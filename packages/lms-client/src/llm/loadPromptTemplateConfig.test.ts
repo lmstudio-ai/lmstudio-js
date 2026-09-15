@@ -1,3 +1,4 @@
+import { resolve } from "node:path";
 import { SimpleLogger, Validator } from "@lmstudio/lms-common";
 import { type LLMPort } from "@lmstudio/lms-external-backend-interfaces";
 import {
@@ -160,11 +161,72 @@ function extractLoadConfigStack(creationParameter: unknown): KVConfigStack {
 }
 
 function resolveLoadPromptTemplate(loadConfigStack: KVConfigStack) {
-  return globalConfigSchematics.access(
-    collapseKVStack(loadConfigStack),
-    "llm.load.promptTemplate",
-  );
+  return globalConfigSchematics.access(collapseKVStack(loadConfigStack), "llm.load.promptTemplate");
 }
+
+describe("SDK engine config file", () => {
+  test.each([
+    {},
+    { engineConfigFileContents: "" },
+    { engineCwd: "" },
+    {
+      engineConfigFileContents: "# keep exactly\r\nchat-template: ./templates/custom.jinja\r\n",
+      engineCwd: "./assets",
+    },
+  ])("schema and pure KV conversion preserve explicit values and omission (%j)", config => {
+    expect(llmLoadModelConfigSchema.parse(config)).toEqual(config);
+    const raw = llmLoadModelConfigToKVConfig(config);
+    expect(kvConfigToLLMLoadModelConfig(raw, { modelFormat: "torch_safetensors" })).toEqual(config);
+  });
+
+  test.each(["load", "model"] as const)(
+    "%s normalizes explicit CWD at the client boundary only",
+    async method => {
+      for (const engineCwd of [undefined, "", ".", "./assets with spaces", resolve("assets")]) {
+        const harness = createNamespaceHarness("torch_safetensors");
+        const config = {
+          engineConfigFileContents: "chat-template: ./templates/custom.jinja\n",
+          engineCwd,
+        };
+        await harness.namespace[method]("test/model", { verbose: false, config });
+        const sent = collapseKVStack(
+          extractLoadConfigStack(harness.capturedChannelCreations[0]?.creationParameter),
+        );
+        expect(kvConfigToLLMLoadModelConfig(sent, { modelFormat: "torch_safetensors" })).toEqual({
+          ...config,
+          engineCwd: engineCwd === undefined || engineCwd === "" ? engineCwd : resolve(engineCwd),
+        });
+        expect(config.engineCwd).toBe(engineCwd);
+      }
+    },
+  );
+
+  test.each([undefined, "", "/user assets"])(
+    "typed reporting retains launch contents, configured CWD and actual context (%s)",
+    async engineCwd => {
+      const harness = createNamespaceHarness("torch_safetensors");
+      const expected = {
+        engineConfigFileContents: "max-model-len: auto\n",
+        engineCwd,
+        contextLength: 32768,
+      };
+      harness.setLoadConfigResponse(llmLoadModelConfigToKVConfig(expected));
+      const model = await harness.namespace.load("test/model", { verbose: false });
+      expect(await model.getLoadConfig()).toEqual(expected);
+    },
+  );
+
+  test("normal vLLM conversion still materializes defaults without inventing engine options", () => {
+    const converted = kvConfigToLLMLoadModelConfig(emptyKVConfig, {
+      modelFormat: "torch_safetensors",
+      useDefaultsForMissingKeys: true,
+    });
+    expect(converted.maxParallelPredictions).toBeDefined();
+    expect(converted.seed).toBeDefined();
+    expect(converted).not.toHaveProperty("engineConfigFileContents");
+    expect(converted).not.toHaveProperty("engineCwd");
+  });
+});
 
 describe("SDK load prompt template config", () => {
   test("load config schema accepts load-time prompt template", () => {
@@ -189,8 +251,9 @@ describe("SDK load prompt template config", () => {
 
     const capturedCreation = harness.capturedChannelCreations[0];
     expect(capturedCreation?.endpointName).toBe("loadModel");
-    expect(resolveLoadPromptTemplate(extractLoadConfigStack(capturedCreation?.creationParameter)))
-      .toEqual(customLoadPromptTemplate);
+    expect(
+      resolveLoadPromptTemplate(extractLoadConfigStack(capturedCreation?.creationParameter)),
+    ).toEqual(customLoadPromptTemplate);
   });
 
   test("client.llm.model maps promptTemplate to llm.load.promptTemplate", async () => {
@@ -205,8 +268,9 @@ describe("SDK load prompt template config", () => {
 
     const capturedCreation = harness.capturedChannelCreations[0];
     expect(capturedCreation?.endpointName).toBe("getOrLoad");
-    expect(resolveLoadPromptTemplate(extractLoadConfigStack(capturedCreation?.creationParameter)))
-      .toEqual(customLoadPromptTemplate);
+    expect(
+      resolveLoadPromptTemplate(extractLoadConfigStack(capturedCreation?.creationParameter)),
+    ).toEqual(customLoadPromptTemplate);
   });
 
   test("getLoadConfig round-trips explicitly configured custom templates", async () => {
@@ -268,9 +332,7 @@ describe("SDK load prompt template config", () => {
 
   test("getLoadConfig round-trips llama.cpp argument overrides", async () => {
     const harness = createNamespaceHarness();
-    harness.setLoadConfigResponse(
-      llmLoadModelConfigToKVConfig({ llamaCppArgumentsOverride }),
-    );
+    harness.setLoadConfigResponse(llmLoadModelConfigToKVConfig({ llamaCppArgumentsOverride }));
     const model = await harness.namespace.load("test/model", { verbose: false });
 
     expect((await model.getLoadConfig()).llamaCppArgumentsOverride).toEqual(
