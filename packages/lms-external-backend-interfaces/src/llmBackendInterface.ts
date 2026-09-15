@@ -55,6 +55,8 @@ export function createLlmBackendInterface() {
              * The LLM specific call id of the tool call.
              */
             toolCallId: z.string().optional(),
+            // Encoding of streamed argument fragments, when supplied by the prediction source.
+            argumentsFormat: z.literal("json").optional(),
           }),
           z.object({
             type: z.literal("toolCallGenerationNameReceived"),

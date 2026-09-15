@@ -401,6 +401,8 @@ export interface LLMActBaseOpts<TPredictionResult> {
        * is provided by lmstudio.js and is guaranteed to behave consistently across all LLMs.
        */
       toolCallId?: string;
+      /** Encoding of argument fragments, if known. Individual fragments may be incomplete JSON. */
+      argumentsFormat?: "json";
     },
   ) => void;
   /**
@@ -745,7 +747,7 @@ interface ActPredictionImplementationArgs<TEndPacket> {
   signal: AbortSignal;
   handleFragment: (fragment: LLMPredictionFragment) => void;
   handlePromptProcessingProgress: (progress: number, details: PromptProcessingDetails) => void;
-  handleToolCallGenerationStart: (toolCallId: string | undefined) => void;
+  handleToolCallGenerationStart: (toolCallId: string | undefined, argumentsFormat?: "json") => void;
   handleToolCallGenerationNameReceived: (name: string) => void;
   handleToolCallGenerationArgumentFragmentGenerated: (content: string) => void;
   handleToolCallGenerationEnd: (request: ToolCallRequest, rawContent: string | undefined) => void;
@@ -1009,7 +1011,7 @@ export async function internalAct<TPredictionResult, TEndPacket>(
           [predictionsPerformed, progress, details],
         );
       },
-      handleToolCallGenerationStart: toolCallId => {
+      handleToolCallGenerationStart: (toolCallId, argumentsFormat) => {
         currentCallId = callIdGiver.next();
         receivedEagerToolNameReporting = false;
         receivedToolArgumentsStreaming = false;
@@ -1017,7 +1019,7 @@ export async function internalAct<TPredictionResult, TEndPacket>(
         safeCallCallback(logger, "onToolCallRequestStart", baseOpts.onToolCallRequestStart, [
           predictionsPerformed,
           currentCallId,
-          { toolCallId: toolCallId },
+          { toolCallId, argumentsFormat },
         ]);
       },
       handleToolCallGenerationNameReceived: name => {

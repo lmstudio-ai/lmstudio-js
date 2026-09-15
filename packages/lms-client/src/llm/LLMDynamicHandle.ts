@@ -59,8 +59,9 @@ import { ToolCallRequestError } from "./ToolCallRequestError.js";
  *
  * @public
  */
-export interface LLMPredictionOpts<TStructuredOutputType = unknown>
-  extends LLMPredictionConfigInput<TStructuredOutputType> {
+export interface LLMPredictionOpts<
+  TStructuredOutputType = unknown,
+> extends LLMPredictionConfigInput<TStructuredOutputType> {
   /**
    * A callback that is called when the model is processing the prompt. The callback is called with
    * a number between 0 and 1, representing the progress of the prompt processing.
@@ -105,6 +106,8 @@ export interface LLMPredictionOpts<TStructuredOutputType = unknown>
        * is provided by lmstudio.js and is guaranteed to behave consistently across all LLMs.
        */
       toolCallId?: string;
+      /** Encoding of argument fragments, if known. Individual fragments may be incomplete JSON. */
+      argumentsFormat?: "json";
     },
   ) => void;
   /**
@@ -259,8 +262,9 @@ function validateRawCompletionConfig(config: LLMPredictionConfigInput, stack: st
  *
  * @public
  */
-export interface LLMRespondOpts<TStructuredOutputType = unknown>
-  extends LLMPredictionOpts<TStructuredOutputType> {
+export interface LLMRespondOpts<
+  TStructuredOutputType = unknown,
+> extends LLMPredictionOpts<TStructuredOutputType> {
   /**
    * A convenience callback that is called when the model finishes generation. The callback is
    * called with a message that has the role set to "assistant" and the content set to the generated
@@ -516,7 +520,10 @@ export class LLMDynamicHandle extends DynamicHandle<
               this.logger,
               "onToolCallGenerationStart",
               extraOpts.onToolCallRequestStart,
-              [currentCallId, { toolCallId: message.toolCallId }],
+              [
+                currentCallId,
+                { toolCallId: message.toolCallId, argumentsFormat: message.argumentsFormat },
+              ],
             );
             break;
           }
@@ -1082,7 +1089,7 @@ export class LLMDynamicHandle extends DynamicHandle<
                 break;
               }
               case "toolCallGenerationStart": {
-                handleToolCallGenerationStart(message.toolCallId);
+                handleToolCallGenerationStart(message.toolCallId, message.argumentsFormat);
                 break;
               }
               case "toolCallGenerationNameReceived": {
@@ -1278,7 +1285,7 @@ export class LLMDynamicHandle extends DynamicHandle<
       const modelSpecifier =
         this.specifier.type === "instanceReference"
           ? this.specifier.instanceReference
-          : this.specifier.query.identifier ?? this.specifier.query.path ?? "unknown";
+          : (this.specifier.query.identifier ?? this.specifier.query.path ?? "unknown");
 
       throw makePrettyError(
         `Could not get model info for the loaded model - ${modelSpecifier}`,
