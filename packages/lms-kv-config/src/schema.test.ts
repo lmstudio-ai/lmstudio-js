@@ -1,4 +1,5 @@
 import {
+  kvConfigSchema,
   llmLoadModelConfigSchema,
   llmPredictionConfigInputSchema,
   type LLMLoadModelConfig,
@@ -110,13 +111,19 @@ describe("AutoFit GPU request validation", () => {
   const placementSettings: Array<NonNullable<LLMLoadModelConfig["gpu"]>> = [
     { mainGpu: 0 },
     { splitStrategy: "evenly" },
+    { splitStrategy: "evenly", disabledGpus: [] },
+    { splitStrategy: "evenly", disabledGpus: [2] },
     { splitStrategy: "favorMainGpu" },
     { mainGpu: 1, splitStrategy: "favorMainGpu", disabledGpus: [2] },
   ];
 
   describe.each(["gguf", "safetensors"] as const)("%s", modelFormat => {
     it.each(placementSettings)("rejects explicit AutoFit with placement %j", gpu => {
-      const config = llmLoadModelConfigToKVConfig({ autoFit: true, gpu });
+      const request = llmLoadModelConfigToKVConfig(
+        llmLoadModelConfigSchema.parse({ autoFit: true, gpu }),
+      );
+      // The host only sees KV config after transport, not the original public GPU setting.
+      const config = kvConfigSchema.parse(JSON.parse(JSON.stringify(request)));
       expect(() => validateLLMLoadAutoFitGPUConfigForModelFormat(config, modelFormat)).toThrow(
         /AutoFit cannot be enabled with manual GPU placement/,
       );
@@ -126,22 +133,42 @@ describe("AutoFit GPU request validation", () => {
       "allows AutoFit with only GPU filters %j",
       gpu => {
         const config = llmLoadModelConfigToKVConfig({ autoFit: true, gpu });
+        expect(llmLoadSchematics.accessPartial(config, "gpuPlacementIsExplicit")).toBeUndefined();
         expect(() =>
           validateLLMLoadAutoFitGPUConfigForModelFormat(config, modelFormat),
         ).not.toThrow();
       },
     );
 
-    it.each([undefined, false])("allows manual GPU placement with autoFit=%s", autoFit => {
-      const config = llmLoadModelConfigToKVConfig({ autoFit, gpu: { mainGpu: 1 } });
-      expect(() =>
-        validateLLMLoadAutoFitGPUConfigForModelFormat(config, modelFormat),
-      ).not.toThrow();
+    describe.each([undefined, false])("manual GPU placement with autoFit=%s", autoFit => {
+      it.each(placementSettings)("allows placement %j", gpu => {
+        const config = llmLoadModelConfigToKVConfig({ autoFit, gpu });
+        expect(() =>
+          validateLLMLoadAutoFitGPUConfigForModelFormat(config, modelFormat),
+        ).not.toThrow();
+      });
+    });
+
+    it("still validates legacy placement requests without provenance", () => {
+      const config = llmLoadSchematics.buildPartialConfig({
+        "llama.autoFit": true,
+        "mlx.autoFit": true,
+        "gpuSplitConfig": {
+          strategy: "priorityOrder",
+          priority: [1],
+          disabledGpus: [2],
+          customRatio: [],
+        },
+      });
+      expect(() => validateLLMLoadAutoFitGPUConfigForModelFormat(config, modelFormat)).toThrow(
+        /AutoFit cannot be enabled with manual GPU placement/,
+      );
     });
 
     it("does not apply defaults or another engine's AutoFit flag", () => {
       const config = llmLoadSchematics.buildPartialConfig({
         "vllm.autoFit": true,
+        "gpuPlacementIsExplicit": true,
         "gpuSplitConfig": {
           strategy: "priorityOrder",
           priority: [1],
@@ -164,6 +191,23 @@ describe("AutoFit GPU request validation", () => {
 });
 
 describe("llmLoadModelConfig conversion", () => {
+  it("keeps GPU placement provenance out of runtime load configs", () => {
+    const config = llmLoadModelConfigToKVConfig({
+      autoFit: true,
+      gpu: { splitStrategy: "evenly", disabledGpus: [2] },
+    });
+    expect(llmLoadSchematics.accessPartial(config, "gpuPlacementIsExplicit")).toBe(true);
+    for (const runtimeConfig of [
+      llmLlamaLoadConfigSchematics.filterConfig(config),
+      llmMlxLoadConfigSchematics.filterConfig(config),
+      llmVllmLoadConfigSchematics.filterConfig(config),
+    ]) {
+      expect(
+        llmLoadSchematics.accessPartial(runtimeConfig, "gpuPlacementIsExplicit"),
+      ).toBeUndefined();
+    }
+  });
+
   it("round trips explicit AutoFit for GGUF, MLX, and vLLM", () => {
     const loadConfig = llmLoadModelConfigToKVConfig({ autoFit: true });
     const fieldMap = new Map(loadConfig.fields.map(field => [field.key, field.value]));
