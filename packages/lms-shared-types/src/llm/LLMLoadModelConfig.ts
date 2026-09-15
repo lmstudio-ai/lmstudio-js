@@ -834,13 +834,13 @@ export const llmLoadModelConfigSchema = z
     mlxKvCacheQuantization: llmMlxKvCacheQuantizationSchema.or(z.literal(false)).optional(),
   })
   .superRefine((config, context) => {
+    // GPU selection can coexist with context fitting (for example, vLLM's single-GPU mode).
+    // Manual context and offload/memory settings still conflict with AutoFit.
     if (
       config.autoFit === true &&
       (config.contextLength !== undefined ||
         config.gpu?.ratio !== undefined ||
         config.gpu?.numCpuExpertLayersRatio !== undefined ||
-        config.gpu?.mainGpu !== undefined ||
-        config.gpu?.splitStrategy !== undefined ||
         config.gpuStrictVramCap !== undefined)
     ) {
       context.addIssue({
