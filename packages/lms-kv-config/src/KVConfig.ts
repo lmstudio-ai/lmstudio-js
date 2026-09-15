@@ -784,29 +784,35 @@ export class KVConfigSchematics<
   private makeLenientZodSchema(): ZodSchema<KVConfig> {
     const fullKeyMap = this.getFullKeyMap();
     return kvConfigSchema.transform(value => {
+      const exactKeys = new Set(value.fields.map(field => field.key));
       const seenKeys = new Set<string>();
-      return {
-        fields: value.fields.filter(field => {
-          if (this.hasExtensionPrefix(field.key)) {
-            // If we matched an extension prefix, we don't care about the key or value type. Just
-            // allow it.
-            return true;
-          }
-          if (seenKeys.has(field.key)) {
-            return false;
-          }
-          const fieldDef = fullKeyMap.get(field.key);
-          if (fieldDef === undefined) {
-            return false;
-          }
-          const parsed = fieldDef.schema.safeParse(field.value);
-          if (!parsed.success) {
-            return false;
-          }
-          seenKeys.add(field.key);
-          return true;
-        }),
-      };
+      const fields = new Array<KVConfigField>();
+      for (const field of value.fields) {
+        const canonicalKey = canonicalizeKVConfigKey(field.key);
+        if (canonicalKey !== field.key && exactKeys.has(canonicalKey)) {
+          continue;
+        }
+        if (this.hasExtensionPrefix(canonicalKey)) {
+          // If we matched an extension prefix, we don't care about the key or value type. Just
+          // allow it.
+          fields.push({ ...field, key: canonicalKey });
+          continue;
+        }
+        if (seenKeys.has(canonicalKey)) {
+          continue;
+        }
+        const fieldDef = fullKeyMap.get(canonicalKey);
+        if (fieldDef === undefined) {
+          continue;
+        }
+        const parsed = fieldDef.schema.safeParse(field.value);
+        if (!parsed.success) {
+          continue;
+        }
+        seenKeys.add(canonicalKey);
+        fields.push({ key: canonicalKey, value: parsed.data });
+      }
+      return { fields };
     });
   }
 
@@ -870,22 +876,30 @@ export class KVConfigSchematics<
     config: KVConfig,
     additionalFilter?: ConfigFieldFilter<TKVFieldValueTypeLibraryMap>,
   ): KVConfig {
+    const exactKeys = new Set(config.fields.map(field => field.key));
     const fullKeyMap = this.getFullKeyMap();
-    return {
-      fields: config.fields.filter(configField => {
-        const field = fullKeyMap.get(configField.key);
-        if (field === undefined) {
-          return false;
-        }
-        if (additionalFilter !== undefined) {
-          return additionalFilter(field.fullKey, {
-            type: field.valueTypeKey,
-            param: field.valueTypeParams,
-          });
-        }
-        return true;
-      }),
-    };
+    const fields = new Array<KVConfigField>();
+    for (const configField of config.fields) {
+      const canonicalKey = canonicalizeKVConfigKey(configField.key);
+      if (canonicalKey !== configField.key && exactKeys.has(canonicalKey)) {
+        continue;
+      }
+      const field = fullKeyMap.get(canonicalKey);
+      if (field === undefined) {
+        continue;
+      }
+      if (
+        additionalFilter !== undefined &&
+        !additionalFilter(field.fullKey, {
+          type: field.valueTypeKey,
+          param: field.valueTypeParams,
+        })
+      ) {
+        continue;
+      }
+      fields.push({ ...configField, key: canonicalKey });
+    }
+    return { fields };
   }
 
   /**
@@ -906,9 +920,15 @@ export class KVConfigSchematics<
   ): readonly [included: KVConfig, excluded: KVConfig] {
     const includedFields: Array<KVConfig["fields"][number]> = [];
     const excludedFields: Array<KVConfig["fields"][number]> = [];
+    const exactKeys = new Set(config.fields.map(field => field.key));
     const fullKeyMap = this.getFullKeyMap();
     for (const configField of config.fields) {
-      const field = fullKeyMap.get(configField.key);
+      const canonicalKey = canonicalizeKVConfigKey(configField.key);
+      if (canonicalKey !== configField.key && exactKeys.has(canonicalKey)) {
+        continue;
+      }
+      const canonicalConfigField = { ...configField, key: canonicalKey };
+      const field = fullKeyMap.get(canonicalKey);
       let include = field !== undefined;
       if (field !== undefined && additionalFilter !== undefined) {
         include = additionalFilter(field.fullKey, {
@@ -917,9 +937,9 @@ export class KVConfigSchematics<
         });
       }
       if (include) {
-        includedFields.push(configField);
+        includedFields.push(canonicalConfigField);
       } else {
-        excludedFields.push(configField);
+        excludedFields.push(canonicalConfigField);
       }
     }
     return [{ fields: includedFields }, { fields: excludedFields }];
@@ -1400,8 +1420,30 @@ export function kvConfigToFields(config: KVConfig): Array<KVConfigField> {
   return config.fields;
 }
 
+const LEGACY_LOAD_SPECULATIVE_DECODING_PREFIX = "llm.load.llama.speculativeDecoding.";
+const LOAD_SPECULATIVE_DECODING_PREFIX = "llm.load.speculativeDecoding.";
+
+function canonicalizeKVConfigKey(key: string): string {
+  if (key.startsWith(LEGACY_LOAD_SPECULATIVE_DECODING_PREFIX)) {
+    return `${LOAD_SPECULATIVE_DECODING_PREFIX}${key.slice(
+      LEGACY_LOAD_SPECULATIVE_DECODING_PREFIX.length,
+    )}`;
+  }
+  return key;
+}
+
 export function kvConfigToMap(config: KVConfig): Map<string, any> {
-  return new Map(config.fields.map(f => [f.key, f.value]));
+  const exactKeys = new Set(config.fields.map(field => field.key));
+  const result = new Map<string, any>();
+  for (const field of config.fields) {
+    const canonicalKey = canonicalizeKVConfigKey(field.key);
+    // A canonical key in the same config wins over its legacy alias regardless of field order.
+    if (canonicalKey !== field.key && exactKeys.has(canonicalKey)) {
+      continue;
+    }
+    result.set(canonicalKey, field.value);
+  }
+  return result;
 }
 
 export function mapToKVConfig(map: Map<string, any>): KVConfig {
@@ -1413,7 +1455,7 @@ export function mapToKVConfig(map: Map<string, any>): KVConfig {
 export function collapseKVStack(stack: KVConfigStack): KVConfig {
   const map: Map<string, any> = new Map();
   for (const layer of stack.layers) {
-    for (const { key, value } of layer.config.fields) {
+    for (const [key, value] of kvConfigToMap(layer.config)) {
       map.set(key, value);
     }
   }
@@ -1423,7 +1465,7 @@ export function collapseKVStack(stack: KVConfigStack): KVConfig {
 export function collapseKVStackRaw(configs: Array<KVConfig>): KVConfig {
   const map: Map<string, any> = new Map();
   for (const config of configs) {
-    for (const { key, value } of config.fields) {
+    for (const [key, value] of kvConfigToMap(config)) {
       map.set(key, value);
     }
   }
