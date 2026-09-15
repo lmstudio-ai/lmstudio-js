@@ -5,7 +5,6 @@ import {
   serializedKVConfigSchematicsSchema,
 } from "@lmstudio/lms-shared-types";
 import {
-  collapseKVStack,
   kvConfigField,
   KVConfigSchematics,
   KVConfigSchematicsBuilder,
@@ -706,68 +705,6 @@ describe("llmLoadModelConfig conversion", () => {
     expect(fieldMap.get("llm.load.speculativeDecoding.draftDflashSidecar")).toBe(false);
     expect(fieldMap.get("llm.load.speculativeDecoding.draftDsparkSidecar")).toBe(false);
     expect(fieldMap.get("llm.load.speculativeDecoding.draftMtpSidecar")).toBe(false);
-  });
-
-  it("migrates legacy speculative decoding keys while preserving layer precedence", () => {
-    const collapsedConfig = collapseKVStack({
-      layers: [
-        {
-          layerName: "modelDefault",
-          config: makeKVConfigFromFields([
-            kvConfigField("llm.load.speculativeDecoding.draftMtp", true),
-          ]),
-        },
-        {
-          layerName: "userModelDefault",
-          config: makeKVConfigFromFields([
-            kvConfigField("llm.load.llama.speculativeDecoding.draftMtp", false),
-          ]),
-        },
-      ],
-    });
-
-    expect(
-      globalConfigSchematics.access(collapsedConfig, "llm.load.speculativeDecoding.draftMtp"),
-    ).toBe(false);
-    expect(collapsedConfig.fields).toEqual([
-      { key: "llm.load.speculativeDecoding.draftMtp", value: false },
-    ]);
-  });
-
-  it("prefers a canonical speculative decoding key over its legacy alias in one config", () => {
-    const legacyAndCanonicalConfig = makeKVConfigFromFields([
-      kvConfigField("llm.load.speculativeDecoding.draftMtp", true),
-      kvConfigField("llm.load.llama.speculativeDecoding.draftMtp", false),
-    ]);
-
-    expect(
-      globalConfigSchematics.access(
-        legacyAndCanonicalConfig,
-        "llm.load.speculativeDecoding.draftMtp",
-      ),
-    ).toBe(true);
-    expect(globalConfigSchematics.getLenientZodSchema().parse(legacyAndCanonicalConfig)).toEqual({
-      fields: [{ key: "llm.load.speculativeDecoding.draftMtp", value: true }],
-    });
-  });
-
-  it("canonicalizes legacy speculative decoding keys while filtering configs", () => {
-    const config = makeKVConfigFromFields([
-      kvConfigField("llm.load.llama.speculativeDecoding.draftMtp", true),
-      kvConfigField("unknown.key", "preserve when excluded"),
-    ]);
-
-    expect(globalConfigSchematics.filterConfig(config)).toEqual({
-      fields: [{ key: "llm.load.speculativeDecoding.draftMtp", value: true }],
-    });
-    expect(globalConfigSchematics.twoWayFilterConfig(config)).toEqual([
-      {
-        fields: [{ key: "llm.load.speculativeDecoding.draftMtp", value: true }],
-      },
-      {
-        fields: [{ key: "unknown.key", value: "preserve when excluded" }],
-      },
-    ]);
   });
 
   it("round trips explicit Draft MTP off", () => {

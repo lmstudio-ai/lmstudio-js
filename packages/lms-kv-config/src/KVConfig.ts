@@ -786,7 +786,7 @@ export class KVConfigSchematics<
     return kvConfigSchema.transform(value => {
       const seenKeys = new Set<string>();
       return {
-        fields: canonicalizeKVConfig(value).fields.filter(field => {
+        fields: value.fields.filter(field => {
           if (this.hasExtensionPrefix(field.key)) {
             // If we matched an extension prefix, we don't care about the key or value type. Just
             // allow it.
@@ -872,7 +872,7 @@ export class KVConfigSchematics<
   ): KVConfig {
     const fullKeyMap = this.getFullKeyMap();
     return {
-      fields: canonicalizeKVConfig(config).fields.filter(configField => {
+      fields: config.fields.filter(configField => {
         const field = fullKeyMap.get(configField.key);
         if (field === undefined) {
           return false;
@@ -907,7 +907,7 @@ export class KVConfigSchematics<
     const includedFields: Array<KVConfig["fields"][number]> = [];
     const excludedFields: Array<KVConfig["fields"][number]> = [];
     const fullKeyMap = this.getFullKeyMap();
-    for (const configField of canonicalizeKVConfig(config).fields) {
+    for (const configField of config.fields) {
       const field = fullKeyMap.get(configField.key);
       let include = field !== undefined;
       if (field !== undefined && additionalFilter !== undefined) {
@@ -1400,33 +1400,8 @@ export function kvConfigToFields(config: KVConfig): Array<KVConfigField> {
   return config.fields;
 }
 
-const LEGACY_LOAD_SPECULATIVE_DECODING_PREFIX = "llm.load.llama.speculativeDecoding.";
-const LOAD_SPECULATIVE_DECODING_PREFIX = "llm.load.speculativeDecoding.";
-
-function canonicalizeKVConfigKey(key: string): string {
-  if (key.startsWith(LEGACY_LOAD_SPECULATIVE_DECODING_PREFIX)) {
-    return `${LOAD_SPECULATIVE_DECODING_PREFIX}${key.slice(
-      LEGACY_LOAD_SPECULATIVE_DECODING_PREFIX.length,
-    )}`;
-  }
-  return key;
-}
-
-function canonicalizeKVConfig(config: KVConfig): KVConfig {
-  const exactKeys = new Set(config.fields.map(field => field.key));
-  return {
-    fields: config.fields.flatMap(field => {
-      const canonicalKey = canonicalizeKVConfigKey(field.key);
-      // A canonical key in the same config wins over its legacy alias regardless of field order.
-      return canonicalKey !== field.key && exactKeys.has(canonicalKey)
-        ? []
-        : [{ ...field, key: canonicalKey }];
-    }),
-  };
-}
-
 export function kvConfigToMap(config: KVConfig): Map<string, any> {
-  return new Map(canonicalizeKVConfig(config).fields.map(field => [field.key, field.value]));
+  return new Map(config.fields.map(f => [f.key, f.value]));
 }
 
 export function mapToKVConfig(map: Map<string, any>): KVConfig {
@@ -1438,7 +1413,7 @@ export function mapToKVConfig(map: Map<string, any>): KVConfig {
 export function collapseKVStack(stack: KVConfigStack): KVConfig {
   const map: Map<string, any> = new Map();
   for (const layer of stack.layers) {
-    for (const [key, value] of kvConfigToMap(layer.config)) {
+    for (const { key, value } of layer.config.fields) {
       map.set(key, value);
     }
   }
@@ -1448,7 +1423,7 @@ export function collapseKVStack(stack: KVConfigStack): KVConfig {
 export function collapseKVStackRaw(configs: Array<KVConfig>): KVConfig {
   const map: Map<string, any> = new Map();
   for (const config of configs) {
-    for (const [key, value] of kvConfigToMap(config)) {
+    for (const { key, value } of config.fields) {
       map.set(key, value);
     }
   }
