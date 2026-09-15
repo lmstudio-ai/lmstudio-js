@@ -5,6 +5,7 @@ export {
 export {
   kvConfigToLLMLoadModelConfig,
   llmLoadModelConfigToKVConfig,
+  validateLLMLoadAutoFitGPUConfigForModelFormat,
 } from "./conversion/llmLoadModelConfig.js";
 export {
   kvConfigToLLMPredictionConfig,
