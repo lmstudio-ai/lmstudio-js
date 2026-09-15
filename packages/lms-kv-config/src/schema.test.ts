@@ -5,6 +5,7 @@ import {
   serializedKVConfigSchematicsSchema,
 } from "@lmstudio/lms-shared-types";
 import {
+  collapseKVStack,
   kvConfigField,
   KVConfigSchematics,
   KVConfigSchematicsBuilder,
@@ -419,9 +420,9 @@ describe("llmLoadModelConfig conversion", () => {
     };
     const loadConfig = llmLoadModelConfigToKVConfig({ llamaCppArgumentsOverride });
 
-    expect(
-      globalConfigSchematics.access(loadConfig, "llm.load.llama.argumentsOverride"),
-    ).toEqual(llamaCppArgumentsOverride);
+    expect(globalConfigSchematics.access(loadConfig, "llm.load.llama.argumentsOverride")).toEqual(
+      llamaCppArgumentsOverride,
+    );
     expect(kvConfigToLLMLoadModelConfig(loadConfig).llamaCppArgumentsOverride).toEqual(
       llamaCppArgumentsOverride,
     );
@@ -637,44 +638,42 @@ describe("llmLoadModelConfig conversion", () => {
     expect(roundTrippedConfig.speculativeDraftMaxTokens).toBeUndefined();
     expect(roundTrippedConfig.speculativeDraftMinTokens).toBeUndefined();
     expect(roundTrippedConfig.speculativeDraftMinContinueProbability).toBeUndefined();
-    expect(fieldKeys).not.toContain("llm.load.llama.speculativeDecoding.draftDflashSidecar");
-    expect(fieldKeys).not.toContain("llm.load.llama.speculativeDecoding.draftDsparkSidecar");
-    expect(fieldKeys).not.toContain("llm.load.llama.speculativeDecoding.draftMtpSidecar");
+    expect(fieldKeys).not.toContain("llm.load.speculativeDecoding.draftDflashSidecar");
+    expect(fieldKeys).not.toContain("llm.load.speculativeDecoding.draftDsparkSidecar");
+    expect(fieldKeys).not.toContain("llm.load.speculativeDecoding.draftMtpSidecar");
   });
 
   it("adds internal sidecar speculative decoding fields as boolean defaults", () => {
     const emptyConfig = makeKVConfigFromFields([]);
     const loadConfig = llmLoadSchematics.buildPartialConfig({
-      "llama.speculativeDecoding.draftDflashSidecar": true,
-      "llama.speculativeDecoding.draftDsparkSidecar": true,
-      "llama.speculativeDecoding.draftMtpSidecar": true,
+      "speculativeDecoding.draftDflashSidecar": true,
+      "speculativeDecoding.draftDsparkSidecar": true,
+      "speculativeDecoding.draftMtpSidecar": true,
     });
 
-    expect(
-      llmLoadSchematics.access(emptyConfig, "llama.speculativeDecoding.draftDflashSidecar"),
-    ).toBe(false);
-    expect(
-      llmLoadSchematics.access(emptyConfig, "llama.speculativeDecoding.draftDsparkSidecar"),
-    ).toBe(false);
-    expect(
-      llmLoadSchematics.access(emptyConfig, "llama.speculativeDecoding.draftMtpSidecar"),
-    ).toBe(false);
-    expect(llmLoadSchematics.access(loadConfig, "llama.speculativeDecoding.draftDflashSidecar")).toBe(
+    expect(llmLoadSchematics.access(emptyConfig, "speculativeDecoding.draftDflashSidecar")).toBe(
+      false,
+    );
+    expect(llmLoadSchematics.access(emptyConfig, "speculativeDecoding.draftDsparkSidecar")).toBe(
+      false,
+    );
+    expect(llmLoadSchematics.access(emptyConfig, "speculativeDecoding.draftMtpSidecar")).toBe(
+      false,
+    );
+    expect(llmLoadSchematics.access(loadConfig, "speculativeDecoding.draftDflashSidecar")).toBe(
       true,
     );
-    expect(llmLoadSchematics.access(loadConfig, "llama.speculativeDecoding.draftDsparkSidecar")).toBe(
+    expect(llmLoadSchematics.access(loadConfig, "speculativeDecoding.draftDsparkSidecar")).toBe(
       true,
     );
-    expect(
-      llmLoadSchematics.access(loadConfig, "llama.speculativeDecoding.draftMtpSidecar"),
-    ).toBe(true);
+    expect(llmLoadSchematics.access(loadConfig, "speculativeDecoding.draftMtpSidecar")).toBe(true);
   });
 
   it("rejects non-boolean internal sidecar speculative decoding field values", () => {
     for (const key of [
-      "llama.speculativeDecoding.draftDflashSidecar",
-      "llama.speculativeDecoding.draftDsparkSidecar",
-      "llama.speculativeDecoding.draftMtpSidecar",
+      "speculativeDecoding.draftDflashSidecar",
+      "speculativeDecoding.draftDsparkSidecar",
+      "speculativeDecoding.draftMtpSidecar",
     ] as const) {
       expect(llmLoadSchematics.getSchemaForKey(key).safeParse("true").success).toBe(false);
       expect(llmLoadSchematics.getSchemaForKey(key).safeParse(1).success).toBe(false);
@@ -683,9 +682,9 @@ describe("llmLoadModelConfig conversion", () => {
 
   it("does not expose internal sidecar speculative decoding fields through public conversion", () => {
     const loadConfig = globalConfigSchematics.scoped("llm.load").buildPartialConfig({
-      "llama.speculativeDecoding.draftDflashSidecar": true,
-      "llama.speculativeDecoding.draftDsparkSidecar": true,
-      "llama.speculativeDecoding.draftMtpSidecar": true,
+      "speculativeDecoding.draftDflashSidecar": true,
+      "speculativeDecoding.draftDsparkSidecar": true,
+      "speculativeDecoding.draftMtpSidecar": true,
     });
 
     const convertedConfig = kvConfigToLLMLoadModelConfig(loadConfig, {
@@ -704,9 +703,71 @@ describe("llmLoadModelConfig conversion", () => {
     });
     const fieldMap = new Map(loadConfig.fields.map(field => [field.key, field.value]));
 
-    expect(fieldMap.get("llm.load.llama.speculativeDecoding.draftDflashSidecar")).toBe(false);
-    expect(fieldMap.get("llm.load.llama.speculativeDecoding.draftDsparkSidecar")).toBe(false);
-    expect(fieldMap.get("llm.load.llama.speculativeDecoding.draftMtpSidecar")).toBe(false);
+    expect(fieldMap.get("llm.load.speculativeDecoding.draftDflashSidecar")).toBe(false);
+    expect(fieldMap.get("llm.load.speculativeDecoding.draftDsparkSidecar")).toBe(false);
+    expect(fieldMap.get("llm.load.speculativeDecoding.draftMtpSidecar")).toBe(false);
+  });
+
+  it("migrates legacy speculative decoding keys while preserving layer precedence", () => {
+    const collapsedConfig = collapseKVStack({
+      layers: [
+        {
+          layerName: "modelDefault",
+          config: makeKVConfigFromFields([
+            kvConfigField("llm.load.speculativeDecoding.draftMtp", true),
+          ]),
+        },
+        {
+          layerName: "userModelDefault",
+          config: makeKVConfigFromFields([
+            kvConfigField("llm.load.llama.speculativeDecoding.draftMtp", false),
+          ]),
+        },
+      ],
+    });
+
+    expect(
+      globalConfigSchematics.access(collapsedConfig, "llm.load.speculativeDecoding.draftMtp"),
+    ).toBe(false);
+    expect(collapsedConfig.fields).toEqual([
+      { key: "llm.load.speculativeDecoding.draftMtp", value: false },
+    ]);
+  });
+
+  it("prefers a canonical speculative decoding key over its legacy alias in one config", () => {
+    const legacyAndCanonicalConfig = makeKVConfigFromFields([
+      kvConfigField("llm.load.speculativeDecoding.draftMtp", true),
+      kvConfigField("llm.load.llama.speculativeDecoding.draftMtp", false),
+    ]);
+
+    expect(
+      globalConfigSchematics.access(
+        legacyAndCanonicalConfig,
+        "llm.load.speculativeDecoding.draftMtp",
+      ),
+    ).toBe(true);
+    expect(globalConfigSchematics.getLenientZodSchema().parse(legacyAndCanonicalConfig)).toEqual({
+      fields: [{ key: "llm.load.speculativeDecoding.draftMtp", value: true }],
+    });
+  });
+
+  it("canonicalizes legacy speculative decoding keys while filtering configs", () => {
+    const config = makeKVConfigFromFields([
+      kvConfigField("llm.load.llama.speculativeDecoding.draftMtp", true),
+      kvConfigField("unknown.key", "preserve when excluded"),
+    ]);
+
+    expect(globalConfigSchematics.filterConfig(config)).toEqual({
+      fields: [{ key: "llm.load.speculativeDecoding.draftMtp", value: true }],
+    });
+    expect(globalConfigSchematics.twoWayFilterConfig(config)).toEqual([
+      {
+        fields: [{ key: "llm.load.speculativeDecoding.draftMtp", value: true }],
+      },
+      {
+        fields: [{ key: "unknown.key", value: "preserve when excluded" }],
+      },
+    ]);
   });
 
   it("round trips explicit Draft MTP off", () => {
@@ -717,6 +778,20 @@ describe("llmLoadModelConfig conversion", () => {
     const roundTrippedConfig = kvConfigToLLMLoadModelConfig(loadConfig);
 
     expect(roundTrippedConfig.speculativeDraftMtp).toBe(false);
+  });
+
+  it("round trips Draft MTP through the vLLM load schema", () => {
+    const loadConfig = llmLoadModelConfigToKVConfig({
+      speculativeDraftMtp: true,
+      speculativeDraftMaxTokens: 3,
+    });
+
+    const roundTrippedConfig = kvConfigToLLMLoadModelConfig(loadConfig, {
+      modelFormat: "torch_safetensors",
+    });
+
+    expect(roundTrippedConfig.speculativeDraftMtp).toBe(true);
+    expect(roundTrippedConfig.speculativeDraftMaxTokens).toBe(3);
   });
 
   it("round trips Draft MTP load-time speculative decoding", () => {
@@ -768,7 +843,7 @@ describe("llmLoadModelConfig conversion", () => {
 
   it("uses shared draft tuning defaults when defaults are requested", () => {
     const loadConfig = globalConfigSchematics.scoped("llm.load").buildPartialConfig({
-      "llama.speculativeDecoding.draftMtp": true,
+      "speculativeDecoding.draftMtp": true,
     });
 
     const convertedConfig = kvConfigToLLMLoadModelConfig(loadConfig, {
@@ -795,9 +870,9 @@ describe("llmLoadModelConfig conversion", () => {
 
   it("normalizes inert materialized Draft Model resources for public round trips", () => {
     const loadConfig = globalConfigSchematics.scoped("llm.load").buildPartialConfig({
-      "llama.speculativeDecoding.draftMtp": false,
-      "llama.speculativeDecoding.draftSimple": false,
-      "llama.speculativeDecoding.draftModel": "publisher/stale-draft-model",
+      "speculativeDecoding.draftMtp": false,
+      "speculativeDecoding.draftSimple": false,
+      "speculativeDecoding.draftModel": "publisher/stale-draft-model",
     });
 
     const convertedConfig = kvConfigToLLMLoadModelConfig(loadConfig, {
@@ -812,9 +887,9 @@ describe("llmLoadModelConfig conversion", () => {
 
   it("preserves materialized Draft Model resources when Draft Simple is active", () => {
     const loadConfig = globalConfigSchematics.scoped("llm.load").buildPartialConfig({
-      "llama.speculativeDecoding.draftMtp": false,
-      "llama.speculativeDecoding.draftSimple": true,
-      "llama.speculativeDecoding.draftModel": "publisher/draft-model",
+      "speculativeDecoding.draftMtp": false,
+      "speculativeDecoding.draftSimple": true,
+      "speculativeDecoding.draftModel": "publisher/draft-model",
     });
 
     const convertedConfig = kvConfigToLLMLoadModelConfig(loadConfig, {
@@ -829,7 +904,7 @@ describe("llmLoadModelConfig conversion", () => {
 
   it("preserves an explicitly empty Draft Model from KV config", () => {
     const loadConfig = globalConfigSchematics.scoped("llm.load").buildPartialConfig({
-      "llama.speculativeDecoding.draftModel": "",
+      "speculativeDecoding.draftModel": "",
     });
 
     const convertedConfig = kvConfigToLLMLoadModelConfig(loadConfig);
@@ -839,9 +914,9 @@ describe("llmLoadModelConfig conversion", () => {
 
   it("preserves orphan draft tuning fields without enabling speculative decoding", () => {
     const loadConfig = globalConfigSchematics.scoped("llm.load").buildPartialConfig({
-      "llama.speculativeDecoding.draftMaxTokens": 8,
-      "llama.speculativeDecoding.draftMinTokens": 2,
-      "llama.speculativeDecoding.draftMinContinueProbability": 0.5,
+      "speculativeDecoding.draftMaxTokens": 8,
+      "speculativeDecoding.draftMinTokens": 2,
+      "speculativeDecoding.draftMinContinueProbability": 0.5,
     });
 
     const convertedConfig = kvConfigToLLMLoadModelConfig(loadConfig);
@@ -874,8 +949,8 @@ describe("llmLoadModelConfig conversion", () => {
 
     const fieldKeys = loadConfig.fields.map(field => field.key);
 
-    expect(fieldKeys).toContain("llm.load.llama.speculativeDecoding.draftMaxTokens");
-    expect(fieldKeys).toContain("llm.load.llama.speculativeDecoding.draftMinTokens");
+    expect(fieldKeys).toContain("llm.load.speculativeDecoding.draftMaxTokens");
+    expect(fieldKeys).toContain("llm.load.speculativeDecoding.draftMinTokens");
     expect(fieldKeys).not.toContain("llm.load.llama.speculativeDecoding.draftMtpMaxTokens");
     expect(fieldKeys).not.toContain("llm.load.llama.speculativeDecoding.draftMtpMinTokens");
   });
@@ -1071,6 +1146,8 @@ describe("globalConfigSchematics", () => {
         "llm.load.vllm.gpuMemoryUtilization",
         "llm.load.vllm.reasoningParser",
         "llm.load.vllm.toolCallParser",
+        "llm.load.speculativeDecoding.draftMtp",
+        "llm.load.speculativeDecoding.draftMaxTokens",
         "load.gpuSplitConfig",
       ]),
     );

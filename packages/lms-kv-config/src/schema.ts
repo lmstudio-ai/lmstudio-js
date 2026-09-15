@@ -306,12 +306,7 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
         },
         2048,
       )
-      .field(
-        "autoFitMinContextLength",
-        "numeric",
-        { min: 0, int: true, machineDependent: true },
-        0,
-      )
+      .field("autoFitMinContextLength", "numeric", { min: 0, int: true, machineDependent: true }, 0)
       .field("numExperts", "numeric", { min: 0, int: true }, 0)
       .field(
         "seed",
@@ -339,6 +334,98 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
         4,
       )
       .field("useUnifiedKvCache", "boolean", { isExperimental: true }, true)
+      .scope("speculativeDecoding", builder =>
+        builder
+          .field(
+            "draftMtp",
+            "boolean",
+            {
+              displayName: "Draft MTP",
+              hint: "Use bundled multi-token prediction heads when loading the model.",
+            },
+            false,
+          )
+          .field(
+            "draftSimple",
+            "boolean",
+            {
+              displayName: "Draft Simple",
+              hint: "Use a separate draft model for speculative decoding.",
+            },
+            false,
+          )
+          .field(
+            "draftDflashSidecar",
+            "boolean",
+            {
+              displayName: "DFlash Sidecar",
+              hint: "Use a DFlash sidecar drafter model for speculative decoding.",
+            },
+            false,
+          )
+          .field(
+            "draftDsparkSidecar",
+            "boolean",
+            {
+              displayName: "DSpark Sidecar",
+              hint: "Use a DSpark sidecar drafter model for speculative decoding.",
+            },
+            false,
+          )
+          .field(
+            "draftMtpSidecar",
+            "boolean",
+            {
+              displayName: "MTP Sidecar",
+              hint: "Use an MTP sidecar drafter model for speculative decoding.",
+            },
+            false,
+          )
+          .field(
+            "draftModel",
+            "string",
+            {
+              displayName: "Speculative Decoding",
+              hint: "Configure load-time speculative decoding.",
+            },
+            "",
+          )
+          .field(
+            "draftMaxTokens",
+            "numeric",
+            {
+              min: 0,
+              int: true,
+              displayName: "Max Draft Tokens",
+              hint: "Maximum number of draft tokens to generate.",
+            },
+            3,
+          )
+          .field(
+            "draftMinTokens",
+            "numeric",
+            {
+              min: 0,
+              int: true,
+              displayName: "Min Draft Tokens",
+              hint: "Minimum draft length to verify with the main model.",
+            },
+            0,
+          )
+          .field(
+            "draftMinContinueProbability",
+            "numeric",
+            {
+              min: 0,
+              max: 1,
+              step: 0.01,
+              precision: 2,
+              displayName: "Drafting Probability Cutoff",
+              hint: "Continue drafting while token probability is at or above this threshold.",
+            },
+            0,
+          ),
+      )
       .scope("llama", builder =>
         builder
           .field("autoFit", "boolean", { machineDependent: true }, true)
@@ -375,98 +462,6 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
             32,
           )
           .field("reasoningBudgetMessage", "string", {}, "")
-          .scope("speculativeDecoding", builder =>
-            builder
-              .field(
-                "draftMtp",
-                "boolean",
-                {
-                  displayName: "Draft MTP",
-                  hint: "Use bundled multi-token prediction heads when loading the model.",
-                },
-                false,
-              )
-              .field(
-                "draftSimple",
-                "boolean",
-                {
-                  displayName: "Draft Simple",
-                  hint: "Use a separate draft model for speculative decoding.",
-                },
-                false,
-              )
-              .field(
-                "draftDflashSidecar",
-                "boolean",
-                {
-                  displayName: "DFlash Sidecar",
-                  hint: "Use a DFlash sidecar drafter model for speculative decoding.",
-                },
-                false,
-              )
-              .field(
-                "draftDsparkSidecar",
-                "boolean",
-                {
-                  displayName: "DSpark Sidecar",
-                  hint: "Use a DSpark sidecar drafter model for speculative decoding.",
-                },
-                false,
-              )
-              .field(
-                "draftMtpSidecar",
-                "boolean",
-                {
-                  displayName: "MTP Sidecar",
-                  hint: "Use an MTP sidecar drafter model for speculative decoding.",
-                },
-                false,
-              )
-              .field(
-                "draftModel",
-                "string",
-                {
-                  displayName: "Speculative Decoding",
-                  hint: "Configure load-time speculative decoding.",
-                },
-                "",
-              )
-              .field(
-                "draftMaxTokens",
-                "numeric",
-                {
-                  min: 0,
-                  int: true,
-                  displayName: "Max Draft Tokens",
-                  hint: "Maximum number of draft tokens to generate.",
-                },
-                3,
-              )
-              .field(
-                "draftMinTokens",
-                "numeric",
-                {
-                  min: 0,
-                  int: true,
-                  displayName: "Min Draft Tokens",
-                  hint: "Minimum draft length to verify with the main model.",
-                },
-                0,
-              )
-              .field(
-                "draftMinContinueProbability",
-                "numeric",
-                {
-                  min: 0,
-                  max: 1,
-                  step: 0.01,
-                  precision: 2,
-                  displayName: "Drafting Probability Cutoff",
-                  hint: "Continue drafting while token probability is at or above this threshold.",
-                },
-                0,
-              ),
-          )
           .field(
             "ropeFrequencyBase",
             "checkboxNumeric",
@@ -766,6 +761,7 @@ export const llmLlamaLoadConfigSchematics = llmSharedLoadConfigSchematics
       "offloadKVCacheToGpu",
       "numParallelSessions",
       "useUnifiedKvCache",
+      "speculativeDecoding.*",
     ),
   )
   .union(llamaLoadConfigSchematics);
@@ -775,7 +771,14 @@ export const llmMlxLoadConfigSchematics = llmSharedLoadConfigSchematics.union(
 );
 
 export const llmVllmLoadConfigSchematics = llmSharedLoadConfigSchematics
-  .union(llmLoadSchematics.sliced("vllm.*", "numParallelSessions", "promptTemplate"))
+  .union(
+    llmLoadSchematics.sliced(
+      "vllm.*",
+      "numParallelSessions",
+      "promptTemplate",
+      "speculativeDecoding.*",
+    ),
+  )
   .union(globalConfigSchematics.sliced("load.gpuSplitConfig"));
 
 export const llmTransformersLoadConfigSchematics = llmSharedLoadConfigSchematics.union(
