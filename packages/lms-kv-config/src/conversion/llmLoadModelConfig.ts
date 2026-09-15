@@ -24,6 +24,51 @@ interface KvConfigToLLMLoadModelConfigOpts {
   modelFormat?: ModelCompatibilityType;
 }
 
+function hasManualGPUSplitConfig(splitConfig: GPUSplitConfig | undefined): boolean {
+  // The SDK also writes the default "evenly" strategy when only disabledGpus is supplied.
+  return (
+    splitConfig !== undefined &&
+    (splitConfig.strategy !== "evenly" ||
+      splitConfig.disabledGpus.length === 0 ||
+      splitConfig.priority.length > 0 ||
+      splitConfig.customRatio.length > 0)
+  );
+}
+
+/**
+ * Validates explicit external GPU placement after model resolution, before loading starts.
+ * Pass only the request override, not saved settings, defaults, or runtime load-config readback:
+ * those can contain stale placement alongside AutoFit. The public schema cannot do this check
+ * because the SDK does not know which model format a key resolves to. The request-only
+ * gpuPlacementIsExplicit field preserves explicit placement before GPU conversion adds defaults.
+ */
+export function validateLLMLoadAutoFitGPUConfigForModelFormat(
+  config: KVConfig,
+  modelFormat: ModelCompatibilityType,
+): void {
+  const autoFitKey =
+    modelFormat === "gguf"
+      ? "llama.autoFit"
+      : modelFormat === "safetensors"
+        ? "mlx.autoFit"
+        : undefined;
+  // vLLM fits context independently of GPU selection. Other formats do not expose AutoFit.
+  if (autoFitKey === undefined) {
+    return;
+  }
+  const parsed = llmLoadSchematics.parsePartial(config);
+  if (
+    parsed.get(autoFitKey) === true &&
+    (parsed.get("gpuPlacementIsExplicit") === true ||
+      hasManualGPUSplitConfig(parsed.get("gpuSplitConfig")))
+  ) {
+    throw new Error(
+      `AutoFit cannot be enabled with manual GPU placement for ${modelFormat} models. ` +
+        "GPU selection with AutoFit is only supported by vLLM. Set autoFit to false to use manual placement.",
+    );
+  }
+}
+
 /** Converts GGUF load fields back to the public SDK shape, optionally materializing defaults. */
 function kvConfigToLLMLlamaLoadModelConfig(
   config: KVConfig,
@@ -48,11 +93,7 @@ function kvConfigToLLMLlamaLoadModelConfig(
       partialParsed.get("load.gpuStrictVramCap") !== undefined ||
       partialParsed.get("llama.acceleration.offloadRatio") !== undefined ||
       partialParsed.get("numCpuExpertLayersRatio") !== undefined ||
-      (explicitGpuSplitConfig !== undefined &&
-        (explicitGpuSplitConfig.strategy !== "evenly" ||
-          explicitGpuSplitConfig.disabledGpus.length === 0 ||
-          explicitGpuSplitConfig.priority.length > 0 ||
-          explicitGpuSplitConfig.customRatio.length > 0)));
+      hasManualGPUSplitConfig(explicitGpuSplitConfig));
   const autoFit = hasLegacyManualLoadSetting ? false : parsed.get("llama.autoFit");
   if (autoFit !== undefined) {
     result.autoFit = autoFit;
@@ -329,10 +370,26 @@ function kvConfigToLLMVllmLoadModelConfig(
     useDefaultsForMissingKeys === true ? llmVllmLoadConfigSchematics.parse(config) : partialParsed;
 
   const gpuSplitConfig = partialParsed.get("load.gpuSplitConfig");
+  // Preserve legacy manual requests before schema defaults fill in AutoFit.
+  const autoFit =
+    partialParsed.get("vllm.autoFit") === undefined &&
+    (partialParsed.get("contextLength") !== undefined || hasManualGPUSplitConfig(gpuSplitConfig))
+      ? false
+      : parsed.get("vllm.autoFit");
+  if (autoFit !== undefined) {
+    result.autoFit = autoFit;
+  }
+
   if (gpuSplitConfig !== undefined) {
     const gpuSetting = convertVllmGPUSplitConfigToGPUSetting(gpuSplitConfig);
     if (gpuSetting !== undefined) {
-      result.gpu = gpuSetting;
+      // vLLM AutoFit owns context, not GPU selection, so preserve the strategy in explicit modes.
+      // When AutoFit is unspecified, omit the default strategy added for GPU filters so reusing
+      // the readback does not turn inherited AutoFit off.
+      result.gpu =
+        autoFit === undefined && gpuSetting.mainGpu === undefined
+          ? { disabledGpus: gpuSetting.disabledGpus }
+          : gpuSetting;
     }
   }
 
@@ -342,7 +399,7 @@ function kvConfigToLLMVllmLoadModelConfig(
   }
 
   const contextLength = parsed.get("contextLength");
-  if (contextLength !== undefined) {
+  if (autoFit !== true && contextLength !== undefined) {
     result.contextLength = contextLength;
   }
 
@@ -392,22 +449,24 @@ export function llmLoadModelConfigToKVConfig(config: LLMLoadModelConfig): KVConf
     config.speculativeDraftMtp !== undefined ||
     config.speculativeDraftSimple !== undefined ||
     config.speculativeDraftModel !== undefined;
+  const gpuPlacementIsExplicit =
+    config.gpu?.mainGpu !== undefined || config.gpu?.splitStrategy !== undefined;
   const hasManualLoadSetting =
     config.contextLength !== undefined ||
     config.gpu?.ratio !== undefined ||
     config.gpu?.numCpuExpertLayersRatio !== undefined ||
-    config.gpu?.mainGpu !== undefined ||
-    config.gpu?.splitStrategy !== undefined ||
+    gpuPlacementIsExplicit ||
     config.gpuStrictVramCap !== undefined;
   const autoFit = config.autoFit ?? (hasManualLoadSetting ? false : undefined);
   const hasGpuSplitSetting =
     (config.gpu?.disabledGpus !== undefined && config.gpu.disabledGpus.length > 0) ||
-    config.gpu?.mainGpu !== undefined ||
-    config.gpu?.splitStrategy !== undefined;
+    gpuPlacementIsExplicit;
 
   const top = llmLoadSchematics.buildPartialConfig({
     "llama.autoFit": autoFit,
     "mlx.autoFit": autoFit,
+    "vllm.autoFit": autoFit,
+    "gpuPlacementIsExplicit": gpuPlacementIsExplicit ? true : undefined,
     "gpuSplitConfig": hasGpuSplitSetting
       ? convertGPUSettingToGPUSplitConfig(config.gpu)
       : undefined,

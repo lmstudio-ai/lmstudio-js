@@ -306,12 +306,9 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
         },
         2048,
       )
-      .field(
-        "autoFitMinContextLength",
-        "numeric",
-        { min: 0, int: true, machineDependent: true },
-        0,
-      )
+      .field("autoFitMinContextLength", "numeric", { min: 0, int: true, machineDependent: true }, 0)
+      // Track explicit GPU placement for AutoFit validation; exclude from runtime settings.
+      .field("gpuPlacementIsExplicit", "boolean", { machineDependent: true }, false)
       .field("numExperts", "numeric", { min: 0, int: true }, 0)
       .field(
         "seed",
@@ -520,6 +517,16 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
       )
       .scope("vllm", builder =>
         builder
+          .field(
+            "autoFit",
+            "boolean",
+            {
+              machineDependent: true,
+              displayName: "AutoFit Context",
+              hint: "Automatically choose the largest context that fits in the GPU memory budget.",
+            },
+            true,
+          )
           .field(
             "gpuMemoryUtilization",
             "numeric",
