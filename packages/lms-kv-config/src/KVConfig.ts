@@ -784,35 +784,29 @@ export class KVConfigSchematics<
   private makeLenientZodSchema(): ZodSchema<KVConfig> {
     const fullKeyMap = this.getFullKeyMap();
     return kvConfigSchema.transform(value => {
-      const exactKeys = new Set(value.fields.map(field => field.key));
       const seenKeys = new Set<string>();
-      const fields = new Array<KVConfigField>();
-      for (const field of value.fields) {
-        const canonicalKey = canonicalizeKVConfigKey(field.key);
-        if (canonicalKey !== field.key && exactKeys.has(canonicalKey)) {
-          continue;
-        }
-        if (this.hasExtensionPrefix(canonicalKey)) {
-          // If we matched an extension prefix, we don't care about the key or value type. Just
-          // allow it.
-          fields.push({ ...field, key: canonicalKey });
-          continue;
-        }
-        if (seenKeys.has(canonicalKey)) {
-          continue;
-        }
-        const fieldDef = fullKeyMap.get(canonicalKey);
-        if (fieldDef === undefined) {
-          continue;
-        }
-        const parsed = fieldDef.schema.safeParse(field.value);
-        if (!parsed.success) {
-          continue;
-        }
-        seenKeys.add(canonicalKey);
-        fields.push({ key: canonicalKey, value: parsed.data });
-      }
-      return { fields };
+      return {
+        fields: canonicalizeKVConfig(value).fields.filter(field => {
+          if (this.hasExtensionPrefix(field.key)) {
+            // If we matched an extension prefix, we don't care about the key or value type. Just
+            // allow it.
+            return true;
+          }
+          if (seenKeys.has(field.key)) {
+            return false;
+          }
+          const fieldDef = fullKeyMap.get(field.key);
+          if (fieldDef === undefined) {
+            return false;
+          }
+          const parsed = fieldDef.schema.safeParse(field.value);
+          if (!parsed.success) {
+            return false;
+          }
+          seenKeys.add(field.key);
+          return true;
+        }),
+      };
     });
   }
 
@@ -876,30 +870,22 @@ export class KVConfigSchematics<
     config: KVConfig,
     additionalFilter?: ConfigFieldFilter<TKVFieldValueTypeLibraryMap>,
   ): KVConfig {
-    const exactKeys = new Set(config.fields.map(field => field.key));
     const fullKeyMap = this.getFullKeyMap();
-    const fields = new Array<KVConfigField>();
-    for (const configField of config.fields) {
-      const canonicalKey = canonicalizeKVConfigKey(configField.key);
-      if (canonicalKey !== configField.key && exactKeys.has(canonicalKey)) {
-        continue;
-      }
-      const field = fullKeyMap.get(canonicalKey);
-      if (field === undefined) {
-        continue;
-      }
-      if (
-        additionalFilter !== undefined &&
-        !additionalFilter(field.fullKey, {
-          type: field.valueTypeKey,
-          param: field.valueTypeParams,
-        })
-      ) {
-        continue;
-      }
-      fields.push({ ...configField, key: canonicalKey });
-    }
-    return { fields };
+    return {
+      fields: canonicalizeKVConfig(config).fields.filter(configField => {
+        const field = fullKeyMap.get(configField.key);
+        if (field === undefined) {
+          return false;
+        }
+        if (additionalFilter !== undefined) {
+          return additionalFilter(field.fullKey, {
+            type: field.valueTypeKey,
+            param: field.valueTypeParams,
+          });
+        }
+        return true;
+      }),
+    };
   }
 
   /**
@@ -920,15 +906,9 @@ export class KVConfigSchematics<
   ): readonly [included: KVConfig, excluded: KVConfig] {
     const includedFields: Array<KVConfig["fields"][number]> = [];
     const excludedFields: Array<KVConfig["fields"][number]> = [];
-    const exactKeys = new Set(config.fields.map(field => field.key));
     const fullKeyMap = this.getFullKeyMap();
-    for (const configField of config.fields) {
-      const canonicalKey = canonicalizeKVConfigKey(configField.key);
-      if (canonicalKey !== configField.key && exactKeys.has(canonicalKey)) {
-        continue;
-      }
-      const canonicalConfigField = { ...configField, key: canonicalKey };
-      const field = fullKeyMap.get(canonicalKey);
+    for (const configField of canonicalizeKVConfig(config).fields) {
+      const field = fullKeyMap.get(configField.key);
       let include = field !== undefined;
       if (field !== undefined && additionalFilter !== undefined) {
         include = additionalFilter(field.fullKey, {
@@ -937,9 +917,9 @@ export class KVConfigSchematics<
         });
       }
       if (include) {
-        includedFields.push(canonicalConfigField);
+        includedFields.push(configField);
       } else {
-        excludedFields.push(canonicalConfigField);
+        excludedFields.push(configField);
       }
     }
     return [{ fields: includedFields }, { fields: excludedFields }];
@@ -1432,18 +1412,21 @@ function canonicalizeKVConfigKey(key: string): string {
   return key;
 }
 
-export function kvConfigToMap(config: KVConfig): Map<string, any> {
+function canonicalizeKVConfig(config: KVConfig): KVConfig {
   const exactKeys = new Set(config.fields.map(field => field.key));
-  const result = new Map<string, any>();
-  for (const field of config.fields) {
-    const canonicalKey = canonicalizeKVConfigKey(field.key);
-    // A canonical key in the same config wins over its legacy alias regardless of field order.
-    if (canonicalKey !== field.key && exactKeys.has(canonicalKey)) {
-      continue;
-    }
-    result.set(canonicalKey, field.value);
-  }
-  return result;
+  return {
+    fields: config.fields.flatMap(field => {
+      const canonicalKey = canonicalizeKVConfigKey(field.key);
+      // A canonical key in the same config wins over its legacy alias regardless of field order.
+      return canonicalKey !== field.key && exactKeys.has(canonicalKey)
+        ? []
+        : [{ ...field, key: canonicalKey }];
+    }),
+  };
+}
+
+export function kvConfigToMap(config: KVConfig): Map<string, any> {
+  return new Map(canonicalizeKVConfig(config).fields.map(field => [field.key, field.value]));
 }
 
 export function mapToKVConfig(map: Map<string, any>): KVConfig {
