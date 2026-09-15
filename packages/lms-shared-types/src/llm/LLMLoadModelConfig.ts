@@ -839,11 +839,13 @@ export const llmLoadModelConfigSchema = z
       (config.contextLength !== undefined ||
         config.gpu?.ratio !== undefined ||
         config.gpu?.numCpuExpertLayersRatio !== undefined ||
+        config.gpu?.mainGpu !== undefined ||
+        config.gpu?.splitStrategy !== undefined ||
         config.gpuStrictVramCap !== undefined)
     ) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "autoFit cannot be enabled with manual context, offload, or memory settings",
+        message: "autoFit cannot be enabled with manual context, placement, or memory settings",
         path: ["autoFit"],
       });
     }
