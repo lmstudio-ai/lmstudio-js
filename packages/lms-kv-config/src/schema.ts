@@ -307,6 +307,9 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
         2048,
       )
       .field("autoFitMinContextLength", "numeric", { min: 0, int: true, machineDependent: true }, 0)
+      // Request-only provenance for AutoFit validation after model resolution. Keep this out of
+      // runtime load schematics: GPU filters also synthesize a default "evenly" split strategy.
+      .field("gpuPlacementIsExplicit", "boolean", { machineDependent: true }, false)
       .field("numExperts", "numeric", { min: 0, int: true }, 0)
       .field(
         "seed",

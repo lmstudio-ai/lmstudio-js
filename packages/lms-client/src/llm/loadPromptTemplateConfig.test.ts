@@ -285,6 +285,9 @@ describe("SDK load prompt template config", () => {
       extractLoadConfigStack(harness.capturedChannelCreations[1]?.creationParameter),
     );
     expect(globalConfigSchematics.accessPartial(reapplied, "llm.load.vllm.autoFit")).toBe(true);
+    expect(globalConfigSchematics.accessPartial(reapplied, "llm.load.gpuPlacementIsExplicit")).toBe(
+      true,
+    );
     expect(globalConfigSchematics.accessPartial(reapplied, "load.gpuSplitConfig")).toEqual(
       globalConfigSchematics.accessPartial(original, "load.gpuSplitConfig"),
     );
