@@ -505,6 +505,10 @@ export interface LLMLoadModelConfig {
   /**
    * Whether LM Studio should automatically choose context length and model placement based on
    * available resources. This option is only available when using Bionic.
+   *
+   * vLLM fits context within its GPU memory budget and allows independent GPU selection. Other
+   * AutoFit backends reject explicit manual GPU placement after the host resolves the model.
+   * Disabled-GPU-only filters can still be used with llama.cpp AutoFit.
    */
   autoFit?: boolean;
 
@@ -834,7 +838,8 @@ export const llmLoadModelConfigSchema = z
     mlxKvCacheQuantization: llmMlxKvCacheQuantizationSchema.or(z.literal(false)).optional(),
   })
   .superRefine((config, context) => {
-    // GPU selection can coexist with context fitting (for example, vLLM's single-GPU mode).
+    // GPU selection can coexist with vLLM context fitting. The host validates GPU placement
+    // against the resolved model format; the SDK cannot resolve model keys here.
     // Manual context and offload/memory settings still conflict with AutoFit.
     if (
       config.autoFit === true &&

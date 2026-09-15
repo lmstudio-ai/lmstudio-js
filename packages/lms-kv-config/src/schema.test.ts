@@ -13,6 +13,7 @@ import {
 import {
   kvConfigToLLMLoadModelConfig,
   llmLoadModelConfigToKVConfig,
+  validateLLMLoadAutoFitGPUConfigForModelFormat,
 } from "./conversion/llmLoadModelConfig.js";
 import {
   kvConfigToLLMPredictionConfig,
@@ -102,6 +103,63 @@ describe("llmPredictionConfig reasoning budget", () => {
     expect(llmPredictionConfigInputSchema.safeParse({ reasoningBudget: 1024 }).success).toBe(true);
     expect(llmPredictionConfigInputSchema.safeParse({ reasoningBudget: -1 }).success).toBe(false);
     expect(llmPredictionConfigInputSchema.safeParse({ reasoningBudget: 1.5 }).success).toBe(false);
+  });
+});
+
+describe("AutoFit GPU request validation", () => {
+  const placementSettings: Array<NonNullable<LLMLoadModelConfig["gpu"]>> = [
+    { mainGpu: 0 },
+    { splitStrategy: "evenly" },
+    { splitStrategy: "favorMainGpu" },
+    { mainGpu: 1, splitStrategy: "favorMainGpu", disabledGpus: [2] },
+  ];
+
+  describe.each(["gguf", "safetensors"] as const)("%s", modelFormat => {
+    it.each(placementSettings)("rejects explicit AutoFit with placement %j", gpu => {
+      const config = llmLoadModelConfigToKVConfig({ autoFit: true, gpu });
+      expect(() => validateLLMLoadAutoFitGPUConfigForModelFormat(config, modelFormat)).toThrow(
+        /AutoFit cannot be enabled with manual GPU placement/,
+      );
+    });
+
+    it.each([undefined, {}, { disabledGpus: [] }, { disabledGpus: [2] }])(
+      "allows AutoFit with only GPU filters %j",
+      gpu => {
+        const config = llmLoadModelConfigToKVConfig({ autoFit: true, gpu });
+        expect(() =>
+          validateLLMLoadAutoFitGPUConfigForModelFormat(config, modelFormat),
+        ).not.toThrow();
+      },
+    );
+
+    it.each([undefined, false])("allows manual GPU placement with autoFit=%s", autoFit => {
+      const config = llmLoadModelConfigToKVConfig({ autoFit, gpu: { mainGpu: 1 } });
+      expect(() =>
+        validateLLMLoadAutoFitGPUConfigForModelFormat(config, modelFormat),
+      ).not.toThrow();
+    });
+
+    it("does not apply defaults or another engine's AutoFit flag", () => {
+      const config = llmLoadSchematics.buildPartialConfig({
+        "vllm.autoFit": true,
+        "gpuSplitConfig": {
+          strategy: "priorityOrder",
+          priority: [1],
+          disabledGpus: [],
+          customRatio: [],
+        },
+      });
+      expect(() =>
+        validateLLMLoadAutoFitGPUConfigForModelFormat(config, modelFormat),
+      ).not.toThrow();
+    });
+  });
+
+  it.each(placementSettings)("allows vLLM AutoFit GPU selection %j", gpu => {
+    const config = llmLoadModelConfigToKVConfig({ autoFit: true, gpu });
+    expect(() =>
+      validateLLMLoadAutoFitGPUConfigForModelFormat(config, "torch_safetensors"),
+    ).not.toThrow();
   });
 });
 
