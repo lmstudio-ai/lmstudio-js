@@ -31,6 +31,13 @@ export class LLMNamespace extends ModelNamespace<
   /** @internal */
   protected override loadConfigToKVConfig = llmLoadModelConfigToKVConfig;
   /** @internal */
+  protected override getRequestedGpuPlacement({ gpu }: LLMLoadModelConfig) {
+    if (gpu?.mainGpu === undefined && gpu?.splitStrategy === undefined) {
+      return undefined;
+    }
+    return { mainGpu: gpu?.mainGpu, splitStrategy: gpu?.splitStrategy };
+  }
+  /** @internal */
   protected override createDomainSpecificModel(
     port: LLMPort,
     info: LLMInstanceInfo,

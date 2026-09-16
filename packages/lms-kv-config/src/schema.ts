@@ -307,8 +307,6 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
         2048,
       )
       .field("autoFitMinContextLength", "numeric", { min: 0, int: true, machineDependent: true }, 0)
-      // Track explicit GPU placement for AutoFit validation; exclude from runtime settings.
-      .field("gpuPlacementIsExplicit", "boolean", { machineDependent: true }, false)
       .field("numExperts", "numeric", { min: 0, int: true }, 0)
       .field(
         "seed",

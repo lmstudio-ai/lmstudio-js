@@ -11,6 +11,7 @@ import {
 } from "@lmstudio/lms-kv-config";
 import {
   type GPUSplitConfig,
+  type GPUSetting,
   type KVConfig,
   type KVConfigStack,
   type LLMLoadModelConfig,
@@ -30,6 +31,7 @@ interface CapturedChannelCreation {
 interface LLMNamespaceHarness {
   namespace: LLMNamespace;
   capturedChannelCreations: Array<CapturedChannelCreation>;
+  capturedRpcCalls: Array<{ endpointName: string; parameter: unknown }>;
   setLoadConfigResponse: (loadConfig: KVConfig) => void;
 }
 
@@ -91,6 +93,7 @@ function createSilentLogger(): SimpleLogger {
 
 function createNamespaceHarness(modelFormat: ModelCompatibilityType = "gguf"): LLMNamespaceHarness {
   const capturedChannelCreations: Array<CapturedChannelCreation> = [];
+  const capturedRpcCalls: Array<{ endpointName: string; parameter: unknown }> = [];
   let loadConfigResponse: KVConfig = emptyKVConfig;
   const port = {
     createChannel: (
@@ -123,7 +126,22 @@ function createNamespaceHarness(modelFormat: ModelCompatibilityType = "gguf"): L
         send: () => {},
       };
     },
-    callRpc: async (endpointName: string) => {
+    callRpc: async (endpointName: string, parameter: unknown) => {
+      capturedRpcCalls.push({ endpointName, parameter });
+      if (endpointName === "estimateModelUsage") {
+        return {
+          passesGuardrails: true,
+          memory: {
+            confidence: "high",
+            modelVramBytes: 0,
+            contextVramBytes: 0,
+            totalVramBytes: 0,
+            modelBytes: 0,
+            contextBytes: 0,
+            totalBytes: 0,
+          },
+        };
+      }
       if (endpointName === "getLoadConfig") {
         return loadConfigResponse;
       }
@@ -142,6 +160,7 @@ function createNamespaceHarness(modelFormat: ModelCompatibilityType = "gguf"): L
       new Validator({ attachStack: false }),
     ),
     capturedChannelCreations,
+    capturedRpcCalls,
     setLoadConfigResponse: (loadConfig: KVConfig) => {
       loadConfigResponse = loadConfig;
     },
@@ -166,6 +185,49 @@ function resolveLoadPromptTemplate(loadConfigStack: KVConfigStack) {
     "llm.load.promptTemplate",
   );
 }
+
+describe.each(["load", "model", "estimateResourcesUsage"] as const)(
+  "SDK %s GPU placement requests",
+  method => {
+    test.each<{
+      gpu?: GPUSetting;
+      placement?: Pick<GPUSetting, "mainGpu" | "splitStrategy">;
+    }>([
+      {},
+      { gpu: { disabledGpus: [2] } },
+      { gpu: { mainGpu: 0 }, placement: { mainGpu: 0 } },
+      {
+        gpu: { splitStrategy: "evenly", disabledGpus: [2] },
+        placement: { splitStrategy: "evenly" },
+      },
+      {
+        gpu: { splitStrategy: "evenly", disabledGpus: [] },
+        placement: { splitStrategy: "evenly" },
+      },
+      {
+        gpu: { mainGpu: 1, splitStrategy: "favorMainGpu", disabledGpus: [2] },
+        placement: { mainGpu: 1, splitStrategy: "favorMainGpu" },
+      },
+    ])("keeps original placement outside model settings: %j", async ({ gpu, placement }) => {
+      const harness = createNamespaceHarness();
+      const config: LLMLoadModelConfig = { autoFit: true, gpu };
+      let rawRequest: unknown;
+      if (method === "estimateResourcesUsage") {
+        await harness.namespace.estimateResourcesUsage("test/model", config);
+        rawRequest = harness.capturedRpcCalls[0].parameter;
+      } else {
+        await harness.namespace[method]("test/model", { config, verbose: false });
+        rawRequest = harness.capturedChannelCreations[0].creationParameter;
+      }
+      const request = JSON.parse(JSON.stringify(rawRequest));
+      expect(request.requestedGpuPlacement).toEqual(placement);
+      expect(collapseKVStack(extractLoadConfigStack(request))).toEqual(
+        llmLoadModelConfigToKVConfig(config),
+      );
+      expect(globalConfigSchematics.hasFullKey("llm.load.gpuPlacementIsExplicit")).toBe(false);
+    });
+  },
+);
 
 describe("SDK load prompt template config", () => {
   test("load config schema accepts load-time prompt template", () => {
@@ -285,9 +347,6 @@ describe("SDK load prompt template config", () => {
       extractLoadConfigStack(harness.capturedChannelCreations[1]?.creationParameter),
     );
     expect(globalConfigSchematics.accessPartial(reapplied, "llm.load.vllm.autoFit")).toBe(true);
-    expect(globalConfigSchematics.accessPartial(reapplied, "llm.load.gpuPlacementIsExplicit")).toBe(
-      true,
-    );
     expect(globalConfigSchematics.accessPartial(reapplied, "load.gpuSplitConfig")).toEqual(
       globalConfigSchematics.accessPartial(original, "load.gpuSplitConfig"),
     );
