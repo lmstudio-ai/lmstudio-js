@@ -411,7 +411,7 @@ describe("llmLoadModelConfig conversion", () => {
         { customRatio: [1, 1, 0] },
         { customRatio: [0, 0, 0] },
         { customRatio: [] },
-      ])("omits ignored filters from custom AutoFit splits: %j", ({ customRatio }) => {
+      ])("preserves disabled GPUs from custom AutoFit splits: %j", ({ customRatio }) => {
         const loadConfig = llmVllmLoadConfigSchematics.buildPartialConfig({
           "vllm.autoFit": true,
           "load.gpuSplitConfig": {
@@ -426,13 +426,16 @@ describe("llmLoadModelConfig conversion", () => {
           useDefaultsForMissingKeys,
         });
         expect(converted.autoFit).toBe(true);
-        expect(converted.gpu).toBeUndefined();
+        expect(converted.gpu).toEqual({ disabledGpus: [1] });
         expect(llmLoadModelConfigSchema.parse(converted)).toEqual(converted);
 
         const reapplied = llmLoadModelConfigToKVConfig(converted);
-        expect(
-          globalConfigSchematics.accessPartial(reapplied, "load.gpuSplitConfig"),
-        ).toBeUndefined();
+        expect(globalConfigSchematics.accessPartial(reapplied, "load.gpuSplitConfig")).toEqual({
+          strategy: "evenly",
+          priority: [],
+          disabledGpus: [1],
+          customRatio: [],
+        });
         expect(globalConfigSchematics.accessPartial(reapplied, "llm.load.vllm.autoFit")).toBe(true);
       });
 
