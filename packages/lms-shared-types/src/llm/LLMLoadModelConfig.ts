@@ -507,6 +507,9 @@ export interface LLMLoadModelConfig {
    * ordinary LM Studio load tuning with the file and engine defaults. Omit to inherit the host's
    * settings; use "" to disable config-file mode for this load without changing saved defaults.
    * Supplying, changing, or clearing this option requires local system.manage permission.
+   * Contents are a snapshot; later source-file edits do not affect the imported configuration.
+   * Apply changes with a new load or reload; model() reuse does not reload an existing instance.
+   * Explicit prediction-request overrides remain active.
    *
    * Configuration files can specify unsafe settings. You are responsible for ensuring the
    * configuration and its referenced resources are safe. Configuration file contents are readable
