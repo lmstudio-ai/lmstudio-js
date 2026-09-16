@@ -40,12 +40,14 @@ function hasManualGPUSplitConfig(splitConfig: GPUSplitConfig | undefined): boole
  * Validates explicit external GPU placement after model resolution, before loading starts.
  * Pass only the request override, not saved settings, defaults, or runtime load-config readback:
  * those can contain stale placement alongside AutoFit. The public schema cannot do this check
- * because the SDK does not know which model format a key resolves to. The request-only
- * gpuPlacementIsExplicit field preserves explicit placement before GPU conversion adds defaults.
+ * because the SDK does not know which model format a key resolves to. Original placement inputs
+ * travel separately on the request, preserving omitted vs. explicit strategies without adding
+ * derived fields to the settings schema.
  */
 export function validateLLMLoadAutoFitGPUConfigForModelFormat(
   config: KVConfig,
   modelFormat: ModelCompatibilityType,
+  requestedGpuPlacement?: Pick<GPUSetting, "mainGpu" | "splitStrategy">,
 ): void {
   const autoFitKey =
     modelFormat === "gguf"
@@ -60,7 +62,8 @@ export function validateLLMLoadAutoFitGPUConfigForModelFormat(
   const parsed = llmLoadSchematics.parsePartial(config);
   if (
     parsed.get(autoFitKey) === true &&
-    (parsed.get("gpuPlacementIsExplicit") === true ||
+    (requestedGpuPlacement?.mainGpu !== undefined ||
+      requestedGpuPlacement?.splitStrategy !== undefined ||
       hasManualGPUSplitConfig(parsed.get("gpuSplitConfig")))
   ) {
     throw new Error(
@@ -462,24 +465,23 @@ export function llmLoadModelConfigToKVConfig(config: LLMLoadModelConfig): KVConf
     config.speculativeDraftMtp !== undefined ||
     config.speculativeDraftSimple !== undefined ||
     config.speculativeDraftModel !== undefined;
-  const gpuPlacementIsExplicit =
-    config.gpu?.mainGpu !== undefined || config.gpu?.splitStrategy !== undefined;
   const hasManualLoadSetting =
     config.contextLength !== undefined ||
     config.gpu?.ratio !== undefined ||
     config.gpu?.numCpuExpertLayersRatio !== undefined ||
-    gpuPlacementIsExplicit ||
+    config.gpu?.mainGpu !== undefined ||
+    config.gpu?.splitStrategy !== undefined ||
     config.gpuStrictVramCap !== undefined;
   const autoFit = config.autoFit ?? (hasManualLoadSetting ? false : undefined);
   const hasGpuSplitSetting =
     (config.gpu?.disabledGpus !== undefined && config.gpu.disabledGpus.length > 0) ||
-    gpuPlacementIsExplicit;
+    config.gpu?.mainGpu !== undefined ||
+    config.gpu?.splitStrategy !== undefined;
 
   const top = llmLoadSchematics.buildPartialConfig({
     "llama.autoFit": autoFit,
     "mlx.autoFit": autoFit,
     "vllm.autoFit": autoFit,
-    "gpuPlacementIsExplicit": gpuPlacementIsExplicit ? true : undefined,
     "gpuSplitConfig": hasGpuSplitSetting
       ? convertGPUSettingToGPUSplitConfig(config.gpu)
       : undefined,

@@ -3,6 +3,7 @@ import { BackendInterface } from "@lmstudio/lms-communication";
 import { type ClientPort } from "@lmstudio/lms-communication-client";
 import {
   estimatedResourcesUsageSchema,
+  gpuSettingSchema,
   kvConfigSchema,
   kvConfigStackSchema,
   type ModelInfoBase,
@@ -22,6 +23,12 @@ import { z, type ZodSchema } from "zod";
 // TypeScript does not support higher order types.
 type SpecificModelInstanceInfo = ModelInstanceInfoBase & { brand: true };
 type SpecificModelInfo = ModelInfoBase & { brand: true };
+
+// Original public inputs, before GPU conversion inserts defaults. These are request-only:
+// the host validates them after model resolution and never merges them into runtime settings.
+const requestedGpuPlacementSchema = gpuSettingSchema
+  .pick({ mainGpu: true, splitStrategy: true })
+  .optional();
 /**
  * Create a base model backend interface that are used by all domain-specific model backend
  * interfaces.
@@ -48,6 +55,7 @@ export function createBaseModelBackendInterface<
          */
         ttlMs: z.number().int().min(1).optional(),
         loadConfigStack: kvConfigStackSchema,
+        requestedGpuPlacement: requestedGpuPlacementSchema,
       }),
       toClientPacket: z.discriminatedUnion("type", [
         z.object({
@@ -111,6 +119,7 @@ export function createBaseModelBackendInterface<
          */
         loadTtlMs: z.number().int().min(1).optional(),
         loadConfigStack: kvConfigStackSchema,
+        requestedGpuPlacement: requestedGpuPlacementSchema,
       }),
       toClientPacket: z.discriminatedUnion("type", [
         z.object({
@@ -153,6 +162,7 @@ export function createBaseModelBackendInterface<
       parameter: z.object({
         modelKey: z.string(),
         loadConfigStack: kvConfigStackSchema,
+        requestedGpuPlacement: requestedGpuPlacementSchema,
         deviceIdentifier: z.string().nullable().optional(),
       }),
       returns: estimatedResourcesUsageSchema,

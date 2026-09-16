@@ -14,6 +14,7 @@ import {
   modelQuerySchema,
   reasonableKeyStringSchema,
   type EstimatedResourcesUsage,
+  type GPUSetting,
   type KVConfig,
   type LogLevel,
   type ModelDomainType,
@@ -195,6 +196,12 @@ export abstract class ModelNamespace<
    */
   protected abstract loadConfigToKVConfig(config: TLoadModelConfig): KVConfig;
   /** @internal */
+  protected getRequestedGpuPlacement(
+    _config: TLoadModelConfig,
+  ): Pick<GPUSetting, "mainGpu" | "splitStrategy"> | undefined {
+    return undefined;
+  }
+  /** @internal */
   protected abstract createDomainSpecificModel(
     port: TClientPort,
     info: TModelInstanceInfo,
@@ -290,6 +297,7 @@ export abstract class ModelNamespace<
         identifier,
         deviceIdentifier,
         ttlMs: opts.ttl === undefined ? undefined : opts.ttl * 1000,
+        requestedGpuPlacement: this.getRequestedGpuPlacement(config ?? this.defaultLoadConfig),
         loadConfigStack: singleLayerKVConfigStackOf(
           "apiOverride",
           this.loadConfigToKVConfig(config ?? this.defaultLoadConfig),
@@ -645,6 +653,7 @@ export abstract class ModelNamespace<
         identifier: modelKey,
         deviceIdentifier,
         loadTtlMs: opts.ttl === undefined ? undefined : opts.ttl * 1000,
+        requestedGpuPlacement: this.getRequestedGpuPlacement(config ?? this.defaultLoadConfig),
         loadConfigStack: singleLayerKVConfigStackOf(
           "apiOverride",
           this.loadConfigToKVConfig(config ?? this.defaultLoadConfig),
@@ -776,6 +785,7 @@ export abstract class ModelNamespace<
           "apiOverride",
           this.loadConfigToKVConfig(validatedLoadConfig),
         ),
+        requestedGpuPlacement: this.getRequestedGpuPlacement(validatedLoadConfig),
         deviceIdentifier: resolvedOpts.deviceIdentifier,
       },
       { stack },
