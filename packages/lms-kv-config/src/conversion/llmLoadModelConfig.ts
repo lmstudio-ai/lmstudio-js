@@ -347,8 +347,6 @@ function kvConfigToLLMVllmLoadModelConfig(
   }
 
   if (gpuSplitConfig !== undefined) {
-    // Match the public AutoFit contract for all backends: readback may retain GPU filters,
-    // but must not return manual placement that the SDK rejects when the config is reused.
     if (autoFit !== false) {
       result.gpu = { disabledGpus: gpuSplitConfig.disabledGpus };
     } else {

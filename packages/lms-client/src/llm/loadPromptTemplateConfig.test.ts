@@ -342,7 +342,6 @@ describe("SDK load prompt template config", () => {
     { splitStrategy: "evenly", disabledGpus: [2] },
   ])("omits manual strategies from vLLM AutoFit readback: %j", async gpu => {
     const harness = createNamespaceHarness("torch_safetensors");
-    // Loaded runtime settings can include saved placement even though public requests reject it.
     const original = llmLoadModelConfigToKVConfig({ autoFit: true, gpu });
     harness.setLoadConfigResponse(original);
     const model = await harness.namespace.load("test/model", { verbose: false });

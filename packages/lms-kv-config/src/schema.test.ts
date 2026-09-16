@@ -220,7 +220,6 @@ describe("llmLoadModelConfig conversion", () => {
       });
       expect(globalConfigSchematics.access(reapplied, "llm.load.vllm.autoFit")).toBe(true);
 
-      // All backends share the same public AutoFit restrictions.
       const llamaConfig = kvConfigToLLMLoadModelConfig(loadConfig, {
         modelFormat: "gguf",
         useDefaultsForMissingKeys,
