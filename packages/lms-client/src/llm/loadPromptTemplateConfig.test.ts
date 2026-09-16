@@ -30,19 +30,19 @@ interface CapturedChannelCreation {
 
 interface LLMNamespaceHarness {
   namespace: LLMNamespace;
-  capturedChannelCreations: Array;
-  capturedRpcCalls: Array;
+  capturedChannelCreations: Array<CapturedChannelCreation>;
+  capturedRpcCalls: Array<{ endpointName: string; parameter: unknown }>;
   setLoadConfigResponse: (loadConfig: KVConfig) => void;
 }
 
-const customLoadPromptTemplate: NonNullable = {
+const customLoadPromptTemplate: NonNullable<LLMLoadModelConfig["promptTemplate"]> = {
   type: "jinja",
   jinjaPromptTemplate: {
     template: "{% for message in messages %}{{ message.content }}{% endfor %}",
   },
 };
 
-const predictionPromptTemplate: NonNullable = {
+const predictionPromptTemplate: NonNullable<LLMPredictionConfig["promptTemplate"]> = {
   type: "jinja",
   jinjaPromptTemplate: {
     template: "{{ messages }}",
@@ -50,7 +50,7 @@ const predictionPromptTemplate: NonNullable = {
   stopStrings: ["<prediction-stop>"],
 };
 
-const llamaCppArgumentsOverride: NonNullable = {
+const llamaCppArgumentsOverride: NonNullable<LLMLoadModelConfig["llamaCppArgumentsOverride"]> = {
   enabled: true,
   disabledParameters: ["--batch-size"],
   overrideParameters: [
@@ -92,8 +92,8 @@ function createSilentLogger(): SimpleLogger {
 }
 
 function createNamespaceHarness(modelFormat: ModelCompatibilityType = "gguf"): LLMNamespaceHarness {
-  const capturedChannelCreations: Array = [];
-  const capturedRpcCalls: Array = [];
+  const capturedChannelCreations: Array<CapturedChannelCreation> = [];
+  const capturedRpcCalls: Array<{ endpointName: string; parameter: unknown }> = [];
   let loadConfigResponse: KVConfig = emptyKVConfig;
   const port = {
     createChannel: (
@@ -335,7 +335,7 @@ describe("SDK load prompt template config", () => {
     expect(reapplied.fields.map(field => field.key)).not.toContain("llm.load.contextLength");
   });
 
-  test.each<NonNullable>([
+  test.each<NonNullable<LLMLoadModelConfig["gpu"]>>([
     { splitStrategy: "favorMainGpu" },
     { splitStrategy: "favorMainGpu", disabledGpus: [2] },
     { splitStrategy: "evenly" },
