@@ -33,10 +33,14 @@ describe("LLMLoadModelConfig schema", () => {
   it.each([
     { mainGpu: 0 },
     { splitStrategy: "evenly" },
+    { splitStrategy: "evenly", disabledGpus: [] },
+    { splitStrategy: "evenly", disabledGpus: [2] },
+    { splitStrategy: "favorMainGpu" },
     { mainGpu: 1, splitStrategy: "favorMainGpu", disabledGpus: [2] },
-  ])("allows AutoFit with GPU selection %j", gpu => {
-    const config = { autoFit: true, gpu };
-    expect(llmLoadModelConfigSchema.parse(config)).toEqual(config);
+  ])("rejects AutoFit with explicit GPU placement %j before normalization", gpu => {
+    expect(() => llmLoadModelConfigSchema.parse({ autoFit: true, gpu })).toThrow(
+      "autoFit cannot be enabled with manual context, placement, or memory settings",
+    );
   });
 
   it("allows AutoFit with disabled GPUs", () => {
