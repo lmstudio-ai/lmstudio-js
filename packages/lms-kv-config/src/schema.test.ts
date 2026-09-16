@@ -235,6 +235,36 @@ describe("llmLoadModelConfig conversion", () => {
   describe.each([false, true])(
     "vLLM GPU strategy readback (defaults=%s)",
     useDefaultsForMissingKeys => {
+      it.each([
+        { customRatio: [0, 3, 0] },
+        { customRatio: [1, 1, 0] },
+        { customRatio: [0, 0, 0] },
+        { customRatio: [] },
+      ])("omits ignored filters from custom AutoFit splits: %j", ({ customRatio }) => {
+        const loadConfig = llmVllmLoadConfigSchematics.buildPartialConfig({
+          "vllm.autoFit": true,
+          "load.gpuSplitConfig": {
+            strategy: "custom",
+            customRatio,
+            disabledGpus: [1],
+            priority: [0],
+          },
+        });
+        const converted = kvConfigToLLMLoadModelConfig(loadConfig, {
+          modelFormat: "torch_safetensors",
+          useDefaultsForMissingKeys,
+        });
+        expect(converted.autoFit).toBe(true);
+        expect(converted.gpu).toBeUndefined();
+        expect(llmLoadModelConfigSchema.parse(converted)).toEqual(converted);
+
+        const reapplied = llmLoadModelConfigToKVConfig(converted);
+        expect(
+          globalConfigSchematics.accessPartial(reapplied, "load.gpuSplitConfig"),
+        ).toBeUndefined();
+        expect(globalConfigSchematics.accessPartial(reapplied, "llm.load.vllm.autoFit")).toBe(true);
+      });
+
       it.each<NonNullable<LLMLoadModelConfig["gpu"]>>([
         { splitStrategy: "favorMainGpu" },
         { splitStrategy: "favorMainGpu", disabledGpus: [2] },
