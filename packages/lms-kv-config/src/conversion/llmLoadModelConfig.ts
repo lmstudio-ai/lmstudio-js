@@ -348,9 +348,7 @@ function kvConfigToLLMVllmLoadModelConfig(
 
   if (gpuSplitConfig !== undefined) {
     if (autoFit !== false) {
-      if (gpuSplitConfig.strategy !== "custom") {
-        result.gpu = { disabledGpus: gpuSplitConfig.disabledGpus };
-      }
+      result.gpu = { disabledGpus: gpuSplitConfig.disabledGpus };
     } else {
       const gpuSetting = convertVllmGPUSplitConfigToGPUSetting(gpuSplitConfig);
       if (gpuSetting !== undefined) {

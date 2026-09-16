@@ -321,11 +321,7 @@ describe("SDK load prompt template config", () => {
     const loadConfig = await model.getLoadConfig();
     expect(loadConfig.autoFit).toBe(true);
     expect(loadConfig.contextLength).toBeUndefined();
-    expect(loadConfig.gpu).toEqual(
-      gpuSplitConfig.strategy === "custom"
-        ? undefined
-        : { disabledGpus: gpuSplitConfig.disabledGpus },
-    );
+    expect(loadConfig.gpu).toEqual({ disabledGpus: gpuSplitConfig.disabledGpus });
 
     // Exercise SDK validation as well as conversion when reusing the readback.
     await harness.namespace.load("test/model", { verbose: false, config: loadConfig });
@@ -333,16 +329,12 @@ describe("SDK load prompt template config", () => {
       extractLoadConfigStack(harness.capturedChannelCreations[1]?.creationParameter),
     );
     expect(globalConfigSchematics.access(reapplied, "llm.load.vllm.autoFit")).toBe(true);
-    expect(globalConfigSchematics.accessPartial(reapplied, "load.gpuSplitConfig")).toEqual(
-      gpuSplitConfig.strategy === "custom"
-        ? undefined
-        : {
-            strategy: "evenly",
-            priority: [],
-            disabledGpus: gpuSplitConfig.disabledGpus,
-            customRatio: [],
-          },
-    );
+    expect(globalConfigSchematics.accessPartial(reapplied, "load.gpuSplitConfig")).toEqual({
+      strategy: "evenly",
+      priority: [],
+      disabledGpus: gpuSplitConfig.disabledGpus,
+      customRatio: [],
+    });
     expect(reapplied.fields.map(field => field.key)).not.toContain("llm.load.contextLength");
   });
 
