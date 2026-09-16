@@ -303,8 +303,11 @@ describe("SDK load prompt template config", () => {
   });
 
   test.each<GPUSplitConfig>([
+    { strategy: "evenly", priority: [], disabledGpus: [2], customRatio: [] },
     { strategy: "priorityOrder", priority: [2, 1], disabledGpus: [2], customRatio: [] },
+    { strategy: "tensor", priority: [], disabledGpus: [2], customRatio: [] },
     { strategy: "custom", priority: [0], disabledGpus: [1], customRatio: [0, 3, 0] },
+    { strategy: "custom", priority: [0], disabledGpus: [1], customRatio: [1, 1, 0] },
   ])("keeps vLLM AutoFit readback reusable without manual placement: %j", async gpuSplitConfig => {
     const harness = createNamespaceHarness("torch_safetensors");
     harness.setLoadConfigResponse(
@@ -318,7 +321,11 @@ describe("SDK load prompt template config", () => {
     const loadConfig = await model.getLoadConfig();
     expect(loadConfig.autoFit).toBe(true);
     expect(loadConfig.contextLength).toBeUndefined();
-    expect(loadConfig.gpu).toEqual({ disabledGpus: gpuSplitConfig.disabledGpus });
+    expect(loadConfig.gpu).toEqual(
+      gpuSplitConfig.strategy === "custom"
+        ? undefined
+        : { disabledGpus: gpuSplitConfig.disabledGpus },
+    );
 
     // Exercise SDK validation as well as conversion when reusing the readback.
     await harness.namespace.load("test/model", { verbose: false, config: loadConfig });
@@ -326,12 +333,16 @@ describe("SDK load prompt template config", () => {
       extractLoadConfigStack(harness.capturedChannelCreations[1]?.creationParameter),
     );
     expect(globalConfigSchematics.access(reapplied, "llm.load.vllm.autoFit")).toBe(true);
-    expect(globalConfigSchematics.access(reapplied, "load.gpuSplitConfig")).toEqual({
-      strategy: "evenly",
-      priority: [],
-      disabledGpus: gpuSplitConfig.disabledGpus,
-      customRatio: [],
-    });
+    expect(globalConfigSchematics.accessPartial(reapplied, "load.gpuSplitConfig")).toEqual(
+      gpuSplitConfig.strategy === "custom"
+        ? undefined
+        : {
+            strategy: "evenly",
+            priority: [],
+            disabledGpus: gpuSplitConfig.disabledGpus,
+            customRatio: [],
+          },
+    );
     expect(reapplied.fields.map(field => field.key)).not.toContain("llm.load.contextLength");
   });
 
