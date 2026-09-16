@@ -35,43 +35,6 @@ function hasManualGPUSplitConfig(splitConfig: GPUSplitConfig | undefined): boole
   );
 }
 
-/**
- * Validates explicit external GPU placement after model resolution, before loading starts.
- * Pass only the request override, not saved settings, defaults, or runtime load-config readback:
- * those can contain stale placement alongside AutoFit. The public schema cannot do this check
- * because the SDK does not know which model format a key resolves to. Original placement inputs
- * travel separately on the request, preserving omitted vs. explicit strategies without adding
- * derived fields to the settings schema.
- */
-export function validateLLMLoadAutoFitGPUConfigForModelFormat(
-  config: KVConfig,
-  modelFormat: ModelCompatibilityType,
-  requestedGpuPlacement?: Pick<GPUSetting, "mainGpu" | "splitStrategy">,
-): void {
-  const autoFitKey =
-    modelFormat === "gguf"
-      ? "llama.autoFit"
-      : modelFormat === "safetensors"
-        ? "mlx.autoFit"
-        : undefined;
-  // vLLM fits context independently of GPU selection. Other formats do not expose AutoFit.
-  if (autoFitKey === undefined) {
-    return;
-  }
-  const parsed = llmLoadSchematics.parsePartial(config);
-  if (
-    parsed.get(autoFitKey) === true &&
-    (requestedGpuPlacement?.mainGpu !== undefined ||
-      requestedGpuPlacement?.splitStrategy !== undefined ||
-      hasManualGPUSplitConfig(parsed.get("gpuSplitConfig")))
-  ) {
-    throw new Error(
-      `AutoFit cannot be enabled with manual GPU placement for ${modelFormat} models. ` +
-        "GPU selection with AutoFit is only supported by vLLM. Set autoFit to false to use manual placement.",
-    );
-  }
-}
-
 /** Converts GGUF load fields back to the public SDK shape, optionally materializing defaults. */
 function kvConfigToLLMLlamaLoadModelConfig(
   config: KVConfig,
@@ -384,15 +347,15 @@ function kvConfigToLLMVllmLoadModelConfig(
   }
 
   if (gpuSplitConfig !== undefined) {
-    const gpuSetting = convertVllmGPUSplitConfigToGPUSetting(gpuSplitConfig);
-    if (gpuSetting !== undefined) {
-      // vLLM AutoFit owns context, not GPU selection, so preserve the strategy in explicit modes.
-      // When AutoFit is unspecified, omit the default strategy added for GPU filters so reusing
-      // the readback does not turn inherited AutoFit off.
-      result.gpu =
-        autoFit === undefined && gpuSetting.mainGpu === undefined
-          ? { disabledGpus: gpuSetting.disabledGpus }
-          : gpuSetting;
+    // Match the public AutoFit contract for all backends: readback may retain GPU filters,
+    // but must not return manual placement that the SDK rejects when the config is reused.
+    if (autoFit !== false) {
+      result.gpu = { disabledGpus: gpuSplitConfig.disabledGpus };
+    } else {
+      const gpuSetting = convertVllmGPUSplitConfigToGPUSetting(gpuSplitConfig);
+      if (gpuSetting !== undefined) {
+        result.gpu = gpuSetting;
+      }
     }
   }
 

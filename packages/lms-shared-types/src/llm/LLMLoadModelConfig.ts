@@ -839,6 +839,8 @@ export const llmLoadModelConfigSchema = z
       (config.contextLength !== undefined ||
         config.gpu?.ratio !== undefined ||
         config.gpu?.numCpuExpertLayersRatio !== undefined ||
+        config.gpu?.mainGpu !== undefined ||
+        config.gpu?.splitStrategy !== undefined ||
         config.gpuStrictVramCap !== undefined)
     ) {
       context.addIssue({
