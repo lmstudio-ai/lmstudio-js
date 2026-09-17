@@ -12,6 +12,7 @@ import {
   llmLlamaMoeLoadConfigSchematics,
   llmLoadSchematics,
   llmMlxLoadConfigSchematics,
+  llmYuzuLoadConfigSchematics,
   llmVllmLoadConfigSchematics,
 } from "../schema.js";
 import { maybeFalseValueToCheckboxValue, maybeFalseValueToValue } from "./utils.js";
@@ -373,6 +374,14 @@ export function kvConfigToLLMLoadModelConfig(
       return kvConfigToLLMMlxLoadModelConfig(config, {
         useDefaultsForMissingKeys,
       });
+    case "yuzu": {
+      const parsed =
+        useDefaultsForMissingKeys === true
+          ? llmYuzuLoadConfigSchematics.parse(config)
+          : llmYuzuLoadConfigSchematics.parsePartial(config);
+      const contextLength = parsed.get("contextLength");
+      return contextLength === undefined ? {} : { contextLength };
+    }
     case "torch_safetensors":
       return kvConfigToLLMVllmLoadModelConfig(config, {
         useDefaultsForMissingKeys,

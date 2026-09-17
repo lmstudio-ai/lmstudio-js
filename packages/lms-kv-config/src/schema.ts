@@ -306,12 +306,7 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
         },
         2048,
       )
-      .field(
-        "autoFitMinContextLength",
-        "numeric",
-        { min: 0, int: true, machineDependent: true },
-        0,
-      )
+      .field("autoFitMinContextLength", "numeric", { min: 0, int: true, machineDependent: true }, 0)
       .field("numExperts", "numeric", { min: 0, int: true }, 0)
       .field(
         "seed",
@@ -653,6 +648,37 @@ export const llmMlxPredictionConfigSchematics = llmSharedPredictionConfigSchemat
   ),
 );
 
+// Yuzu owns a fixed packed target/draft pair. Expose only controls accepted by its frontend;
+// in particular its top-k range/default differ from llama.cpp and MLX.
+export const llmYuzuPredictionConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypesLibrary)
+  .scope("llm.prediction", builder =>
+    builder
+      .field("temperature", "numeric", { min: 0, max: 2, step: 0.01, precision: 2 }, 1)
+      .field("topKSampling", "numeric", { min: 1, max: 32, int: true }, 20)
+      .field(
+        "contextOverflowPolicy",
+        "contextOverflowPolicy",
+        { nonConfigurable: true },
+        "stopAtLimit",
+      ),
+  )
+  .build()
+  .scoped("llm.prediction")
+  .union(
+    llmPredictionConfigSchematics.sliced(
+      "maxPredictedTokens",
+      "topPSampling",
+      "seed",
+      "stopStrings",
+      "structured",
+      "systemPrompt",
+      "tools",
+      "toolChoice",
+      "toolNaming",
+      "reasoning.enableThinking",
+    ),
+  );
+
 export const llmVllmPredictionConfigSchematics = llmPredictionConfigSchematics.sliced(
   "temperature",
   "maxPredictedTokens",
@@ -716,6 +742,11 @@ export const llmLlamaLoadConfigSchematics = llmSharedLoadConfigSchematics
 export const llmMlxLoadConfigSchematics = llmSharedLoadConfigSchematics.union(
   llmLoadSchematics.sliced("mlx.*", "numParallelSessions"),
 );
+
+// Memory sizing stays native auto; no external drafter, GPU split, KV cache or parallelism knobs.
+export const llmYuzuLoadConfigSchematics = llmLoadSchematics
+  .sliced("contextLength", "envVars")
+  .withTypeParamOverride("contextLength", param => ({ ...param, min: 1, max: 262144 }));
 
 export const llmVllmLoadConfigSchematics = llmSharedLoadConfigSchematics
   .union(llmLoadSchematics.sliced("vllm.*", "numParallelSessions", "promptTemplate"))
