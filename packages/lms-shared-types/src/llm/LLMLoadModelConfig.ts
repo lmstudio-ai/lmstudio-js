@@ -503,6 +503,32 @@ export const llmLlamaCppArgumentsOverrideSchema = z.object({
 /** @public */
 export interface LLMLoadModelConfig {
   /**
+   * Raw engine-native configuration contents (initially vLLM YAML). Nonempty contents replace
+   * ordinary LM Studio load tuning with the file and engine defaults. Omit to inherit the host's
+   * settings; use "" to disable config-file mode for this load without changing saved defaults.
+   * Supplying, changing, or clearing this option requires local system.manage permission.
+   * Contents are a snapshot; later source-file edits do not affect the imported configuration.
+   * Apply changes with a new load or reload; model() reuse does not reload an existing instance.
+   * Explicit prediction-request overrides remain active.
+   *
+   * Configuration files can specify unsafe settings. You are responsible for ensuring the
+   * configuration and its referenced resources are safe. Configuration file contents are readable
+   * by users and clients with access to the model's configuration. Keep credentials and other
+   * secrets out of configuration files.
+   */
+  engineConfigFileContents?: string;
+
+  /**
+   * Engine process's current working directory, the base for relative file paths. Initially used
+   * only in vLLM config-file mode. Omit to inherit the host's setting; use "" for runtime temp.
+   * Explicit relative paths resolve against the caller process's current directory. Environments
+   * without a process working directory must supply an absolute path. YAML stays in runtime temp;
+   * outputs written there are removed on unload. User-selected directories are never cleaned up.
+   * Supplying, changing, or clearing this option requires local system.manage permission.
+   */
+  engineCwd?: string;
+
+  /**
    * Whether LM Studio should automatically choose context length and model placement based on
    * available resources. This option is only available when using Bionic.
    */
@@ -794,6 +820,8 @@ export interface LLMLoadModelConfig {
 }
 export const llmLoadModelConfigSchema = z
   .object({
+    engineConfigFileContents: z.string().optional(),
+    engineCwd: z.string().optional(),
     autoFit: z.boolean().optional(),
     gpu: gpuSettingSchema.optional(),
     maxParallelPredictions: z.number().int().min(1).optional(),

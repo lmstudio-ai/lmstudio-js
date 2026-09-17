@@ -1,3 +1,4 @@
+export { isEngineConfigFileField, isEngineConfigFileMode } from "./engineConfigFile.js";
 export {
   embeddingLoadModelConfigToKVConfig,
   kvConfigToEmbeddingLoadModelConfig,

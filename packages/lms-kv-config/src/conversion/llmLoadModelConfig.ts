@@ -8,6 +8,7 @@ import {
   type ModelCompatibilityType,
 } from "@lmstudio/lms-shared-types";
 import { collapseKVStackRaw } from "../KVConfig.js";
+import { isEngineConfigFileMode } from "../engineConfigFile.js";
 import {
   llmLlamaMoeLoadConfigSchematics,
   llmLoadSchematics,
@@ -325,8 +326,20 @@ function kvConfigToLLMVllmLoadModelConfig(
 ): LLMLoadModelConfig {
   const result: LLMLoadModelConfig = {};
   const partialParsed = llmVllmLoadConfigSchematics.parsePartial(config);
+  // The backend's reporting view omits tuning owned by YAML. Do not recreate it from defaults.
   const parsed =
-    useDefaultsForMissingKeys === true ? llmVllmLoadConfigSchematics.parse(config) : partialParsed;
+    useDefaultsForMissingKeys === true && !isEngineConfigFileMode(config)
+      ? llmVllmLoadConfigSchematics.parse(config)
+      : partialParsed;
+
+  const engineConfigFileContents = partialParsed.get("engineConfigFileContents");
+  if (engineConfigFileContents !== undefined) {
+    result.engineConfigFileContents = engineConfigFileContents;
+  }
+  const engineCwd = partialParsed.get("engineCwd");
+  if (engineCwd !== undefined) {
+    result.engineCwd = engineCwd;
+  }
 
   const gpuSplitConfig = partialParsed.get("load.gpuSplitConfig");
   if (gpuSplitConfig !== undefined) {
@@ -406,6 +419,8 @@ export function llmLoadModelConfigToKVConfig(config: LLMLoadModelConfig): KVConf
     config.gpu?.splitStrategy !== undefined;
 
   const top = llmLoadSchematics.buildPartialConfig({
+    "engineConfigFileContents": config.engineConfigFileContents,
+    "engineCwd": config.engineCwd,
     "llama.autoFit": autoFit,
     "mlx.autoFit": autoFit,
     "gpuSplitConfig": hasGpuSplitSetting

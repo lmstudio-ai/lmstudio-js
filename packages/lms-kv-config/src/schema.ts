@@ -325,6 +325,8 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
         { modelCentric: true },
         defaultLlmLoadPromptTemplate,
       )
+      .field("engineConfigFileContents", "string", { machineDependent: true, nonConfigurable: true }, "")
+      .field("engineCwd", "string", { machineDependent: true, nonConfigurable: true }, "")
       .field("offloadKVCacheToGpu", "boolean", {}, true)
       .field(
         "numCpuExpertLayersRatio",
@@ -718,7 +720,15 @@ export const llmMlxLoadConfigSchematics = llmSharedLoadConfigSchematics.union(
 );
 
 export const llmVllmLoadConfigSchematics = llmSharedLoadConfigSchematics
-  .union(llmLoadSchematics.sliced("vllm.*", "numParallelSessions", "promptTemplate"))
+  .union(
+    llmLoadSchematics.sliced(
+      "vllm.*",
+      "numParallelSessions",
+      "promptTemplate",
+      "engineConfigFileContents",
+      "engineCwd",
+    ),
+  )
   .union(globalConfigSchematics.sliced("load.gpuSplitConfig"));
 
 export const llmTransformersLoadConfigSchematics = llmSharedLoadConfigSchematics.union(
