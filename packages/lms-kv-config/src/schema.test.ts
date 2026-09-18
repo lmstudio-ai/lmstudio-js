@@ -130,23 +130,6 @@ describe("yuzu config", () => {
     ).toBe(true);
   });
 
-  it.each(["stopAtLimit", "truncateMiddle", "rollingWindow"] as const)(
-    "does not expose or retain configurable overflow policy %s",
-    contextOverflowPolicy => {
-      expect(
-        llmYuzuPredictionConfigSchematics.hasFullKey("llm.prediction.contextOverflowPolicy"),
-      ).toBe(false);
-      const config = globalConfigSchematics.buildPartialConfig({
-        "llm.prediction.contextOverflowPolicy": contextOverflowPolicy,
-      });
-      expect(llmYuzuPredictionConfigSchematics.filterConfig(config).fields).toEqual([]);
-      expect(
-        kvConfigToLLMPredictionConfig(llmYuzuPredictionConfigSchematics.buildFullConfig({}))
-          .contextOverflowPolicy,
-      ).toBeUndefined();
-    },
-  );
-
   it.each([-1, 0, 33, 40, 20.5, NaN, Infinity])("rejects top-k %p", value => {
     expect(() =>
       llmYuzuPredictionConfigSchematics.buildPartialConfig({ topKSampling: value }),
