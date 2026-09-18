@@ -718,6 +718,9 @@ export const llmYuzuPredictionConfigSchematics = new KVConfigSchematicsBuilder(k
       "toolChoice",
       "toolNaming",
       "reasoning.enableThinking",
+      "seed",
+      "stopStrings",
+      "structured",
     ),
   );
 
