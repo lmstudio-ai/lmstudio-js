@@ -676,6 +676,51 @@ export const llmVllmPredictionConfigSchematics = llmPredictionConfigSchematics.s
   "llama.logitBias",
 );
 
+// Keep yuzu defaults and limits local to its slice; other engines retain their sampler defaults.
+export const llmYuzuPredictionConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypesLibrary)
+  .scope("llm.prediction", builder =>
+    builder
+      .field(
+        "temperature",
+        "numeric",
+        {
+          min: 0,
+          max: 2,
+          step: 0.01,
+          precision: 2,
+          slider: { min: 0, max: 2, step: 0.01 },
+          shortHand: "temp",
+        },
+        1,
+      )
+      .field("topKSampling", "numeric", { min: 1, max: 32, int: true }, 20)
+      .field(
+        "topPSampling",
+        "checkboxNumeric",
+        {
+          // Smallest positive float32 accepted by the runtime. Unchecked maps to top_p = 1.
+          min: 2 ** -149,
+          max: 1,
+          step: 0.01,
+          precision: 2,
+          slider: { min: 0.01, max: 1, step: 0.01 },
+        },
+        { checked: true, value: 0.95 },
+      ),
+  )
+  .build()
+  .scoped("llm.prediction")
+  .union(
+    llmPredictionConfigSchematics.sliced(
+      "maxPredictedTokens",
+      "systemPrompt",
+      "tools",
+      "toolChoice",
+      "toolNaming",
+      "reasoning.enableThinking",
+    ),
+  );
+
 export const llmTransformersPredictionConfigSchematics = llmSharedPredictionConfigSchematics.union(
   llmPredictionConfigSchematics.sliced("transformers.*"),
 );
@@ -697,6 +742,8 @@ export const llmSharedLoadConfigSchematics = llmLoadSchematics.sliced(
   "seed",
   "envVars",
 );
+
+export const llmYuzuLoadConfigSchematics = llmLoadSchematics.sliced("contextLength");
 
 const llamaLoadConfigSchematics = globalConfigSchematics.sliced("llama.load.*", "load.*");
 
