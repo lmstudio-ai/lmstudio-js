@@ -171,6 +171,31 @@ describe("yuzu config", () => {
     ).toEqual(config);
   });
 
+  it.each([false, true])(
+    "reads only yuzu context length with defaults=%p",
+    useDefaultsForMissingKeys => {
+      const config = llmLoadSchematics.buildPartialConfig({
+        "contextLength": 8192,
+        "llama.autoFit": true,
+        "llama.speculativeDecoding.draftMtp": true,
+      });
+      expect(
+        kvConfigToLLMLoadModelConfig(config, { modelFormat: "yuzu", useDefaultsForMissingKeys }),
+      ).toEqual({ contextLength: 8192 });
+    },
+  );
+
+  it("omits absent yuzu context in partial readback and uses the schema default when requested", () => {
+    const emptyConfig = makeKVConfigFromFields([]);
+    expect(kvConfigToLLMLoadModelConfig(emptyConfig, { modelFormat: "yuzu" })).toEqual({});
+    expect(
+      kvConfigToLLMLoadModelConfig(emptyConfig, {
+        modelFormat: "yuzu",
+        useDefaultsForMissingKeys: true,
+      }),
+    ).toEqual({ contextLength: 2048 });
+  });
+
   it("filters unrelated preset fields but does not silently clamp a retained invalid top-k", () => {
     const preset = globalConfigSchematics.buildPartialConfig({
       "llm.prediction.topKSampling": 40,

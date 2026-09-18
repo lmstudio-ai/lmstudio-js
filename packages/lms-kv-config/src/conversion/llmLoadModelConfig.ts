@@ -13,6 +13,7 @@ import {
   llmLoadSchematics,
   llmMlxLoadConfigSchematics,
   llmVllmLoadConfigSchematics,
+  llmYuzuLoadConfigSchematics,
 } from "../schema.js";
 import { maybeFalseValueToCheckboxValue, maybeFalseValueToValue } from "./utils.js";
 
@@ -377,6 +378,14 @@ export function kvConfigToLLMLoadModelConfig(
       return kvConfigToLLMVllmLoadModelConfig(config, {
         useDefaultsForMissingKeys,
       });
+    case "yuzu": {
+      const parsed =
+        useDefaultsForMissingKeys === true
+          ? llmYuzuLoadConfigSchematics.parse(config)
+          : llmYuzuLoadConfigSchematics.parsePartial(config);
+      const contextLength = parsed.get("contextLength");
+      return contextLength === undefined ? {} : { contextLength };
+    }
     default:
       throw new Error(`Unsupported model format: ${modelFormat}`);
   }
