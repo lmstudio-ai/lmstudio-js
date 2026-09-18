@@ -100,13 +100,13 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
     );
   }
 
-  /** Reports the first dependency error and clears it when the sources recover. */
+  /** Observes errors from any source that exposes them, including optimistic writable signals. */
   public static subscribeToErrors(
     sources: ReadonlyArray<SignalLike<unknown>>,
     listener: (error: Error | null) => void,
   ): () => void {
     const errorSignals = sources.flatMap(source =>
-      LazySignal.isLazySignal(source) ? [source.errorSignal] : [],
+      source.errorSignal === undefined ? [] : [source.errorSignal],
     );
     /** Rechecks every source so one recovery cannot hide another source's failure. */
     const publish = () =>

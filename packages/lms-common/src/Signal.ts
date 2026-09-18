@@ -268,6 +268,8 @@ export interface SignalLike<TValue> extends Subscribable<TValue> {
    * transition must also emit one value event, even when the committed value compares equal.
    */
   readonly staleSignal?: Signal<boolean>;
+  /** Present when the signal exposes failures. Check staleSignal separately while awaiting fresh data. */
+  readonly errorSignal?: Signal<Error | null>;
   get(): TValue;
   subscribe(subscriber: Subscriber<TValue>): () => void;
   subscribeFull(subscriber: SignalFullSubscriber<TValue>): () => void;
