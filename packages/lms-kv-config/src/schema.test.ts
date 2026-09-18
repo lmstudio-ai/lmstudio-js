@@ -26,6 +26,8 @@ import {
   llmMlxLoadConfigSchematics,
   llmVllmLoadConfigSchematics,
   llmVllmPredictionConfigSchematics,
+  llmYuzuLoadConfigSchematics,
+  llmYuzuPredictionConfigSchematics,
 } from "./schema.js";
 import { kvValueTypesLibrary } from "./valueTypes.js";
 
@@ -76,6 +78,110 @@ describe("KVConfig", () => {
       expect(parsed.get("a")).toBe(1);
       expect(parsed.get("b")).toBe(2);
     });
+  });
+});
+
+describe("yuzu config", () => {
+  it("materializes only the initial chat controls with valid defaults", () => {
+    const config = llmYuzuPredictionConfigSchematics.buildFullConfig({});
+    expect(config.fields.map(field => field.key).sort()).toEqual(
+      [
+        "temperature",
+        "topKSampling",
+        "topPSampling",
+        "maxPredictedTokens",
+        "systemPrompt",
+        "tools",
+        "toolChoice",
+        "toolNaming",
+        "reasoning.enableThinking",
+      ]
+        .map(key => `llm.prediction.${key}`)
+        .sort(),
+    );
+    expect(kvConfigToLLMPredictionConfig(config)).toMatchObject({
+      temperature: 1,
+      topKSampling: 20,
+      topPSampling: 0.95,
+      maxTokens: false,
+      enableThinking: true,
+    });
+    expect(Array.from(llmYuzuLoadConfigSchematics.fullKeys())).toEqual(["llm.load.contextLength"]);
+    expect(
+      llmYuzuPredictionConfigSchematics.getSchemaForKey("topKSampling").safeParse(20).success,
+    ).toBe(true);
+    // Other engines must not pick up yuzu's default or bound.
+    expect(
+      globalConfigSchematics.access(makeKVConfigFromFields([]), "llm.prediction.topKSampling"),
+    ).toBe(40);
+    expect(
+      llmVllmPredictionConfigSchematics.getSchemaForKey("topKSampling").safeParse(40).success,
+    ).toBe(true);
+  });
+
+  it.each([-1, 0, 33, 40, 20.5, NaN, Infinity])("rejects top-k %p", value => {
+    expect(() =>
+      llmYuzuPredictionConfigSchematics.buildPartialConfig({ topKSampling: value }),
+    ).toThrow();
+  });
+  it.each([1, 20, 32])("accepts top-k %p", value => {
+    expect(
+      llmYuzuPredictionConfigSchematics.getSchemaForKey("topKSampling").safeParse(value).success,
+    ).toBe(true);
+  });
+  it.each([-0.1, 2.01, NaN, Infinity])("rejects temperature %p", value => {
+    expect(() =>
+      llmYuzuPredictionConfigSchematics.buildPartialConfig({ temperature: value }),
+    ).toThrow();
+  });
+  it.each([0, 1, 2])("accepts temperature %p", value => {
+    expect(
+      llmYuzuPredictionConfigSchematics.getSchemaForKey("temperature").safeParse(value).success,
+    ).toBe(true);
+  });
+  it.each([0, -0.1, 1.01, Number.MIN_VALUE, NaN, Infinity])("rejects top-p %p", value => {
+    expect(() =>
+      llmYuzuPredictionConfigSchematics.buildPartialConfig({
+        topPSampling: { checked: true, value },
+      }),
+    ).toThrow();
+  });
+  it.each([2 ** -149, 0.95, 1])("accepts top-p %p", value => {
+    expect(
+      llmYuzuPredictionConfigSchematics
+        .getSchemaForKey("topPSampling")
+        .safeParse({ checked: true, value }).success,
+    ).toBe(true);
+  });
+
+  it("round trips supported overrides without enabling deferred samplers", () => {
+    const config = llmYuzuPredictionConfigSchematics.buildPartialConfig({
+      "temperature": 0,
+      "topKSampling": 32,
+      "topPSampling": { checked: false, value: 0.95 },
+      "maxPredictedTokens": { checked: true, value: 128 },
+      "reasoning.enableThinking": false,
+    });
+    const converted = kvConfigToLLMPredictionConfig(config);
+    expect(converted).toMatchObject({ topPSampling: false, maxTokens: 128, enableThinking: false });
+    expect(converted.minPSampling).toBeUndefined();
+    expect(converted.repeatPenalty).toBeUndefined();
+    expect(
+      llmYuzuPredictionConfigSchematics.filterConfig(llmPredictionConfigToKVConfig(converted)),
+    ).toEqual(config);
+  });
+
+  it("filters unrelated preset fields but does not silently clamp a retained invalid top-k", () => {
+    const preset = globalConfigSchematics.buildPartialConfig({
+      "llm.prediction.topKSampling": 40,
+      "llm.prediction.minPSampling": { checked: true, value: 0.05 },
+      "llm.prediction.repeatPenalty": { checked: true, value: 1.1 },
+      "llm.prediction.speculativeDecoding.draftModel": "owner/drafter",
+    });
+    const filtered = llmYuzuPredictionConfigSchematics.filterConfig(preset);
+    expect(filtered.fields).toEqual([{ key: "llm.prediction.topKSampling", value: 40 }]);
+    expect(() => llmYuzuPredictionConfigSchematics.parse(filtered)).toThrow(/topKSampling/);
+    expect(preset.fields).toHaveLength(4);
   });
 });
 
