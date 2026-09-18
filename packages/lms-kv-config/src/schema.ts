@@ -518,6 +518,9 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
             { enabled: false, bits: 8, groupSize: 64, quantizedStart: 5000 },
           ),
       )
+      .scope("yuzu", builder =>
+        builder.field("autoFit", "boolean", { machineDependent: true }, true),
+      )
       .scope("vllm", builder =>
         builder
           .field(
@@ -746,7 +749,11 @@ export const llmSharedLoadConfigSchematics = llmLoadSchematics.sliced(
   "envVars",
 );
 
-export const llmYuzuLoadConfigSchematics = llmLoadSchematics.sliced("contextLength");
+export const llmYuzuLoadConfigSchematics = llmLoadSchematics.sliced(
+  "contextLength",
+  "autoFitMinContextLength",
+  "yuzu.*",
+);
 
 const llamaLoadConfigSchematics = globalConfigSchematics.sliced("llama.load.*", "load.*");
 
