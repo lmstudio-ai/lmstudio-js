@@ -82,7 +82,7 @@ describe("KVConfig", () => {
 });
 
 describe("yuzu config", () => {
-  it("materializes only the initial chat controls with valid defaults", () => {
+  it("materializes the supported prediction controls with valid defaults", () => {
     const config = llmYuzuPredictionConfigSchematics.buildFullConfig({});
     expect(config.fields.map(field => field.key).sort()).toEqual(
       [
@@ -95,6 +95,10 @@ describe("yuzu config", () => {
         "toolChoice",
         "toolNaming",
         "reasoning.enableThinking",
+        "seed",
+        "stopStrings",
+        "structured",
+        "contextOverflowPolicy",
       ]
         .map(key => `llm.prediction.${key}`)
         .sort(),
@@ -105,7 +109,16 @@ describe("yuzu config", () => {
       topPSampling: 0.95,
       maxTokens: false,
       enableThinking: true,
+      contextOverflowPolicy: "stopAtLimit",
+      stopStrings: [],
+      structured: { type: "none" },
     });
+    expect(
+      globalConfigSchematics.access(
+        makeKVConfigFromFields([]),
+        "llm.prediction.contextOverflowPolicy",
+      ),
+    ).toBe("truncateMiddle");
     expect(Array.from(llmYuzuLoadConfigSchematics.fullKeys())).toEqual(["llm.load.contextLength"]);
     expect(
       llmYuzuPredictionConfigSchematics.getSchemaForKey("topKSampling").safeParse(20).success,
@@ -161,14 +174,39 @@ describe("yuzu config", () => {
       "topPSampling": { checked: false, value: 0.95 },
       "maxPredictedTokens": { checked: true, value: 128 },
       "reasoning.enableThinking": false,
+      "stopStrings": ["STOP"],
+      "structured": { type: "json", jsonSchema: { type: "object" } },
+      "contextOverflowPolicy": "stopAtLimit",
     });
     const converted = kvConfigToLLMPredictionConfig(config);
-    expect(converted).toMatchObject({ topPSampling: false, maxTokens: 128, enableThinking: false });
+    expect(converted).toMatchObject({
+      topPSampling: false,
+      maxTokens: 128,
+      enableThinking: false,
+      stopStrings: ["STOP"],
+      structured: { type: "json", jsonSchema: { type: "object" } },
+      contextOverflowPolicy: "stopAtLimit",
+    });
     expect(converted.minPSampling).toBeUndefined();
     expect(converted.repeatPenalty).toBeUndefined();
     expect(
-      llmYuzuPredictionConfigSchematics.filterConfig(llmPredictionConfigToKVConfig(converted)),
-    ).toEqual(config);
+      llmYuzuPredictionConfigSchematics.parseToMap(llmPredictionConfigToKVConfig(converted)),
+    ).toEqual(llmYuzuPredictionConfigSchematics.parseToMap(config));
+  });
+
+  it("retains prediction seed through schematic filtering", () => {
+    const config = globalConfigSchematics.buildPartialConfig({
+      "llm.prediction.seed": { checked: true, value: 42 },
+      "llm.prediction.minPSampling": { checked: true, value: 0.1 },
+    });
+    const filtered = llmYuzuPredictionConfigSchematics.filterConfig(config);
+    expect(filtered.fields).toEqual([
+      { key: "llm.prediction.seed", value: { checked: true, value: 42 } },
+    ]);
+    expect(llmYuzuPredictionConfigSchematics.parse(filtered).get("seed")).toEqual({
+      checked: true,
+      value: 42,
+    });
   });
 
   it.each([false, true])(

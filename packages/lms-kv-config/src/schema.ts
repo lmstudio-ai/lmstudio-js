@@ -706,7 +706,9 @@ export const llmYuzuPredictionConfigSchematics = new KVConfigSchematicsBuilder(k
           slider: { min: 0.01, max: 1, step: 0.01 },
         },
         { checked: true, value: 0.95 },
-      ),
+      )
+      // Yuzu cannot truncate an active context; stop generation at the loaded limit.
+      .field("contextOverflowPolicy", "contextOverflowPolicy", {}, "stopAtLimit"),
   )
   .build()
   .scoped("llm.prediction")
@@ -718,6 +720,9 @@ export const llmYuzuPredictionConfigSchematics = new KVConfigSchematicsBuilder(k
       "toolChoice",
       "toolNaming",
       "reasoning.enableThinking",
+      "seed",
+      "stopStrings",
+      "structured",
     ),
   );
 
