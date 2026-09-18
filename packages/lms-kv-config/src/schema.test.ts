@@ -98,7 +98,6 @@ describe("yuzu config", () => {
         "seed",
         "stopStrings",
         "structured",
-        "contextOverflowPolicy",
       ]
         .map(key => `llm.prediction.${key}`)
         .sort(),
@@ -109,7 +108,6 @@ describe("yuzu config", () => {
       topPSampling: 0.95,
       maxTokens: false,
       enableThinking: true,
-      contextOverflowPolicy: "stopAtLimit",
       stopStrings: [],
       structured: { type: "none" },
     });
@@ -131,6 +129,23 @@ describe("yuzu config", () => {
       llmVllmPredictionConfigSchematics.getSchemaForKey("topKSampling").safeParse(40).success,
     ).toBe(true);
   });
+
+  it.each(["stopAtLimit", "truncateMiddle", "rollingWindow"] as const)(
+    "does not expose or retain configurable overflow policy %s",
+    contextOverflowPolicy => {
+      expect(
+        llmYuzuPredictionConfigSchematics.hasFullKey("llm.prediction.contextOverflowPolicy"),
+      ).toBe(false);
+      const config = globalConfigSchematics.buildPartialConfig({
+        "llm.prediction.contextOverflowPolicy": contextOverflowPolicy,
+      });
+      expect(llmYuzuPredictionConfigSchematics.filterConfig(config).fields).toEqual([]);
+      expect(
+        kvConfigToLLMPredictionConfig(llmYuzuPredictionConfigSchematics.buildFullConfig({}))
+          .contextOverflowPolicy,
+      ).toBeUndefined();
+    },
+  );
 
   it.each([-1, 0, 33, 40, 20.5, NaN, Infinity])("rejects top-k %p", value => {
     expect(() =>
@@ -176,7 +191,6 @@ describe("yuzu config", () => {
       "reasoning.enableThinking": false,
       "stopStrings": ["STOP"],
       "structured": { type: "json", jsonSchema: { type: "object" } },
-      "contextOverflowPolicy": "stopAtLimit",
     });
     const converted = kvConfigToLLMPredictionConfig(config);
     expect(converted).toMatchObject({
@@ -185,7 +199,6 @@ describe("yuzu config", () => {
       enableThinking: false,
       stopStrings: ["STOP"],
       structured: { type: "json", jsonSchema: { type: "object" } },
-      contextOverflowPolicy: "stopAtLimit",
     });
     expect(converted.minPSampling).toBeUndefined();
     expect(converted.repeatPenalty).toBeUndefined();
