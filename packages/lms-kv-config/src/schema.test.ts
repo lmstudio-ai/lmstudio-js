@@ -26,6 +26,8 @@ import {
   llmMlxLoadConfigSchematics,
   llmVllmLoadConfigSchematics,
   llmVllmPredictionConfigSchematics,
+  llmYuzuLoadConfigSchematics,
+  llmYuzuPredictionConfigSchematics,
 } from "./schema.js";
 import { kvValueTypesLibrary } from "./valueTypes.js";
 
@@ -79,6 +81,173 @@ describe("KVConfig", () => {
   });
 });
 
+describe("yuzu config", () => {
+  it("materializes the supported prediction controls with valid defaults", () => {
+    const config = llmYuzuPredictionConfigSchematics.buildFullConfig({});
+    expect(config.fields.map(field => field.key).sort()).toEqual(
+      [
+        "temperature",
+        "topKSampling",
+        "topPSampling",
+        "maxPredictedTokens",
+        "systemPrompt",
+        "tools",
+        "toolChoice",
+        "toolNaming",
+        "reasoning.enableThinking",
+        "seed",
+        "stopStrings",
+        "structured",
+      ]
+        .map(key => `llm.prediction.${key}`)
+        .sort(),
+    );
+    expect(kvConfigToLLMPredictionConfig(config)).toMatchObject({
+      temperature: 1,
+      topKSampling: 20,
+      topPSampling: 0.95,
+      maxTokens: false,
+      enableThinking: true,
+      stopStrings: [],
+      structured: { type: "none" },
+    });
+    expect(
+      globalConfigSchematics.access(
+        makeKVConfigFromFields([]),
+        "llm.prediction.contextOverflowPolicy",
+      ),
+    ).toBe("truncateMiddle");
+    expect(Array.from(llmYuzuLoadConfigSchematics.fullKeys())).toEqual([
+      "llm.load.contextLength",
+      "llm.load.autoFitMinContextLength",
+      "llm.load.yuzu.autoFit",
+    ]);
+    expect(
+      llmYuzuPredictionConfigSchematics.getSchemaForKey("topKSampling").safeParse(20).success,
+    ).toBe(true);
+    // Other engines must not pick up yuzu's default or bound.
+    expect(
+      globalConfigSchematics.access(makeKVConfigFromFields([]), "llm.prediction.topKSampling"),
+    ).toBe(40);
+    expect(
+      llmVllmPredictionConfigSchematics.getSchemaForKey("topKSampling").safeParse(40).success,
+    ).toBe(true);
+  });
+
+  it.each([-1, 0, 33, 40, 20.5, NaN, Infinity])("rejects top-k %p", value => {
+    expect(() =>
+      llmYuzuPredictionConfigSchematics.buildPartialConfig({ topKSampling: value }),
+    ).toThrow();
+  });
+  it.each([1, 20, 32])("accepts top-k %p", value => {
+    expect(
+      llmYuzuPredictionConfigSchematics.getSchemaForKey("topKSampling").safeParse(value).success,
+    ).toBe(true);
+  });
+  it.each([-0.1, 2.01, NaN, Infinity])("rejects temperature %p", value => {
+    expect(() =>
+      llmYuzuPredictionConfigSchematics.buildPartialConfig({ temperature: value }),
+    ).toThrow();
+  });
+  it.each([0, 1, 2])("accepts temperature %p", value => {
+    expect(
+      llmYuzuPredictionConfigSchematics.getSchemaForKey("temperature").safeParse(value).success,
+    ).toBe(true);
+  });
+  it.each([0, -0.1, 1.01, Number.MIN_VALUE, NaN, Infinity])("rejects top-p %p", value => {
+    expect(() =>
+      llmYuzuPredictionConfigSchematics.buildPartialConfig({
+        topPSampling: { checked: true, value },
+      }),
+    ).toThrow();
+  });
+  it.each([2 ** -149, 0.95, 1])("accepts top-p %p", value => {
+    expect(
+      llmYuzuPredictionConfigSchematics
+        .getSchemaForKey("topPSampling")
+        .safeParse({ checked: true, value }).success,
+    ).toBe(true);
+  });
+
+  it("round trips supported overrides without enabling deferred samplers", () => {
+    const config = llmYuzuPredictionConfigSchematics.buildPartialConfig({
+      "temperature": 0,
+      "topKSampling": 32,
+      "topPSampling": { checked: false, value: 0.95 },
+      "maxPredictedTokens": { checked: true, value: 128 },
+      "reasoning.enableThinking": false,
+      "stopStrings": ["STOP"],
+      "structured": { type: "json", jsonSchema: { type: "object" } },
+    });
+    const converted = kvConfigToLLMPredictionConfig(config);
+    expect(converted).toMatchObject({
+      topPSampling: false,
+      maxTokens: 128,
+      enableThinking: false,
+      stopStrings: ["STOP"],
+      structured: { type: "json", jsonSchema: { type: "object" } },
+    });
+    expect(converted.minPSampling).toBeUndefined();
+    expect(converted.repeatPenalty).toBeUndefined();
+    expect(
+      llmYuzuPredictionConfigSchematics.parseToMap(llmPredictionConfigToKVConfig(converted)),
+    ).toEqual(llmYuzuPredictionConfigSchematics.parseToMap(config));
+  });
+
+  it("retains prediction seed through schematic filtering", () => {
+    const config = globalConfigSchematics.buildPartialConfig({
+      "llm.prediction.seed": { checked: true, value: 42 },
+      "llm.prediction.minPSampling": { checked: true, value: 0.1 },
+    });
+    const filtered = llmYuzuPredictionConfigSchematics.filterConfig(config);
+    expect(filtered.fields).toEqual([
+      { key: "llm.prediction.seed", value: { checked: true, value: 42 } },
+    ]);
+    expect(llmYuzuPredictionConfigSchematics.parse(filtered).get("seed")).toEqual({
+      checked: true,
+      value: 42,
+    });
+  });
+
+  it.each([false, true])(
+    "does not infer manual Yuzu loading from context with defaults=%p",
+    useDefaultsForMissingKeys => {
+      const config = llmLoadSchematics.buildPartialConfig({
+        "contextLength": 8192,
+        "llama.autoFit": true,
+        "llama.speculativeDecoding.draftMtp": true,
+      });
+      expect(
+        kvConfigToLLMLoadModelConfig(config, { modelFormat: "yuzu", useDefaultsForMissingKeys }),
+      ).toEqual(useDefaultsForMissingKeys ? { autoFit: true } : { contextLength: 8192 });
+    },
+  );
+
+  it("omits absent yuzu config in partial readback and materializes AutoFit when requested", () => {
+    const emptyConfig = makeKVConfigFromFields([]);
+    expect(kvConfigToLLMLoadModelConfig(emptyConfig, { modelFormat: "yuzu" })).toEqual({});
+    expect(
+      kvConfigToLLMLoadModelConfig(emptyConfig, {
+        modelFormat: "yuzu",
+        useDefaultsForMissingKeys: true,
+      }),
+    ).toEqual({ autoFit: true });
+  });
+
+  it("filters unrelated preset fields but does not silently clamp a retained invalid top-k", () => {
+    const preset = globalConfigSchematics.buildPartialConfig({
+      "llm.prediction.topKSampling": 40,
+      "llm.prediction.minPSampling": { checked: true, value: 0.05 },
+      "llm.prediction.repeatPenalty": { checked: true, value: 1.1 },
+      "llm.prediction.speculativeDecoding.draftModel": "owner/drafter",
+    });
+    const filtered = llmYuzuPredictionConfigSchematics.filterConfig(preset);
+    expect(filtered.fields).toEqual([{ key: "llm.prediction.topKSampling", value: 40 }]);
+    expect(() => llmYuzuPredictionConfigSchematics.parse(filtered)).toThrow(/topKSampling/);
+    expect(preset.fields).toHaveLength(4);
+  });
+});
+
 describe("llmPredictionConfig reasoning budget", () => {
   it.each([false, 0, 1024] as const)("round trips %p", reasoningBudget => {
     const kvConfig = llmPredictionConfigToKVConfig({ reasoningBudget });
@@ -106,16 +275,18 @@ describe("llmPredictionConfig reasoning budget", () => {
 });
 
 describe("llmLoadModelConfig conversion", () => {
-  it("round trips explicit AutoFit for GGUF and MLX", () => {
+  it("round trips explicit AutoFit for GGUF, MLX, and Yuzu", () => {
     const loadConfig = llmLoadModelConfigToKVConfig({ autoFit: true });
     const fieldMap = new Map(loadConfig.fields.map(field => [field.key, field.value]));
 
     expect(fieldMap.get("llm.load.llama.autoFit")).toBe(true);
     expect(fieldMap.get("llm.load.mlx.autoFit")).toBe(true);
+    expect(fieldMap.get("llm.load.yuzu.autoFit")).toBe(true);
     expect(kvConfigToLLMLoadModelConfig(loadConfig).autoFit).toBe(true);
     expect(kvConfigToLLMLoadModelConfig(loadConfig, { modelFormat: "safetensors" }).autoFit).toBe(
       true,
     );
+    expect(kvConfigToLLMLoadModelConfig(loadConfig, { modelFormat: "yuzu" }).autoFit).toBe(true);
   });
 
   it("disables AutoFit for explicit manual settings", () => {
@@ -133,10 +304,12 @@ describe("llmLoadModelConfig conversion", () => {
 
       expect(globalConfigSchematics.access(loadConfig, "llm.load.llama.autoFit")).toBe(false);
       expect(globalConfigSchematics.access(loadConfig, "llm.load.mlx.autoFit")).toBe(false);
+      expect(globalConfigSchematics.access(loadConfig, "llm.load.yuzu.autoFit")).toBe(false);
       expect(kvConfigToLLMLoadModelConfig(loadConfig).autoFit).toBe(false);
       expect(kvConfigToLLMLoadModelConfig(loadConfig, { modelFormat: "safetensors" }).autoFit).toBe(
         false,
       );
+      expect(kvConfigToLLMLoadModelConfig(loadConfig, { modelFormat: "yuzu" }).autoFit).toBe(false);
     }
   });
 
