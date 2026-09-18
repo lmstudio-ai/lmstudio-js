@@ -546,6 +546,7 @@ export class ServerPort<
     this.openSignalSubscriptions.delete(message.subscribeId);
   }
 
+  /** Serves a writable subscription and validates incoming edits before applying them. */
   private receivedWritableSignalSubscribe(
     message: ClientToServerMessage & { type: "writableSignalSubscribe" },
   ) {
@@ -694,7 +695,9 @@ export class ServerPort<
                   );
                   return;
                 }
-                setter.withValueAndPatches(parseResult.data, deserializedPatches, tags);
+                // Parsing clones the entire value. Keep the patch result so unchanged branches
+                // retain their references and the value still matches the forwarded patches.
+                setter.withValueAndPatches(result, deserializedPatches, tags);
               } catch (error: any) {
                 this.communicationWarning(
                   text`

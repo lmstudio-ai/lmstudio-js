@@ -1,6 +1,6 @@
 import { flattenSignalOfSignal, flattenSignalOfWritableSignal } from "./flattenSignal.js";
 import { LazySignal } from "./LazySignal.js";
-import { type Setter } from "./makeSetter.js";
+import { makeSetter, type Setter } from "./makeSetter.js";
 import { OWLSignal } from "./OWLSignal.js";
 import { Signal } from "./Signal.js";
 
@@ -9,6 +9,44 @@ async function waitForTick(): Promise<void> {
 }
 
 describe("flattenSignalOfSignal", () => {
+  /** Both nested signal forms expose inner errors and keep listening for recovery. */
+  it.each([false, true])("carries recoverable inner errors (writable=%s)", writable => {
+    let publish!: Setter<number>;
+    let fail!: (error: Error) => void;
+    const inner = LazySignal.createWithoutInitialValue<number>((set, onError) => {
+      publish = set;
+      fail = onError;
+      return () => {};
+    });
+    const flattened = writable
+      ? flattenSignalOfWritableSignal(
+          Signal.createReadonly([inner, makeSetter<number>(() => {})] as const),
+        )[0]
+      : flattenSignalOfSignal(Signal.createReadonly(inner));
+    const unsubscribe = flattened.subscribe(() => {});
+    const error = new Error("Remote read failed");
+    fail(error);
+    expect(flattened.errorSignal.get()).toBe(error);
+    inner.recoverFromError();
+    expect(flattened.errorSignal.get()).toBeNull();
+    publish(7);
+    expect(flattened.get()).toBe(7);
+    unsubscribe();
+  });
+
+  /** Setup can fail before the root has selected any inner signal. */
+  it("reports a synchronous root failure before the first value", () => {
+    const error = new Error("Setup failed");
+    const root = LazySignal.createWithoutInitialValue<Signal<number>>((_set, fail) => {
+      fail(error);
+      return () => {};
+    });
+    const flattened = flattenSignalOfSignal(root);
+    const unsubscribe = flattened.subscribe(() => {});
+    expect(flattened.errorSignal.get()).toBe(error);
+    unsubscribe();
+  });
+
   it("should preserve nested patches and tags from a stable inner signal", async () => {
     const [innerSignal, setInnerSignal] = Signal.create({
       nested: {

@@ -1,4 +1,4 @@
-import { isAvailable, Signal, SimpleLogger } from "@lmstudio/lms-common";
+import { isAvailable, makePromise, Signal, SimpleLogger } from "@lmstudio/lms-common";
 import { BackendInterface } from "@lmstudio/lms-communication";
 import { type Context, type ContextCreator } from "@lmstudio/lms-communication-server";
 import { z } from "zod";
@@ -139,6 +139,58 @@ describe("Writable Signal Recovery", () => {
   });
 
   describe("Write Operations", () => {
+    /** Validating an edit must preserve the untouched branches of the server's value. */
+    it("preserves server references, patches, and tags when validating client writes", async () => {
+      const initial = { changed: { count: 0 }, untouched: { label: "Keep" } };
+      const [serverSignal, serverSetter] = Signal.create(initial);
+      const backendInterface = new BackendInterface().addWritableSignalEndpoint("state", {
+        creationParameter: z.void(),
+        signalData: z.object({
+          changed: z.object({ count: z.number() }),
+          untouched: z.object({ label: z.string() }),
+        }),
+      });
+      backendInterface.handleWritableSignalEndpoint("state", () => [serverSignal, serverSetter]);
+      const { clientPort } = createControllableMockedPorts(
+        backendInterface,
+        createTestContextCreator(),
+      );
+      const [clientSignal, clientSetter] = clientPort.createWritableSignal("state", undefined);
+      const received = jest.fn();
+      const stopSource = serverSignal.subscribeFull(received);
+      const acknowledged = makePromise<void>();
+      const stopClient = clientSignal.subscribeFull((_value, _patches, tags) => {
+        if (tags.includes("edit")) acknowledged.resolve();
+      });
+      try {
+        await clientSignal.pull();
+        clientSetter.withProducer(
+          value => {
+            value.changed.count = 1;
+          },
+          ["edit"],
+        );
+        await acknowledged.promise;
+        expect(serverSignal.get().changed).not.toBe(initial.changed);
+        expect(serverSignal.get().untouched).toBe(initial.untouched);
+        expect(received).toHaveBeenLastCalledWith(
+          serverSignal.get(),
+          [{ op: "replace", path: ["changed", "count"], value: 1 }],
+          expect.arrayContaining(["edit"]),
+        );
+
+        const before = serverSignal.get();
+        clientSetter.withPatches([{ op: "replace", path: ["changed", "count"], value: "invalid" }]);
+        await new Promise(resolve => setTimeout(resolve, 0));
+        expect(serverSignal.get()).toBe(before);
+        expect(received).toHaveBeenCalledTimes(1);
+      } finally {
+        stopSource();
+        stopClient();
+        await clientPort[Symbol.asyncDispose]();
+      }
+    });
+
     it("should allow writes after recovery", async () => {
       const [serverSignal, serverSetter] = Signal.create({ value: 0 });
       const serverReceivedValues: number[] = [];

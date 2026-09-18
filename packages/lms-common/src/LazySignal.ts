@@ -34,6 +34,8 @@ export type SubscribeUpstream<TData> = (
    * while one of their sources is waiting to recover.
    */
   markDownstreamStale: (tags?: Array<WriteTag>) => void,
+  /** Reports dependency errors while keeping subscriptions alive for their recovery. */
+  setSourceError: (error: Error | null) => void,
 ) => () => void;
 
 /**
@@ -98,6 +100,22 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
     );
   }
 
+  /** Observes errors from any source that exposes them, including optimistic writable signals. */
+  public static subscribeToErrors(
+    sources: ReadonlyArray<SignalLike<unknown>>,
+    listener: (error: Error | null) => void,
+  ): () => void {
+    const errorSignals = sources.flatMap(source =>
+      source.errorSignal === undefined ? [] : [source.errorSignal],
+    );
+    /** Rechecks every source so one recovery cannot hide another source's failure. */
+    const publish = () =>
+      listener(errorSignals.map(signal => signal.get()).find(error => error !== null) ?? null);
+    const unsubscribers = errorSignals.map(signal => signal.subscribe(publish));
+    publish();
+    return () => unsubscribers.forEach(unsubscribe => unsubscribe());
+  }
+
   /**
    * Subscribes to each source and runs the update only while every source has fresh data.
    */
@@ -105,6 +123,7 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
     sourceSignals: { [TKey in keyof TSource]: SignalLike<TSource[TKey]> },
     onSourceValuesChanged: () => void,
     markDownstreamStale: () => void,
+    setSourceError: (error: Error | null) => void,
   ): () => void {
     let sourceSubscriptionsReady = false;
 
@@ -134,6 +153,7 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
         }),
       ];
     });
+    const unsubscribeErrors = LazySignal.subscribeToErrors(sourceSignals, setSourceError);
     sourceSubscriptionsReady = true;
     if (sourceSignals.some(sourceSignal => sourceSignal.staleSignal?.get() === true)) {
       markDownstreamStale();
@@ -142,11 +162,13 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
     }
 
     return () => {
+      unsubscribeErrors();
       freshnessUnsubscribers.forEach(unsubscribe => unsubscribe());
       sourceUnsubscribers.forEach(unsubscribe => unsubscribe());
     };
   }
 
+  /** Derives from fresh source values and exposes dependency failures until those sources recover. */
   public static deriveFrom<TSource extends Array<unknown>, TData>(
     sourceSignals: { [TKey in keyof TSource]: SignalLike<TSource[TKey]> },
     deriver: (
@@ -182,7 +204,7 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
     };
     return new LazySignal(
       derive(),
-      (setDownstream, _errorListener, markDownstreamStale) =>
+      (setDownstream, _errorListener, markDownstreamStale, setSourceError) =>
         LazySignal.subscribeToSources(
           sourceSignals,
           () => {
@@ -192,6 +214,7 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
             }
           },
           markDownstreamStale,
+          setSourceError,
         ),
       fullEqualsPredicate,
     ) as any;
@@ -223,7 +246,8 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
     let lastIssuedUpdateId = -1;
     return new LazySignal<TData | NotAvailable>(
       LazySignal.NOT_AVAILABLE,
-      (setDownstream, _errorListener, markDownstreamStale) => {
+      (setDownstream, _errorListener, markDownstreamStale, setSourceError) => {
+        /** Publishes completed work only while its source values still apply. */
         const deriveAndUpdate = () => {
           lastIssuedUpdateId++;
           const updateId = lastIssuedUpdateId;
@@ -231,30 +255,44 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
           if (sourceValues.some(value => value === LazySignal.NOT_AVAILABLE)) {
             return;
           }
-          deriver(...(sourceValues as any)).then(result => {
-            if (!isAvailable(result)) {
-              return;
-            }
-            switch (strategy) {
-              case "eager": {
-                if (updateId > lastAppliedUpdateId) {
-                  lastAppliedUpdateId = updateId;
-                  setDownstream(result);
+          deriver(...(sourceValues as any)).then(
+            result => {
+              if (!isAvailable(result)) {
+                return;
+              }
+              switch (strategy) {
+                case "eager": {
+                  if (updateId > lastAppliedUpdateId) {
+                    lastAppliedUpdateId = updateId;
+                    setSourceError(null);
+                    setDownstream(result);
+                  }
+                  break;
                 }
-                break;
+                default: {
+                  const exhaustiveCheck: never = strategy;
+                  throw new Error(`Unknown strategy: ${exhaustiveCheck}`);
+                }
               }
-              default: {
-                const exhaustiveCheck: never = strategy;
-                throw new Error(`Unknown strategy: ${exhaustiveCheck}`);
+            },
+            error => {
+              if (updateId > lastAppliedUpdateId) {
+                lastAppliedUpdateId = updateId;
+                setSourceError(error instanceof Error ? error : new Error(String(error)));
               }
-            }
-          });
+            },
+          );
         };
-        return LazySignal.subscribeToSources(sourceSignals, deriveAndUpdate, () => {
-          // Work started before a source became stale must not make the output fresh again.
-          lastAppliedUpdateId = ++lastIssuedUpdateId;
-          markDownstreamStale();
-        });
+        return LazySignal.subscribeToSources(
+          sourceSignals,
+          deriveAndUpdate,
+          () => {
+            // Work started before a source became stale must not make the output fresh again.
+            lastAppliedUpdateId = ++lastIssuedUpdateId;
+            markDownstreamStale();
+          },
+          setSourceError,
+        );
       },
       fullEqualsPredicate,
     );
@@ -308,7 +346,7 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
 
     return new LazySignal<TData | NotAvailable>(
       LazySignal.NOT_AVAILABLE,
-      (setDownstream, _errorListener, markDownstreamStale) => {
+      (setDownstream, _errorListener, markDownstreamStale, setSourceError) => {
         let subscribed = true;
         let freshnessGeneration = 0;
 
@@ -402,6 +440,7 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
             }
             markDownstreamStale();
           },
+          setSourceError,
         );
 
         return () => {
@@ -526,6 +565,12 @@ export class LazySignal<TData> extends Subscribable<TData> implements SignalLike
       tags => {
         if (subscribed) {
           this.markStale(tags);
+        }
+      },
+      error => {
+        if (subscribed) {
+          this.setError(error);
+          if (error !== null) this.markStale();
         }
       },
     );

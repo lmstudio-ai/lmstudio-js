@@ -13,15 +13,16 @@ function isReplaceRootPatch(patch: Patch): boolean {
 }
 
 /**
- * Flatten a signal of signals into a single signal.
+ * Flattens nested values, freshness, and recoverable dependency errors into one signal.
  */
 export function flattenSignalOfSignal<TInner>(
   rootSignal: SignalLike<SignalLike<TInner | NotAvailable> | NotAvailable>,
 ): LazySignal<TInner | NotAvailable> {
   return LazySignal.createWithoutInitialValue<TInner>(
-    (setDownstream, _errorListener, markDownstreamStale) => {
+    (setDownstream, _errorListener, markDownstreamStale, setSourceError) => {
       let unsubscribeInnerSignal: (() => void) | null = null;
       let unsubscribeInnerStaleSignal: (() => void) | null = null;
+      let unsubscribeErrors = LazySignal.subscribeToErrors([rootSignal], setSourceError);
 
       /** Stops listening to the previously selected inner signal. */
       const unsubscribeInner = () => {
@@ -36,6 +37,11 @@ export function flattenSignalOfSignal<TInner>(
         maybeInnerSignal: SignalLike<TInner | NotAvailable> | NotAvailable,
       ) => {
         unsubscribeInner();
+        unsubscribeErrors();
+        unsubscribeErrors = LazySignal.subscribeToErrors(
+          isAvailable(maybeInnerSignal) ? [rootSignal, maybeInnerSignal] : [rootSignal],
+          setSourceError,
+        );
         if (!isAvailable(maybeInnerSignal)) {
           markDownstreamStale();
           return;
@@ -88,6 +94,7 @@ export function flattenSignalOfSignal<TInner>(
       updateFromRoot();
 
       return () => {
+        unsubscribeErrors();
         unsubscribeInner();
         unsubscribeRootStaleSignal?.();
         unsubscribeRootSignal();
@@ -97,7 +104,7 @@ export function flattenSignalOfSignal<TInner>(
 }
 
 /**
- * Flatten a signal of writable signals into a single writable signal.
+ * Flattens nested writable signals and carries their freshness and dependency errors.
  */
 export function flattenSignalOfWritableSignal<TInner>(
   rootSignal: SignalLike<
@@ -123,9 +130,10 @@ export function flattenSignalOfWritableSignal<TInner>(
     }
   });
   signal = LazySignal.createWithoutInitialValue<TInner>(
-    (setDownstream, _errorListener, markDownstreamStale) => {
+    (setDownstream, _errorListener, markDownstreamStale, setSourceError) => {
       let unsubscribeInnerSignal: (() => void) | null = null;
       let unsubscribeInnerStaleSignal: (() => void) | null = null;
+      let unsubscribeErrors = LazySignal.subscribeToErrors([rootSignal], setSourceError);
 
       /** Stops writes and updates from the previously selected inner signal. */
       const unsubscribeInner = () => {
@@ -143,6 +151,11 @@ export function flattenSignalOfWritableSignal<TInner>(
           | NotAvailable,
       ) => {
         unsubscribeInner();
+        unsubscribeErrors();
+        unsubscribeErrors = LazySignal.subscribeToErrors(
+          isAvailable(maybeInnerSignal) ? [rootSignal, maybeInnerSignal[0]] : [rootSignal],
+          setSourceError,
+        );
         if (!isAvailable(maybeInnerSignal)) {
           markDownstreamStale();
           return;
@@ -230,6 +243,7 @@ export function flattenSignalOfWritableSignal<TInner>(
       updateFromRoot();
 
       return () => {
+        unsubscribeErrors();
         unsubscribeInner();
         unsubscribeRootStaleSignal?.();
         unsubscribeRootSignal();
