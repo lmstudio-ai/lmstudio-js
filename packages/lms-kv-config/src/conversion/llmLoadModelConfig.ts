@@ -383,8 +383,12 @@ export function kvConfigToLLMLoadModelConfig(
         useDefaultsForMissingKeys === true
           ? llmYuzuLoadConfigSchematics.parse(config)
           : llmYuzuLoadConfigSchematics.parsePartial(config);
+      const autoFit = parsed.get("yuzu.autoFit");
       const contextLength = parsed.get("contextLength");
-      return contextLength === undefined ? {} : { contextLength };
+      return {
+        ...(autoFit === undefined ? {} : { autoFit }),
+        ...(autoFit !== true && contextLength !== undefined ? { contextLength } : {}),
+      };
     }
     default:
       throw new Error(`Unsupported model format: ${modelFormat}`);
@@ -417,6 +421,7 @@ export function llmLoadModelConfigToKVConfig(config: LLMLoadModelConfig): KVConf
   const top = llmLoadSchematics.buildPartialConfig({
     "llama.autoFit": autoFit,
     "mlx.autoFit": autoFit,
+    "yuzu.autoFit": autoFit,
     "gpuSplitConfig": hasGpuSplitSetting
       ? convertGPUSettingToGPUSplitConfig(config.gpu)
       : undefined,

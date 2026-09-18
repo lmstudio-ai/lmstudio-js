@@ -117,7 +117,11 @@ describe("yuzu config", () => {
         "llm.prediction.contextOverflowPolicy",
       ),
     ).toBe("truncateMiddle");
-    expect(Array.from(llmYuzuLoadConfigSchematics.fullKeys())).toEqual(["llm.load.contextLength"]);
+    expect(Array.from(llmYuzuLoadConfigSchematics.fullKeys())).toEqual([
+      "llm.load.contextLength",
+      "llm.load.autoFitMinContextLength",
+      "llm.load.yuzu.autoFit",
+    ]);
     expect(
       llmYuzuPredictionConfigSchematics.getSchemaForKey("topKSampling").safeParse(20).success,
     ).toBe(true);
@@ -206,7 +210,7 @@ describe("yuzu config", () => {
   });
 
   it.each([false, true])(
-    "reads only yuzu context length with defaults=%p",
+    "does not infer manual Yuzu loading from context with defaults=%p",
     useDefaultsForMissingKeys => {
       const config = llmLoadSchematics.buildPartialConfig({
         "contextLength": 8192,
@@ -215,11 +219,11 @@ describe("yuzu config", () => {
       });
       expect(
         kvConfigToLLMLoadModelConfig(config, { modelFormat: "yuzu", useDefaultsForMissingKeys }),
-      ).toEqual({ contextLength: 8192 });
+      ).toEqual(useDefaultsForMissingKeys ? { autoFit: true } : { contextLength: 8192 });
     },
   );
 
-  it("omits absent yuzu context in partial readback and uses the schema default when requested", () => {
+  it("omits absent yuzu config in partial readback and materializes AutoFit when requested", () => {
     const emptyConfig = makeKVConfigFromFields([]);
     expect(kvConfigToLLMLoadModelConfig(emptyConfig, { modelFormat: "yuzu" })).toEqual({});
     expect(
@@ -227,7 +231,7 @@ describe("yuzu config", () => {
         modelFormat: "yuzu",
         useDefaultsForMissingKeys: true,
       }),
-    ).toEqual({ contextLength: 2048 });
+    ).toEqual({ autoFit: true });
   });
 
   it("filters unrelated preset fields but does not silently clamp a retained invalid top-k", () => {
@@ -271,16 +275,18 @@ describe("llmPredictionConfig reasoning budget", () => {
 });
 
 describe("llmLoadModelConfig conversion", () => {
-  it("round trips explicit AutoFit for GGUF and MLX", () => {
+  it("round trips explicit AutoFit for GGUF, MLX, and Yuzu", () => {
     const loadConfig = llmLoadModelConfigToKVConfig({ autoFit: true });
     const fieldMap = new Map(loadConfig.fields.map(field => [field.key, field.value]));
 
     expect(fieldMap.get("llm.load.llama.autoFit")).toBe(true);
     expect(fieldMap.get("llm.load.mlx.autoFit")).toBe(true);
+    expect(fieldMap.get("llm.load.yuzu.autoFit")).toBe(true);
     expect(kvConfigToLLMLoadModelConfig(loadConfig).autoFit).toBe(true);
     expect(kvConfigToLLMLoadModelConfig(loadConfig, { modelFormat: "safetensors" }).autoFit).toBe(
       true,
     );
+    expect(kvConfigToLLMLoadModelConfig(loadConfig, { modelFormat: "yuzu" }).autoFit).toBe(true);
   });
 
   it("disables AutoFit for explicit manual settings", () => {
@@ -298,10 +304,12 @@ describe("llmLoadModelConfig conversion", () => {
 
       expect(globalConfigSchematics.access(loadConfig, "llm.load.llama.autoFit")).toBe(false);
       expect(globalConfigSchematics.access(loadConfig, "llm.load.mlx.autoFit")).toBe(false);
+      expect(globalConfigSchematics.access(loadConfig, "llm.load.yuzu.autoFit")).toBe(false);
       expect(kvConfigToLLMLoadModelConfig(loadConfig).autoFit).toBe(false);
       expect(kvConfigToLLMLoadModelConfig(loadConfig, { modelFormat: "safetensors" }).autoFit).toBe(
         false,
       );
+      expect(kvConfigToLLMLoadModelConfig(loadConfig, { modelFormat: "yuzu" }).autoFit).toBe(false);
     }
   });
 
