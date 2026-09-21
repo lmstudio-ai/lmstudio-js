@@ -4,6 +4,50 @@ import { OWLSignal } from "./OWLSignal.js";
 import { Signal } from "./Signal.js";
 
 describe("LazySignal", () => {
+  /** Dependency errors remain observable while the sources reconnect. */
+  it("reports errors through a derive chain and clears them after recovery", () => {
+    let publish!: Setter<number>;
+    let fail!: (error: Error) => void;
+    const source = LazySignal.createWithoutInitialValue<number>((set, onError) => {
+      publish = set;
+      fail = onError;
+      return () => {};
+    });
+    const derived = LazySignal.deriveFrom(
+      [LazySignal.deriveFrom([source], value => value + 1)],
+      value => value * 2,
+    );
+    const unsubscribe = derived.subscribe(() => {});
+    const error = new Error("Connection lost");
+    fail(error);
+    expect(derived.errorSignal.get()).toBe(error);
+    expect(derived.isStale()).toBe(true);
+    source.recoverFromError();
+    expect(derived.errorSignal.get()).toBeNull();
+    publish(2);
+    expect(derived.get()).toBe(6);
+    expect(derived.isStale()).toBe(false);
+    unsubscribe();
+  });
+
+  /** A rejected async derivation is visible until a later source change produces a value. */
+  it("reports a rejected async derivation and recovers on the next result", async () => {
+    const [source, setSource] = Signal.create(1);
+    const error = new Error("Lookup failed");
+    const derived = LazySignal.asyncDeriveFrom("eager", [source], async value => {
+      if (value === 1) throw error;
+      return value;
+    });
+    const unsubscribe = derived.subscribe(() => {});
+    await Promise.resolve();
+    expect(derived.errorSignal.get()).toBe(error);
+    setSource(2);
+    await Promise.resolve();
+    expect(derived.errorSignal.get()).toBeNull();
+    expect(derived.get()).toBe(2);
+    unsubscribe();
+  });
+
   it("should not subscribe to the upstream until a subscriber is attached", () => {
     const subscriberMock = jest.fn(() => {
       return () => {};
