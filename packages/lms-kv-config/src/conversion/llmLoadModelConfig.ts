@@ -442,6 +442,7 @@ export function llmLoadModelConfigToKVConfig(config: LLMLoadModelConfig): KVConf
   const top = llmLoadSchematics.buildPartialConfig({
     "llama.autoFit": autoFit,
     "mlx.autoFit": autoFit,
+    "yuzu.autoFit": autoFit,
     "vllm.autoFit": autoFit,
     "gpuSplitConfig": hasGpuSplitSetting
       ? convertGPUSettingToGPUSplitConfig(config.gpu)

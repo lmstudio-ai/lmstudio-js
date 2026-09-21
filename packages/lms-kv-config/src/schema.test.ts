@@ -284,17 +284,19 @@ describe("llmLoadModelConfig conversion", () => {
       "llm.load.llama.autoFit",
       "llm.load.mlx.autoFit",
       "llm.load.vllm.autoFit",
+      "llm.load.yuzu.autoFit",
       "load.gpuSplitConfig",
     ]);
     expect(globalConfigSchematics.hasFullKey("llm.load.gpuPlacementIsExplicit")).toBe(false);
   });
 
-  it("round trips explicit AutoFit for GGUF, MLX, and vLLM", () => {
+  it("round trips explicit AutoFit for GGUF, MLX, Yuzu, and vLLM", () => {
     const loadConfig = llmLoadModelConfigToKVConfig({ autoFit: true });
     const fieldMap = new Map(loadConfig.fields.map(field => [field.key, field.value]));
 
     expect(fieldMap.get("llm.load.llama.autoFit")).toBe(true);
     expect(fieldMap.get("llm.load.mlx.autoFit")).toBe(true);
+    expect(fieldMap.get("llm.load.yuzu.autoFit")).toBe(true);
     expect(fieldMap.get("llm.load.vllm.autoFit")).toBe(true);
     expect(
       kvConfigToLLMLoadModelConfig(loadConfig, { modelFormat: "torch_safetensors" }).autoFit,
@@ -321,6 +323,7 @@ describe("llmLoadModelConfig conversion", () => {
 
       expect(globalConfigSchematics.access(loadConfig, "llm.load.llama.autoFit")).toBe(false);
       expect(globalConfigSchematics.access(loadConfig, "llm.load.mlx.autoFit")).toBe(false);
+      expect(globalConfigSchematics.access(loadConfig, "llm.load.yuzu.autoFit")).toBe(false);
       expect(globalConfigSchematics.access(loadConfig, "llm.load.vllm.autoFit")).toBe(false);
       expect(kvConfigToLLMLoadModelConfig(loadConfig).autoFit).toBe(false);
       expect(kvConfigToLLMLoadModelConfig(loadConfig, { modelFormat: "safetensors" }).autoFit).toBe(
