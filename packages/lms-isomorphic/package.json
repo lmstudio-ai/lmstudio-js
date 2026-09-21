@@ -1,6 +1,6 @@
 {
   "name": "@lmstudio/lms-isomorphic",
-  "version": "0.4.6",
+  "version": "0.5.0",
   "description": "",
   "main": "dist/cjs/index.js",
   "module": "dist/esm/index.js",
@@ -33,5 +33,5 @@
       "default": "./dist/esm/index.js"
     }
   },
-  "gitHead": "883a08d0cbc27d0ea888355a21f8bca61275f23d"
+  "gitHead": "fef5d2c2e0b43ee6313397dbf3c77c78eba683c3"
 }
