@@ -337,7 +337,6 @@ function kvConfigToLLMVllmLoadModelConfig(
     useDefaultsForMissingKeys === true ? llmVllmLoadConfigSchematics.parse(config) : partialParsed;
 
   const gpuSplitConfig = partialParsed.get("load.gpuSplitConfig");
-  // Preserve legacy manual requests before schema defaults fill in AutoFit.
   const autoFit =
     partialParsed.get("vllm.autoFit") === undefined &&
     (partialParsed.get("contextLength") !== undefined || hasManualGPUSplitConfig(gpuSplitConfig))
