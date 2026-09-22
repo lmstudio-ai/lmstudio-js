@@ -215,7 +215,7 @@ describe("yuzu config", () => {
       const config = llmLoadSchematics.buildPartialConfig({
         "contextLength": 8192,
         "llama.autoFit": true,
-        "llama.speculativeDecoding.draftMtp": true,
+        "speculativeDecoding.draftMtp": true,
       });
       expect(
         kvConfigToLLMLoadModelConfig(config, { modelFormat: "yuzu", useDefaultsForMissingKeys }),
