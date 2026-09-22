@@ -520,6 +520,9 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
             { enabled: false, bits: 8, groupSize: 64, quantizedStart: 5000 },
           ),
       )
+      .scope("yuzu", builder =>
+        builder.field("autoFit", "boolean", { machineDependent: true }, true),
+      )
       .scope("vllm", builder =>
         builder
           .field(
@@ -678,6 +681,54 @@ export const llmVllmPredictionConfigSchematics = llmPredictionConfigSchematics.s
   "llama.logitBias",
 );
 
+// Keep yuzu defaults and limits local to its slice; other engines retain their sampler defaults.
+export const llmYuzuPredictionConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypesLibrary)
+  .scope("llm.prediction", builder =>
+    builder
+      .field(
+        "temperature",
+        "numeric",
+        {
+          min: 0,
+          max: 2,
+          step: 0.01,
+          precision: 2,
+          slider: { min: 0, max: 2, step: 0.01 },
+          shortHand: "temp",
+        },
+        1,
+      )
+      .field("topKSampling", "numeric", { min: 1, max: 32, int: true }, 20)
+      .field(
+        "topPSampling",
+        "checkboxNumeric",
+        {
+          // Smallest positive float32 accepted by the runtime. Unchecked maps to top_p = 1.
+          min: 2 ** -149,
+          max: 1,
+          step: 0.01,
+          precision: 2,
+          slider: { min: 0.01, max: 1, step: 0.01 },
+        },
+        { checked: true, value: 0.95 },
+      ),
+  )
+  .build()
+  .scoped("llm.prediction")
+  .union(
+    llmPredictionConfigSchematics.sliced(
+      "maxPredictedTokens",
+      "systemPrompt",
+      "tools",
+      "toolChoice",
+      "toolNaming",
+      "reasoning.enableThinking",
+      "seed",
+      "stopStrings",
+      "structured",
+    ),
+  );
+
 export const llmTransformersPredictionConfigSchematics = llmSharedPredictionConfigSchematics.union(
   llmPredictionConfigSchematics.sliced("transformers.*"),
 );
@@ -698,6 +749,12 @@ export const llmSharedLoadConfigSchematics = llmLoadSchematics.sliced(
   "autoFitMinContextLength",
   "seed",
   "envVars",
+);
+
+export const llmYuzuLoadConfigSchematics = llmLoadSchematics.sliced(
+  "contextLength",
+  "autoFitMinContextLength",
+  "yuzu.*",
 );
 
 const llamaLoadConfigSchematics = globalConfigSchematics.sliced("llama.load.*", "load.*");

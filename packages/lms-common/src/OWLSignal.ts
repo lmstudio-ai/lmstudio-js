@@ -404,6 +404,11 @@ export class OWLSignal<TData> extends Subscribable<TData> implements SignalLike<
     return this.innerSignal.get();
   }
 
+  /** Exposes confirmed updates with their original patches for forwarding to another client. */
+  public getPessimisticSignal(): SignalLike<TData> {
+    return this.innerSignal;
+  }
+
   /**
    * Pulls the current value of the signal. If the value is stale, it will subscribe and wait for
    * the next value from the upstream and return it.

@@ -14,6 +14,7 @@ import {
   llmLoadSchematics,
   llmMlxLoadConfigSchematics,
   llmVllmLoadConfigSchematics,
+  llmYuzuLoadConfigSchematics,
 } from "../schema.js";
 import { maybeFalseValueToCheckboxValue, maybeFalseValueToValue } from "./utils.js";
 
@@ -390,6 +391,18 @@ export function kvConfigToLLMLoadModelConfig(
       return kvConfigToLLMVllmLoadModelConfig(config, {
         useDefaultsForMissingKeys,
       });
+    case "yuzu": {
+      const parsed =
+        useDefaultsForMissingKeys === true
+          ? llmYuzuLoadConfigSchematics.parse(config)
+          : llmYuzuLoadConfigSchematics.parsePartial(config);
+      const autoFit = parsed.get("yuzu.autoFit");
+      const contextLength = parsed.get("contextLength");
+      return {
+        ...(autoFit === undefined ? {} : { autoFit }),
+        ...(autoFit !== true && contextLength !== undefined ? { contextLength } : {}),
+      };
+    }
     default:
       throw new Error(`Unsupported model format: ${modelFormat}`);
   }
@@ -423,6 +436,7 @@ export function llmLoadModelConfigToKVConfig(config: LLMLoadModelConfig): KVConf
     "engineCwd": config.engineCwd,
     "llama.autoFit": autoFit,
     "mlx.autoFit": autoFit,
+    "yuzu.autoFit": autoFit,
     "gpuSplitConfig": hasGpuSplitSetting
       ? convertGPUSettingToGPUSplitConfig(config.gpu)
       : undefined,
