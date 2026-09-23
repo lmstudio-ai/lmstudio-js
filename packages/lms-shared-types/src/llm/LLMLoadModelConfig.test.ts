@@ -20,8 +20,6 @@ describe("LLMLoadModelConfig schema", () => {
       { contextLength: 4096 },
       { gpu: { ratio: 0 } },
       { gpu: { numCpuExpertLayersRatio: 0.5 } },
-      { gpu: { mainGpu: 0 } },
-      { gpu: { splitStrategy: "evenly" } },
       { gpuStrictVramCap: false },
     ];
 
@@ -30,6 +28,19 @@ describe("LLMLoadModelConfig schema", () => {
         llmLoadModelConfigSchema.safeParse({ autoFit: true, ...manualLoadConfig }).success,
       ).toBe(false);
     }
+  });
+
+  it.each([
+    { mainGpu: 0 },
+    { splitStrategy: "evenly" },
+    { splitStrategy: "evenly", disabledGpus: [] },
+    { splitStrategy: "evenly", disabledGpus: [2] },
+    { splitStrategy: "favorMainGpu" },
+    { mainGpu: 1, splitStrategy: "favorMainGpu", disabledGpus: [2] },
+  ])("rejects AutoFit with explicit GPU placement %j before normalization", gpu => {
+    expect(() => llmLoadModelConfigSchema.parse({ autoFit: true, gpu })).toThrow(
+      "autoFit cannot be enabled with manual context, placement, or memory settings",
+    );
   });
 
   it("allows AutoFit with disabled GPUs", () => {

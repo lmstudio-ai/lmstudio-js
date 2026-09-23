@@ -275,13 +275,32 @@ describe("llmPredictionConfig reasoning budget", () => {
 });
 
 describe("llmLoadModelConfig conversion", () => {
-  it("round trips explicit AutoFit for GGUF, MLX, and Yuzu", () => {
+  it("serializes GPU settings without derived request metadata", () => {
+    const config = llmLoadModelConfigToKVConfig({
+      autoFit: false,
+      gpu: { splitStrategy: "evenly", disabledGpus: [2] },
+    });
+    expect(config.fields.map(field => field.key).sort()).toEqual([
+      "llm.load.llama.autoFit",
+      "llm.load.mlx.autoFit",
+      "llm.load.vllm.autoFit",
+      "llm.load.yuzu.autoFit",
+      "load.gpuSplitConfig",
+    ]);
+    expect(globalConfigSchematics.hasFullKey("llm.load.gpuPlacementIsExplicit")).toBe(false);
+  });
+
+  it("round trips explicit AutoFit for GGUF, MLX, Yuzu, and vLLM", () => {
     const loadConfig = llmLoadModelConfigToKVConfig({ autoFit: true });
     const fieldMap = new Map(loadConfig.fields.map(field => [field.key, field.value]));
 
     expect(fieldMap.get("llm.load.llama.autoFit")).toBe(true);
     expect(fieldMap.get("llm.load.mlx.autoFit")).toBe(true);
     expect(fieldMap.get("llm.load.yuzu.autoFit")).toBe(true);
+    expect(fieldMap.get("llm.load.vllm.autoFit")).toBe(true);
+    expect(
+      kvConfigToLLMLoadModelConfig(loadConfig, { modelFormat: "torch_safetensors" }).autoFit,
+    ).toBe(true);
     expect(kvConfigToLLMLoadModelConfig(loadConfig).autoFit).toBe(true);
     expect(kvConfigToLLMLoadModelConfig(loadConfig, { modelFormat: "safetensors" }).autoFit).toBe(
       true,
@@ -305,6 +324,7 @@ describe("llmLoadModelConfig conversion", () => {
       expect(globalConfigSchematics.access(loadConfig, "llm.load.llama.autoFit")).toBe(false);
       expect(globalConfigSchematics.access(loadConfig, "llm.load.mlx.autoFit")).toBe(false);
       expect(globalConfigSchematics.access(loadConfig, "llm.load.yuzu.autoFit")).toBe(false);
+      expect(globalConfigSchematics.access(loadConfig, "llm.load.vllm.autoFit")).toBe(false);
       expect(kvConfigToLLMLoadModelConfig(loadConfig).autoFit).toBe(false);
       expect(kvConfigToLLMLoadModelConfig(loadConfig, { modelFormat: "safetensors" }).autoFit).toBe(
         false,
@@ -312,6 +332,141 @@ describe("llmLoadModelConfig conversion", () => {
       expect(kvConfigToLLMLoadModelConfig(loadConfig, { modelFormat: "yuzu" }).autoFit).toBe(false);
     }
   });
+
+  it.each([true, false])("round trips vLLM AutoFit=%s without exposing stale context", autoFit => {
+    const config = llmVllmLoadConfigSchematics.buildPartialConfig({
+      "vllm.autoFit": autoFit,
+      "contextLength": 8192,
+    });
+    const converted = kvConfigToLLMLoadModelConfig(config, { modelFormat: "torch_safetensors" });
+    expect(converted).toEqual(
+      autoFit ? { autoFit: true } : { autoFit: false, contextLength: 8192 },
+    );
+    expect(
+      llmVllmLoadConfigSchematics.access(llmLoadModelConfigToKVConfig(converted), "vllm.autoFit"),
+    ).toBe(autoFit);
+  });
+
+  it("keeps materialized vLLM AutoFit defaults valid public load configs", () => {
+    const config = llmVllmLoadConfigSchematics.buildPartialConfig({
+      "load.gpuSplitConfig": {
+        strategy: "evenly",
+        disabledGpus: [1],
+        priority: [],
+        customRatio: [],
+      },
+    });
+    const converted = kvConfigToLLMLoadModelConfig(config, {
+      modelFormat: "torch_safetensors",
+      useDefaultsForMissingKeys: true,
+    });
+    expect(converted.autoFit).toBe(true);
+    expect(converted.contextLength).toBeUndefined();
+    expect(converted.gpu).toEqual({ disabledGpus: [1] });
+    expect(llmLoadModelConfigSchema.safeParse(converted).success).toBe(true);
+    expect(
+      llmVllmLoadConfigSchematics.getValueTypeParamByFullKey("llm.load.vllm.autoFit"),
+    ).toMatchObject({ machineDependent: true });
+  });
+
+  it.each([false, true])(
+    "omits manual placement from vLLM AutoFit readback (defaults=%s)",
+    useDefaultsForMissingKeys => {
+      const config: LLMLoadModelConfig = {
+        autoFit: true,
+        gpu: { mainGpu: 0, splitStrategy: "favorMainGpu", disabledGpus: [2] },
+      };
+      const loadConfig = llmLoadModelConfigToKVConfig(config);
+      const converted = kvConfigToLLMLoadModelConfig(loadConfig, {
+        modelFormat: "torch_safetensors",
+        useDefaultsForMissingKeys,
+      });
+      expect(converted.autoFit).toBe(true);
+      expect(converted.gpu).toEqual({ disabledGpus: [2] });
+      expect(converted.contextLength).toBeUndefined();
+      expect(llmLoadModelConfigSchema.parse(converted)).toEqual(converted);
+      const reapplied = llmLoadModelConfigToKVConfig(converted);
+      expect(globalConfigSchematics.access(reapplied, "load.gpuSplitConfig")).toEqual({
+        strategy: "evenly",
+        priority: [],
+        disabledGpus: [2],
+        customRatio: [],
+      });
+      expect(globalConfigSchematics.access(reapplied, "llm.load.vllm.autoFit")).toBe(true);
+
+      const llamaConfig = kvConfigToLLMLoadModelConfig(loadConfig, {
+        modelFormat: "gguf",
+        useDefaultsForMissingKeys,
+      });
+      expect(llamaConfig.autoFit).toBe(true);
+      expect(llamaConfig.gpu?.mainGpu).toBeUndefined();
+      expect(llamaConfig.gpu?.splitStrategy).toBeUndefined();
+      expect(llamaConfig.gpu?.disabledGpus).toEqual([2]);
+      expect(llmLoadModelConfigSchema.parse(llamaConfig)).toEqual(llamaConfig);
+    },
+  );
+
+  describe.each([false, true])(
+    "vLLM GPU strategy readback (defaults=%s)",
+    useDefaultsForMissingKeys => {
+      it.each([
+        { customRatio: [0, 3, 0] },
+        { customRatio: [1, 1, 0] },
+        { customRatio: [0, 0, 0] },
+        { customRatio: [] },
+      ])("preserves disabled GPUs from custom AutoFit splits: %j", ({ customRatio }) => {
+        const loadConfig = llmVllmLoadConfigSchematics.buildPartialConfig({
+          "vllm.autoFit": true,
+          "load.gpuSplitConfig": {
+            strategy: "custom",
+            customRatio,
+            disabledGpus: [1],
+            priority: [0],
+          },
+        });
+        const converted = kvConfigToLLMLoadModelConfig(loadConfig, {
+          modelFormat: "torch_safetensors",
+          useDefaultsForMissingKeys,
+        });
+        expect(converted.autoFit).toBe(true);
+        expect(converted.gpu).toEqual({ disabledGpus: [1] });
+        expect(llmLoadModelConfigSchema.parse(converted)).toEqual(converted);
+
+        const reapplied = llmLoadModelConfigToKVConfig(converted);
+        expect(globalConfigSchematics.accessPartial(reapplied, "load.gpuSplitConfig")).toEqual({
+          strategy: "evenly",
+          priority: [],
+          disabledGpus: [1],
+          customRatio: [],
+        });
+        expect(globalConfigSchematics.accessPartial(reapplied, "llm.load.vllm.autoFit")).toBe(true);
+      });
+
+      it.each<NonNullable<LLMLoadModelConfig["gpu"]>>([
+        { splitStrategy: "favorMainGpu" },
+        { splitStrategy: "favorMainGpu", disabledGpus: [2] },
+        { splitStrategy: "evenly" },
+        { splitStrategy: "evenly", disabledGpus: [2] },
+      ])("omits manual strategy from AutoFit readback: %j", gpu => {
+        const loadConfig = llmLoadModelConfigToKVConfig({ autoFit: true, gpu });
+        const converted = kvConfigToLLMLoadModelConfig(loadConfig, {
+          modelFormat: "torch_safetensors",
+          useDefaultsForMissingKeys,
+        });
+        expect(converted.autoFit).toBe(true);
+        expect(converted.gpu).toEqual({ disabledGpus: gpu.disabledGpus ?? [] });
+        expect(llmLoadModelConfigSchema.parse(converted)).toEqual(converted);
+
+        const reapplied = llmLoadModelConfigToKVConfig(converted);
+        expect(globalConfigSchematics.accessPartial(reapplied, "load.gpuSplitConfig")).toEqual(
+          gpu.disabledGpus?.length
+            ? { strategy: "evenly", priority: [], disabledGpus: gpu.disabledGpus, customRatio: [] }
+            : undefined,
+        );
+        expect(globalConfigSchematics.accessPartial(reapplied, "llm.load.vllm.autoFit")).toBe(true);
+      });
+    },
+  );
 
   it("keeps materialized AutoFit configs valid public load configs", () => {
     const convertedConfig = kvConfigToLLMLoadModelConfig(makeKVConfigFromFields([]), {
@@ -332,7 +487,7 @@ describe("llmLoadModelConfig conversion", () => {
     expect(llmLoadModelConfigSchema.safeParse(convertedMlxConfig).success).toBe(true);
   });
 
-  it.each(["gguf", "safetensors"] as const)(
+  it.each(["gguf", "safetensors", "torch_safetensors"] as const)(
     "preserves legacy manual context for %s",
     modelFormat => {
       const legacyConfig = llmLoadSchematics.buildPartialConfig({ contextLength: 4096 });
@@ -350,6 +505,7 @@ describe("llmLoadModelConfig conversion", () => {
       expect(reappliedFields.get("llm.load.contextLength")).toBe(4096);
       expect(reappliedFields.get("llm.load.llama.autoFit")).toBe(false);
       expect(reappliedFields.get("llm.load.mlx.autoFit")).toBe(false);
+      expect(reappliedFields.get("llm.load.vllm.autoFit")).toBe(false);
     },
   );
 
@@ -383,15 +539,19 @@ describe("llmLoadModelConfig conversion", () => {
 
     expect(fieldKeys).not.toContain("llm.load.llama.autoFit");
     expect(fieldKeys).not.toContain("llm.load.mlx.autoFit");
+    expect(fieldKeys).not.toContain("llm.load.vllm.autoFit");
 
-    const roundTrippedConfig = kvConfigToLLMLoadModelConfig(loadConfig);
-    expect(roundTrippedConfig).toEqual(config);
+    for (const modelFormat of ["gguf", "torch_safetensors"] as const) {
+      const roundTrippedConfig = kvConfigToLLMLoadModelConfig(loadConfig, { modelFormat });
+      expect(roundTrippedConfig).toEqual(config);
 
-    const reappliedFieldKeys = llmLoadModelConfigToKVConfig(roundTrippedConfig).fields.map(
-      field => field.key,
-    );
-    expect(reappliedFieldKeys).not.toContain("llm.load.llama.autoFit");
-    expect(reappliedFieldKeys).not.toContain("llm.load.mlx.autoFit");
+      const reappliedFieldKeys = llmLoadModelConfigToKVConfig(roundTrippedConfig).fields.map(
+        field => field.key,
+      );
+      expect(reappliedFieldKeys).not.toContain("llm.load.llama.autoFit");
+      expect(reappliedFieldKeys).not.toContain("llm.load.mlx.autoFit");
+      expect(reappliedFieldKeys).not.toContain("llm.load.vllm.autoFit");
+    }
   });
 
   it.each([{ gpu: {} }, { gpu: { disabledGpus: [] } }] as Array<LLMLoadModelConfig>)(
@@ -419,9 +579,9 @@ describe("llmLoadModelConfig conversion", () => {
     };
     const loadConfig = llmLoadModelConfigToKVConfig({ llamaCppArgumentsOverride });
 
-    expect(
-      globalConfigSchematics.access(loadConfig, "llm.load.llama.argumentsOverride"),
-    ).toEqual(llamaCppArgumentsOverride);
+    expect(globalConfigSchematics.access(loadConfig, "llm.load.llama.argumentsOverride")).toEqual(
+      llamaCppArgumentsOverride,
+    );
     expect(kvConfigToLLMLoadModelConfig(loadConfig).llamaCppArgumentsOverride).toEqual(
       llamaCppArgumentsOverride,
     );
@@ -491,10 +651,10 @@ describe("llmLoadModelConfig conversion", () => {
       modelFormat: "torch_safetensors",
     });
 
-    expect(convertedConfig).toEqual(config);
+    expect(convertedConfig).toEqual({ ...config, autoFit: false });
   });
 
-  it("preserves a single-GPU custom vLLM split through public readback", () => {
+  it.each([false, true])("preserves a single-GPU custom vLLM split (defaults=%s)", defaults => {
     const rawConfig = llmLoadSchematics.buildPartialConfig({
       gpuSplitConfig: {
         strategy: "custom",
@@ -506,7 +666,9 @@ describe("llmLoadModelConfig conversion", () => {
 
     const publicConfig = kvConfigToLLMLoadModelConfig(rawConfig, {
       modelFormat: "torch_safetensors",
+      useDefaultsForMissingKeys: defaults,
     });
+    expect(publicConfig.autoFit).toBe(false);
     expect(publicConfig.gpu).toEqual({
       splitStrategy: "favorMainGpu",
       mainGpu: 1,
@@ -521,7 +683,7 @@ describe("llmLoadModelConfig conversion", () => {
     });
   });
 
-  it("skips disabled GPUs in vLLM priority-order readback", () => {
+  it.each([false, true])("skips disabled GPUs in vLLM priority order (defaults=%s)", defaults => {
     const rawConfig = llmLoadSchematics.buildPartialConfig({
       gpuSplitConfig: {
         strategy: "priorityOrder",
@@ -533,7 +695,9 @@ describe("llmLoadModelConfig conversion", () => {
 
     const publicConfig = kvConfigToLLMLoadModelConfig(rawConfig, {
       modelFormat: "torch_safetensors",
+      useDefaultsForMissingKeys: defaults,
     });
+    expect(publicConfig.autoFit).toBe(false);
     expect(publicConfig.gpu).toEqual({
       splitStrategy: "favorMainGpu",
       disabledGpus: [2],
@@ -656,18 +820,18 @@ describe("llmLoadModelConfig conversion", () => {
     expect(
       llmLoadSchematics.access(emptyConfig, "llama.speculativeDecoding.draftDsparkSidecar"),
     ).toBe(false);
-    expect(
-      llmLoadSchematics.access(emptyConfig, "llama.speculativeDecoding.draftMtpSidecar"),
-    ).toBe(false);
-    expect(llmLoadSchematics.access(loadConfig, "llama.speculativeDecoding.draftDflashSidecar")).toBe(
-      true,
-    );
-    expect(llmLoadSchematics.access(loadConfig, "llama.speculativeDecoding.draftDsparkSidecar")).toBe(
-      true,
+    expect(llmLoadSchematics.access(emptyConfig, "llama.speculativeDecoding.draftMtpSidecar")).toBe(
+      false,
     );
     expect(
-      llmLoadSchematics.access(loadConfig, "llama.speculativeDecoding.draftMtpSidecar"),
+      llmLoadSchematics.access(loadConfig, "llama.speculativeDecoding.draftDflashSidecar"),
     ).toBe(true);
+    expect(
+      llmLoadSchematics.access(loadConfig, "llama.speculativeDecoding.draftDsparkSidecar"),
+    ).toBe(true);
+    expect(llmLoadSchematics.access(loadConfig, "llama.speculativeDecoding.draftMtpSidecar")).toBe(
+      true,
+    );
   });
 
   it("rejects non-boolean internal sidecar speculative decoding field values", () => {

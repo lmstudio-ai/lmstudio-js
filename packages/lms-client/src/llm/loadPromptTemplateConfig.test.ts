@@ -11,6 +11,8 @@ import {
   llmPredictionConfigToKVConfig,
 } from "@lmstudio/lms-kv-config";
 import {
+  type GPUSplitConfig,
+  type GPUSetting,
   type KVConfig,
   type KVConfigStack,
   type LLMLoadModelConfig,
@@ -30,6 +32,7 @@ interface CapturedChannelCreation {
 interface LLMNamespaceHarness {
   namespace: LLMNamespace;
   capturedChannelCreations: Array<CapturedChannelCreation>;
+  capturedRpcCalls: Array<{ endpointName: string; parameter: unknown }>;
   setLoadConfigResponse: (loadConfig: KVConfig) => void;
 }
 
@@ -91,6 +94,7 @@ function createSilentLogger(): SimpleLogger {
 
 function createNamespaceHarness(modelFormat: ModelCompatibilityType = "gguf"): LLMNamespaceHarness {
   const capturedChannelCreations: Array<CapturedChannelCreation> = [];
+  const capturedRpcCalls: Array<{ endpointName: string; parameter: unknown }> = [];
   let loadConfigResponse: KVConfig = emptyKVConfig;
   const port = {
     createChannel: (
@@ -123,7 +127,22 @@ function createNamespaceHarness(modelFormat: ModelCompatibilityType = "gguf"): L
         send: () => {},
       };
     },
-    callRpc: async (endpointName: string) => {
+    callRpc: async (endpointName: string, parameter: unknown) => {
+      capturedRpcCalls.push({ endpointName, parameter });
+      if (endpointName === "estimateModelUsage") {
+        return {
+          passesGuardrails: true,
+          memory: {
+            confidence: "high",
+            modelVramBytes: 0,
+            contextVramBytes: 0,
+            totalVramBytes: 0,
+            modelBytes: 0,
+            contextBytes: 0,
+            totalBytes: 0,
+          },
+        };
+      }
       if (endpointName === "getLoadConfig") {
         return loadConfigResponse;
       }
@@ -142,6 +161,7 @@ function createNamespaceHarness(modelFormat: ModelCompatibilityType = "gguf"): L
       new Validator({ attachStack: false }),
     ),
     capturedChannelCreations,
+    capturedRpcCalls,
     setLoadConfigResponse: (loadConfig: KVConfig) => {
       loadConfigResponse = loadConfig;
     },
@@ -216,6 +236,23 @@ describe("SDK engine config file", () => {
     },
   );
 
+  test.each([undefined, false, true])(
+    "config-file reporting omits inactive AutoFit and retains effective context (%s)",
+    autoFit => {
+      const config = globalConfigSchematics.buildPartialConfig({
+        "llm.load.engineConfigFileContents": "max-model-len: auto\n",
+        "llm.load.contextLength": 32768,
+        "llm.load.vllm.autoFit": autoFit,
+      });
+      expect(
+        kvConfigToLLMLoadModelConfig(config, {
+          modelFormat: "torch_safetensors",
+          useDefaultsForMissingKeys: true,
+        }),
+      ).toEqual({ engineConfigFileContents: "max-model-len: auto\n", contextLength: 32768 });
+    },
+  );
+
   test("normal vLLM conversion still materializes defaults without inventing engine options", () => {
     const converted = kvConfigToLLMLoadModelConfig(emptyKVConfig, {
       modelFormat: "torch_safetensors",
@@ -227,6 +264,59 @@ describe("SDK engine config file", () => {
     expect(converted).not.toHaveProperty("engineCwd");
   });
 });
+
+describe.each(["gguf", "safetensors", "torch_safetensors"] as const)(
+  "%s SDK AutoFit validation",
+  modelFormat => {
+    describe.each(["load", "model", "estimateResourcesUsage"] as const)("%s", method => {
+      test.each<GPUSetting>([
+        { mainGpu: 0 },
+        { splitStrategy: "evenly" },
+        { splitStrategy: "evenly", disabledGpus: [] },
+        { splitStrategy: "evenly", disabledGpus: [2] },
+        { splitStrategy: "favorMainGpu" },
+        { mainGpu: 1, splitStrategy: "favorMainGpu", disabledGpus: [2] },
+      ])("rejects explicit placement before sending a request: %j", async gpu => {
+        const harness = createNamespaceHarness(modelFormat);
+        const config: LLMLoadModelConfig = { autoFit: true, gpu };
+        const result =
+          method === "estimateResourcesUsage"
+            ? harness.namespace.estimateResourcesUsage("test/model", config)
+            : harness.namespace[method]("test/model", { config, verbose: false });
+        await expect(result).rejects.toThrow(
+          "autoFit cannot be enabled with manual context, placement, or memory settings",
+        );
+        expect(harness.capturedChannelCreations).toHaveLength(0);
+        expect(harness.capturedRpcCalls).toHaveLength(0);
+      });
+
+      test.each<LLMLoadModelConfig>([
+        { autoFit: true },
+        { autoFit: true, gpu: { disabledGpus: [] } },
+        { autoFit: true, gpu: { disabledGpus: [2] } },
+        { autoFit: false, gpu: { mainGpu: 1, splitStrategy: "favorMainGpu" } },
+        { autoFit: false, gpu: { splitStrategy: "evenly", disabledGpus: [2] } },
+        { gpu: { mainGpu: 0 } },
+        { gpu: { splitStrategy: "evenly", disabledGpus: [2] } },
+      ])("preserves supported settings without request metadata: %j", async config => {
+        const harness = createNamespaceHarness(modelFormat);
+        let rawRequest: unknown;
+        if (method === "estimateResourcesUsage") {
+          await harness.namespace.estimateResourcesUsage("test/model", config);
+          rawRequest = harness.capturedRpcCalls[0].parameter;
+        } else {
+          await harness.namespace[method]("test/model", { config, verbose: false });
+          rawRequest = harness.capturedChannelCreations[0].creationParameter;
+        }
+        const request = JSON.parse(JSON.stringify(rawRequest));
+        expect(request).not.toHaveProperty("requestedGpuPlacement");
+        expect(collapseKVStack(extractLoadConfigStack(request))).toEqual(
+          llmLoadModelConfigToKVConfig(config),
+        );
+      });
+    });
+  },
+);
 
 describe("SDK load prompt template config", () => {
   test("load config schema accepts load-time prompt template", () => {
@@ -292,6 +382,70 @@ describe("SDK load prompt template config", () => {
     const model = await harness.namespace.load("test/model", { verbose: false });
 
     expect((await model.getLoadConfig()).maxParallelPredictions).toBe(256);
+  });
+
+  test.each<GPUSplitConfig>([
+    { strategy: "evenly", priority: [], disabledGpus: [2], customRatio: [] },
+    { strategy: "priorityOrder", priority: [2, 1], disabledGpus: [2], customRatio: [] },
+    { strategy: "tensor", priority: [], disabledGpus: [2], customRatio: [] },
+    { strategy: "custom", priority: [0], disabledGpus: [1], customRatio: [0, 3, 0] },
+    { strategy: "custom", priority: [0], disabledGpus: [1], customRatio: [1, 1, 0] },
+  ])("keeps vLLM AutoFit readback reusable without manual placement: %j", async gpuSplitConfig => {
+    const harness = createNamespaceHarness("torch_safetensors");
+    harness.setLoadConfigResponse(
+      globalConfigSchematics.buildPartialConfig({
+        "llm.load.vllm.autoFit": true,
+        "llm.load.contextLength": 8192,
+        "load.gpuSplitConfig": gpuSplitConfig,
+      }),
+    );
+    const model = await harness.namespace.load("test/model", { verbose: false });
+    const loadConfig = await model.getLoadConfig();
+    expect(loadConfig.autoFit).toBe(true);
+    expect(loadConfig.contextLength).toBeUndefined();
+    expect(loadConfig.gpu).toEqual({ disabledGpus: gpuSplitConfig.disabledGpus });
+
+    // Exercise SDK validation as well as conversion when reusing the readback.
+    await harness.namespace.load("test/model", { verbose: false, config: loadConfig });
+    const reapplied = collapseKVStack(
+      extractLoadConfigStack(harness.capturedChannelCreations[1]?.creationParameter),
+    );
+    expect(globalConfigSchematics.access(reapplied, "llm.load.vllm.autoFit")).toBe(true);
+    expect(globalConfigSchematics.accessPartial(reapplied, "load.gpuSplitConfig")).toEqual({
+      strategy: "evenly",
+      priority: [],
+      disabledGpus: gpuSplitConfig.disabledGpus,
+      customRatio: [],
+    });
+    expect(reapplied.fields.map(field => field.key)).not.toContain("llm.load.contextLength");
+  });
+
+  test.each<NonNullable<LLMLoadModelConfig["gpu"]>>([
+    { splitStrategy: "favorMainGpu" },
+    { splitStrategy: "favorMainGpu", disabledGpus: [2] },
+    { splitStrategy: "evenly" },
+    { splitStrategy: "evenly", disabledGpus: [2] },
+  ])("omits manual strategies from vLLM AutoFit readback: %j", async gpu => {
+    const harness = createNamespaceHarness("torch_safetensors");
+    const original = llmLoadModelConfigToKVConfig({ autoFit: true, gpu });
+    harness.setLoadConfigResponse(original);
+    const model = await harness.namespace.load("test/model", { verbose: false });
+    const loadConfig = await model.getLoadConfig();
+    expect(loadConfig.autoFit).toBe(true);
+    expect(loadConfig.contextLength).toBeUndefined();
+    expect(loadConfig.gpu).toEqual({ disabledGpus: gpu.disabledGpus ?? [] });
+
+    await harness.namespace.load("test/model", { verbose: false, config: loadConfig });
+    const reapplied = collapseKVStack(
+      extractLoadConfigStack(harness.capturedChannelCreations[1]?.creationParameter),
+    );
+    expect(globalConfigSchematics.accessPartial(reapplied, "llm.load.vllm.autoFit")).toBe(true);
+    expect(globalConfigSchematics.accessPartial(reapplied, "load.gpuSplitConfig")).toEqual(
+      gpu.disabledGpus?.length
+        ? { strategy: "evenly", priority: [], disabledGpus: gpu.disabledGpus, customRatio: [] }
+        : undefined,
+    );
+    expect(reapplied.fields.map(field => field.key)).not.toContain("llm.load.contextLength");
   });
 
   test("getLoadConfig does not synthesize prompt templates when absent", async () => {
