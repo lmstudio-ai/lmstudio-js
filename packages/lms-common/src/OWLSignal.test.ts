@@ -62,6 +62,51 @@ function createMockUpstream<TData>() {
 
 describe("OWLSignal Write Loop Error Recovery", () => {
   describe("Baseline Write Functionality", () => {
+    /** A forwarding subscriber needs confirmed patches even while the UI has a pending edit. */
+    it("exposes confirmed patches without publishing optimistic updates", async () => {
+      const initial = { changed: { count: 0 }, untouched: { label: "Keep" } };
+      const mock = createMockUpstream<typeof initial>();
+      const [signal, setter] = OWLSignal.create(
+        initial,
+        mock.subscribeUpstream,
+        mock.writeUpstream,
+      );
+      const confirmed = signal.getPessimisticSignal();
+      const received = jest.fn();
+      const unsubscribe = confirmed.subscribeFull(received);
+      try {
+        mock.simulateUpdate(initial);
+        received.mockClear();
+        setter.withProducer(
+          value => {
+            value.changed.count = 1;
+          },
+          ["edit"],
+        );
+        expect(signal.get().changed.count).toBe(1);
+        expect(confirmed.get()).toBe(initial);
+        expect(received).not.toHaveBeenCalled();
+
+        const write = mock.getLastWrite();
+        mock.simulateUpdate(write.data, write.patches, write.tags);
+        expect(confirmed.get()).toBe(write.data);
+        expect(confirmed.get().untouched).toBe(initial.untouched);
+        expect(received).toHaveBeenLastCalledWith(
+          write.data,
+          [{ op: "replace", path: ["changed", "count"], value: 1 }],
+          write.tags,
+        );
+
+        received.mockClear();
+        mock.simulateUpdate(write.data, [], ["no-change"]);
+        expect(received).toHaveBeenLastCalledWith(write.data, [], ["no-change"]);
+      } finally {
+        unsubscribe();
+      }
+      await new Promise(resolve => setTimeout(resolve, 0));
+      expect(mock.getSubscriptionCount()).toBe(0);
+    });
+
     it("should complete write successfully when upstream confirms", async () => {
       const mock = createMockUpstream<{ count: number }>();
       const [signal, setter] = OWLSignal.create(

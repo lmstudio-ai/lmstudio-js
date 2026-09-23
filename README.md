@@ -65,6 +65,10 @@ npm run build
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for more information.
 
+## Breaking Changes
+
+Major version changes may introduce breaking changes.
+
 ## Community
 
 <p>Discuss all things lmstudio-js in <a href="https://discord.gg/aPQfnNkxGC">#dev-chat</a> in LM Studio's Community Discord server.</p>
