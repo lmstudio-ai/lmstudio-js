@@ -519,6 +519,16 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
       .scope("vllm", builder =>
         builder
           .field(
+            "autoFit",
+            "boolean",
+            {
+              machineDependent: true,
+              displayName: "AutoFit Context",
+              hint: "Automatically choose the largest context that fits in the GPU memory budget.",
+            },
+            true,
+          )
+          .field(
             "gpuMemoryUtilization",
             "numeric",
             {

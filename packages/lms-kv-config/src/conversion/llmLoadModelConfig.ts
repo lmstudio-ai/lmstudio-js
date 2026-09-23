@@ -25,6 +25,17 @@ interface KvConfigToLLMLoadModelConfigOpts {
   modelFormat?: ModelCompatibilityType;
 }
 
+function hasManualGPUSplitConfig(splitConfig: GPUSplitConfig | undefined): boolean {
+  // The SDK also writes the default "evenly" strategy when only disabledGpus is supplied.
+  return (
+    splitConfig !== undefined &&
+    (splitConfig.strategy !== "evenly" ||
+      splitConfig.disabledGpus.length === 0 ||
+      splitConfig.priority.length > 0 ||
+      splitConfig.customRatio.length > 0)
+  );
+}
+
 /** Converts GGUF load fields back to the public SDK shape, optionally materializing defaults. */
 function kvConfigToLLMLlamaLoadModelConfig(
   config: KVConfig,
@@ -49,11 +60,7 @@ function kvConfigToLLMLlamaLoadModelConfig(
       partialParsed.get("load.gpuStrictVramCap") !== undefined ||
       partialParsed.get("llama.acceleration.offloadRatio") !== undefined ||
       partialParsed.get("numCpuExpertLayersRatio") !== undefined ||
-      (explicitGpuSplitConfig !== undefined &&
-        (explicitGpuSplitConfig.strategy !== "evenly" ||
-          explicitGpuSplitConfig.disabledGpus.length === 0 ||
-          explicitGpuSplitConfig.priority.length > 0 ||
-          explicitGpuSplitConfig.customRatio.length > 0)));
+      hasManualGPUSplitConfig(explicitGpuSplitConfig));
   const autoFit = hasLegacyManualLoadSetting ? false : parsed.get("llama.autoFit");
   if (autoFit !== undefined) {
     result.autoFit = autoFit;
@@ -330,10 +337,23 @@ function kvConfigToLLMVllmLoadModelConfig(
     useDefaultsForMissingKeys === true ? llmVllmLoadConfigSchematics.parse(config) : partialParsed;
 
   const gpuSplitConfig = partialParsed.get("load.gpuSplitConfig");
+  const autoFit =
+    partialParsed.get("vllm.autoFit") === undefined &&
+    (partialParsed.get("contextLength") !== undefined || hasManualGPUSplitConfig(gpuSplitConfig))
+      ? false
+      : parsed.get("vllm.autoFit");
+  if (autoFit !== undefined) {
+    result.autoFit = autoFit;
+  }
+
   if (gpuSplitConfig !== undefined) {
-    const gpuSetting = convertVllmGPUSplitConfigToGPUSetting(gpuSplitConfig);
-    if (gpuSetting !== undefined) {
-      result.gpu = gpuSetting;
+    if (autoFit !== false) {
+      result.gpu = { disabledGpus: gpuSplitConfig.disabledGpus };
+    } else {
+      const gpuSetting = convertVllmGPUSplitConfigToGPUSetting(gpuSplitConfig);
+      if (gpuSetting !== undefined) {
+        result.gpu = gpuSetting;
+      }
     }
   }
 
@@ -343,7 +363,7 @@ function kvConfigToLLMVllmLoadModelConfig(
   }
 
   const contextLength = parsed.get("contextLength");
-  if (contextLength !== undefined) {
+  if (autoFit !== true && contextLength !== undefined) {
     result.contextLength = contextLength;
   }
 
@@ -457,6 +477,7 @@ export function llmLoadModelConfigToKVConfig(config: LLMLoadModelConfig): KVConf
     "llama.autoFit": autoFit,
     "mlx.autoFit": autoFit,
     "yuzu.autoFit": autoFit,
+    "vllm.autoFit": autoFit,
     "gpuSplitConfig": hasGpuSplitSetting
       ? convertGPUSettingToGPUSplitConfig(config.gpu)
       : undefined,
