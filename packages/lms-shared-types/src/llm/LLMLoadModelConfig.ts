@@ -503,28 +503,19 @@ export const llmLlamaCppArgumentsOverrideSchema = z.object({
 /** @public */
 export interface LLMLoadModelConfig {
   /**
-   * Raw engine-native configuration contents (initially vLLM YAML). Nonempty contents replace
-   * ordinary LM Studio load tuning with the file and engine defaults. Omit to inherit the host's
-   * settings; use "" to disable config-file mode for this load without changing saved defaults.
-   * Supplying, changing, or clearing this option requires local system.manage permission.
-   * Contents are a snapshot; later source-file edits do not affect the imported configuration.
-   * Apply changes with a new load or reload; model() reuse does not reload an existing instance.
-   * Explicit prediction-request overrides remain active.
+   * vLLM YAML contents. Replaces LM Studio tuning with the supplied settings and engine defaults.
+   * Omit to inherit saved contents; use "" to disable config-file mode for this load.
    *
-   * Configuration files can specify unsafe settings. You are responsible for ensuring the
-   * configuration and its referenced resources are safe. Configuration file contents are readable
-   * by users and clients with access to the model's configuration. Keep credentials and other
-   * secrets out of configuration files.
+   * Changes require local system.manage permission. Only use trusted configurations.
+   * Contents are visible to users and clients with model-config access; keep secrets out.
    */
   engineConfigFileContents?: string;
 
   /**
-   * Engine process's current working directory, the base for relative file paths. Initially used
-   * only in vLLM config-file mode. Omit to inherit the host's setting; use "" for runtime temp.
-   * Explicit relative paths resolve against the caller process's current directory. Environments
-   * without a process working directory must supply an absolute path. YAML stays in runtime temp;
-   * outputs written there are removed on unload. User-selected directories are never cleaned up.
-   * Supplying, changing, or clearing this option requires local system.manage permission.
+   * Engine working directory for vLLM config-file mode, used to resolve relative paths in the YAML.
+   * Relative values resolve from the SDK caller's CWD. Browser paths must be absolute.
+   * Omit to inherit the saved directory; use "" for runtime temp, which is removed on unload.
+   * Changes require local system.manage permission.
    */
   engineCwd?: string;
 
