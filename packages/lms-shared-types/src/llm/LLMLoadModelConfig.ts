@@ -503,10 +503,12 @@ export const llmLlamaCppArgumentsOverrideSchema = z.object({
 /** @public */
 export interface LLMLoadModelConfig {
   /**
-   * vLLM YAML contents. Replaces LM Studio tuning with the supplied settings and engine defaults.
-   * Omit to inherit saved contents; use "" to disable config-file mode for this load.
+   * vLLM YAML contents. Replaces LM Studio load tuning with the supplied settings and engine defaults.
+   * Prediction settings and their materialized defaults still apply and can override YAML-selected
+   * generation defaults. Omit to inherit saved contents; use "" to disable config-file mode for this load.
    *
-   * Changes require local system.manage permission. Only use trusted configurations.
+   * Changes require local system.manage permission. These configurations can enable custom code
+   * execution on the host. Only use trusted configurations.
    * Contents are visible to users and clients with model-config access; keep secrets out.
    */
   engineConfigFileContents?: string;
