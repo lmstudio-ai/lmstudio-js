@@ -323,10 +323,15 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
       .field(
         "engineConfigFileContents",
         "string",
-        { machineDependent: true, nonConfigurable: true },
+        { machineDependent: true, nonConfigurable: true, requiresPrivilegedWrite: true },
         "",
       )
-      .field("engineCwd", "string", { machineDependent: true, nonConfigurable: true }, "")
+      .field(
+        "engineCwd",
+        "string",
+        { machineDependent: true, nonConfigurable: true, requiresPrivilegedWrite: true },
+        "",
+      )
       .field("offloadKVCacheToGpu", "boolean", {}, true)
       .field(
         "numCpuExpertLayersRatio",

@@ -1,4 +1,5 @@
 export { isEngineConfigFileField, isEngineConfigFileMode } from "./engineConfigFile.js";
+export { requiresPrivilegedConfigWrite } from "./privilegedConfig.js";
 export {
   embeddingLoadModelConfigToKVConfig,
   kvConfigToEmbeddingLoadModelConfig,
