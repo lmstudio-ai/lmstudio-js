@@ -167,17 +167,17 @@ function kvConfigToLLMLlamaLoadModelConfig(
     result.reasoningBudgetMessage = reasoningBudgetMessage;
   }
 
-  const speculativeDraftMtp = parsed.get("llama.speculativeDecoding.draftMtp");
+  const speculativeDraftMtp = parsed.get("speculativeDecoding.draftMtp");
   if (speculativeDraftMtp !== undefined) {
     result.speculativeDraftMtp = speculativeDraftMtp;
   }
 
-  const speculativeDraftSimple = parsed.get("llama.speculativeDecoding.draftSimple");
+  const speculativeDraftSimple = parsed.get("speculativeDecoding.draftSimple");
   if (speculativeDraftSimple !== undefined) {
     result.speculativeDraftSimple = speculativeDraftSimple;
   }
 
-  const speculativeDraftModel = parsed.get("llama.speculativeDecoding.draftModel");
+  const speculativeDraftModel = parsed.get("speculativeDecoding.draftModel");
   if (speculativeDraftModel !== undefined) {
     // Materialized public configs must be valid if passed back to client.llm.load(). Keep stale
     // draft-model resources internal unless Draft Simple currently consumes them.
@@ -187,18 +187,18 @@ function kvConfigToLLMLlamaLoadModelConfig(
         : speculativeDraftModel;
   }
 
-  const speculativeDraftMaxTokens = parsed.get("llama.speculativeDecoding.draftMaxTokens");
+  const speculativeDraftMaxTokens = parsed.get("speculativeDecoding.draftMaxTokens");
   if (speculativeDraftMaxTokens !== undefined) {
     result.speculativeDraftMaxTokens = speculativeDraftMaxTokens;
   }
 
-  const speculativeDraftMinTokens = parsed.get("llama.speculativeDecoding.draftMinTokens");
+  const speculativeDraftMinTokens = parsed.get("speculativeDecoding.draftMinTokens");
   if (speculativeDraftMinTokens !== undefined) {
     result.speculativeDraftMinTokens = speculativeDraftMinTokens;
   }
 
   const speculativeDraftMinContinueProbability = parsed.get(
-    "llama.speculativeDecoding.draftMinContinueProbability",
+    "speculativeDecoding.draftMinContinueProbability",
   );
   if (speculativeDraftMinContinueProbability !== undefined) {
     result.speculativeDraftMinContinueProbability = speculativeDraftMinContinueProbability;
@@ -394,6 +394,41 @@ function kvConfigToLLMVllmLoadModelConfig(
     result.seed = seed.checked ? seed.value : false;
   }
 
+  const speculativeDraftMtp = parsed.get("speculativeDecoding.draftMtp");
+  if (speculativeDraftMtp !== undefined) {
+    result.speculativeDraftMtp = speculativeDraftMtp;
+  }
+
+  const speculativeDraftSimple = parsed.get("speculativeDecoding.draftSimple");
+  if (speculativeDraftSimple !== undefined) {
+    result.speculativeDraftSimple = speculativeDraftSimple;
+  }
+
+  const speculativeDraftModel = parsed.get("speculativeDecoding.draftModel");
+  if (speculativeDraftModel !== undefined) {
+    result.speculativeDraftModel =
+      useDefaultsForMissingKeys === true && speculativeDraftSimple !== true
+        ? ""
+        : speculativeDraftModel;
+  }
+
+  const speculativeDraftMaxTokens = parsed.get("speculativeDecoding.draftMaxTokens");
+  if (speculativeDraftMaxTokens !== undefined) {
+    result.speculativeDraftMaxTokens = speculativeDraftMaxTokens;
+  }
+
+  const speculativeDraftMinTokens = parsed.get("speculativeDecoding.draftMinTokens");
+  if (speculativeDraftMinTokens !== undefined) {
+    result.speculativeDraftMinTokens = speculativeDraftMinTokens;
+  }
+
+  const speculativeDraftMinContinueProbability = parsed.get(
+    "speculativeDecoding.draftMinContinueProbability",
+  );
+  if (speculativeDraftMinContinueProbability !== undefined) {
+    result.speculativeDraftMinContinueProbability = speculativeDraftMinContinueProbability;
+  }
+
   return result;
 }
 
@@ -480,19 +515,19 @@ export function llmLoadModelConfigToKVConfig(config: LLMLoadModelConfig): KVConf
     "llama.flashAttention": config.flashAttention,
     "llama.contextCheckpoints": config.contextCheckpoints,
     "llama.reasoningBudgetMessage": config.reasoningBudgetMessage,
-    "llama.speculativeDecoding.draftMtp": config.speculativeDraftMtp,
-    "llama.speculativeDecoding.draftSimple": config.speculativeDraftSimple,
+    "speculativeDecoding.draftMtp": config.speculativeDraftMtp,
+    "speculativeDecoding.draftSimple": config.speculativeDraftSimple,
     ...(publicSpeculativeSelectorIsSpecified
       ? {
-          "llama.speculativeDecoding.draftDflashSidecar": false,
-          "llama.speculativeDecoding.draftDsparkSidecar": false,
-          "llama.speculativeDecoding.draftMtpSidecar": false,
+          "speculativeDecoding.draftDflashSidecar": false,
+          "speculativeDecoding.draftDsparkSidecar": false,
+          "speculativeDecoding.draftMtpSidecar": false,
         }
       : {}),
-    "llama.speculativeDecoding.draftModel": config.speculativeDraftModel,
-    "llama.speculativeDecoding.draftMaxTokens": config.speculativeDraftMaxTokens,
-    "llama.speculativeDecoding.draftMinTokens": config.speculativeDraftMinTokens,
-    "llama.speculativeDecoding.draftMinContinueProbability":
+    "speculativeDecoding.draftModel": config.speculativeDraftModel,
+    "speculativeDecoding.draftMaxTokens": config.speculativeDraftMaxTokens,
+    "speculativeDecoding.draftMinTokens": config.speculativeDraftMinTokens,
+    "speculativeDecoding.draftMinContinueProbability":
       config.speculativeDraftMinContinueProbability,
     "llama.keepModelInMemory": config.keepModelInMemory,
     "seed": maybeFalseValueToCheckboxValue(config.seed, 0),
