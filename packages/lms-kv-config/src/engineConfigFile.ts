@@ -1,7 +1,7 @@
 import { type KVConfig } from "@lmstudio/lms-shared-types";
 import { kvConfigToMap } from "./KVConfig.js";
 
-/** Executable host configuration, excluded from portable presets and model definitions. */
+/** The launch fields that select config-file mode and its working directory. */
 export function isEngineConfigFileField(key: string): boolean {
   return key === "llm.load.engineConfigFileContents" || key === "llm.load.engineCwd";
 }
