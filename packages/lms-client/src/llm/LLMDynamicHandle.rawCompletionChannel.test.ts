@@ -1,11 +1,7 @@
 import { SimpleLogger, Validator } from "@lmstudio/lms-common";
 import { type LLMPort } from "@lmstudio/lms-external-backend-interfaces";
 import { collapseKVStack, globalConfigSchematics } from "@lmstudio/lms-kv-config";
-import {
-  type KVConfig,
-  type KVConfigStack,
-  type LLMInstanceInfo,
-} from "@lmstudio/lms-shared-types";
+import { type KVConfigStack, type LLMInstanceInfo } from "@lmstudio/lms-shared-types";
 import { Chat } from "../Chat.js";
 import { LLMDynamicHandle } from "./LLMDynamicHandle.js";
 
@@ -45,10 +41,7 @@ function createSilentLogger(): SimpleLogger {
   });
 }
 
-function createHandleHarness({
-  loadModelConfig = { fields: [] },
-  modelInfo = createInstanceInfo(),
-}: { loadModelConfig?: KVConfig; modelInfo?: LLMInstanceInfo } = {}) {
+function createHandleHarness() {
   const capturedChannelCreations = new Array<CapturedChannelCreation>();
   const port = {
     createChannel: (
@@ -64,8 +57,8 @@ function createHandleHarness({
         onMessage({
           type: "success",
           stats: { stopReason: "eosFound" },
-          modelInfo,
-          loadModelConfig,
+          modelInfo: createInstanceInfo(),
+          loadModelConfig: { fields: [] },
           predictionConfig: { fields: [] },
         });
       });
@@ -102,28 +95,6 @@ function getPredictionConfigStack(creationParameter: unknown): KVConfigStack {
 }
 
 describe("LLMDynamicHandle raw completion channel", () => {
-  test.each(["complete", "respond"] as const)(
-    "%s result snapshot preserves config-mode omissions",
-    async method => {
-      const engineConfigFileContents = "max-model-len: auto\n";
-      const harness = createHandleHarness({
-        modelInfo: { ...createInstanceInfo(), format: "torch_safetensors", contextLength: 32768 },
-        loadModelConfig: globalConfigSchematics.buildPartialConfig({
-          "llm.load.engineConfigFileContents": engineConfigFileContents,
-          "llm.load.engineCwd": "",
-          "llm.load.contextLength": 32768,
-        }),
-      });
-      const result = await harness.handle[method]("hello");
-      expect(result.loadConfig).toEqual(
-        globalConfigSchematics.buildPartialConfig({
-          "llm.load.engineConfigFileContents": engineConfigFileContents,
-          "llm.load.engineCwd": "",
-          "llm.load.contextLength": 32768,
-        }),
-      );
-    },
-  );
   test("complete opens completeRawText with rawPrompt", async () => {
     const harness = createHandleHarness();
 

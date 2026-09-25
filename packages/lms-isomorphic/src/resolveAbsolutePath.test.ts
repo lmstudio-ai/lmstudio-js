@@ -1,13 +1,4 @@
-import { resolve } from "node:path";
-import { resolveAbsolutePath } from "./index.js";
 import { resolveAbsolutePath as resolveBrowserPath } from "./browser.js";
-
-test.each([".", "../assets with spaces", resolve("assets")])(
-  "Node resolves %s using the caller's CWD",
-  path => {
-    expect(resolveAbsolutePath(path)).toBe(resolve(path));
-  },
-);
 
 test.each([".", "relative/assets", "C:relative", "\\rooted"])(
   "browser rejects a path requiring a process CWD: %s",

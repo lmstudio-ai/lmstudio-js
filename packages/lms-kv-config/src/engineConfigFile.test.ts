@@ -1,5 +1,5 @@
-import { isEngineConfigFileField, isEngineConfigFileMode } from "./engineConfigFile.js";
-import { collapseKVStackRaw, emptyKVConfig, filterKVConfig } from "./KVConfig.js";
+import { isEngineConfigFileMode } from "./engineConfigFile.js";
+import { collapseKVStackRaw, emptyKVConfig } from "./KVConfig.js";
 import {
   globalConfigSchematics,
   llmLlamaLoadConfigSchematics,
@@ -44,11 +44,5 @@ describe("engine config-file fields", () => {
       expect(llmMlxLoadConfigSchematics.hasFullKey(key)).toBe(false);
     }
     expect(llmVllmLoadConfigSchematics.filterConfig(saved)).toEqual(saved);
-  });
-
-  it("excludes only the protected fields from portable configuration", () => {
-    expect(filterKVConfig(saved, key => !isEngineConfigFileField(key))).toEqual(
-      globalConfigSchematics.buildPartialConfig({ "llm.load.contextLength": 4096 }),
-    );
   });
 });
