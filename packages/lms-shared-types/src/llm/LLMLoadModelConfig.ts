@@ -503,21 +503,15 @@ export const llmLlamaCppArgumentsOverrideSchema = z.object({
 /** @public */
 export interface LLMLoadModelConfig {
   /**
-   * vLLM YAML contents. Replaces LM Studio load tuning with the supplied settings and engine defaults.
-   * Prediction settings and their materialized defaults still apply and can override YAML-selected
-   * generation defaults. Omit to inherit saved contents; use "" to disable config-file mode for this load.
-   *
-   * Changes require local system.manage permission. These configurations can enable custom code
-   * execution on the host. Only use trusted configurations.
-   * Contents are visible to users and clients with model-config access; keep secrets out.
+   * Contents of an engine configuration file, used in place of ordinary load settings.
+   * Omit to inherit the saved contents; use an empty string to disable config-file mode.
    */
   engineConfigFileContents?: string;
 
   /**
-   * Engine working directory for vLLM config-file mode, used to resolve relative paths in the YAML.
-   * Relative values resolve from the SDK caller's CWD. Browser paths must be absolute.
-   * Omit to inherit the saved directory; use "" for runtime temp, which is removed on unload.
-   * Changes require local system.manage permission.
+   * Engine working directory in config-file mode, used to resolve relative file paths.
+   * Relative values resolve from the caller's current directory. Browsers require absolute paths.
+   * Omit to inherit the saved directory; use an empty string for a temporary directory.
    */
   engineCwd?: string;
 
