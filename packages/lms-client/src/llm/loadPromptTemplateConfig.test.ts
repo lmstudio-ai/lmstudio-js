@@ -183,6 +183,65 @@ function resolveLoadPromptTemplate(loadConfigStack: KVConfigStack) {
   return globalConfigSchematics.access(collapseKVStack(loadConfigStack), "llm.load.promptTemplate");
 }
 
+describe("SDK engine config file", () => {
+  test.each([
+    {},
+    { engineConfigFileContents: "" },
+    { engineCwd: "" },
+    {
+      engineConfigFileContents: "# keep exactly\r\nchat-template: ./templates/custom.jinja\r\n",
+      engineCwd: "/host/assets",
+    },
+  ])("schema and pure KV conversion preserve explicit values and omission (%j)", config => {
+    expect(llmLoadModelConfigSchema.parse(config)).toEqual(config);
+    const raw = llmLoadModelConfigToKVConfig(config);
+    expect(kvConfigToLLMLoadModelConfig(raw, { modelFormat: "torch_safetensors" })).toEqual(config);
+  });
+
+  test.each([undefined, "", "/user assets"])(
+    "typed reporting retains launch contents, configured CWD and actual context (%s)",
+    async engineCwd => {
+      const harness = createNamespaceHarness("torch_safetensors");
+      const expected = {
+        engineConfigFileContents: "max-model-len: auto\n",
+        engineCwd,
+        contextLength: 32768,
+      };
+      harness.setLoadConfigResponse(llmLoadModelConfigToKVConfig(expected));
+      const model = await harness.namespace.load("test/model", { verbose: false });
+      expect(await model.getLoadConfig()).toEqual(expected);
+    },
+  );
+
+  test.each([undefined, false, true])(
+    "config-file reporting omits inactive AutoFit and retains effective context (%s)",
+    autoFit => {
+      const config = globalConfigSchematics.buildPartialConfig({
+        "llm.load.engineConfigFileContents": "max-model-len: auto\n",
+        "llm.load.contextLength": 32768,
+        "llm.load.vllm.autoFit": autoFit,
+      });
+      expect(
+        kvConfigToLLMLoadModelConfig(config, {
+          modelFormat: "torch_safetensors",
+          useDefaultsForMissingKeys: true,
+        }),
+      ).toEqual({ engineConfigFileContents: "max-model-len: auto\n", contextLength: 32768 });
+    },
+  );
+
+  test("normal vLLM conversion still materializes defaults without inventing engine options", () => {
+    const converted = kvConfigToLLMLoadModelConfig(emptyKVConfig, {
+      modelFormat: "torch_safetensors",
+      useDefaultsForMissingKeys: true,
+    });
+    expect(converted.maxParallelPredictions).toBeDefined();
+    expect(converted.seed).toBeDefined();
+    expect(converted).not.toHaveProperty("engineConfigFileContents");
+    expect(converted).not.toHaveProperty("engineCwd");
+  });
+});
+
 describe.each(["gguf", "safetensors", "torch_safetensors"] as const)(
   "%s SDK AutoFit validation",
   modelFormat => {

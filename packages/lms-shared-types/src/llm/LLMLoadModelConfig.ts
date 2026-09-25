@@ -503,6 +503,19 @@ export const llmLlamaCppArgumentsOverrideSchema = z.object({
 /** @public */
 export interface LLMLoadModelConfig {
   /**
+   * Contents of an engine configuration file, used in place of ordinary load settings.
+   * Omit to inherit the saved contents; use an empty string to disable config-file mode.
+   */
+  engineConfigFileContents?: string;
+
+  /**
+   * Engine working directory in config-file mode, used to resolve relative file paths.
+   * Must be an absolute path on the engine host. Resolve relative paths before calling the SDK.
+   * Omit to inherit the saved directory; use an empty string for a temporary directory.
+   */
+  engineCwd?: string;
+
+  /**
    * Whether LM Studio should automatically choose context length and model placement based on
    * available resources. This option is only available when using Bionic.
    */
@@ -794,6 +807,8 @@ export interface LLMLoadModelConfig {
 }
 export const llmLoadModelConfigSchema = z
   .object({
+    engineConfigFileContents: z.string().optional(),
+    engineCwd: z.string().optional(),
     autoFit: z.boolean().optional(),
     gpu: gpuSettingSchema.optional(),
     maxParallelPredictions: z.number().int().min(1).optional(),

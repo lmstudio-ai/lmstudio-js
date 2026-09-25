@@ -29,7 +29,9 @@ export class LLMNamespace extends ModelNamespace<
   /** @internal */
   protected override readonly loadModelConfigSchema = llmLoadModelConfigSchema;
   /** @internal */
-  protected override loadConfigToKVConfig = llmLoadModelConfigToKVConfig;
+  protected override loadConfigToKVConfig(config: LLMLoadModelConfig) {
+    return llmLoadModelConfigToKVConfig(config);
+  }
   /** @internal */
   protected override createDomainSpecificModel(
     port: LLMPort,

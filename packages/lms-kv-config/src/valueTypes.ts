@@ -95,6 +95,8 @@ const baseKVValueTypesLibraryBuilder = new KVFieldValueTypesLibraryBuilder({
    * @experimental This field is experimental and may change in the future.
    */
   machineDependent: z.boolean().optional(),
+  /** Supplying or changing this field requires privileged local access. */
+  requiresPrivilegedWrite: z.boolean().optional(),
   warning: z.string().optional(),
   subtitle: z.string().optional(),
   isExperimental: z.boolean().optional(),
