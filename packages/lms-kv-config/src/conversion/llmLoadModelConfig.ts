@@ -8,6 +8,7 @@ import {
   type ModelCompatibilityType,
 } from "@lmstudio/lms-shared-types";
 import { collapseKVStackRaw } from "../KVConfig.js";
+import { isEngineConfigFileMode } from "../engineConfigFile.js";
 import {
   llmLlamaMoeLoadConfigSchematics,
   llmLoadSchematics,
@@ -333,13 +334,29 @@ function kvConfigToLLMVllmLoadModelConfig(
 ): LLMLoadModelConfig {
   const result: LLMLoadModelConfig = {};
   const partialParsed = llmVllmLoadConfigSchematics.parsePartial(config);
+  const configFileMode = isEngineConfigFileMode(config);
+  // The backend's reporting view omits tuning owned by YAML. Do not recreate it from defaults.
   const parsed =
-    useDefaultsForMissingKeys === true ? llmVllmLoadConfigSchematics.parse(config) : partialParsed;
+    useDefaultsForMissingKeys === true && !configFileMode
+      ? llmVllmLoadConfigSchematics.parse(config)
+      : partialParsed;
+
+  const engineConfigFileContents = partialParsed.get("engineConfigFileContents");
+  if (engineConfigFileContents !== undefined) {
+    result.engineConfigFileContents = engineConfigFileContents;
+  }
+  const engineCwd = partialParsed.get("engineCwd");
+  if (engineCwd !== undefined) {
+    result.engineCwd = engineCwd;
+  }
 
   const gpuSplitConfig = partialParsed.get("load.gpuSplitConfig");
-  const autoFit =
-    partialParsed.get("vllm.autoFit") === undefined &&
-    (partialParsed.get("contextLength") !== undefined || hasManualGPUSplitConfig(gpuSplitConfig))
+  // YAML owns context sizing; its confirmed context is not a manual LM Studio AutoFit setting.
+  const autoFit = configFileMode
+    ? undefined
+    : partialParsed.get("vllm.autoFit") === undefined &&
+        (partialParsed.get("contextLength") !== undefined ||
+          hasManualGPUSplitConfig(gpuSplitConfig))
       ? false
       : parsed.get("vllm.autoFit");
   if (autoFit !== undefined) {
@@ -474,6 +491,8 @@ export function llmLoadModelConfigToKVConfig(config: LLMLoadModelConfig): KVConf
     config.gpu?.splitStrategy !== undefined;
 
   const top = llmLoadSchematics.buildPartialConfig({
+    "engineConfigFileContents": config.engineConfigFileContents,
+    "engineCwd": config.engineCwd,
     "llama.autoFit": autoFit,
     "mlx.autoFit": autoFit,
     "yuzu.autoFit": autoFit,

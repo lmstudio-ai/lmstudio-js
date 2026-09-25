@@ -6,6 +6,7 @@ import {
 } from "@lmstudio/lms-shared-types";
 import {
   kvConfigField,
+  filterKVConfig,
   KVConfigSchematics,
   KVConfigSchematicsBuilder,
   makeKVConfigFromFields,
@@ -30,6 +31,62 @@ import {
   llmYuzuPredictionConfigSchematics,
 } from "./schema.js";
 import { kvValueTypesLibrary } from "./valueTypes.js";
+import { requiresPrivilegedConfigWrite } from "./privilegedConfig.js";
+
+// Privilege filtering must retain unrelated fields verbatim, even outside the selected engine schema.
+describe("privileged field metadata", () => {
+  const schematics = new KVConfigSchematicsBuilder(kvValueTypesLibrary)
+    .scope("test", builder =>
+      builder
+        .field("ordinary", "string", {}, "")
+        .field("explicitFalse", "string", { requiresPrivilegedWrite: false }, "")
+        .field("startupHook", "string", { requiresPrivilegedWrite: true }, ""),
+    )
+    .build();
+
+  it("classifies full keys and survives schema serialization", () => {
+    const restored = KVConfigSchematics.deserialize(
+      kvValueTypesLibrary,
+      serializedKVConfigSchematicsSchema.parse(JSON.parse(JSON.stringify(schematics.serialize()))),
+    );
+    for (const schema of [schematics, restored, restored.scoped("test")]) {
+      expect(requiresPrivilegedConfigWrite("test.startupHook", schema)).toBe(true);
+      for (const key of ["test.ordinary", "test.explicitFalse", "unknown", "startupHook"]) {
+        expect(requiresPrivilegedConfigWrite(key, schema)).toBe(false);
+      }
+    }
+  });
+
+  it("filters only marked keys, preserving unknown fields, duplicates, order, and values", () => {
+    const config = {
+      fields: [
+        { key: "custom.unknown", value: { nested: [1, 2] } },
+        { key: "test.startupHook", value: "run" },
+        { key: "test.ordinary", value: "first" },
+        { key: "test.ordinary", value: "second" },
+        { key: "test.startupHook", value: "" },
+        { key: "custom.unknown", value: null },
+      ],
+    };
+    expect(filterKVConfig(config, key => !requiresPrivilegedConfigWrite(key, schematics))).toEqual({
+      fields: [config.fields[0], config.fields[2], config.fields[3], config.fields[5]],
+    });
+  });
+
+  it("classifies production fields independently of the active engine", () => {
+    const restored = KVConfigSchematics.deserialize(
+      kvValueTypesLibrary,
+      globalConfigSchematics.serialize(),
+    );
+    for (const key of ["llm.load.engineConfigFileContents", "llm.load.engineCwd"]) {
+      expect(llmLlamaLoadConfigSchematics.hasFullKey(key)).toBe(false);
+      expect(requiresPrivilegedConfigWrite(key)).toBe(true);
+      expect(requiresPrivilegedConfigWrite(key, restored)).toBe(true);
+    }
+    expect(requiresPrivilegedConfigWrite("llm.load.contextLength")).toBe(false);
+    expect(requiresPrivilegedConfigWrite("custom.unknown")).toBe(false);
+  });
+});
 
 describe("KVConfig", () => {
   describe("union", () => {
