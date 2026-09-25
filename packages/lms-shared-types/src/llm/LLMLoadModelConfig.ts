@@ -510,7 +510,7 @@ export interface LLMLoadModelConfig {
 
   /**
    * Engine working directory in config-file mode, used to resolve relative file paths.
-   * Relative values resolve from the caller's current directory. Browsers require absolute paths.
+   * Must be an absolute path on the engine host. Resolve relative paths before calling the SDK.
    * Omit to inherit the saved directory; use an empty string for a temporary directory.
    */
   engineCwd?: string;

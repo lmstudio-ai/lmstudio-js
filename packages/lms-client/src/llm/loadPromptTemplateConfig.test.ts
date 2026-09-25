@@ -1,4 +1,3 @@
-import { resolve } from "node:path";
 import { SimpleLogger, Validator } from "@lmstudio/lms-common";
 import { type LLMPort } from "@lmstudio/lms-external-backend-interfaces";
 import {
@@ -191,35 +190,13 @@ describe("SDK engine config file", () => {
     { engineCwd: "" },
     {
       engineConfigFileContents: "# keep exactly\r\nchat-template: ./templates/custom.jinja\r\n",
-      engineCwd: "./assets",
+      engineCwd: "/host/assets",
     },
   ])("schema and pure KV conversion preserve explicit values and omission (%j)", config => {
     expect(llmLoadModelConfigSchema.parse(config)).toEqual(config);
     const raw = llmLoadModelConfigToKVConfig(config);
     expect(kvConfigToLLMLoadModelConfig(raw, { modelFormat: "torch_safetensors" })).toEqual(config);
   });
-
-  test.each(["load", "model"] as const)(
-    "%s normalizes explicit CWD at the client boundary only",
-    async method => {
-      for (const engineCwd of [undefined, "", ".", "./assets with spaces", resolve("assets")]) {
-        const harness = createNamespaceHarness("torch_safetensors");
-        const config = {
-          engineConfigFileContents: "chat-template: ./templates/custom.jinja\n",
-          engineCwd,
-        };
-        await harness.namespace[method]("test/model", { verbose: false, config });
-        const sent = collapseKVStack(
-          extractLoadConfigStack(harness.capturedChannelCreations[0]?.creationParameter),
-        );
-        expect(kvConfigToLLMLoadModelConfig(sent, { modelFormat: "torch_safetensors" })).toEqual({
-          ...config,
-          engineCwd: engineCwd === undefined || engineCwd === "" ? engineCwd : resolve(engineCwd),
-        });
-        expect(config.engineCwd).toBe(engineCwd);
-      }
-    },
-  );
 
   test.each([undefined, "", "/user assets"])(
     "typed reporting retains launch contents, configured CWD and actual context (%s)",

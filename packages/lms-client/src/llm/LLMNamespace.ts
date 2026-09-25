@@ -1,6 +1,5 @@
 import { type SimpleLogger, type Validator } from "@lmstudio/lms-common";
 import { type LLMPort } from "@lmstudio/lms-external-backend-interfaces";
-import { resolveAbsolutePath } from "@lmstudio/lms-isomorphic";
 import { llmLoadModelConfigToKVConfig } from "@lmstudio/lms-kv-config";
 import {
   llmLoadModelConfigSchema,
@@ -31,15 +30,7 @@ export class LLMNamespace extends ModelNamespace<
   protected override readonly loadModelConfigSchema = llmLoadModelConfigSchema;
   /** @internal */
   protected override loadConfigToKVConfig(config: LLMLoadModelConfig) {
-    return llmLoadModelConfigToKVConfig({
-      ...config,
-      // Relative engineCwd paths must resolve against the caller's CWD,
-      // so expand them in the client SDK before sending to the server.
-      engineCwd:
-        config.engineCwd === undefined || config.engineCwd === ""
-          ? config.engineCwd
-          : resolveAbsolutePath(config.engineCwd),
-    });
+    return llmLoadModelConfigToKVConfig(config);
   }
   /** @internal */
   protected override createDomainSpecificModel(
