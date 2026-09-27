@@ -1,5 +1,5 @@
 import { mkdir, writeFile } from "fs/promises";
-import { dirname } from "path";
+import { dirname, join } from "path";
 
 const template = `\
 import { LMStudioClient, type PluginContext } from "@lmstudio/sdk";
@@ -98,12 +98,34 @@ import("./../src/index.ts").then(async module => {
 });
 `;
 
+/**
+ * esbuild bundles the entry file to CommonJS, and the bundle is written into the
+ * plugin's `.lmstudio` folder as a `.js` file. Node decides whether a `.js` file
+ * is CommonJS or ESM from the nearest `package.json`, which - with nothing in
+ * `.lmstudio` - is the plugin's own. A plugin declaring `"type": "module"`
+ * therefore has its bundle loaded as ESM, and it dies on the first `require`
+ * the bundle emits:
+ *
+ *     ReferenceError: require is not defined in ES module scope
+ *
+ * Writing a `package.json` into `.lmstudio` itself makes that folder the nearest
+ * one, so the bundle is read as CommonJS whatever the plugin declares. This is
+ * written next to the entry file rather than at either build site because both
+ * the dev watcher and the production installer go through here - fixing it in
+ * one of them and not the other is how this would come back.
+ */
+const commonJsMarkerContents = JSON.stringify({ type: "commonjs" }, null, 2) + "\n";
+
 interface GenerateEntryFileOpts {}
 export function generateEntryFileContents(_opts: GenerateEntryFileOpts) {
   return template;
+}
+export function generateCommonJsMarkerContents() {
+  return commonJsMarkerContents;
 }
 export async function generateEntryFileAt(path: string, _opts: GenerateEntryFileOpts) {
   const directoryPath = dirname(path);
   await mkdir(directoryPath, { recursive: true });
   await writeFile(path, template, "utf-8");
+  await writeFile(join(directoryPath, "package.json"), commonJsMarkerContents, "utf-8");
 }
