@@ -23,6 +23,7 @@ import {
   defaultLlmLoadPromptTemplate,
   globalConfigSchematics,
   llmLlamaLoadConfigSchematics,
+  llmLlamaPredictionConfigSchematics,
   llmLoadSchematics,
   llmMlxLoadConfigSchematics,
   llmOmlxLoadConfigSchematics,
@@ -308,6 +309,62 @@ describe("yuzu config", () => {
 });
 
 describe("oMLX config", () => {
+  it.each(["omlx.presencePenalty", "omlx.frequencyPenalty"] as const)(
+    "defaults %s to disabled",
+    key => {
+      expect(llmOmlxPredictionConfigSchematics.access(makeKVConfigFromFields([]), key)).toEqual({
+        checked: false,
+        value: 0,
+      });
+    },
+  );
+
+  it.each([false, 0, 0.5, -0.5] as const)(
+    "round trips SDK presence penalty %p through each supported engine",
+    presencePenalty => {
+      const config = llmPredictionConfigToKVConfig({ presencePenalty });
+      for (const schematics of [
+        llmOmlxPredictionConfigSchematics,
+        llmLlamaPredictionConfigSchematics,
+        llmVllmPredictionConfigSchematics,
+      ]) {
+        const filtered = schematics.filterConfig(config);
+        expect(filtered.fields).toHaveLength(1);
+        for (const useDefaultsForMissingKeys of [false, true]) {
+          expect(
+            kvConfigToLLMPredictionConfig(filtered, { useDefaultsForMissingKeys }).presencePenalty,
+          ).toBe(presencePenalty);
+        }
+        expect(
+          schematics.filterConfig(
+            llmPredictionConfigToKVConfig(kvConfigToLLMPredictionConfig(filtered)),
+          ),
+        ).toEqual(filtered);
+      }
+    },
+  );
+
+  it("preserves absent penalties in partial conversion", () => {
+    const config = llmPredictionConfigToKVConfig({});
+    expect(config.fields).toEqual([]);
+    expect(kvConfigToLLMPredictionConfig(config).presencePenalty).toBeUndefined();
+    expect(
+      kvConfigToLLMPredictionConfig(config, { useDefaultsForMissingKeys: true }).presencePenalty,
+    ).toBe(false);
+  });
+
+  it.each([false, true])("retains explicit llama precedence with checked=%p", checked => {
+    const config = globalConfigSchematics.buildPartialConfig({
+      "llm.prediction.llama.presencePenalty": { checked, value: 0.7 },
+      "llm.prediction.omlx.presencePenalty": { checked: true, value: 0.3 },
+    });
+    for (const useDefaultsForMissingKeys of [false, true]) {
+      expect(
+        kvConfigToLLMPredictionConfig(config, { useDefaultsForMissingKeys }).presencePenalty,
+      ).toBe(checked ? 0.7 : false);
+    }
+  });
+
   it("filters native MLX load settings without dropping context or concurrency", () => {
     const config = llmLoadModelConfigToKVConfig({
       contextLength: 8192,

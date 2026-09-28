@@ -81,7 +81,11 @@ export function kvConfigToLLMPredictionConfig(
     result.repeatPenalty = repeatPenalty.checked ? repeatPenalty.value : false;
   }
 
-  const presencePenalty = parsed.get("llama.presencePenalty");
+  // Read explicit engine values before defaults, preserving llama's precedence if both are set.
+  const presencePenalty =
+    llmPredictionConfigSchematics.accessPartial(config, "llama.presencePenalty") ??
+    llmPredictionConfigSchematics.accessPartial(config, "omlx.presencePenalty") ??
+    parsed.get("llama.presencePenalty");
   if (presencePenalty !== undefined) {
     result.presencePenalty = presencePenalty.checked ? presencePenalty.value : false;
   }
@@ -191,6 +195,7 @@ export function llmPredictionConfigToKVConfig(config: LLMPredictionConfig): KVCo
     "topKSampling": config.topKSampling,
     "repeatPenalty": maybeFalseValueToCheckboxValue(config.repeatPenalty, 1.1),
     "llama.presencePenalty": maybeFalseValueToCheckboxValue(config.presencePenalty, 0),
+    "omlx.presencePenalty": maybeFalseValueToCheckboxValue(config.presencePenalty, 0),
     "minPSampling": maybeFalseValueToCheckboxValue(config.minPSampling, 0.05),
     "topPSampling": maybeFalseValueToCheckboxValue(config.topPSampling, 0.95),
     "llama.xtcProbability": maybeFalseValueToCheckboxValue(config.xtcProbability, 0),
