@@ -25,6 +25,8 @@ import {
   llmLlamaLoadConfigSchematics,
   llmLoadSchematics,
   llmMlxLoadConfigSchematics,
+  llmOmlxLoadConfigSchematics,
+  llmOmlxPredictionConfigSchematics,
   llmVllmLoadConfigSchematics,
   llmVllmPredictionConfigSchematics,
   llmYuzuLoadConfigSchematics,
@@ -302,6 +304,46 @@ describe("yuzu config", () => {
     expect(filtered.fields).toEqual([{ key: "llm.prediction.topKSampling", value: 40 }]);
     expect(() => llmYuzuPredictionConfigSchematics.parse(filtered)).toThrow(/topKSampling/);
     expect(preset.fields).toHaveLength(4);
+  });
+});
+
+describe("oMLX config", () => {
+  it("filters native MLX load settings without dropping context or concurrency", () => {
+    const config = llmLoadModelConfigToKVConfig({
+      contextLength: 8192,
+      maxParallelPredictions: 2,
+      mlxDiskCache: true,
+      seed: 7,
+    });
+
+    expect(llmOmlxLoadConfigSchematics.filterConfig(config).fields).toEqual([
+      { key: "llm.load.numParallelSessions", value: 2 },
+      { key: "llm.load.contextLength", value: 8192 },
+    ]);
+  });
+
+  it("preserves prediction overrides while excluding unsupported preset fields", () => {
+    const config = llmPredictionConfigToKVConfig({
+      temperature: 0,
+      topPSampling: false,
+      minPSampling: false,
+      repeatPenalty: false,
+      enableThinking: false,
+      reasoningBudget: 0,
+      logProbs: 3,
+      contextOverflowPolicy: "truncateMiddle",
+    });
+    const filtered = llmOmlxPredictionConfigSchematics.filterConfig(config);
+
+    expect(kvConfigToLLMPredictionConfig(filtered)).toEqual({
+      temperature: 0,
+      topPSampling: false,
+      minPSampling: false,
+      repeatPenalty: false,
+      enableThinking: false,
+      reasoningBudget: 0,
+      raw: filtered,
+    });
   });
 });
 

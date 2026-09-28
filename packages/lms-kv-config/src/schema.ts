@@ -673,6 +673,27 @@ export const llmMlxPredictionConfigSchematics = llmSharedPredictionConfigSchemat
   ),
 );
 
+export const llmOmlxPredictionConfigSchematics = llmPredictionConfigSchematics.sliced(
+  "temperature",
+  "maxPredictedTokens",
+  "stopStrings",
+  "structured",
+  "tools",
+  "toolChoice",
+  "toolNaming",
+  "systemPrompt",
+  "seed",
+  "contextPrefill",
+  "topKSampling",
+  "repeatPenalty",
+  "minPSampling",
+  "topPSampling",
+  "reasoning.enableThinking",
+  "reasoning.budgetTokens",
+  "llama.presencePenalty",
+  "llama.frequencyPenalty",
+);
+
 export const llmVllmPredictionConfigSchematics = llmPredictionConfigSchematics.sliced(
   "temperature",
   "maxPredictedTokens",
@@ -790,6 +811,12 @@ export const llmLlamaLoadConfigSchematics = llmSharedLoadConfigSchematics
 
 export const llmMlxLoadConfigSchematics = llmSharedLoadConfigSchematics.union(
   llmLoadSchematics.sliced("mlx.*", "numParallelSessions"),
+);
+
+export const llmOmlxLoadConfigSchematics = llmLoadSchematics.sliced(
+  "contextLength",
+  "numParallelSessions",
+  "envVars",
 );
 
 export const llmVllmLoadConfigSchematics = llmSharedLoadConfigSchematics

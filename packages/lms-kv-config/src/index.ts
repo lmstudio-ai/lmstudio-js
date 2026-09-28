@@ -69,6 +69,8 @@ export {
   llmMistralrsPredictionConfigSchematics,
   llmMlxLoadConfigSchematics,
   llmMlxPredictionConfigSchematics,
+  llmOmlxLoadConfigSchematics,
+  llmOmlxPredictionConfigSchematics,
   llmOnnxLoadConfigSchematics,
   llmOnnxPredictionConfigSchematics,
   llmPredictionConfigSchematics,
