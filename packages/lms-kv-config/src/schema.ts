@@ -831,6 +831,7 @@ export const llmMlxLoadConfigSchematics = llmSharedLoadConfigSchematics.union(
 export const llmOmlxLoadConfigSchematics = llmLoadSchematics.sliced(
   "contextLength",
   "numParallelSessions",
+  "seed",
   "envVars",
 );
 
