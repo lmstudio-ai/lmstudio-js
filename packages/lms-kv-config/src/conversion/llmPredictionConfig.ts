@@ -15,12 +15,11 @@ export function kvConfigToLLMPredictionConfig(
   { useDefaultsForMissingKeys }: KvConfigToLLMPredictionConfigOpts = {},
 ) {
   const result: LLMPredictionConfig = {};
-  let parsed;
-  if (useDefaultsForMissingKeys === true) {
-    parsed = llmPredictionConfigSchematics.parse(config);
-  } else {
-    parsed = llmPredictionConfigSchematics.parsePartial(config);
-  }
+  const partialParsed = llmPredictionConfigSchematics.parsePartial(config);
+  const parsed =
+    useDefaultsForMissingKeys === true
+      ? llmPredictionConfigSchematics.parse(config)
+      : partialParsed;
   const maxPredictedTokens = parsed.get("maxPredictedTokens");
   if (maxPredictedTokens !== undefined) {
     result.maxTokens = maxPredictedTokens.checked ? maxPredictedTokens.value : false;
@@ -83,8 +82,8 @@ export function kvConfigToLLMPredictionConfig(
 
   // Read explicit engine values before defaults, preserving llama's precedence if both are set.
   const presencePenalty =
-    llmPredictionConfigSchematics.accessPartial(config, "llama.presencePenalty") ??
-    llmPredictionConfigSchematics.accessPartial(config, "omlx.presencePenalty") ??
+    partialParsed.get("llama.presencePenalty") ??
+    partialParsed.get("omlx.presencePenalty") ??
     parsed.get("llama.presencePenalty");
   if (presencePenalty !== undefined) {
     result.presencePenalty = presencePenalty.checked ? presencePenalty.value : false;
@@ -181,6 +180,19 @@ export function kvConfigToLLMPredictionConfig(
 }
 
 export function llmPredictionConfigToKVConfig(config: LLMPredictionConfig): KVConfig {
+  const rawPenalties =
+    config.raw === undefined
+      ? undefined
+      : llmPredictionConfigSchematics
+          .sliced("llama.presencePenalty", "omlx.presencePenalty")
+          .parsePartial(config.raw);
+  const rawPresencePenalty =
+    rawPenalties?.get("llama.presencePenalty") ?? rawPenalties?.get("omlx.presencePenalty");
+  const presencePenaltyOverride =
+    rawPresencePenalty !== undefined &&
+    config.presencePenalty === (rawPresencePenalty.checked ? rawPresencePenalty.value : false)
+      ? undefined
+      : maybeFalseValueToCheckboxValue(config.presencePenalty, 0);
   const top = llmPredictionConfigSchematics.buildPartialConfig({
     "temperature": config.temperature,
     "contextOverflowPolicy": config.contextOverflowPolicy,
@@ -194,8 +206,8 @@ export function llmPredictionConfigToKVConfig(config: LLMPredictionConfig): KVCo
     "toolNaming": config.toolNaming,
     "topKSampling": config.topKSampling,
     "repeatPenalty": maybeFalseValueToCheckboxValue(config.repeatPenalty, 1.1),
-    "llama.presencePenalty": maybeFalseValueToCheckboxValue(config.presencePenalty, 0),
-    "omlx.presencePenalty": maybeFalseValueToCheckboxValue(config.presencePenalty, 0),
+    "llama.presencePenalty": presencePenaltyOverride,
+    "omlx.presencePenalty": presencePenaltyOverride,
     "minPSampling": maybeFalseValueToCheckboxValue(config.minPSampling, 0.05),
     "topPSampling": maybeFalseValueToCheckboxValue(config.topPSampling, 0.95),
     "llama.xtcProbability": maybeFalseValueToCheckboxValue(config.xtcProbability, 0),
