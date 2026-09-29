@@ -11,7 +11,8 @@ export type ModelCompatibilityType =
   | "pte"
   | "mlx_placeholder"
   | "torch_safetensors"
-  | "yuzu";
+  | "yuzu"
+  | "openvino";
 export const modelCompatibilityTypeSchema = z.enum([
   "gguf",
   "safetensors",
@@ -21,4 +22,5 @@ export const modelCompatibilityTypeSchema = z.enum([
   "mlx_placeholder",
   "torch_safetensors",
   "yuzu",
+  "openvino",
 ]);

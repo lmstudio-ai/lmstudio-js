@@ -1,12 +1,13 @@
 import { z } from "zod";
 
 /**
- * Supported model formats
+ * Supported model formats. OpenVINO denotes a prepared native chat-model bundle with its
+ * required assets, rather than an arbitrary XML/BIN pair.
  *
  * @public
  */
-export type ModelFormatName = "GGUF" | "MLX" | "GGML" | "PT" | "PTE" | "yuzu";
-export const modelFormatNameSchema = z.enum(["GGUF", "MLX", "GGML", "PT", "PTE", "yuzu"]);
+export type ModelFormatName = "GGUF" | "MLX" | "GGML" | "PT" | "PTE" | "yuzu" | "OpenVINO";
+export const modelFormatNameSchema = z.enum(["GGUF", "MLX", "GGML", "PT", "PTE", "yuzu", "OpenVINO"]);
 
 /**
  * Common CPU information structure
