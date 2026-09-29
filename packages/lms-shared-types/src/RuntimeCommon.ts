@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 /**
- * Supported model format names.
+ * Supported model formats
  *
  * @public
  */
