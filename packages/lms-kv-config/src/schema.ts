@@ -294,21 +294,6 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
             { checked: false, value: 0.9 },
           )
           .field("logitBias", "llamaLogitBias", {}, []),
-      )
-      .scope("omlx", builder =>
-        builder
-          .field(
-            "presencePenalty",
-            "checkboxNumeric",
-            { step: 0.01, precision: 2 },
-            { checked: false, value: 0.0 },
-          )
-          .field(
-            "frequencyPenalty",
-            "checkboxNumeric",
-            { precision: 2 },
-            { checked: false, value: 0.0 },
-          ),
       ),
   )
   .scope("llm.load", builder =>
@@ -705,8 +690,8 @@ export const llmOmlxPredictionConfigSchematics = llmPredictionConfigSchematics.s
   "topPSampling",
   "reasoning.enableThinking",
   "reasoning.budgetTokens",
-  "omlx.presencePenalty",
-  "omlx.frequencyPenalty",
+  "llama.presencePenalty",
+  "llama.frequencyPenalty",
 );
 
 export const llmVllmPredictionConfigSchematics = llmPredictionConfigSchematics.sliced(

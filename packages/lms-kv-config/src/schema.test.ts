@@ -309,7 +309,7 @@ describe("yuzu config", () => {
 });
 
 describe("oMLX config", () => {
-  it.each(["omlx.presencePenalty", "omlx.frequencyPenalty"] as const)(
+  it.each(["llama.presencePenalty", "llama.frequencyPenalty"] as const)(
     "defaults %s to disabled",
     key => {
       expect(llmOmlxPredictionConfigSchematics.access(makeKVConfigFromFields([]), key)).toEqual({
@@ -351,18 +351,6 @@ describe("oMLX config", () => {
     expect(
       kvConfigToLLMPredictionConfig(config, { useDefaultsForMissingKeys: true }).presencePenalty,
     ).toBe(false);
-  });
-
-  it.each([false, true])("retains explicit llama precedence with checked=%p", checked => {
-    const config = globalConfigSchematics.buildPartialConfig({
-      "llm.prediction.llama.presencePenalty": { checked, value: 0.7 },
-      "llm.prediction.omlx.presencePenalty": { checked: true, value: 0.3 },
-    });
-    for (const useDefaultsForMissingKeys of [false, true]) {
-      expect(
-        kvConfigToLLMPredictionConfig(config, { useDefaultsForMissingKeys }).presencePenalty,
-      ).toBe(checked ? 0.7 : false);
-    }
   });
 
   it("filters native MLX load settings without dropping context, concurrency, or seed", () => {

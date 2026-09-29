@@ -15,11 +15,12 @@ export function kvConfigToLLMPredictionConfig(
   { useDefaultsForMissingKeys }: KvConfigToLLMPredictionConfigOpts = {},
 ) {
   const result: LLMPredictionConfig = {};
-  const partialParsed = llmPredictionConfigSchematics.parsePartial(config);
-  const parsed =
-    useDefaultsForMissingKeys === true
-      ? llmPredictionConfigSchematics.parse(config)
-      : partialParsed;
+  let parsed;
+  if (useDefaultsForMissingKeys === true) {
+    parsed = llmPredictionConfigSchematics.parse(config);
+  } else {
+    parsed = llmPredictionConfigSchematics.parsePartial(config);
+  }
   const maxPredictedTokens = parsed.get("maxPredictedTokens");
   if (maxPredictedTokens !== undefined) {
     result.maxTokens = maxPredictedTokens.checked ? maxPredictedTokens.value : false;
@@ -80,11 +81,7 @@ export function kvConfigToLLMPredictionConfig(
     result.repeatPenalty = repeatPenalty.checked ? repeatPenalty.value : false;
   }
 
-  // Read explicit engine values before defaults, preserving llama's precedence if both are set.
-  const presencePenalty =
-    partialParsed.get("llama.presencePenalty") ??
-    partialParsed.get("omlx.presencePenalty") ??
-    parsed.get("llama.presencePenalty");
+  const presencePenalty = parsed.get("llama.presencePenalty");
   if (presencePenalty !== undefined) {
     result.presencePenalty = presencePenalty.checked ? presencePenalty.value : false;
   }
@@ -180,7 +177,6 @@ export function kvConfigToLLMPredictionConfig(
 }
 
 export function llmPredictionConfigToKVConfig(config: LLMPredictionConfig): KVConfig {
-  const presencePenaltyOverride = maybeFalseValueToCheckboxValue(config.presencePenalty, 0);
   const top = llmPredictionConfigSchematics.buildPartialConfig({
     "temperature": config.temperature,
     "contextOverflowPolicy": config.contextOverflowPolicy,
@@ -194,8 +190,7 @@ export function llmPredictionConfigToKVConfig(config: LLMPredictionConfig): KVCo
     "toolNaming": config.toolNaming,
     "topKSampling": config.topKSampling,
     "repeatPenalty": maybeFalseValueToCheckboxValue(config.repeatPenalty, 1.1),
-    "llama.presencePenalty": presencePenaltyOverride,
-    "omlx.presencePenalty": presencePenaltyOverride,
+    "llama.presencePenalty": maybeFalseValueToCheckboxValue(config.presencePenalty, 0),
     "minPSampling": maybeFalseValueToCheckboxValue(config.minPSampling, 0.05),
     "topPSampling": maybeFalseValueToCheckboxValue(config.topPSampling, 0.95),
     "llama.xtcProbability": maybeFalseValueToCheckboxValue(config.xtcProbability, 0),
