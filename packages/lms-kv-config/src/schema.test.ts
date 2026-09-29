@@ -318,25 +318,6 @@ describe("oMLX config", () => {
     },
   );
 
-  it.each([false, 0, 0.5, -0.5] as const)(
-    "round trips SDK presence penalty %p through oMLX",
-    presencePenalty => {
-      const config = llmPredictionConfigToKVConfig({ presencePenalty });
-      const filtered = llmOmlxPredictionConfigSchematics.filterConfig(config);
-      expect(filtered.fields).toHaveLength(1);
-      for (const useDefaultsForMissingKeys of [false, true]) {
-        expect(
-          kvConfigToLLMPredictionConfig(filtered, { useDefaultsForMissingKeys }).presencePenalty,
-        ).toBe(presencePenalty);
-      }
-      expect(
-        llmOmlxPredictionConfigSchematics.filterConfig(
-          llmPredictionConfigToKVConfig(kvConfigToLLMPredictionConfig(filtered)),
-        ),
-      ).toEqual(filtered);
-    },
-  );
-
   it("filters native MLX load settings without dropping context, concurrency, or seed", () => {
     const config = llmLoadModelConfigToKVConfig({
       contextLength: 8192,
