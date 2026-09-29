@@ -534,9 +534,6 @@ export interface LLMLoadModelConfig {
    * Maximum number of predictions the model can run at a given time. The speed of each individual
    * prediction may decrease with concurrency, but each prediction will start faster and higher
    * total throughput can be achieved.
-   *
-   * Splash (Yuzu format) supports values from 1 to 4 and defaults to 4. Parallel execution requires
-   * a compatible runtime.
    */
   maxParallelPredictions?: number;
 

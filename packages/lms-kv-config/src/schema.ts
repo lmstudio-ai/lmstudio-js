@@ -766,13 +766,12 @@ export const llmSharedLoadConfigSchematics = llmLoadSchematics.sliced(
   "envVars",
 );
 
-export const llmYuzuLoadConfigSchematics = llmLoadSchematics
-  .sliced("contextLength", "autoFitMinContextLength", "numParallelSessions", "yuzu.*")
-  .withTypeParamOverride("numParallelSessions", param => ({
-    ...param,
-    // Splash's native execution supports batches of up to four requests.
-    max: 4,
-  }));
+export const llmYuzuLoadConfigSchematics = llmLoadSchematics.sliced(
+  "contextLength",
+  "autoFitMinContextLength",
+  "numParallelSessions",
+  "yuzu.*",
+);
 
 const llamaLoadConfigSchematics = globalConfigSchematics.sliced("llama.load.*", "load.*");
 

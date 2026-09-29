@@ -364,17 +364,17 @@ describe("SDK load prompt template config", () => {
   test("getLoadConfig preserves Splash parallelism for reuse", async () => {
     const harness = createNamespaceHarness("yuzu");
     harness.setLoadConfigResponse(
-      llmLoadModelConfigToKVConfig({ autoFit: true, maxParallelPredictions: 2 }),
+      llmLoadModelConfigToKVConfig({ autoFit: true, maxParallelPredictions: 1023 }),
     );
     const model = await harness.namespace.load("test/model", { verbose: false });
     const loadConfig = await model.getLoadConfig();
-    expect(loadConfig).toEqual({ autoFit: true, maxParallelPredictions: 2 });
+    expect(loadConfig).toEqual({ autoFit: true, maxParallelPredictions: 1023 });
 
     await harness.namespace.load("test/model", { verbose: false, config: loadConfig });
     const reapplied = collapseKVStack(
       extractLoadConfigStack(harness.capturedChannelCreations[1]?.creationParameter),
     );
-    expect(globalConfigSchematics.access(reapplied, "llm.load.numParallelSessions")).toBe(2);
+    expect(globalConfigSchematics.access(reapplied, "llm.load.numParallelSessions")).toBe(1023);
     expect(globalConfigSchematics.access(reapplied, "llm.load.yuzu.autoFit")).toBe(true);
   });
 
