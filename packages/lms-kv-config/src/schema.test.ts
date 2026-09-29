@@ -177,6 +177,7 @@ describe("yuzu config", () => {
     expect(Array.from(llmYuzuLoadConfigSchematics.fullKeys())).toEqual([
       "llm.load.contextLength",
       "llm.load.autoFitMinContextLength",
+      "llm.load.numParallelSessions",
       "llm.load.yuzu.autoFit",
     ]);
     expect(
@@ -190,6 +191,69 @@ describe("yuzu config", () => {
       llmVllmPredictionConfigSchematics.getSchemaForKey("topKSampling").safeParse(40).success,
     ).toBe(true);
   });
+
+  it("defaults to four parallel sessions without changing other engines' limits", () => {
+    const config = llmYuzuLoadConfigSchematics.buildFullConfig({});
+    expect(llmYuzuLoadConfigSchematics.parse(config).get("numParallelSessions")).toBe(4);
+    expect(config.fields).toContainEqual({ key: "llm.load.numParallelSessions", value: 4 });
+    expect(
+      llmYuzuLoadConfigSchematics.getValueTypeParamByFullKey("llm.load.numParallelSessions"),
+    ).toMatchObject({ min: 1, max: 4, int: true });
+    for (const schema of [
+      llmLoadSchematics.getSchemaForKey("numParallelSessions"),
+      llmLlamaLoadConfigSchematics.getSchemaForKey("numParallelSessions"),
+      llmMlxLoadConfigSchematics.getSchemaForKey("numParallelSessions"),
+      llmVllmLoadConfigSchematics.getSchemaForKey("numParallelSessions"),
+    ]) {
+      expect(schema.safeParse(1023).success).toBe(true);
+    }
+  });
+
+  it.each([1, 2, 3, 4])(
+    "round trips parallel=%p through Yuzu filtering and conversion",
+    maxParallelPredictions => {
+      for (const autoFit of [false, true]) {
+        const config = llmYuzuLoadConfigSchematics.filterConfig(
+          llmLoadModelConfigToKVConfig({ autoFit, maxParallelPredictions }),
+        );
+        expect(llmYuzuLoadConfigSchematics.parse(config).get("numParallelSessions")).toBe(
+          maxParallelPredictions,
+        );
+        for (const useDefaultsForMissingKeys of [false, true]) {
+          const converted = kvConfigToLLMLoadModelConfig(config, {
+            modelFormat: "yuzu",
+            useDefaultsForMissingKeys,
+          });
+          expect(converted).toMatchObject({ autoFit, maxParallelPredictions });
+        }
+        const converted = kvConfigToLLMLoadModelConfig(config, { modelFormat: "yuzu" });
+        expect(
+          llmYuzuLoadConfigSchematics.filterConfig(llmLoadModelConfigToKVConfig(converted)),
+        ).toEqual(config);
+      }
+    },
+  );
+
+  it.each([0, -1, 1.5, 5, 1023, NaN, Infinity])(
+    "rejects parallel=%p without clamping",
+    numParallelSessions => {
+      expect(() =>
+        llmYuzuLoadConfigSchematics.buildPartialConfig({ numParallelSessions }),
+      ).toThrow();
+      const config = makeKVConfigFromFields([
+        kvConfigField("llm.load.numParallelSessions", numParallelSessions),
+      ]);
+      expect(llmYuzuLoadConfigSchematics.filterConfig(config)).toEqual(config);
+      for (const useDefaultsForMissingKeys of [false, true]) {
+        expect(() =>
+          kvConfigToLLMLoadModelConfig(config, {
+            modelFormat: "yuzu",
+            useDefaultsForMissingKeys,
+          }),
+        ).toThrow(/numParallelSessions/);
+      }
+    },
+  );
 
   it.each([-1, 0, 33, 40, 20.5, NaN, Infinity])("rejects top-k %p", value => {
     expect(() =>
@@ -276,11 +340,15 @@ describe("yuzu config", () => {
       });
       expect(
         kvConfigToLLMLoadModelConfig(config, { modelFormat: "yuzu", useDefaultsForMissingKeys }),
-      ).toEqual(useDefaultsForMissingKeys ? { autoFit: true } : { contextLength: 8192 });
+      ).toEqual(
+        useDefaultsForMissingKeys
+          ? { autoFit: true, maxParallelPredictions: 4 }
+          : { contextLength: 8192 },
+      );
     },
   );
 
-  it("omits absent yuzu config in partial readback and materializes AutoFit when requested", () => {
+  it("omits absent yuzu config in partial readback and materializes defaults when requested", () => {
     const emptyConfig = makeKVConfigFromFields([]);
     expect(kvConfigToLLMLoadModelConfig(emptyConfig, { modelFormat: "yuzu" })).toEqual({});
     expect(
@@ -288,7 +356,7 @@ describe("yuzu config", () => {
         modelFormat: "yuzu",
         useDefaultsForMissingKeys: true,
       }),
-    ).toEqual({ autoFit: true });
+    ).toEqual({ autoFit: true, maxParallelPredictions: 4 });
   });
 
   it("filters unrelated preset fields but does not silently clamp a retained invalid top-k", () => {

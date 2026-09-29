@@ -457,9 +457,11 @@ export function kvConfigToLLMLoadModelConfig(
           : llmYuzuLoadConfigSchematics.parsePartial(config);
       const autoFit = parsed.get("yuzu.autoFit");
       const contextLength = parsed.get("contextLength");
+      const maxParallelPredictions = parsed.get("numParallelSessions");
       return {
         ...(autoFit === undefined ? {} : { autoFit }),
         ...(autoFit !== true && contextLength !== undefined ? { contextLength } : {}),
+        ...(maxParallelPredictions === undefined ? {} : { maxParallelPredictions }),
       };
     }
     default:
