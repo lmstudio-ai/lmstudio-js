@@ -1,8 +1,7 @@
 import { z } from "zod";
 
 /**
- * Supported model formats. OpenVINO denotes a prepared native chat-model bundle with its
- * required assets, rather than an arbitrary XML/BIN pair.
+ * Supported model format names.
  *
  * @public
  */
