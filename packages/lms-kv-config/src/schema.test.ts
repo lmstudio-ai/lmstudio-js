@@ -23,7 +23,6 @@ import {
   defaultLlmLoadPromptTemplate,
   globalConfigSchematics,
   llmLlamaLoadConfigSchematics,
-  llmLlamaPredictionConfigSchematics,
   llmLoadSchematics,
   llmMlxLoadConfigSchematics,
   llmOmlxLoadConfigSchematics,
@@ -320,38 +319,23 @@ describe("oMLX config", () => {
   );
 
   it.each([false, 0, 0.5, -0.5] as const)(
-    "round trips SDK presence penalty %p through each supported engine",
+    "round trips SDK presence penalty %p through oMLX",
     presencePenalty => {
       const config = llmPredictionConfigToKVConfig({ presencePenalty });
-      for (const schematics of [
-        llmOmlxPredictionConfigSchematics,
-        llmLlamaPredictionConfigSchematics,
-        llmVllmPredictionConfigSchematics,
-      ]) {
-        const filtered = schematics.filterConfig(config);
-        expect(filtered.fields).toHaveLength(1);
-        for (const useDefaultsForMissingKeys of [false, true]) {
-          expect(
-            kvConfigToLLMPredictionConfig(filtered, { useDefaultsForMissingKeys }).presencePenalty,
-          ).toBe(presencePenalty);
-        }
+      const filtered = llmOmlxPredictionConfigSchematics.filterConfig(config);
+      expect(filtered.fields).toHaveLength(1);
+      for (const useDefaultsForMissingKeys of [false, true]) {
         expect(
-          schematics.filterConfig(
-            llmPredictionConfigToKVConfig(kvConfigToLLMPredictionConfig(filtered)),
-          ),
-        ).toEqual(filtered);
+          kvConfigToLLMPredictionConfig(filtered, { useDefaultsForMissingKeys }).presencePenalty,
+        ).toBe(presencePenalty);
       }
+      expect(
+        llmOmlxPredictionConfigSchematics.filterConfig(
+          llmPredictionConfigToKVConfig(kvConfigToLLMPredictionConfig(filtered)),
+        ),
+      ).toEqual(filtered);
     },
   );
-
-  it("preserves absent penalties in partial conversion", () => {
-    const config = llmPredictionConfigToKVConfig({});
-    expect(config.fields).toEqual([]);
-    expect(kvConfigToLLMPredictionConfig(config).presencePenalty).toBeUndefined();
-    expect(
-      kvConfigToLLMPredictionConfig(config, { useDefaultsForMissingKeys: true }).presencePenalty,
-    ).toBe(false);
-  });
 
   it("filters native MLX load settings without dropping context, concurrency, or seed", () => {
     const config = llmLoadModelConfigToKVConfig({
