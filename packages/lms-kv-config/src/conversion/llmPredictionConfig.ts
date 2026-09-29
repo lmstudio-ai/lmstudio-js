@@ -180,16 +180,7 @@ export function kvConfigToLLMPredictionConfig(
 }
 
 export function llmPredictionConfigToKVConfig(config: LLMPredictionConfig): KVConfig {
-  const rawPresencePenalty =
-    config.raw === undefined
-      ? undefined
-      : llmPredictionConfigSchematics.accessPartial(config.raw, "llama.presencePenalty") ??
-        llmPredictionConfigSchematics.accessPartial(config.raw, "omlx.presencePenalty");
-  const presencePenaltyOverride =
-    rawPresencePenalty !== undefined &&
-    config.presencePenalty === (rawPresencePenalty.checked ? rawPresencePenalty.value : false)
-      ? undefined
-      : maybeFalseValueToCheckboxValue(config.presencePenalty, 0);
+  const presencePenaltyOverride = maybeFalseValueToCheckboxValue(config.presencePenalty, 0);
   const top = llmPredictionConfigSchematics.buildPartialConfig({
     "temperature": config.temperature,
     "contextOverflowPolicy": config.contextOverflowPolicy,
