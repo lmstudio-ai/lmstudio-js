@@ -4,6 +4,14 @@ import {
 } from "./ModelCompatibilityType.js";
 import { modelFormatNameSchema, type ModelFormatName } from "./RuntimeCommon.js";
 
+/** Checks that the public OpenVINO atoms retain separate serialized and display spellings. */
+it("accepts the OpenVINO compatibility and format-name atoms", () => {
+  const compatibility: ModelCompatibilityType = "openvino";
+  const formatName: ModelFormatName = "OpenVINO";
+  expect(modelCompatibilityTypeSchema.parse(compatibility)).toBe("openvino");
+  expect(modelFormatNameSchema.parse(formatName)).toBe("OpenVINO");
+});
+
 it("accepts the yuzu compatibility and format-name atoms", () => {
   const compatibility: ModelCompatibilityType = "yuzu";
   const formatName: ModelFormatName = "yuzu";
