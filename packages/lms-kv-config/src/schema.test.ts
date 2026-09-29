@@ -180,6 +180,9 @@ describe("yuzu config", () => {
       "llm.load.numParallelSessions",
       "llm.load.yuzu.autoFit",
     ]);
+    expect(() =>
+      llmYuzuLoadConfigSchematics.buildPartialConfig({ numParallelSessions: 5 }),
+    ).toThrow();
     expect(
       llmYuzuPredictionConfigSchematics.getSchemaForKey("topKSampling").safeParse(20).success,
     ).toBe(true);
