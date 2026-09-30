@@ -7,3 +7,31 @@ coverage
 .DS_Store
 .turbo
 *.bun-build
+
+
+# AI-Ley generated files and directories
+# Core AI-Ley
+.ai-ley/
+.cache/
+.project/
+
+# AI Assistant configurations
+.github/copilot-instructions.md
+.github/chatmodes/
+.github/prompts/
+.github/copilot-instructions/
+CLAUDE.md
+.claude/
+GEMINI.md
+.gemini/
+.cursor/
+cursor-config.json
+.windsurf/
+windsurf-config.json
+.clinerules/
+.roorules/
+.codex/
+.opencode/
+.metis/
+AGENT.md
+AGENTS.md
