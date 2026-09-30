@@ -142,19 +142,21 @@ export class ServerPort<
     }
   }
 
+  /** Opens a channel or reports a request-scoped error when its endpoint has no handler. */
   private receivedChannelCreate(message: ClientToServerMessage & { type: "channelCreate" }) {
     const endpoint = this.backendInterface.getChannelEndpoint(message.endpoint);
-    if (endpoint === undefined) {
-      this.communicationWarning(
-        `Received channelCreate for unknown endpoint, endpoint = ${message.endpoint}`,
-        "channelEndpointUnknown",
+    if (endpoint === undefined || endpoint.handler === null) {
+      const error = new Error(
+        `${endpoint === undefined ? "Unknown" : "Unhandled"} channel endpoint '${message.endpoint}'.`,
       );
-      return;
-    }
-    if (endpoint.handler === null) {
       this.communicationWarning(
-        `Received channelCreate for unhandled endpoint, endpoint = ${message.endpoint}`,
-        "channelEndpointUnhandled",
+        error.message,
+        endpoint === undefined ? "channelEndpointUnknown" : "channelEndpointUnhandled",
+      );
+      // Error replies must still reach the caller after communication warnings are capped.
+      this.safeSend(
+        { type: "channelError", channelId: message.channelId, error: serializeError(error) },
+        "channelError",
       );
       return;
     }
@@ -289,19 +291,20 @@ export class ServerPort<
     openChannel.receivedAck(message.ackId);
   }
 
+  /** Settles an RPC with a result or error, including requests for endpoints without handlers. */
   private receivedRpcCall(message: ClientToServerMessage & { type: "rpcCall" }) {
     const endpoint = this.backendInterface.getRpcEndpoint(message.endpoint);
-    if (endpoint === undefined) {
-      this.communicationWarning(
-        `Received rpcCall for unknown endpoint, endpoint = ${message.endpoint}`,
-        "rpcEndpointUnknown",
+    if (endpoint === undefined || endpoint.handler === null) {
+      const error = new Error(
+        `${endpoint === undefined ? "Unknown" : "Unhandled"} RPC endpoint '${message.endpoint}'.`,
       );
-      return;
-    }
-    if (endpoint.handler === null) {
       this.communicationWarning(
-        `Received rpcCall for unhandled endpoint, endpoint = ${message.endpoint}`,
-        "rpcEndpointUnhandled",
+        error.message,
+        endpoint === undefined ? "rpcEndpointUnknown" : "rpcEndpointUnhandled",
+      );
+      this.safeSend(
+        { type: "rpcError", callId: message.callId, error: serializeError(error) },
+        "rpcError",
       );
       return;
     }
@@ -372,19 +375,20 @@ export class ServerPort<
       });
   }
 
+  /** Starts a signal subscription or reports why the endpoint cannot serve it. */
   private receivedSignalSubscribe(message: ClientToServerMessage & { type: "signalSubscribe" }) {
     const endpoint = this.backendInterface.getSignalEndpoint(message.endpoint);
-    if (endpoint === undefined) {
-      this.communicationWarning(
-        `Received signalSubscribe for unknown endpoint, endpoint = ${message.endpoint}`,
-        "signalEndpointUnknown",
+    if (endpoint === undefined || endpoint.handler === null) {
+      const error = new Error(
+        `${endpoint === undefined ? "Unknown" : "Unhandled"} signal endpoint '${message.endpoint}'.`,
       );
-      return;
-    }
-    if (endpoint.handler === null) {
       this.communicationWarning(
-        `Received signalSubscribe for unhandled endpoint, endpoint = ${message.endpoint}`,
-        "signalEndpointUnhandled",
+        error.message,
+        endpoint === undefined ? "signalEndpointUnknown" : "signalEndpointUnhandled",
+      );
+      this.safeSend(
+        { type: "signalError", subscribeId: message.subscribeId, error: serializeError(error) },
+        "signalError",
       );
       return;
     }
@@ -546,22 +550,28 @@ export class ServerPort<
     this.openSignalSubscriptions.delete(message.subscribeId);
   }
 
-  /** Serves a writable subscription and validates incoming edits before applying them. */
+  /** Serves writable subscriptions, reports unavailable endpoints, and validates incoming edits. */
   private receivedWritableSignalSubscribe(
     message: ClientToServerMessage & { type: "writableSignalSubscribe" },
   ) {
     const endpoint = this.backendInterface.getWritableSignalEndpoint(message.endpoint);
-    if (endpoint === undefined) {
-      this.communicationWarning(
-        `Received writableSignalSubscribe for unknown endpoint, endpoint = ${message.endpoint}`,
-        "writableSignalEndpointUnknown",
+    if (endpoint === undefined || endpoint.handler === null) {
+      const error = new Error(
+        `${endpoint === undefined ? "Unknown" : "Unhandled"} writable signal endpoint '${message.endpoint}'.`,
       );
-      return;
-    }
-    if (endpoint.handler === null) {
       this.communicationWarning(
-        `Received writableSignalSubscribe for unhandled endpoint, endpoint = ${message.endpoint}`,
-        "writableSignalEndpointUnhandled",
+        error.message,
+        endpoint === undefined
+          ? "writableSignalEndpointUnknown"
+          : "writableSignalEndpointUnhandled",
+      );
+      this.safeSend(
+        {
+          type: "writableSignalError",
+          subscribeId: message.subscribeId,
+          error: serializeError(error),
+        },
+        "writableSignalError",
       );
       return;
     }
