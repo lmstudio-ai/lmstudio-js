@@ -177,8 +177,12 @@ describe("yuzu config", () => {
     expect(Array.from(llmYuzuLoadConfigSchematics.fullKeys())).toEqual([
       "llm.load.contextLength",
       "llm.load.autoFitMinContextLength",
+      "llm.load.numParallelSessions",
       "llm.load.yuzu.autoFit",
     ]);
+    expect(() =>
+      llmYuzuLoadConfigSchematics.buildPartialConfig({ numParallelSessions: 5 }),
+    ).toThrow();
     expect(
       llmYuzuPredictionConfigSchematics.getSchemaForKey("topKSampling").safeParse(20).success,
     ).toBe(true);
@@ -276,11 +280,15 @@ describe("yuzu config", () => {
       });
       expect(
         kvConfigToLLMLoadModelConfig(config, { modelFormat: "yuzu", useDefaultsForMissingKeys }),
-      ).toEqual(useDefaultsForMissingKeys ? { autoFit: true } : { contextLength: 8192 });
+      ).toEqual(
+        useDefaultsForMissingKeys
+          ? { autoFit: true, maxParallelPredictions: 4 }
+          : { contextLength: 8192 },
+      );
     },
   );
 
-  it("omits absent yuzu config in partial readback and materializes AutoFit when requested", () => {
+  it("omits absent yuzu config in partial readback and materializes defaults when requested", () => {
     const emptyConfig = makeKVConfigFromFields([]);
     expect(kvConfigToLLMLoadModelConfig(emptyConfig, { modelFormat: "yuzu" })).toEqual({});
     expect(
@@ -288,7 +296,7 @@ describe("yuzu config", () => {
         modelFormat: "yuzu",
         useDefaultsForMissingKeys: true,
       }),
-    ).toEqual({ autoFit: true });
+    ).toEqual({ autoFit: true, maxParallelPredictions: 4 });
   });
 
   it("filters unrelated preset fields but does not silently clamp a retained invalid top-k", () => {
