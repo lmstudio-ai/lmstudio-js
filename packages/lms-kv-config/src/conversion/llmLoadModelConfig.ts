@@ -294,6 +294,10 @@ function kvConfigToLLMMlxLoadModelConfig(
   if (maxParallelPredictions !== undefined) {
     result.maxParallelPredictions = maxParallelPredictions;
   }
+  const promptTemplate = llmLoadSchematics.accessPartial(config, "promptTemplate");
+  if (promptTemplate !== undefined) {
+    result.promptTemplate = promptTemplate;
+  }
   const mlxDiskCache = parsed.get("mlx.diskCache");
   if (mlxDiskCache !== undefined) {
     result.mlxDiskCache = mlxDiskCache;
