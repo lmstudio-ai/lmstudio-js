@@ -105,6 +105,7 @@ registerErrorDeserializer("generic.specificModelUnloaded", (_, stack) => {
   );
 });
 
+/** Formats a model domain as a phrase for query and domain-mismatch errors. */
 function getModelDomainTypeDisplayNameSingular(domain: ModelDomainType) {
   switch (domain) {
     case "llm":
