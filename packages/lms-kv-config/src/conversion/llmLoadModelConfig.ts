@@ -13,6 +13,7 @@ import {
   llmLlamaMoeLoadConfigSchematics,
   llmLoadSchematics,
   llmMlxLoadConfigSchematics,
+  llmOmlxLoadConfigSchematics,
   llmVllmLoadConfigSchematics,
   llmYuzuLoadConfigSchematics,
 } from "../schema.js";
@@ -24,6 +25,7 @@ interface KvConfigToLLMLoadModelConfigOpts {
    */
   useDefaultsForMissingKeys?: boolean;
   modelFormat?: ModelCompatibilityType;
+  engine?: string;
 }
 
 function hasManualGPUSplitConfig(splitConfig: GPUSplitConfig | undefined): boolean {
@@ -294,10 +296,6 @@ function kvConfigToLLMMlxLoadModelConfig(
   if (maxParallelPredictions !== undefined) {
     result.maxParallelPredictions = maxParallelPredictions;
   }
-  const promptTemplate = llmLoadSchematics.accessPartial(config, "promptTemplate");
-  if (promptTemplate !== undefined) {
-    result.promptTemplate = promptTemplate;
-  }
   const mlxDiskCache = parsed.get("mlx.diskCache");
   if (mlxDiskCache !== undefined) {
     result.mlxDiskCache = mlxDiskCache;
@@ -439,7 +437,11 @@ function kvConfigToLLMVllmLoadModelConfig(
 export function kvConfigToLLMLoadModelConfig(
   config: KVConfig,
   // Default to gguf for backward compatibility
-  { useDefaultsForMissingKeys, modelFormat = "gguf" }: KvConfigToLLMLoadModelConfigOpts = {},
+  {
+    useDefaultsForMissingKeys,
+    modelFormat = "gguf",
+    engine,
+  }: KvConfigToLLMLoadModelConfigOpts = {},
 ): LLMLoadModelConfig {
   switch (modelFormat) {
     case "gguf":
@@ -447,6 +449,20 @@ export function kvConfigToLLMLoadModelConfig(
         useDefaultsForMissingKeys,
       });
     case "safetensors":
+      if (engine === "omlx") {
+        const parsed =
+          useDefaultsForMissingKeys === true
+            ? llmOmlxLoadConfigSchematics.parse(config)
+            : llmOmlxLoadConfigSchematics.parsePartial(config);
+        const contextLength = parsed.get("contextLength");
+        const maxParallelPredictions = parsed.get("numParallelSessions");
+        const seed = parsed.get("seed");
+        return {
+          ...(contextLength === undefined ? {} : { contextLength }),
+          ...(maxParallelPredictions === undefined ? {} : { maxParallelPredictions }),
+          ...(seed === undefined ? {} : { seed: seed.checked ? seed.value : false }),
+        };
+      }
       return kvConfigToLLMMlxLoadModelConfig(config, {
         useDefaultsForMissingKeys,
       });
