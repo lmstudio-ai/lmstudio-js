@@ -326,7 +326,7 @@ describe("oMLX config", () => {
     },
   );
 
-  it("filters native MLX load settings without dropping context, concurrency, or seed", () => {
+  it("filters native MLX load settings and seed while preserving context and concurrency", () => {
     const config = llmLoadModelConfigToKVConfig({
       contextLength: 8192,
       maxParallelPredictions: 2,
@@ -337,7 +337,6 @@ describe("oMLX config", () => {
     expect(llmOmlxLoadConfigSchematics.filterConfig(config).fields).toEqual([
       { key: "llm.load.numParallelSessions", value: 2 },
       { key: "llm.load.contextLength", value: 8192 },
-      { key: "llm.load.seed", value: { checked: true, value: 7 } },
     ]);
   });
 
