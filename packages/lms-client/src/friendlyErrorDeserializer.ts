@@ -111,6 +111,8 @@ function getModelDomainTypeDisplayNameSingular(domain: ModelDomainType) {
       return "an LLM";
     case "embedding":
       return "an embedding model";
+    case "decision":
+      return "a decision model";
     case "drafter":
       return "a drafter model";
     case "imageGen":
