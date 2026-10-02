@@ -326,13 +326,12 @@ describe("oMLX config", () => {
     },
   );
 
-  it("filters native MLX settings and load templates without dropping supported fields", () => {
+  it("filters native MLX load settings without dropping context, concurrency, or seed", () => {
     const config = llmLoadModelConfigToKVConfig({
       contextLength: 8192,
       maxParallelPredictions: 2,
       mlxDiskCache: true,
       seed: 7,
-      promptTemplate: defaultLlmLoadPromptTemplate,
     });
 
     expect(llmOmlxLoadConfigSchematics.filterConfig(config).fields).toEqual([
