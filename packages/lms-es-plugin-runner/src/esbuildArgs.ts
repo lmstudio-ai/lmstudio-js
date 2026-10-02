@@ -12,6 +12,11 @@ const alwaysArgs = [
   "--bundle",
   // Don't bundle node_modules as they are not necessarily designed to be bundled.
   "--packages=external",
+  // Say the format out loud rather than inheriting esbuild's platform default.
+  // The output is written as .js next to the plugin's own package.json, so what
+  // Node makes of it depends on that file's "type" field - see the commonjs
+  // marker written alongside the entry file in generateEntryFile.ts.
+  "--format=cjs",
 ];
 export function createEsBuildArgs({ entryPath, outPath, watch, production }: EsBuildArgsOpts) {
   // We don't need to worry about shell injections here because we never pass the args to a shell,
