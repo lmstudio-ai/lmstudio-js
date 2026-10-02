@@ -38,12 +38,9 @@ export const llmAdditionalInfoSchema = z.object({
  */
 export interface LLMInstanceAdditionalInfo {
   contextLength: number;
-  /** Engine serving this loaded instance, when reported by the host. */
-  engine?: string;
 }
 export const llmInstanceAdditionalInfoSchema = z.object({
   contextLength: z.number().int(),
-  engine: z.string().optional(),
 });
 
 /**

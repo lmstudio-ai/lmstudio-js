@@ -13,7 +13,6 @@ import {
   llmLlamaMoeLoadConfigSchematics,
   llmLoadSchematics,
   llmMlxLoadConfigSchematics,
-  llmOmlxLoadConfigSchematics,
   llmVllmLoadConfigSchematics,
   llmYuzuLoadConfigSchematics,
 } from "../schema.js";
@@ -25,7 +24,6 @@ interface KvConfigToLLMLoadModelConfigOpts {
    */
   useDefaultsForMissingKeys?: boolean;
   modelFormat?: ModelCompatibilityType;
-  engine?: string;
 }
 
 function hasManualGPUSplitConfig(splitConfig: GPUSplitConfig | undefined): boolean {
@@ -437,11 +435,7 @@ function kvConfigToLLMVllmLoadModelConfig(
 export function kvConfigToLLMLoadModelConfig(
   config: KVConfig,
   // Default to gguf for backward compatibility
-  {
-    useDefaultsForMissingKeys,
-    modelFormat = "gguf",
-    engine,
-  }: KvConfigToLLMLoadModelConfigOpts = {},
+  { useDefaultsForMissingKeys, modelFormat = "gguf" }: KvConfigToLLMLoadModelConfigOpts = {},
 ): LLMLoadModelConfig {
   switch (modelFormat) {
     case "gguf":
@@ -449,20 +443,6 @@ export function kvConfigToLLMLoadModelConfig(
         useDefaultsForMissingKeys,
       });
     case "safetensors":
-      if (engine === "omlx") {
-        const parsed =
-          useDefaultsForMissingKeys === true
-            ? llmOmlxLoadConfigSchematics.parse(config)
-            : llmOmlxLoadConfigSchematics.parsePartial(config);
-        const contextLength = parsed.get("contextLength");
-        const maxParallelPredictions = parsed.get("numParallelSessions");
-        const seed = parsed.get("seed");
-        return {
-          ...(contextLength === undefined ? {} : { contextLength }),
-          ...(maxParallelPredictions === undefined ? {} : { maxParallelPredictions }),
-          ...(seed === undefined ? {} : { seed: seed.checked ? seed.value : false }),
-        };
-      }
       return kvConfigToLLMMlxLoadModelConfig(config, {
         useDefaultsForMissingKeys,
       });

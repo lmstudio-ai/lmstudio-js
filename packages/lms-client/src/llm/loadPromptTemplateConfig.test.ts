@@ -16,7 +16,6 @@ import {
   type KVConfigStack,
   type LLMLoadModelConfig,
   llmLoadModelConfigSchema,
-  llmInstanceInfoSchema,
   type LLMInstanceInfo,
   type LLMPredictionConfig,
   type ModelCompatibilityType,
@@ -61,15 +60,11 @@ const llamaCppArgumentsOverride: NonNullable<LLMLoadModelConfig["llamaCppArgumen
   excludeAllConfig: false,
 };
 
-function createInstanceInfo(
-  format: ModelCompatibilityType = "gguf",
-  engine?: string,
-): LLMInstanceInfo {
-  return llmInstanceInfoSchema.parse({
+function createInstanceInfo(format: ModelCompatibilityType = "gguf"): LLMInstanceInfo {
+  return {
     type: "llm",
     modelKey: "test/model",
     format,
-    engine,
     displayName: "Test Model",
     publisher: "test",
     path: "/test/model.gguf",
@@ -84,7 +79,7 @@ function createInstanceInfo(
     trainedForToolUse: false,
     maxContextLength: 4096,
     contextLength: 4096,
-  });
+  };
 }
 
 function createSilentLogger(): SimpleLogger {
@@ -96,10 +91,7 @@ function createSilentLogger(): SimpleLogger {
   });
 }
 
-function createNamespaceHarness(
-  modelFormat: ModelCompatibilityType = "gguf",
-  engine?: string,
-): LLMNamespaceHarness {
+function createNamespaceHarness(modelFormat: ModelCompatibilityType = "gguf"): LLMNamespaceHarness {
   const capturedChannelCreations: Array<CapturedChannelCreation> = [];
   const capturedRpcCalls: Array<{ endpointName: string; parameter: unknown }> = [];
   let loadConfigResponse: KVConfig = emptyKVConfig;
@@ -114,14 +106,14 @@ function createNamespaceHarness(
         if (endpointName === "loadModel") {
           onMessage({
             type: "success",
-            info: createInstanceInfo(modelFormat, engine),
+            info: createInstanceInfo(modelFormat),
           });
           return;
         }
         if (endpointName === "getOrLoad") {
           onMessage({
             type: "loadSuccess",
-            info: createInstanceInfo(modelFormat, engine),
+            info: createInstanceInfo(modelFormat),
           });
           return;
         }
@@ -154,7 +146,7 @@ function createNamespaceHarness(
         return loadConfigResponse;
       }
       if (endpointName === "getModelInfo") {
-        return createInstanceInfo(modelFormat, engine);
+        return createInstanceInfo(modelFormat);
       }
       throw new Error(`Unexpected RPC endpoint: ${endpointName}`);
     },
@@ -302,54 +294,6 @@ describe.each(["gguf", "safetensors", "torch_safetensors"] as const)(
     });
   },
 );
-
-describe("SDK engine-aware load config", () => {
-  test.each([false, 0] as const)("oMLX readback is reusable with seed %s", async seed => {
-    const harness = createNamespaceHarness("safetensors", "omlx");
-    const expected = { contextLength: 8192, maxParallelPredictions: 4, seed };
-    harness.setLoadConfigResponse(
-      globalConfigSchematics.buildPartialConfig({
-        "llm.load.contextLength": expected.contextLength,
-        "llm.load.numParallelSessions": expected.maxParallelPredictions,
-        "llm.load.seed": { checked: seed !== false, value: 0 },
-        "llm.load.mlx.autoFit": true,
-        "llm.load.mlx.diskCache": true,
-        "llm.load.mlx.kvCacheQuantization": {
-          enabled: true,
-          bits: 4,
-          groupSize: 64,
-          quantizedStart: 0,
-        },
-        "llm.load.promptTemplate": customLoadPromptTemplate,
-      }),
-    );
-    const model = await harness.namespace.load("test/model", { verbose: false });
-    const loadConfig = await model.getLoadConfig();
-    expect(loadConfig).toEqual(expected);
-
-    await harness.namespace.load("test/model", { verbose: false, config: loadConfig });
-    expect(
-      collapseKVStack(
-        extractLoadConfigStack(harness.capturedChannelCreations[1].creationParameter),
-      ),
-    ).toEqual(llmLoadModelConfigToKVConfig(expected));
-  });
-
-  test.each(["mlx", undefined])("preserves native MLX readback with engine %s", async engine => {
-    const harness = createNamespaceHarness("safetensors", engine);
-    const expected: LLMLoadModelConfig = {
-      autoFit: false,
-      contextLength: 8192,
-      maxParallelPredictions: 2,
-      seed: 7,
-      mlxDiskCache: false,
-      mlxKvCacheQuantization: false,
-    };
-    harness.setLoadConfigResponse(llmLoadModelConfigToKVConfig(expected));
-    const model = await harness.namespace.load("test/model", { verbose: false });
-    expect(await model.getLoadConfig()).toEqual(expected);
-  });
-});
 
 describe("SDK load prompt template config", () => {
   test("load config schema accepts load-time prompt template", () => {
