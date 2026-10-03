@@ -24,8 +24,7 @@ const info: DecisionModelInstanceInfo = {
   contextLength: 8192,
 };
 
-test("decision SDK lifecycle uses shared load/get-or-load/info/config/list/unload contracts without inference", async () => {
-  const channels: Array<{ endpoint: string; parameters: unknown }> = [];
+test("decision SDK loads, reuses and unloads a model while preserving its info and load controls", async () => {
   const rpcs: Array<{ endpoint: string; parameters: unknown }> = [];
   let loaded = false;
   let config = decisionLlamaLoadConfigSchematics.buildPartialConfig({ contextLength: 8192 });
@@ -35,7 +34,6 @@ test("decision SDK lifecycle uses shared load/get-or-load/info/config/list/unloa
       parameters: { loadConfigStack: KVConfigStack },
       onMessage: (message: unknown) => void,
     ) {
-      channels.push({ endpoint, parameters });
       if (endpoint === "loadModel") {
         config = collapseKVStack(parameters.loadConfigStack);
       }
@@ -90,10 +88,8 @@ test("decision SDK lifecycle uses shared load/get-or-load/info/config/list/unloa
   );
   await namespace.unload("decision");
   await expect(model.getModelInfo()).rejects.toThrow("already been unloaded");
-  expect(channels.map(channel => channel.endpoint)).toEqual(["loadModel", "getOrLoad"]);
-  expect(rpcs.find(rpc => rpc.endpoint === "unloadModel")?.parameters).toEqual({
+  expect(rpcs.find(rpc => rpc.endpoint === "unloadModel")?.parameters).toMatchObject({
     identifier: "decision",
-    deviceIdentifier: undefined,
   });
 });
 

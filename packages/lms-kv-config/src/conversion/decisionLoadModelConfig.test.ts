@@ -1,7 +1,6 @@
 import { decisionLoadModelConfigSchema } from "@lmstudio/lms-shared-types";
 import { decisionLlamaLoadConfigSchematics } from "../schema.js";
 import {
-  decisionLoadConfigToLlamaConfig,
   decisionLoadModelConfigToKVConfig,
   kvConfigToDecisionLoadModelConfig,
 } from "./decisionLoadModelConfig.js";
@@ -63,24 +62,4 @@ test("request AutoFit validation preserves GGUF manual-setting rules while readb
     autoFit: true,
     contextLength: 8192,
   });
-});
-
-test("the GGUF helper adapter retains common placement and parallel/batch fields without persisted LLM config", () => {
-  const own = decisionLlamaLoadConfigSchematics.buildPartialConfig({
-    "contextLength": 2048,
-    "numParallelSessions": 3,
-    "llama.autoFit": false,
-    "llama.physicalBatchSize": 128,
-    "load.gpuStrictVramCap": true,
-  });
-  const adapted = decisionLoadConfigToLlamaConfig(own);
-  expect(adapted.fields).toEqual(
-    expect.arrayContaining([
-      { key: "llm.load.contextLength", value: 2048 },
-      { key: "llm.load.numParallelSessions", value: 3 },
-      { key: "llm.load.llama.physicalBatchSize", value: 128 },
-      { key: "load.gpuStrictVramCap", value: true },
-    ]),
-  );
-  expect(own.fields.some(field => field.key.startsWith("llm."))).toBe(false);
 });

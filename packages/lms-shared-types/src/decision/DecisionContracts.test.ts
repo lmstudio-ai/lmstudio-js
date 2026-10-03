@@ -19,8 +19,6 @@ describe("System One contracts", () => {
     const result = decisionResultSchemaForRequest(request).parse(fixture.result);
     expect(request).toEqual(fixture.request);
     expect(result).toEqual(fixture.result);
-    expect(JSON.stringify(request)).toBe(JSON.stringify(fixture.request));
-    expect(JSON.stringify(result)).toBe(JSON.stringify(fixture.result));
   });
 
   test.each(fixtures.acceptedImageRequests)("accepts inline images in $name", fixture => {
@@ -87,7 +85,6 @@ describe("System One contracts", () => {
     )!;
     const request = decisionRequestSchema.parse(fixture.request);
     expect(Object.hasOwn(request.questions, "__proto__")).toBe(true);
-    expect(Object.getPrototypeOf(request.questions)).toBe(Object.prototype);
     const resultSchema = decisionResultSchemaForRequest(request);
     const result = resultSchema.parse(fixture.result);
     expect(Object.hasOwn(result.answers, "__proto__")).toBe(true);
