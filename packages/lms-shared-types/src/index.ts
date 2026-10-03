@@ -68,22 +68,6 @@ export {
   decisionModelInstanceInfoSchema,
 } from "./decision/DecisionModelInfo.js";
 export {
-  DecisionJSONValue,
-  DecisionJSONObject,
-  DecisionContent,
-  DecisionQuestion,
-  decisionQuestionSchema,
-  DecisionRequest,
-  decisionRequestSchema,
-  decisionImageDataURLSchema,
-  DecisionAnswer,
-  decisionAnswerSchema,
-  DecisionResult,
-  decisionResultSchema,
-  decisionResultSchemaForRequest,
-  DecisionOperationErrorData,
-} from "./decision/DecisionOperation.js";
-export {
   DecisionLoadModelConfig,
   decisionLoadModelConfigSchema,
 } from "./decision/DecisionLoadModelConfig.js";
