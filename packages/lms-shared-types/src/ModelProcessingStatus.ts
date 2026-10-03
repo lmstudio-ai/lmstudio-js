@@ -9,13 +9,15 @@ export type ModelProcessingStatus =
   | "idle"
   | "processingPrompt"
   | "generating"
-  | "computingEmbedding";
+  | "computingEmbedding"
+  | "computingDecision";
 
 const modelProcessingStatusSchema = z.enum([
   "idle",
   "processingPrompt",
   "generating",
   "computingEmbedding",
+  "computingDecision",
 ]) as ZodSchema<ModelProcessingStatus>;
 
 /**

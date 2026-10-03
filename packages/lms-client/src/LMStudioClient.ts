@@ -16,6 +16,8 @@ import {
 } from "@lmstudio/lms-communication";
 import { getHostedEnv, type ClientPort } from "@lmstudio/lms-communication-client";
 import {
+  createDecisionBackendInterface,
+  type DecisionPort,
   createDiagnosticsBackendInterface,
   createEmbeddingBackendInterface,
   createFilesBackendInterface,
@@ -40,6 +42,7 @@ import process from "process";
 import { z } from "zod";
 import { createAuthenticatedClientPort } from "./createAuthenticatedClientPort.js";
 import { DiagnosticsNamespace } from "./diagnostics/DiagnosticsNamespace.js";
+import { DecisionNamespace } from "./decision/DecisionNamespace.js";
 import { EmbeddingNamespace } from "./embedding/EmbeddingNamespace.js";
 import { FilesNamespace } from "./files/FilesNamespace.js";
 import { friendlyErrorDeserializer } from "./friendlyErrorDeserializer.js";
@@ -118,6 +121,7 @@ const constructorOptsSchema = z
     // Internal testing options
     disableConnection: z.boolean().optional(),
     llmPort: z.any().optional(),
+    decisionPort: z.unknown().optional(),
     embeddingPort: z.any().optional(),
     systemPort: z.any().optional(),
     diagnosticsPort: z.any().optional(),
@@ -143,6 +147,8 @@ export class LMStudioClient {
   /** @internal */
   private readonly embeddingPort: EmbeddingPort;
   /** @internal */
+  private readonly decisionPort: DecisionPort;
+  /** @internal */
   private readonly systemPort: SystemPort;
   /** @internal */
   private readonly diagnosticsPort: DiagnosticsPort;
@@ -157,6 +163,7 @@ export class LMStudioClient {
 
   public readonly llm: LLMNamespace;
   public readonly embedding: EmbeddingNamespace;
+  public readonly decision: DecisionNamespace;
   public readonly system: SystemNamespace;
   public readonly diagnostics: DiagnosticsNamespace;
   public readonly files: FilesNamespace;
@@ -326,6 +333,7 @@ export class LMStudioClient {
       disableConnection,
       llmPort,
       embeddingPort,
+      decisionPort,
       systemPort,
       diagnosticsPort,
       retrievalPort,
@@ -437,6 +445,9 @@ export class LMStudioClient {
     this.llmPort = llmPort ?? this.createPort("llm", "LLM", createLlmBackendInterface());
     this.embeddingPort =
       embeddingPort ?? this.createPort("embedding", "Embedding", createEmbeddingBackendInterface());
+    this.decisionPort =
+      (decisionPort as DecisionPort | undefined) ??
+      this.createPort("decision", "Decision", createDecisionBackendInterface());
     this.systemPort =
       systemPort ?? this.createPort("system", "System", createSystemBackendInterface());
     this.diagnosticsPort =
@@ -465,6 +476,12 @@ export class LMStudioClient {
       new SimpleLogger("Embedding", this.logger),
       validator,
     );
+    this.decision = new DecisionNamespace(
+      this,
+      this.decisionPort,
+      new SimpleLogger("Decision", this.logger),
+      validator,
+    );
     this.system = new SystemNamespace(this.systemPort, validator, this.logger);
     this.diagnostics = new DiagnosticsNamespace(this.diagnosticsPort, validator, this.logger);
     this.files = new FilesNamespace(this.filesPort, validator, this.logger);
@@ -477,6 +494,7 @@ export class LMStudioClient {
     await Promise.all([
       this.llmPort[Symbol.asyncDispose](),
       this.embeddingPort[Symbol.asyncDispose](),
+      this.decisionPort[Symbol.asyncDispose](),
       this.systemPort[Symbol.asyncDispose](),
       this.diagnosticsPort[Symbol.asyncDispose](),
       this.filesPort[Symbol.asyncDispose](),

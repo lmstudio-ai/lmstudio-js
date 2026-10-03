@@ -57,6 +57,36 @@ export {
   toolCallResultSchema,
 } from "./ChatHistoryData.js";
 export { CitationSource, citationSourceSchema } from "./CitationSource.js";
+export {
+  DecisionModelAdditionalInfo,
+  decisionModelAdditionalInfoSchema,
+  DecisionModelInfo,
+  decisionModelInfoSchema,
+  DecisionModelInstanceAdditionalInfo,
+  decisionModelInstanceAdditionalInfoSchema,
+  DecisionModelInstanceInfo,
+  decisionModelInstanceInfoSchema,
+} from "./decision/DecisionModelInfo.js";
+export {
+  DecisionJSONValue,
+  DecisionJSONObject,
+  DecisionContent,
+  DecisionQuestion,
+  decisionQuestionSchema,
+  DecisionRequest,
+  decisionRequestSchema,
+  decisionImageDataURLSchema,
+  DecisionAnswer,
+  decisionAnswerSchema,
+  DecisionResult,
+  decisionResultSchema,
+  decisionResultSchemaForRequest,
+  DecisionOperationErrorData,
+} from "./decision/DecisionOperation.js";
+export {
+  DecisionLoadModelConfig,
+  decisionLoadModelConfigSchema,
+} from "./decision/DecisionLoadModelConfig.js";
 export { ColorPalette, colorPalette, colorPaletteSchema } from "./ColorPalette.js";
 export {
   DiagnosticsLogEvent,
