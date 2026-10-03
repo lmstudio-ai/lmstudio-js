@@ -5,6 +5,9 @@ export type {
   DiagnosticsLogRuntimeEventData,
   PromptProcessingDetails,
 } from "@lmstudio/lms-shared-types";
+export { DecisionNamespace } from "./decision/DecisionNamespace.js";
+export { DecisionDynamicHandle } from "./decision/DecisionDynamicHandle.js";
+export { DecisionModel } from "./decision/DecisionModel.js";
 export { Chat, ChatMessage } from "./Chat.js";
 export type { ChatAppendOpts, ChatLike, ChatMessageLike } from "./Chat.js";
 export type { ChatInput, ChatMessageInput } from "./ChatInput.js";

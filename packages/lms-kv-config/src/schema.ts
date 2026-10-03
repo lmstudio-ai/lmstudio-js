@@ -598,6 +598,73 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
           .field("tryMmap", "boolean", {}, true),
       ),
   )
+  // Use the ordinary context control; retain the server's parallel/unified-KV defaults.
+  .scope("decision.load", builder =>
+    builder
+      .field("contextLength", "contextLength", { machineDependent: true }, 2048)
+      .field("autoFitMinContextLength", "numeric", { min: 0, int: true, machineDependent: true }, 0)
+      .field(
+        "numParallelSessions",
+        "numeric",
+        { min: 1, max: 1023, int: true, displayName: "Parallel Sessions" },
+        4,
+      )
+      .field("useUnifiedKvCache", "boolean", {}, true)
+      .field("offloadKVCacheToGpu", "boolean", {}, true)
+      .field(
+        "numCpuExpertLayersRatio",
+        "llamaAccelerationOffloadRatio",
+        { machineDependent: true },
+        "off",
+      )
+      .field("numExperts", "numeric", { min: 0, int: true }, 0)
+      .field("seed", "checkboxNumeric", { min: -1, int: true }, { checked: false, value: -1 })
+      .scope("llama", builder =>
+        builder
+          .field("autoFit", "boolean", { machineDependent: true }, true)
+          .scope("acceleration", builder =>
+            builder.field(
+              "offloadRatio",
+              "llamaAccelerationOffloadRatio",
+              { machineDependent: true },
+              "max",
+            ),
+          )
+          .field("cpuThreadPoolSize", "numeric", { min: 1, int: true, machineDependent: true }, 4)
+          .field("evalBatchSize", "numeric", { min: 1, int: true }, 2048)
+          .field("physicalBatchSize", "numeric", { min: 1, int: true }, 512)
+          .field("flashAttention", "boolean", {}, false)
+          .field("ropeFrequencyBase", "checkboxNumeric", { min: 0 }, { checked: false, value: 0 })
+          .field("ropeFrequencyScale", "checkboxNumeric", { min: 0 }, { checked: false, value: 0 })
+          .field("keepModelInMemory", "boolean", {}, true)
+          .field("tryMmap", "boolean", {}, true)
+          .field("tryDirectIO", "boolean", {}, false)
+          .field("useFp16ForKVCache", "boolean", {}, true)
+          .field(
+            "kCacheQuantizationType",
+            "llamaCacheQuantizationType",
+            {},
+            { checked: false, value: "f16" },
+          )
+          .field(
+            "vCacheQuantizationType",
+            "llamaCacheQuantizationType",
+            {},
+            { checked: false, value: "f16" },
+          )
+          .field(
+            "argumentsOverride",
+            "llamaCppArgumentsOverride",
+            {},
+            {
+              enabled: false,
+              disabledParameters: [],
+              overrideParameters: [],
+              excludeAllConfig: false,
+            },
+          ),
+      ),
+  )
   .scope("retrieval", builder =>
     builder
       .field("databaseFile", "string", { machineDependent: true }, "")
@@ -864,6 +931,19 @@ export const retrievalSchematics = globalConfigSchematics.scoped("retrieval");
 export const embeddingLlamaLoadConfigSchematics = embeddingSharedLoadConfigSchematics
   .union(embeddingLoadSchematics.sliced("llama.*"))
   .union(llamaLoadConfigSchematics);
+
+export const decisionLoadSchematics = globalConfigSchematics
+  .scoped("decision.load")
+  .union(globalConfigSchematics.sliced("envVars"))
+  .union(llamaLoadConfigSchematics);
+export const decisionSharedLoadConfigSchematics = decisionLoadSchematics.sliced(
+  "contextLength",
+  "autoFitMinContextLength",
+  "numParallelSessions",
+  "useUnifiedKvCache",
+  "envVars",
+);
+export const decisionLlamaLoadConfigSchematics = decisionLoadSchematics;
 
 export const emptyConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypesLibrary).build();
 export const customFieldConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypesLibrary)
