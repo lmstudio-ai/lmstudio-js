@@ -598,21 +598,10 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
           .field("tryMmap", "boolean", {}, true),
       ),
   )
-  // Server defaults: auto slots resolve to four with unified KV; context 0 uses model/engine defaults.
+  // Use the ordinary context control; retain the server's parallel/unified-KV defaults.
   .scope("decision.load", builder =>
     builder
-      .field(
-        "contextLength",
-        "numeric",
-        {
-          min: 0,
-          int: true,
-          machineDependent: true,
-          displayName: "Context Length",
-          hint: "0 uses the engine's model default.",
-        },
-        0,
-      )
+      .field("contextLength", "contextLength", { machineDependent: true }, 2048)
       .field("autoFitMinContextLength", "numeric", { min: 0, int: true, machineDependent: true }, 0)
       .field(
         "numParallelSessions",

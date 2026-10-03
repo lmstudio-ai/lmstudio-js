@@ -5,9 +5,9 @@ import {
   kvConfigToDecisionLoadModelConfig,
 } from "./decisionLoadModelConfig.js";
 
-test("manual decision controls round-trip without chat keys, including engine-default context and physical batching", () => {
+test("manual decision controls round-trip without chat keys, including context and physical batching", () => {
   const requested = {
-    contextLength: 0,
+    contextLength: 8192,
     autoFit: false,
     maxParallelPredictions: 6,
     useUnifiedKvCache: false,
@@ -44,10 +44,17 @@ test("partial conversion does not manufacture defaults or overwrite inherited se
   expect(kvConfigToDecisionLoadModelConfig(partial)).toEqual({ physicalBatchSize: 128 });
 });
 
-test("request AutoFit validation preserves GGUF manual-setting rules while readback retains actual context", () => {
-  expect(decisionLoadModelConfigSchema.safeParse({ autoFit: true, contextLength: 0 }).success).toBe(
-    false,
-  );
+test("decision context uses the same positive-length and AutoFit rules as LLMs", () => {
+  expect(() => decisionLoadModelConfigToKVConfig({ contextLength: 0 })).toThrow();
+  expect(() =>
+    decisionLlamaLoadConfigSchematics.parse({
+      fields: [{ key: "decision.load.contextLength", value: 0 }],
+    }),
+  ).toThrow();
+  expect(decisionLoadModelConfigSchema.safeParse({ contextLength: 1 }).success).toBe(true);
+  expect(
+    decisionLoadModelConfigSchema.safeParse({ autoFit: true, contextLength: 2048 }).success,
+  ).toBe(false);
   expect(
     decisionLoadModelConfigSchema.safeParse({ autoFit: true, gpu: { ratio: 0.5 } }).success,
   ).toBe(false);
@@ -58,8 +65,7 @@ test("request AutoFit validation preserves GGUF manual-setting rules while readb
     "llama.autoFit": true,
     "contextLength": 8192,
   });
-  expect(kvConfigToDecisionLoadModelConfig(readback)).toMatchObject({
-    autoFit: true,
-    contextLength: 8192,
-  });
+  const converted = kvConfigToDecisionLoadModelConfig(readback);
+  expect(converted.autoFit).toBe(true);
+  expect(converted.contextLength).toBeUndefined();
 });

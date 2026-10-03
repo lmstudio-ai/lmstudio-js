@@ -15,11 +15,7 @@ export function decisionLoadConfigToLlamaConfig(config: KVConfig): KVConfig {
   config = collapseKVStackRaw([decisionLlamaLoadConfigSchematics.buildFullConfig({}), config]);
   return {
     fields: config.fields
-      .filter(
-        field =>
-          !field.key.startsWith("llm.") &&
-          !(field.key === "decision.load.contextLength" && field.value === 0),
-      )
+      .filter(field => !field.key.startsWith("llm."))
       .map(field => ({ ...field, key: field.key.replace(/^decision\.load\./, "llm.load.") })),
   };
 }
@@ -33,30 +29,21 @@ export function kvConfigToDecisionLoadModelConfig(
   const effective = useDefaultsForMissingKeys
     ? collapseKVStackRaw([decisionLlamaLoadConfigSchematics.buildFullConfig({}), config])
     : config;
-  const contextLength = decisionLlamaLoadConfigSchematics
-    .parsePartial(effective)
-    .get("contextLength");
   const mapped: KVConfig = {
     fields: effective.fields
-      .filter(field => !field.key.startsWith("llm.") && field.key !== "decision.load.contextLength")
+      .filter(field => !field.key.startsWith("llm."))
       .map(field => ({ ...field, key: field.key.replace(/^decision\.load\./, "llm.load.") })),
   };
-  // Actualized context may coexist with AutoFit in readback, unlike requested manual settings.
   return decisionLoadModelConfigSchema.innerType().parse({
     ...kvConfigToLLMLoadModelConfig(mapped),
-    contextLength,
     autoFitMinContextLength: decisionLlamaLoadConfigSchematics
       .parsePartial(effective)
       .get("autoFitMinContextLength"),
   });
 }
 export function decisionLoadModelConfigToKVConfig(config: DecisionLoadModelConfig): KVConfig {
-  const { contextLength, autoFitMinContextLength, ...common } =
-    decisionLoadModelConfigSchema.parse(config);
-  const mapped = llmLoadModelConfigToKVConfig({
-    ...common,
-    autoFit: common.autoFit ?? (contextLength !== undefined ? false : undefined),
-  });
+  const { autoFitMinContextLength, ...common } = decisionLoadModelConfigSchema.parse(config);
+  const mapped = llmLoadModelConfigToKVConfig(common);
   const own: KVConfig = {
     // The LLM converter also normalizes AutoFit for MLX/Splash/vLLM. Retain only the
     // declared decision/GGUF surface, using its schema rather than another field allowlist.
@@ -66,9 +53,6 @@ export function decisionLoadModelConfigToKVConfig(config: DecisionLoadModelConfi
   };
   return collapseKVStackRaw([
     own,
-    decisionLlamaLoadConfigSchematics.buildPartialConfig({
-      contextLength,
-      autoFitMinContextLength,
-    }),
+    decisionLlamaLoadConfigSchematics.buildPartialConfig({ autoFitMinContextLength }),
   ]);
 }

@@ -8,6 +8,7 @@ export const decisionLoadModelConfigSchema: z.ZodEffects<z.ZodType<DecisionLoadM
     .pick({
       gpu: true,
       autoFit: true,
+      contextLength: true,
       maxParallelPredictions: true,
       useUnifiedKvCache: true,
       gpuStrictVramCap: true,
@@ -29,15 +30,9 @@ export const decisionLoadModelConfigSchema: z.ZodEffects<z.ZodType<DecisionLoadM
     })
     .extend({
       autoFitMinContextLength: z.number().int().min(0).optional(),
-      /** 0 delegates context sizing to the engine. Loaded info reports actual context. */
-      contextLength: z.number().int().min(0).optional(),
     })
     .superRefine((config, context) => {
-      // Reuse the shared GGUF cross-field rules; 0 is a decision engine-default sentinel.
-      const validation = llmLoadModelConfigSchema.safeParse({
-        ...config,
-        contextLength: config.contextLength === 0 ? 1 : config.contextLength,
-      });
+      const validation = llmLoadModelConfigSchema.safeParse(config);
       if (!validation.success) {
         for (const issue of validation.error.issues) {
           context.addIssue(issue);
@@ -50,6 +45,7 @@ export interface DecisionLoadModelConfig
     LLMLoadModelConfig,
     | "gpu"
     | "autoFit"
+    | "contextLength"
     | "maxParallelPredictions"
     | "useUnifiedKvCache"
     | "gpuStrictVramCap"
@@ -69,7 +65,5 @@ export interface DecisionLoadModelConfig
     | "llamaKCacheQuantizationType"
     | "llamaVCacheQuantizationType"
   > {
-  /** 0 delegates context sizing to the engine; loaded info reports actual context. */
-  contextLength?: number;
   autoFitMinContextLength?: number;
 }
