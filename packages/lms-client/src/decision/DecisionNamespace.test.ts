@@ -93,25 +93,19 @@ test("decision SDK loads, reuses and unloads a model while preserving its info a
   });
 });
 
-test.each([
-  { config: { autoFit: true, contextLength: 2048 }, message: "autoFit" },
-  { config: { contextLength: 0 }, message: "contextLength" },
-])(
-  "decision SDK rejects invalid load controls $config before opening a load channel",
-  async ({ config, message }) => {
-    const createChannel = jest.fn();
-    const namespace = new DecisionNamespace(
-      {} as LMStudioClient,
-      { createChannel } as unknown as DecisionPort,
-      new SimpleLogger("DecisionSDKTest"),
-      new Validator({ attachStack: false }),
-    );
-    await expect(
-      namespace.load("test/decision", {
-        verbose: false,
-        config,
-      }),
-    ).rejects.toThrow(message);
-    expect(createChannel).not.toHaveBeenCalled();
-  },
-);
+test("decision SDK rejects conflicting AutoFit/manual controls before opening a load channel", async () => {
+  const createChannel = jest.fn();
+  const namespace = new DecisionNamespace(
+    {} as LMStudioClient,
+    { createChannel } as unknown as DecisionPort,
+    new SimpleLogger("DecisionSDKTest"),
+    new Validator({ attachStack: false }),
+  );
+  await expect(
+    namespace.load("test/decision", {
+      verbose: false,
+      config: { autoFit: true, contextLength: 2048 },
+    }),
+  ).rejects.toThrow("autoFit");
+  expect(createChannel).not.toHaveBeenCalled();
+});

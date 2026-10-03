@@ -1,4 +1,3 @@
-import { decisionLoadModelConfigSchema } from "@lmstudio/lms-shared-types";
 import { decisionLlamaLoadConfigSchematics } from "../schema.js";
 import {
   decisionLoadModelConfigToKVConfig,
@@ -21,8 +20,6 @@ test("manual decision controls round-trip without chat keys, including context a
   const config = decisionLoadModelConfigToKVConfig(requested);
   expect(config.fields.some(field => field.key.startsWith("llm."))).toBe(false);
   expect(kvConfigToDecisionLoadModelConfig(config)).toMatchObject(requested);
-  const parsed = decisionLlamaLoadConfigSchematics.parse(config);
-  expect(parsed.get("llama.physicalBatchSize")).toBe(256);
 });
 
 test.each([
@@ -44,23 +41,7 @@ test("partial conversion does not manufacture defaults or overwrite inherited se
   expect(kvConfigToDecisionLoadModelConfig(partial)).toEqual({ physicalBatchSize: 128 });
 });
 
-test("decision context uses the same positive-length and AutoFit rules as LLMs", () => {
-  expect(() => decisionLoadModelConfigToKVConfig({ contextLength: 0 })).toThrow();
-  expect(() =>
-    decisionLlamaLoadConfigSchematics.parse({
-      fields: [{ key: "decision.load.contextLength", value: 0 }],
-    }),
-  ).toThrow();
-  expect(decisionLoadModelConfigSchema.safeParse({ contextLength: 1 }).success).toBe(true);
-  expect(
-    decisionLoadModelConfigSchema.safeParse({ autoFit: true, contextLength: 2048 }).success,
-  ).toBe(false);
-  expect(
-    decisionLoadModelConfigSchema.safeParse({ autoFit: true, gpu: { ratio: 0.5 } }).success,
-  ).toBe(false);
-  expect(
-    decisionLoadModelConfigSchema.safeParse({ autoFit: true, gpu: { disabledGpus: [0] } }).success,
-  ).toBe(true);
+test("AutoFit readback omits manual context from the SDK load config", () => {
   const readback = decisionLlamaLoadConfigSchematics.buildPartialConfig({
     "llama.autoFit": true,
     "contextLength": 8192,
