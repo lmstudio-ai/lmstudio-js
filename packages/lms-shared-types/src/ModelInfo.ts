@@ -1,5 +1,11 @@
 import { z } from "zod";
 import {
+  type DecisionModelInfo,
+  decisionModelInfoSchema,
+  type DecisionModelInstanceInfo,
+  decisionModelInstanceInfoSchema,
+} from "./decision/DecisionModelInfo.js";
+import {
   type EmbeddingModelInfo,
   embeddingModelInfoSchema,
   type EmbeddingModelInstanceInfo,
@@ -17,19 +23,24 @@ import {
  *
  * @public
  */
-export type ModelInfo = LLMInfo | EmbeddingModelInfo;
-export const modelInfoSchema = z.discriminatedUnion("type", [
-  llmInfoSchema as any,
-  embeddingModelInfoSchema as any,
-]) as z.ZodSchema<ModelInfo>;
+export type ModelInfo = LLMInfo | EmbeddingModelInfo | DecisionModelInfo;
+export const modelInfoSchema: z.ZodSchema<ModelInfo> = z.union([
+  llmInfoSchema,
+  embeddingModelInfoSchema,
+  decisionModelInfoSchema,
+]);
 
 /**
  * Information about a model that is loaded.
  *
  * @public
  */
-export type ModelInstanceInfo = LLMInstanceInfo | EmbeddingModelInstanceInfo;
-export const modelInstanceInfoSchema = z.discriminatedUnion("type", [
-  llmInstanceInfoSchema as any,
-  embeddingModelInstanceInfoSchema as any,
-]) as z.ZodSchema<ModelInstanceInfo>;
+export type ModelInstanceInfo =
+  | LLMInstanceInfo
+  | EmbeddingModelInstanceInfo
+  | DecisionModelInstanceInfo;
+export const modelInstanceInfoSchema: z.ZodSchema<ModelInstanceInfo> = z.union([
+  llmInstanceInfoSchema,
+  embeddingModelInstanceInfoSchema,
+  decisionModelInstanceInfoSchema,
+]);

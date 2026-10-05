@@ -1,3 +1,13 @@
+export {
+  decisionLoadConfigToLlamaConfig,
+  decisionLoadModelConfigToKVConfig,
+  kvConfigToDecisionLoadModelConfig,
+} from "./conversion/decisionLoadModelConfig.js";
+export {
+  decisionLoadSchematics,
+  decisionSharedLoadConfigSchematics,
+  decisionLlamaLoadConfigSchematics,
+} from "./schema.js";
 export { isEngineConfigFileField, isEngineConfigFileMode } from "./engineConfigFile.js";
 export { requiresPrivilegedConfigWrite } from "./privilegedConfig.js";
 export {

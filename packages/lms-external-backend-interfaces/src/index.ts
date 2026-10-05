@@ -4,6 +4,11 @@ export {
   createBaseModelBackendInterface,
 } from "./baseModelBackendInterface.js";
 export {
+  createDecisionBackendInterface,
+  DecisionBackendInterface,
+  DecisionPort,
+} from "./decisionBackendInterface.js";
+export {
   createDiagnosticsBackendInterface,
   DiagnosticsBackendInterface,
   DiagnosticsPort,
