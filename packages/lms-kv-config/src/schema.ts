@@ -603,12 +603,7 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
     builder
       .field("contextLength", "contextLength", { machineDependent: true }, 2048)
       .field("autoFitMinContextLength", "numeric", { min: 0, int: true, machineDependent: true }, 0)
-      .field(
-        "numParallelSessions",
-        "numeric",
-        { min: 1, max: 1023, int: true, displayName: "Parallel Sessions" },
-        4,
-      )
+      .field("numParallelSessions", "numeric", { min: 1, max: 1023, int: true }, 4)
       .field("useUnifiedKvCache", "boolean", {}, true)
       .field("offloadKVCacheToGpu", "boolean", {}, true)
       .field(
@@ -618,7 +613,12 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
         "off",
       )
       .field("numExperts", "numeric", { min: 0, int: true }, 0)
-      .field("seed", "checkboxNumeric", { min: -1, int: true }, { checked: false, value: -1 })
+      .field(
+        "seed",
+        "checkboxNumeric",
+        { min: -1, int: true, uncheckedHint: "config:seedUncheckedHint" },
+        { checked: false, value: -1 },
+      )
       .scope("llama", builder =>
         builder
           .field("autoFit", "boolean", { machineDependent: true }, true)
@@ -632,10 +632,25 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
           )
           .field("cpuThreadPoolSize", "numeric", { min: 1, int: true, machineDependent: true }, 4)
           .field("evalBatchSize", "numeric", { min: 1, int: true }, 2048)
-          .field("physicalBatchSize", "numeric", { min: 1, int: true }, 512)
+          .field(
+            "physicalBatchSize",
+            "numeric",
+            { min: 1, int: true, displayName: "Physical Batch Size" },
+            512,
+          )
           .field("flashAttention", "boolean", {}, false)
-          .field("ropeFrequencyBase", "checkboxNumeric", { min: 0 }, { checked: false, value: 0 })
-          .field("ropeFrequencyScale", "checkboxNumeric", { min: 0 }, { checked: false, value: 0 })
+          .field(
+            "ropeFrequencyBase",
+            "checkboxNumeric",
+            { min: 0, uncheckedHint: "config:ropeFrequencyBaseUncheckedHint" },
+            { checked: false, value: 0 },
+          )
+          .field(
+            "ropeFrequencyScale",
+            "checkboxNumeric",
+            { min: 0, uncheckedHint: "config:ropeFrequencyScaleUncheckedHint" },
+            { checked: false, value: 0 },
+          )
           .field("keepModelInMemory", "boolean", {}, true)
           .field("tryMmap", "boolean", {}, true)
           .field("tryDirectIO", "boolean", {}, false)
