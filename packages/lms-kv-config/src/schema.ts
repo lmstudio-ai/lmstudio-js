@@ -529,39 +529,12 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
       .scope("yuzu", builder =>
         builder
           .field("autoFit", "boolean", { machineDependent: true }, true)
-          .field("disableAne", "boolean", { displayName: "Disable ANE" }, false)
-          .field("languageOnly", "boolean", { displayName: "Language Only" }, false)
-          .field(
-            "draftModel",
-            "string",
-            {
-              displayName: "DFlash2 Draft Model",
-              hint: "Local BF16 safetensors draft model key, required for direct GGUF/MLX loading.",
-            },
-            "",
-          )
-          .field(
-            "maxCacheDiskGb",
-            "numeric",
-            { min: 0, step: 1, displayName: "SSD Cache Quota (GB)" },
-            0,
-          )
-          .field(
-            "persistentCache",
-            "boolean",
-            { displayName: "Keep SSD Cache Across Restarts" },
-            false,
-          )
-          .field(
-            "idleReleaseSeconds",
-            "numeric",
-            {
-              min: 0,
-              displayName: "Idle Release (seconds)",
-              hint: "Release wired memory and weights after this idle interval. 0 keeps them resident.",
-            },
-            600,
-          )
+          .field("disableAne", "boolean", {}, false)
+          .field("languageOnly", "boolean", {}, false)
+          .field("draftModel", "string", {}, "")
+          .field("maxCacheDiskGb", "numeric", { min: 0, step: 1 }, 0)
+          .field("persistentCache", "boolean", {}, false)
+          .field("idleReleaseSeconds", "numeric", { min: 0 }, 600)
           .field(
             "kvFormat",
             "select",
@@ -570,7 +543,6 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
                 { value: "int8", displayName: "INT8" },
                 { value: "bf16", displayName: "BF16" },
               ],
-              displayName: "KV Cache Format",
             },
             "int8",
           ),
