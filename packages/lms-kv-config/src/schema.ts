@@ -532,6 +532,18 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
           .field("disableAne", "boolean", { displayName: "Disable ANE" }, false)
           .field("languageOnly", "boolean", { displayName: "Language Only" }, false)
           .field(
+            "maxCacheDiskGb",
+            "numeric",
+            { min: 0, step: 1, displayName: "SSD Cache Quota (GB)" },
+            0,
+          )
+          .field(
+            "persistentCache",
+            "boolean",
+            { displayName: "Keep SSD Cache Across Restarts" },
+            false,
+          )
+          .field(
             "idleReleaseSeconds",
             "numeric",
             {

@@ -525,6 +525,10 @@ export interface LLMLoadModelConfig {
   yuzu?: {
     disableAne?: boolean;
     languageOnly?: boolean;
+    /** Per-model SSD cache quota in decimal GB; 0 disables disk caching (default). */
+    maxCacheDiskGb?: number;
+    /** Opt in to saving conversation prefixes across restarts; needs a nonzero SSD quota. */
+    persistentCache?: boolean;
     /** Seconds before releasing wired memory and weights; 0 disables release. Default 600. */
     idleReleaseSeconds?: number;
     /** Target KV storage; BF16 consumes more memory than the default INT8. */
@@ -824,6 +828,8 @@ export const llmLoadModelConfigSchema = z
       .object({
         disableAne: z.boolean().optional(),
         languageOnly: z.boolean().optional(),
+        maxCacheDiskGb: z.number().finite().nonnegative().optional(),
+        persistentCache: z.boolean().optional(),
         idleReleaseSeconds: z.number().finite().nonnegative().optional(),
         kvFormat: z.enum(["int8", "bf16"]).optional(),
       })

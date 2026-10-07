@@ -272,6 +272,8 @@ describe("yuzu config", () => {
               yuzu: {
                 disableAne: false,
                 languageOnly: false,
+                maxCacheDiskGb: 0,
+                persistentCache: false,
                 idleReleaseSeconds: 600,
                 kvFormat: "int8",
               },
@@ -287,6 +289,8 @@ describe("yuzu config", () => {
       yuzu: {
         disableAne: true,
         languageOnly: true,
+        maxCacheDiskGb: 5,
+        persistentCache: true,
         idleReleaseSeconds: 0,
         kvFormat: "bf16" as const,
       },
@@ -309,7 +313,14 @@ describe("yuzu config", () => {
     ).toEqual({
       autoFit: true,
       maxParallelPredictions: 4,
-      yuzu: { disableAne: false, languageOnly: false, idleReleaseSeconds: 600, kvFormat: "int8" },
+      yuzu: {
+        disableAne: false,
+        languageOnly: false,
+        maxCacheDiskGb: 0,
+        persistentCache: false,
+        idleReleaseSeconds: 600,
+        kvFormat: "int8",
+      },
     });
   });
 
