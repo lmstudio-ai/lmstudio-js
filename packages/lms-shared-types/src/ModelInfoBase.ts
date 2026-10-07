@@ -110,6 +110,11 @@ export const modelInfoBaseSchema = z.object({
  */
 export interface ModelInstanceInfoBase extends ModelInfoBase {
   /**
+   * The engine selected for this loaded instance. Older hosts may omit this field.
+   * Unlike `format`, this identifies the runtime, not the weights on disk.
+   */
+  engine?: string;
+  /**
    * The identifier of the instance.
    */
   identifier: string;
@@ -127,6 +132,7 @@ export interface ModelInstanceInfoBase extends ModelInfoBase {
   lastUsedTime: number | null;
 }
 export const modelInstanceInfoBaseSchema = modelInfoBaseSchema.extend({
+  engine: z.string().optional(),
   identifier: z.string(),
   instanceReference: z.string(),
   ttlMs: z.number().nullable(),

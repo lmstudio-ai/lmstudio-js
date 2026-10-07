@@ -1288,7 +1288,7 @@ export class LLMDynamicHandle extends DynamicHandle<
 
     return kvConfigToLLMLoadModelConfig(loadConfig, {
       useDefaultsForMissingKeys: true,
-      modelFormat: modelInfo.format,
+      modelFormat: modelInfo.engine === "splash" ? "yuzu" : modelInfo.format,
     });
   }
 

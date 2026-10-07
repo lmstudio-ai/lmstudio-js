@@ -91,7 +91,10 @@ function createSilentLogger(): SimpleLogger {
   });
 }
 
-function createNamespaceHarness(modelFormat: ModelCompatibilityType = "gguf"): LLMNamespaceHarness {
+function createNamespaceHarness(
+  modelFormat: ModelCompatibilityType = "gguf",
+  engine?: string,
+): LLMNamespaceHarness {
   const capturedChannelCreations: Array<CapturedChannelCreation> = [];
   const capturedRpcCalls: Array<{ endpointName: string; parameter: unknown }> = [];
   let loadConfigResponse: KVConfig = emptyKVConfig;
@@ -146,7 +149,7 @@ function createNamespaceHarness(modelFormat: ModelCompatibilityType = "gguf"): L
         return loadConfigResponse;
       }
       if (endpointName === "getModelInfo") {
-        return createInstanceInfo(modelFormat);
+        return { ...createInstanceInfo(modelFormat), engine };
       }
       throw new Error(`Unexpected RPC endpoint: ${endpointName}`);
     },
@@ -361,6 +364,28 @@ describe("SDK load prompt template config", () => {
     expect((await model.getLoadConfig()).maxParallelPredictions).toBe(256);
   });
 
+  test.each<ModelCompatibilityType>(["gguf", "safetensors"])(
+    "getLoadConfig follows the loaded Splash engine for %s weights",
+    async format => {
+      const harness = createNamespaceHarness(format, "splash");
+      harness.setLoadConfigResponse(
+        llmLoadModelConfigToKVConfig({
+          autoFit: true,
+          maxParallelPredictions: 4,
+          yuzu: { languageOnly: true, kvFormat: "bf16" },
+        }),
+      );
+      const model = await harness.namespace.load("test/model", { verbose: false });
+      const config = await model.getLoadConfig();
+      expect(config).toMatchObject({
+        autoFit: true,
+        maxParallelPredictions: 4,
+        yuzu: { languageOnly: true, kvFormat: "bf16" },
+      });
+      expect(config).not.toHaveProperty("gpu");
+    },
+  );
+
   test("getLoadConfig preserves Splash parallelism for reuse", async () => {
     const harness = createNamespaceHarness("yuzu");
     harness.setLoadConfigResponse(
@@ -368,7 +393,7 @@ describe("SDK load prompt template config", () => {
     );
     const model = await harness.namespace.load("test/model", { verbose: false });
     const loadConfig = await model.getLoadConfig();
-    expect(loadConfig).toEqual({ autoFit: true, maxParallelPredictions: 4 });
+    expect(loadConfig).toMatchObject({ autoFit: true, maxParallelPredictions: 4 });
 
     await harness.namespace.load("test/model", { verbose: false, config: loadConfig });
     const reapplied = collapseKVStack(
