@@ -187,6 +187,10 @@ export interface LLMPredictionConfigInput<TStructuredOutputType = unknown> {
    * Set to false to disable this penalty.
    */
   presencePenalty?: number | false;
+  /** Frequency-based penalty, where supported by the runtime. */
+  frequencyPenalty?: number | false;
+  /** Ignore EOS stopping. Splash disallows this with tools or structured output. */
+  ignoreEos?: boolean;
   /**
    * Sets a minimum probability threshold that a token must meet to be considered for generation.
    *
@@ -360,6 +364,8 @@ export const llmPredictionConfigInputSchema = z.object({
   topKSampling: z.number().optional(),
   repeatPenalty: z.number().optional().or(z.literal(false)),
   presencePenalty: z.number().optional().or(z.literal(false)),
+  frequencyPenalty: z.number().optional().or(z.literal(false)),
+  ignoreEos: z.boolean().optional(),
   minPSampling: z.number().optional().or(z.literal(false)),
   topPSampling: z.number().optional().or(z.literal(false)),
   cpuThreads: z.number().int().optional(),

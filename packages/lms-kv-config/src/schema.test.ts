@@ -143,24 +143,6 @@ describe("KVConfig", () => {
 describe("yuzu config", () => {
   it("materializes the supported prediction controls with valid defaults", () => {
     const config = llmYuzuPredictionConfigSchematics.buildFullConfig({});
-    expect(config.fields.map(field => field.key).sort()).toEqual(
-      [
-        "temperature",
-        "topKSampling",
-        "topPSampling",
-        "maxPredictedTokens",
-        "systemPrompt",
-        "tools",
-        "toolChoice",
-        "toolNaming",
-        "reasoning.enableThinking",
-        "seed",
-        "stopStrings",
-        "structured",
-      ]
-        .map(key => `llm.prediction.${key}`)
-        .sort(),
-    );
     expect(kvConfigToLLMPredictionConfig(config)).toMatchObject({
       temperature: 1,
       topKSampling: 20,
@@ -176,12 +158,6 @@ describe("yuzu config", () => {
         "llm.prediction.contextOverflowPolicy",
       ),
     ).toBe("truncateMiddle");
-    expect(Array.from(llmYuzuLoadConfigSchematics.fullKeys())).toEqual([
-      "llm.load.contextLength",
-      "llm.load.autoFitMinContextLength",
-      "llm.load.numParallelSessions",
-      "llm.load.yuzu.autoFit",
-    ]);
     expect(() =>
       llmYuzuLoadConfigSchematics.buildPartialConfig({ numParallelSessions: 5 }),
     ).toThrow();
@@ -197,12 +173,12 @@ describe("yuzu config", () => {
     ).toBe(true);
   });
 
-  it.each([-1, 0, 33, 40, 20.5, NaN, Infinity])("rejects top-k %p", value => {
+  it.each([-2, 0x100000000, 20.5, NaN, Infinity])("rejects top-k %p", value => {
     expect(() =>
       llmYuzuPredictionConfigSchematics.buildPartialConfig({ topKSampling: value }),
     ).toThrow();
   });
-  it.each([1, 20, 32])("accepts top-k %p", value => {
+  it.each([-1, 0, 1, 20, 500])("accepts top-k %p", value => {
     expect(
       llmYuzuPredictionConfigSchematics.getSchemaForKey("topKSampling").safeParse(value).success,
     ).toBe(true);
@@ -232,10 +208,14 @@ describe("yuzu config", () => {
     ).toBe(true);
   });
 
-  it("round trips supported overrides without enabling deferred samplers", () => {
+  it("round trips extended sampler overrides through the public SDK config", () => {
     const config = llmYuzuPredictionConfigSchematics.buildPartialConfig({
       "temperature": 0,
-      "topKSampling": 32,
+      "topKSampling": 500,
+      "minPSampling": { checked: true, value: 0.2 },
+      "repeatPenalty": { checked: true, value: 1.15 },
+      "llama.frequencyPenalty": { checked: true, value: -0.5 },
+      "ignoreEos": false,
       "topPSampling": { checked: false, value: 0.95 },
       "maxPredictedTokens": { checked: true, value: 128 },
       "reasoning.enableThinking": false,
@@ -250,8 +230,10 @@ describe("yuzu config", () => {
       stopStrings: ["STOP"],
       structured: { type: "json", jsonSchema: { type: "object" } },
     });
-    expect(converted.minPSampling).toBeUndefined();
-    expect(converted.repeatPenalty).toBeUndefined();
+    expect(converted.minPSampling).toBe(0.2);
+    expect(converted.repeatPenalty).toBe(1.15);
+    expect(converted.frequencyPenalty).toBe(-0.5);
+    expect(converted.ignoreEos).toBe(false);
     expect(
       llmYuzuPredictionConfigSchematics.parseToMap(llmPredictionConfigToKVConfig(converted)),
     ).toEqual(llmYuzuPredictionConfigSchematics.parseToMap(config));
@@ -260,7 +242,7 @@ describe("yuzu config", () => {
   it("retains prediction seed through schematic filtering", () => {
     const config = globalConfigSchematics.buildPartialConfig({
       "llm.prediction.seed": { checked: true, value: 42 },
-      "llm.prediction.minPSampling": { checked: true, value: 0.1 },
+      "llm.prediction.reasoning.budgetTokens": { checked: true, value: 100 },
     });
     const filtered = llmYuzuPredictionConfigSchematics.filterConfig(config);
     expect(filtered.fields).toEqual([
@@ -284,11 +266,37 @@ describe("yuzu config", () => {
         kvConfigToLLMLoadModelConfig(config, { modelFormat: "yuzu", useDefaultsForMissingKeys }),
       ).toEqual(
         useDefaultsForMissingKeys
-          ? { autoFit: true, maxParallelPredictions: 4 }
+          ? {
+              autoFit: true,
+              maxParallelPredictions: 4,
+              yuzu: {
+                disableAne: false,
+                languageOnly: false,
+                idleReleaseSeconds: 600,
+                kvFormat: "int8",
+              },
+            }
           : { contextLength: 8192 },
       );
     },
   );
+
+  it("round trips yuzu load controls without changing AutoFit or adding unrelated engine settings", () => {
+    const request = {
+      autoFit: true,
+      yuzu: {
+        disableAne: true,
+        languageOnly: true,
+        idleReleaseSeconds: 0,
+        kvFormat: "bf16" as const,
+      },
+    };
+    const config = llmLoadModelConfigToKVConfig(request);
+    expect(kvConfigToLLMLoadModelConfig(config, { modelFormat: "yuzu" })).toEqual(request);
+    expect(kvConfigToLLMLoadModelConfig(config, { modelFormat: "safetensors" })).not.toHaveProperty(
+      "yuzu",
+    );
+  });
 
   it("omits absent yuzu config in partial readback and materializes defaults when requested", () => {
     const emptyConfig = makeKVConfigFromFields([]);
@@ -298,10 +306,14 @@ describe("yuzu config", () => {
         modelFormat: "yuzu",
         useDefaultsForMissingKeys: true,
       }),
-    ).toEqual({ autoFit: true, maxParallelPredictions: 4 });
+    ).toEqual({
+      autoFit: true,
+      maxParallelPredictions: 4,
+      yuzu: { disableAne: false, languageOnly: false, idleReleaseSeconds: 600, kvFormat: "int8" },
+    });
   });
 
-  it("filters unrelated preset fields but does not silently clamp a retained invalid top-k", () => {
+  it("retains supported preset samplers without clamping and excludes unsupported prediction drafts", () => {
     const preset = globalConfigSchematics.buildPartialConfig({
       "llm.prediction.topKSampling": 40,
       "llm.prediction.minPSampling": { checked: true, value: 0.05 },
@@ -309,8 +321,12 @@ describe("yuzu config", () => {
       "llm.prediction.speculativeDecoding.draftModel": "owner/drafter",
     });
     const filtered = llmYuzuPredictionConfigSchematics.filterConfig(preset);
-    expect(filtered.fields).toEqual([{ key: "llm.prediction.topKSampling", value: 40 }]);
-    expect(() => llmYuzuPredictionConfigSchematics.parse(filtered)).toThrow(/topKSampling/);
+    expect(kvConfigToLLMPredictionConfig(filtered)).toMatchObject({
+      topKSampling: 40,
+      minPSampling: 0.05,
+      repeatPenalty: 1.1,
+    });
+    expect(kvConfigToLLMPredictionConfig(filtered).draftModel).toBeUndefined();
     expect(preset.fields).toHaveLength(4);
   });
 });

@@ -86,6 +86,15 @@ export function kvConfigToLLMPredictionConfig(
     result.presencePenalty = presencePenalty.checked ? presencePenalty.value : false;
   }
 
+  const frequencyPenalty = parsed.get("llama.frequencyPenalty");
+  if (frequencyPenalty !== undefined) {
+    result.frequencyPenalty = frequencyPenalty.checked ? frequencyPenalty.value : false;
+  }
+  const ignoreEos = parsed.get("ignoreEos");
+  if (ignoreEos !== undefined) {
+    result.ignoreEos = ignoreEos;
+  }
+
   const minPSampling = parsed.get("minPSampling");
   if (minPSampling !== undefined) {
     result.minPSampling = minPSampling.checked ? minPSampling.value : false;
@@ -191,6 +200,8 @@ export function llmPredictionConfigToKVConfig(config: LLMPredictionConfig): KVCo
     "topKSampling": config.topKSampling,
     "repeatPenalty": maybeFalseValueToCheckboxValue(config.repeatPenalty, 1.1),
     "llama.presencePenalty": maybeFalseValueToCheckboxValue(config.presencePenalty, 0),
+    "llama.frequencyPenalty": maybeFalseValueToCheckboxValue(config.frequencyPenalty, 0),
+    "ignoreEos": config.ignoreEos,
     "minPSampling": maybeFalseValueToCheckboxValue(config.minPSampling, 0.05),
     "topPSampling": maybeFalseValueToCheckboxValue(config.topPSampling, 0.95),
     "llama.xtcProbability": maybeFalseValueToCheckboxValue(config.xtcProbability, 0),

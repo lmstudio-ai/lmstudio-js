@@ -521,6 +521,16 @@ export interface LLMLoadModelConfig {
    */
   autoFit?: boolean;
 
+  /** Splash runtime 1.3.0+ controls. The SDK retains its historical yuzu namespace. */
+  yuzu?: {
+    disableAne?: boolean;
+    languageOnly?: boolean;
+    /** Seconds before releasing wired memory and weights; 0 disables release. Default 600. */
+    idleReleaseSeconds?: number;
+    /** Target KV storage; BF16 consumes more memory than the default INT8. */
+    kvFormat?: "int8" | "bf16";
+  };
+
   /**
    * How to distribute the work to your GPUs. See {@link GPUSetting} for more information.
    *
@@ -810,6 +820,14 @@ export const llmLoadModelConfigSchema = z
     engineConfigFileContents: z.string().optional(),
     engineCwd: z.string().optional(),
     autoFit: z.boolean().optional(),
+    yuzu: z
+      .object({
+        disableAne: z.boolean().optional(),
+        languageOnly: z.boolean().optional(),
+        idleReleaseSeconds: z.number().finite().nonnegative().optional(),
+        kvFormat: z.enum(["int8", "bf16"]).optional(),
+      })
+      .optional(),
     gpu: gpuSettingSchema.optional(),
     maxParallelPredictions: z.number().int().min(1).optional(),
     useUnifiedKvCache: z.boolean().optional(),

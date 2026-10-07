@@ -176,6 +176,7 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
         { checked: false, value: -1 },
       )
       .field("contextPrefill", "context", {}, [])
+      .field("ignoreEos", "boolean", { displayName: "Ignore EOS" }, false)
       .field("topKSampling", "numeric", { min: -1, max: 500, int: true }, 40)
       .field(
         "repeatPenalty",
@@ -526,7 +527,32 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
           ),
       )
       .scope("yuzu", builder =>
-        builder.field("autoFit", "boolean", { machineDependent: true }, true),
+        builder
+          .field("autoFit", "boolean", { machineDependent: true }, true)
+          .field("disableAne", "boolean", { displayName: "Disable ANE" }, false)
+          .field("languageOnly", "boolean", { displayName: "Language Only" }, false)
+          .field(
+            "idleReleaseSeconds",
+            "numeric",
+            {
+              min: 0,
+              displayName: "Idle Release (seconds)",
+              hint: "Release wired memory and weights after this idle interval. 0 keeps them resident.",
+            },
+            600,
+          )
+          .field(
+            "kvFormat",
+            "select",
+            {
+              options: [
+                { value: "int8", displayName: "INT8" },
+                { value: "bf16", displayName: "BF16" },
+              ],
+              displayName: "KV Cache Format",
+            },
+            "int8",
+          ),
       )
       .scope("vllm", builder =>
         builder
@@ -816,7 +842,19 @@ export const llmYuzuPredictionConfigSchematics = new KVConfigSchematicsBuilder(k
         },
         1,
       )
-      .field("topKSampling", "numeric", { min: 1, max: 32, int: true }, 20)
+      .field("topKSampling", "numeric", { min: -1, max: 0xffffffff, int: true }, 20)
+      .field(
+        "minPSampling",
+        "checkboxNumeric",
+        { min: 0, max: 1, step: 0.01, precision: 2 },
+        { checked: false, value: 0 },
+      )
+      .field(
+        "repeatPenalty",
+        "checkboxNumeric",
+        { min: 2 ** -149, step: 0.01 },
+        { checked: false, value: 1 },
+      )
       .field(
         "topPSampling",
         "checkboxNumeric",
@@ -837,6 +875,9 @@ export const llmYuzuPredictionConfigSchematics = new KVConfigSchematicsBuilder(k
     llmPredictionConfigSchematics.sliced(
       "maxPredictedTokens",
       "systemPrompt",
+      "ignoreEos",
+      "llama.presencePenalty",
+      "llama.frequencyPenalty",
       "tools",
       "toolChoice",
       "toolNaming",

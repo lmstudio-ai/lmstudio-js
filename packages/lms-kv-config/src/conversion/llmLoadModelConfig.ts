@@ -458,7 +458,14 @@ export function kvConfigToLLMLoadModelConfig(
       const autoFit = parsed.get("yuzu.autoFit");
       const contextLength = parsed.get("contextLength");
       const maxParallelPredictions = parsed.get("numParallelSessions");
+      const yuzu = {
+        disableAne: parsed.get("yuzu.disableAne"),
+        languageOnly: parsed.get("yuzu.languageOnly"),
+        idleReleaseSeconds: parsed.get("yuzu.idleReleaseSeconds"),
+        kvFormat: parsed.get("yuzu.kvFormat") as "int8" | "bf16" | undefined,
+      };
       return {
+        ...(Object.values(yuzu).some(value => value !== undefined) ? { yuzu } : {}),
         ...(autoFit === undefined ? {} : { autoFit }),
         ...(autoFit !== true && contextLength !== undefined ? { contextLength } : {}),
         ...(maxParallelPredictions === undefined ? {} : { maxParallelPredictions }),
@@ -498,6 +505,10 @@ export function llmLoadModelConfigToKVConfig(config: LLMLoadModelConfig): KVConf
     "llama.autoFit": autoFit,
     "mlx.autoFit": autoFit,
     "yuzu.autoFit": autoFit,
+    "yuzu.disableAne": config.yuzu?.disableAne,
+    "yuzu.languageOnly": config.yuzu?.languageOnly,
+    "yuzu.idleReleaseSeconds": config.yuzu?.idleReleaseSeconds,
+    "yuzu.kvFormat": config.yuzu?.kvFormat,
     "vllm.autoFit": autoFit,
     "gpuSplitConfig": hasGpuSplitSetting
       ? convertGPUSettingToGPUSplitConfig(config.gpu)
