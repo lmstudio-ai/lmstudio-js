@@ -461,6 +461,7 @@ export function kvConfigToLLMLoadModelConfig(
       const yuzu = {
         disableAne: parsed.get("yuzu.disableAne"),
         languageOnly: parsed.get("yuzu.languageOnly"),
+        draftModel: parsed.get("yuzu.draftModel"),
         maxCacheDiskGb: parsed.get("yuzu.maxCacheDiskGb"),
         persistentCache: parsed.get("yuzu.persistentCache"),
         idleReleaseSeconds: parsed.get("yuzu.idleReleaseSeconds"),
@@ -509,6 +510,7 @@ export function llmLoadModelConfigToKVConfig(config: LLMLoadModelConfig): KVConf
     "yuzu.autoFit": autoFit,
     "yuzu.disableAne": config.yuzu?.disableAne,
     "yuzu.languageOnly": config.yuzu?.languageOnly,
+    "yuzu.draftModel": config.yuzu?.draftModel,
     "yuzu.maxCacheDiskGb": config.yuzu?.maxCacheDiskGb,
     "yuzu.persistentCache": config.yuzu?.persistentCache,
     "yuzu.idleReleaseSeconds": config.yuzu?.idleReleaseSeconds,

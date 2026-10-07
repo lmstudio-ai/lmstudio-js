@@ -272,6 +272,7 @@ describe("yuzu config", () => {
               yuzu: {
                 disableAne: false,
                 languageOnly: false,
+                draftModel: "",
                 maxCacheDiskGb: 0,
                 persistentCache: false,
                 idleReleaseSeconds: 600,
@@ -289,6 +290,7 @@ describe("yuzu config", () => {
       yuzu: {
         disableAne: true,
         languageOnly: true,
+        draftModel: "owner/local-dflash2",
         maxCacheDiskGb: 5,
         persistentCache: true,
         idleReleaseSeconds: 0,
@@ -316,6 +318,7 @@ describe("yuzu config", () => {
       yuzu: {
         disableAne: false,
         languageOnly: false,
+        draftModel: "",
         maxCacheDiskGb: 0,
         persistentCache: false,
         idleReleaseSeconds: 600,

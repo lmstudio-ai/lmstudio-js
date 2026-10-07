@@ -524,7 +524,10 @@ export interface LLMLoadModelConfig {
   /** Splash runtime 1.3.0+ controls. The SDK retains its historical yuzu namespace. */
   yuzu?: {
     disableAne?: boolean;
+    /** Skip vision in direct GGUF/MLX assemblies; upstream packed models cannot disable vision. */
     languageOnly?: boolean;
+    /** Local BF16 safetensors DFlash2 model key for direct GGUF/MLX; packed models use their bundled draft. */
+    draftModel?: string;
     /** Per-model SSD cache quota in decimal GB; 0 disables disk caching (default). */
     maxCacheDiskGb?: number;
     /** Opt in to saving conversation prefixes across restarts; needs a nonzero SSD quota. */
@@ -828,6 +831,7 @@ export const llmLoadModelConfigSchema = z
       .object({
         disableAne: z.boolean().optional(),
         languageOnly: z.boolean().optional(),
+        draftModel: z.string().optional(),
         maxCacheDiskGb: z.number().finite().nonnegative().optional(),
         persistentCache: z.boolean().optional(),
         idleReleaseSeconds: z.number().finite().nonnegative().optional(),

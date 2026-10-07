@@ -532,6 +532,15 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
           .field("disableAne", "boolean", { displayName: "Disable ANE" }, false)
           .field("languageOnly", "boolean", { displayName: "Language Only" }, false)
           .field(
+            "draftModel",
+            "string",
+            {
+              displayName: "DFlash2 Draft Model",
+              hint: "Local BF16 safetensors draft model key, required for direct GGUF/MLX loading.",
+            },
+            "",
+          )
+          .field(
             "maxCacheDiskGb",
             "numeric",
             { min: 0, step: 1, displayName: "SSD Cache Quota (GB)" },
