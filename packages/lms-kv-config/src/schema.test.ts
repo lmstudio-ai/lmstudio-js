@@ -37,7 +37,8 @@ import { requiresPrivilegedConfigWrite } from "./privilegedConfig.js";
 
 describe("lazy PLE load configuration", () => {
   test.each(["auto", "on", "off"] as const)("round-trips SDK mode %s through KV", lazyMode => {
-    const config = llmLoadModelConfigToKVConfig({ lazyMode });
+    const sdkConfig = llmLoadModelConfigSchema.parse({ lazyMode });
+    const config = llmLoadModelConfigToKVConfig(sdkConfig);
     expect(globalConfigSchematics.access(config, "llm.load.llama.lazyMode")).toBe(lazyMode);
     expect(kvConfigToLLMLoadModelConfig(config).lazyMode).toBe(lazyMode);
   });
