@@ -9,6 +9,7 @@
 
 import {
   defaultGPUSplitConfig,
+  llmLlamaLazyModes,
   type KVConfigFieldDependency,
   type LLMLoadPromptTemplate,
 } from "@lmstudio/lms-shared-types";
@@ -490,6 +491,17 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
           .field("useFp16ForKVCache", "boolean", {}, true)
           .field("tryMmap", "boolean", {}, true)
           .field("tryDirectIO", "boolean", {}, false)
+          .field(
+            "lazyMode",
+            "select",
+            {
+              options: [...llmLlamaLazyModes],
+              machineDependent: true,
+              displayName: "Lazy Mode",
+              hint: "Read eligible supplemental embedding rows on demand instead of keeping the whole table resident. Auto lets the runtime decide.",
+            },
+            "auto",
+          )
           .field(
             "argumentsOverride",
             "llamaCppArgumentsOverride",

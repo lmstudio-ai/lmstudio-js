@@ -1,6 +1,7 @@
 import {
   convertGPUSettingToGPUSplitConfig,
   convertGPUSplitConfigToGPUSetting,
+  llmLlamaLazyModeSchema,
   type GPUSplitConfig,
   type GPUSetting,
   type KVConfig,
@@ -227,6 +228,11 @@ function kvConfigToLLMLlamaLoadModelConfig(
   const tryDirectIO = parsed.get("llama.tryDirectIO");
   if (tryDirectIO !== undefined) {
     result.tryDirectIO = tryDirectIO;
+  }
+
+  const lazyMode = parsed.get("llama.lazyMode");
+  if (lazyMode !== undefined) {
+    result.lazyMode = llmLlamaLazyModeSchema.parse(lazyMode);
   }
 
   const llamaCppArgumentsOverride = parsed.get("llama.argumentsOverride");
@@ -536,6 +542,7 @@ export function llmLoadModelConfigToKVConfig(config: LLMLoadModelConfig): KVConf
     "llama.useFp16ForKVCache": config.useFp16ForKVCache,
     "llama.tryMmap": config.tryMmap,
     "llama.tryDirectIO": config.tryDirectIO,
+    "llama.lazyMode": config.lazyMode,
     "llama.argumentsOverride": config.llamaCppArgumentsOverride,
     "numExperts": config.numExperts,
     "llama.kCacheQuantizationType": maybeFalseValueToCheckboxValue(

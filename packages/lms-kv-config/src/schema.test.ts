@@ -35,6 +35,19 @@ import {
 import { kvValueTypesLibrary } from "./valueTypes.js";
 import { requiresPrivilegedConfigWrite } from "./privilegedConfig.js";
 
+describe("lazy PLE load configuration", () => {
+  test.each(["auto", "on", "off"] as const)("round-trips SDK mode %s through KV", lazyMode => {
+    const config = llmLoadModelConfigToKVConfig({ lazyMode });
+    expect(globalConfigSchematics.access(config, "llm.load.llama.lazyMode")).toBe(lazyMode);
+    expect(kvConfigToLLMLoadModelConfig(config).lazyMode).toBe(lazyMode);
+  });
+
+  test("rejects invalid modes when decoding generic select values", () => {
+    const config = makeKVConfigFromFields([kvConfigField("llm.load.llama.lazyMode", "invalid")]);
+    expect(() => kvConfigToLLMLoadModelConfig(config)).toThrow();
+  });
+});
+
 // Privilege filtering must retain unrelated fields verbatim, even outside the selected engine schema.
 describe("privileged field metadata", () => {
   const schematics = new KVConfigSchematicsBuilder(kvValueTypesLibrary)

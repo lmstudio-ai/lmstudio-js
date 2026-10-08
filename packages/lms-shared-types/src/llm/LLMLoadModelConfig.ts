@@ -72,6 +72,11 @@ export const gpuSettingSchema = z.object({
   disabledGpus: z.array(z.number().int()).optional(),
 });
 
+export const llmLlamaLazyModes = ["auto", "on", "off"] as const;
+/** On-demand reading of eligible supplemental embedding tables by llama-server. @public */
+export type LLMLlamaLazyMode = (typeof llmLlamaLazyModes)[number];
+export const llmLlamaLazyModeSchema = z.enum(llmLlamaLazyModes);
+
 export const llmLlamaCacheQuantizationTypes = [
   "f32",
   "f16",
@@ -735,6 +740,16 @@ export interface LLMLoadModelConfig {
   tryDirectIO?: boolean;
 
   /**
+   * Controls on-demand reading of eligible supplemental or per-layer embedding tables.
+   *
+   * Applies to GGUF models loaded through llama-server runtimes (llama.cpp 2.32.0 or later). "auto"
+   * lets the runtime decide, "on" reads eligible rows from a file mapping on demand (including
+   * when other weights use direct I/O), and "off" keeps the tables resident. Application or
+   * device defaults may override the runtime's "auto" default.
+   */
+  lazyMode?: LLMLlamaLazyMode;
+
+  /**
    * Controls the arguments passed to the llama.cpp server process.
    *
    * This applies to GGUF models loaded through LM Studio's llama-server engine protocol. Disabled
@@ -835,6 +850,7 @@ export const llmLoadModelConfigSchema = z
     useFp16ForKVCache: z.boolean().optional(),
     tryMmap: z.boolean().optional(),
     tryDirectIO: z.boolean().optional(),
+    lazyMode: llmLlamaLazyModeSchema.optional(),
     llamaCppArgumentsOverride: llmLlamaCppArgumentsOverrideSchema.optional(),
     numExperts: z.number().int().optional(),
     llamaKCacheQuantizationType: z

@@ -15,6 +15,14 @@ function expectSpeculativeConfigRejectedByHelpers(
 }
 
 describe("LLMLoadModelConfig schema", () => {
+  it.each(["auto", "on", "off"])("accepts lazy mode %s", lazyMode => {
+    expect(llmLoadModelConfigSchema.parse({ lazyMode }).lazyMode).toBe(lazyMode);
+  });
+
+  it.each([true, "invalid", 1])("rejects invalid lazy mode %j", lazyMode => {
+    expect(llmLoadModelConfigSchema.safeParse({ lazyMode }).success).toBe(false);
+  });
+
   it("rejects AutoFit with explicit manual load settings", () => {
     const manualLoadConfigs = [
       { contextLength: 4096 },
