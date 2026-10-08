@@ -799,6 +799,27 @@ export const llmVllmPredictionConfigSchematics = llmPredictionConfigSchematics.s
   "llama.logitBias",
 );
 
+// OpenVINO Model Server applies its chat template, so the template, stop strings and other llama.cpp
+// controls stay out. Structured output is listed so requests for it fail instead of being dropped.
+export const llmOpenVinoPredictionConfigSchematics = llmPredictionConfigSchematics.sliced(
+  "temperature",
+  "maxPredictedTokens",
+  "structured",
+  "tools",
+  "toolChoice",
+  "toolNaming",
+  "systemPrompt",
+  "seed",
+  "topKSampling",
+  "repeatPenalty",
+  "minPSampling",
+  "topPSampling",
+  "reasoning.enableThinking",
+  "llama.presencePenalty",
+  "llama.frequencyPenalty",
+  "vision.userMaxImageDimensionPixels",
+);
+
 // Keep yuzu defaults and limits local to its slice; other engines retain their sampler defaults.
 export const llmYuzuPredictionConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypesLibrary)
   .scope("llm.prediction", builder =>
@@ -895,6 +916,11 @@ export const llmMlxLoadConfigSchematics = llmSharedLoadConfigSchematics.union(
 
 export const llmOmlxLoadConfigSchematics = llmLoadSchematics.sliced(
   "contextLength",
+  "numParallelSessions",
+  "envVars",
+);
+
+export const llmOpenVinoLoadConfigSchematics = llmLoadSchematics.sliced(
   "numParallelSessions",
   "envVars",
 );
