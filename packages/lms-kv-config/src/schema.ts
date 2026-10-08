@@ -495,7 +495,10 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
             "lazyMode",
             "select",
             {
-              options: [...llmLlamaLazyModes],
+              options: llmLlamaLazyModes.map(value => ({
+                value,
+                displayName: { auto: "Auto", on: "On", off: "Off" }[value],
+              })),
               machineDependent: true,
               displayName: "On-Demand Tensor Loading",
             },

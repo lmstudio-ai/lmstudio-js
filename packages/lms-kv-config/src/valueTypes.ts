@@ -233,8 +233,11 @@ const baseKVValueTypesLibraryBuilder = new KVFieldValueTypesLibraryBuilder({
     effectiveEquals: (a, b) => {
       return a === b;
     },
-    stringify: value => {
-      return value;
+    stringify: (value, { options }) => {
+      const option = options.find(option =>
+        typeof option === "string" ? option === value : option.value === value,
+      );
+      return typeof option === "object" ? option.displayName : value;
     },
   })
   .valueType("boolean", {

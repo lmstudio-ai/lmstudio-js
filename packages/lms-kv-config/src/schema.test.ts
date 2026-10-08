@@ -1602,6 +1602,28 @@ describe("globalConfigSchematics", () => {
     });
   });
   describe("stringify", () => {
+    it("formats select display names without changing stored values or unlabeled options", () => {
+      const modelValue = "provider/model-v2";
+      const modelLabel = "Provider Model With A Long Display Name";
+      const rawOption = "q4_k_m";
+      const schematics = new KVConfigSchematicsBuilder(kvValueTypesLibrary)
+        .field(
+          "model",
+          "select",
+          { options: [{ value: modelValue, displayName: modelLabel }, rawOption] },
+          modelValue,
+        )
+        .build();
+      for (const [value, displayName] of [
+        [modelValue, modelLabel],
+        [rawOption, rawOption],
+      ]) {
+        const config = schematics.buildPartialConfig({ model: value });
+        expect(schematics.stringifyField("model", value)).toBe(displayName);
+        expect(schematics.access(config, "model")).toBe(value);
+      }
+    });
+
     it("should work with temperature", () => {
       expect(globalConfigSchematics.stringifyField("llm.prediction.temperature", 0)).toBe("0.00");
       expect(globalConfigSchematics.stringifyField("llm.prediction.temperature", 0.5)).toBe("0.50");
