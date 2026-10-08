@@ -806,6 +806,9 @@ export class LLMDynamicHandle extends DynamicHandle<
               // prevent the model from using the value set in the preset.
               stopStrings: [],
               ...config,
+              // Do not inherit chat's thinking default for raw prompts. Explicit overrides
+              // still reach the engine's validation.
+              enableThinking: config.enableThinking ?? false,
             }),
           },
         ],

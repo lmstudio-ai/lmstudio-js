@@ -95,26 +95,36 @@ function getPredictionConfigStack(creationParameter: unknown): KVConfigStack {
 }
 
 describe("LLMDynamicHandle raw completion channel", () => {
-  test("complete opens completeRawText with rawPrompt", async () => {
-    const harness = createHandleHarness();
+  test.each([{}, { enableThinking: undefined }])(
+    "complete opens completeRawText without inheriting chat thinking: %j",
+    async opts => {
+      const harness = createHandleHarness();
 
-    await harness.handle.complete("raw prompt");
+      await harness.handle.complete("raw prompt", opts);
 
-    const capturedCreation = harness.capturedChannelCreations[0];
-    expect(capturedCreation?.endpointName).toBe("completeRawText");
-    expect(capturedCreation?.creationParameter).toMatchObject({
-      rawPrompt: "raw prompt",
-      modelSpecifier: { type: "instanceReference", instanceReference: "test-instance" },
-    });
-    const predictionConfigStack = getPredictionConfigStack(capturedCreation?.creationParameter);
-    expect(predictionConfigStack.layers.map(layer => layer.layerName)).toEqual(["apiOverride"]);
-    expect(
-      globalConfigSchematics.access(
-        collapseKVStack(predictionConfigStack),
-        "llm.prediction.stopStrings",
-      ),
-    ).toEqual([]);
-  });
+      const capturedCreation = harness.capturedChannelCreations[0];
+      expect(capturedCreation?.endpointName).toBe("completeRawText");
+      expect(capturedCreation?.creationParameter).toMatchObject({
+        rawPrompt: "raw prompt",
+        modelSpecifier: { type: "instanceReference", instanceReference: "test-instance" },
+      });
+      const predictionConfigStack = getPredictionConfigStack(capturedCreation?.creationParameter);
+      expect(predictionConfigStack.layers.map(layer => layer.layerName)).toEqual(["apiOverride"]);
+      expect(
+        globalConfigSchematics.access(
+          collapseKVStack(predictionConfigStack),
+          "llm.prediction.stopStrings",
+        ),
+      ).toEqual([]);
+      // The server may have chat thinking enabled by default. A raw request must override it.
+      expect(
+        globalConfigSchematics.accessPartial(
+          collapseKVStack(predictionConfigStack),
+          "llm.prediction.reasoning.enableThinking",
+        ),
+      ).toBe(false);
+    },
+  );
 
   test.each([
     ["rawTools", { rawTools: { type: "none" } }],
