@@ -497,8 +497,7 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
             {
               options: [...llmLlamaLazyModes],
               machineDependent: true,
-              displayName: "Lazy Mode",
-              hint: "Read eligible supplemental embedding rows on demand instead of keeping the whole table resident. Auto lets the runtime decide.",
+              displayName: "On-Demand Tensor Loading",
             },
             "auto",
           )
