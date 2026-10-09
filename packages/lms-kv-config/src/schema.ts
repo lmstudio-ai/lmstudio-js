@@ -799,11 +799,13 @@ export const llmVllmPredictionConfigSchematics = llmPredictionConfigSchematics.s
   "llama.logitBias",
 );
 
-// OpenVINO Model Server applies its chat template, so the template, stop strings and other llama.cpp
-// controls stay out. Structured output is listed so requests for it fail instead of being dropped.
+// OpenVINO Model Server applies its chat template, so the template and other llama.cpp controls stay
+// out. OVMS 2026.4 keeps the matched stop string at the end of streamed output. Structured output is
+// listed so requests for it fail instead of being dropped.
 export const llmOpenVinoPredictionConfigSchematics = llmPredictionConfigSchematics.sliced(
   "temperature",
   "maxPredictedTokens",
+  "stopStrings",
   "structured",
   "tools",
   "toolChoice",
