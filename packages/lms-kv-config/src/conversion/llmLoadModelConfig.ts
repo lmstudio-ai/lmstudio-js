@@ -230,7 +230,7 @@ function kvConfigToLLMLlamaLoadModelConfig(
     result.tryDirectIO = tryDirectIO;
   }
 
-  const lazyMode = parsed.get("llama.lazyMode");
+  const lazyMode = parsed.get("lazyMode");
   if (lazyMode !== undefined) {
     result.lazyMode = llmLlamaLazyModeSchema.parse(lazyMode);
   }
@@ -542,7 +542,7 @@ export function llmLoadModelConfigToKVConfig(config: LLMLoadModelConfig): KVConf
     "llama.useFp16ForKVCache": config.useFp16ForKVCache,
     "llama.tryMmap": config.tryMmap,
     "llama.tryDirectIO": config.tryDirectIO,
-    "llama.lazyMode": config.lazyMode,
+    "lazyMode": config.lazyMode,
     "llama.argumentsOverride": config.llamaCppArgumentsOverride,
     "numExperts": config.numExperts,
     "llama.kCacheQuantizationType": maybeFalseValueToCheckboxValue(

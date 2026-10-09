@@ -36,15 +36,31 @@ import { kvValueTypesLibrary } from "./valueTypes.js";
 import { requiresPrivilegedConfigWrite } from "./privilegedConfig.js";
 
 describe("lazy PLE load configuration", () => {
+  test("unsupported engines discard lazy mode while preserving shared load overrides", () => {
+    const config = llmLoadModelConfigToKVConfig({ contextLength: 4096, lazyMode: "on" });
+    for (const schematics of [
+      llmMlxLoadConfigSchematics,
+      llmOmlxLoadConfigSchematics,
+      llmVllmLoadConfigSchematics,
+      llmYuzuLoadConfigSchematics,
+    ]) {
+      const filtered = kvConfigToLLMLoadModelConfig(schematics.filterConfig(config));
+      expect(filtered.contextLength).toBe(4096);
+      expect(filtered.lazyMode).toBeUndefined();
+    }
+  });
+
   test.each(["auto", "on", "off"] as const)("round-trips SDK mode %s through KV", lazyMode => {
     const sdkConfig = llmLoadModelConfigSchema.parse({ lazyMode });
     const config = llmLoadModelConfigToKVConfig(sdkConfig);
-    expect(globalConfigSchematics.access(config, "llm.load.llama.lazyMode")).toBe(lazyMode);
-    expect(kvConfigToLLMLoadModelConfig(config).lazyMode).toBe(lazyMode);
+    expect(globalConfigSchematics.access(config, "llm.load.lazyMode")).toBe(lazyMode);
+    expect(
+      kvConfigToLLMLoadModelConfig(llmLlamaLoadConfigSchematics.filterConfig(config)).lazyMode,
+    ).toBe(lazyMode);
   });
 
   test("rejects invalid modes when decoding generic select values", () => {
-    const config = makeKVConfigFromFields([kvConfigField("llm.load.llama.lazyMode", "invalid")]);
+    const config = makeKVConfigFromFields([kvConfigField("llm.load.lazyMode", "invalid")]);
     expect(() => kvConfigToLLMLoadModelConfig(config)).toThrow();
   });
 });

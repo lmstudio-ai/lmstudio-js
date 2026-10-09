@@ -334,6 +334,20 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
       )
       .field("offloadKVCacheToGpu", "boolean", {}, true)
       .field(
+        "lazyMode",
+        "select",
+        {
+          options: [
+            { value: "auto", displayName: "Auto" },
+            { value: "on", displayName: "On" },
+            { value: "off", displayName: "Off" },
+          ],
+          machineDependent: true,
+          displayName: "On-Demand Tensor Loading",
+        },
+        "auto",
+      )
+      .field(
         "numCpuExpertLayersRatio",
         "llamaAccelerationOffloadRatio",
         { machineDependent: true, isExperimental: true },
@@ -490,20 +504,6 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
           .field("useFp16ForKVCache", "boolean", {}, true)
           .field("tryMmap", "boolean", {}, true)
           .field("tryDirectIO", "boolean", {}, false)
-          .field(
-            "lazyMode",
-            "select",
-            {
-              options: [
-                { value: "auto", displayName: "Auto" },
-                { value: "on", displayName: "On" },
-                { value: "off", displayName: "Off" },
-              ],
-              machineDependent: true,
-              displayName: "On-Demand Tensor Loading",
-            },
-            "auto",
-          )
           .field(
             "argumentsOverride",
             "llamaCppArgumentsOverride",
@@ -896,6 +896,7 @@ export const llmLlamaLoadConfigSchematics = llmSharedLoadConfigSchematics
       "load.*",
       "promptTemplate",
       "offloadKVCacheToGpu",
+      "lazyMode",
       "numParallelSessions",
       "useUnifiedKvCache",
       "speculativeDecoding.*",
