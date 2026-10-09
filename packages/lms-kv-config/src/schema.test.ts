@@ -211,6 +211,7 @@ describe("yuzu config", () => {
       "llm.load.autoFitMinContextLength",
       "llm.load.numParallelSessions",
       "llm.load.yuzu.autoFit",
+      "llm.load.yuzu.neuralEngine",
     ]);
     expect(() =>
       llmYuzuLoadConfigSchematics.buildPartialConfig({ numParallelSessions: 5 }),
