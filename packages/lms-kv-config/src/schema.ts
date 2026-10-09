@@ -9,7 +9,6 @@
 
 import {
   defaultGPUSplitConfig,
-  llmLlamaLazyModes,
   type KVConfigFieldDependency,
   type LLMLoadPromptTemplate,
 } from "@lmstudio/lms-shared-types";
@@ -495,10 +494,11 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
             "lazyMode",
             "select",
             {
-              options: llmLlamaLazyModes.map(value => ({
-                value,
-                displayName: { auto: "Auto", on: "On", off: "Off" }[value],
-              })),
+              options: [
+                { value: "auto", displayName: "Auto" },
+                { value: "on", displayName: "On" },
+                { value: "off", displayName: "Off" },
+              ],
               machineDependent: true,
               displayName: "On-Demand Tensor Loading",
             },
