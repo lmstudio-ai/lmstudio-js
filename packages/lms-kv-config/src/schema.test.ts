@@ -35,6 +35,36 @@ import {
 import { kvValueTypesLibrary } from "./valueTypes.js";
 import { requiresPrivilegedConfigWrite } from "./privilegedConfig.js";
 
+describe("lazy PLE load configuration", () => {
+  test("unsupported engines discard lazy mode while preserving shared load overrides", () => {
+    const config = llmLoadModelConfigToKVConfig({ contextLength: 4096, lazyMode: "on" });
+    for (const schematics of [
+      llmMlxLoadConfigSchematics,
+      llmOmlxLoadConfigSchematics,
+      llmVllmLoadConfigSchematics,
+      llmYuzuLoadConfigSchematics,
+    ]) {
+      const filtered = kvConfigToLLMLoadModelConfig(schematics.filterConfig(config));
+      expect(filtered.contextLength).toBe(4096);
+      expect(filtered.lazyMode).toBeUndefined();
+    }
+  });
+
+  test.each(["auto", "on", "off"] as const)("round-trips SDK mode %s through KV", lazyMode => {
+    const sdkConfig = llmLoadModelConfigSchema.parse({ lazyMode });
+    const config = llmLoadModelConfigToKVConfig(sdkConfig);
+    expect(globalConfigSchematics.access(config, "llm.load.lazyMode")).toBe(lazyMode);
+    expect(
+      kvConfigToLLMLoadModelConfig(llmLlamaLoadConfigSchematics.filterConfig(config)).lazyMode,
+    ).toBe(lazyMode);
+  });
+
+  test("rejects invalid modes when decoding generic select values", () => {
+    const config = makeKVConfigFromFields([kvConfigField("llm.load.lazyMode", "invalid")]);
+    expect(() => kvConfigToLLMLoadModelConfig(config)).toThrow();
+  });
+});
+
 // Privilege filtering must retain unrelated fields verbatim, even outside the selected engine schema.
 describe("privileged field metadata", () => {
   const schematics = new KVConfigSchematicsBuilder(kvValueTypesLibrary)
@@ -1588,6 +1618,28 @@ describe("globalConfigSchematics", () => {
     });
   });
   describe("stringify", () => {
+    it("formats select display names without changing stored values or unlabeled options", () => {
+      const modelValue = "provider/model-v2";
+      const modelLabel = "Provider Model With A Long Display Name";
+      const rawOption = "q4_k_m";
+      const schematics = new KVConfigSchematicsBuilder(kvValueTypesLibrary)
+        .field(
+          "model",
+          "select",
+          { options: [{ value: modelValue, displayName: modelLabel }, rawOption] },
+          modelValue,
+        )
+        .build();
+      for (const [value, displayName] of [
+        [modelValue, modelLabel],
+        [rawOption, rawOption],
+      ]) {
+        const config = schematics.buildPartialConfig({ model: value });
+        expect(schematics.stringifyField("model", value)).toBe(displayName);
+        expect(schematics.access(config, "model")).toBe(value);
+      }
+    });
+
     it("should work with temperature", () => {
       expect(globalConfigSchematics.stringifyField("llm.prediction.temperature", 0)).toBe("0.00");
       expect(globalConfigSchematics.stringifyField("llm.prediction.temperature", 0.5)).toBe("0.50");

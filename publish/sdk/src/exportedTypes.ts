@@ -204,6 +204,7 @@ export type {
   LLMLlamaAccelerationOffloadRatio,
   LLMLlamaCacheQuantizationType,
   LLMLlamaCppArgumentsOverride,
+  LLMLlamaLazyMode,
   LLMLoadModelConfig,
   LLMLoadSpeculativeDecodingConfig,
   LLMLoadSpeculativeDecodingResolution,
