@@ -9,14 +9,16 @@ export function handleAbortSignal(abortSignal: AbortSignal | undefined, onAbort:
     return noop;
   }
   let handled = false;
-  abortSignal.addEventListener("abort", () => {
+  const abortHandler = () => {
     if (handled) {
       return;
     }
     handled = true;
     onAbort();
-  });
+  };
+  abortSignal.addEventListener("abort", abortHandler, { once: true });
   return () => {
     handled = true;
+    abortSignal.removeEventListener("abort", abortHandler);
   };
 }
