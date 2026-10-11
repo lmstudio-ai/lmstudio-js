@@ -1,5 +1,6 @@
 import { applyPatches, type Patch } from "@lmstudio/immer-with-plugins";
 import {
+  executeWithRetry,
   getCurrentStack,
   LazySignal,
   makePromise,
@@ -9,6 +10,7 @@ import {
   Validator,
   type LoggerInterface,
   type NotAvailable,
+  type RetryPolicyConfig,
   type Setter,
   type WriteTag,
 } from "@lmstudio/lms-common";
@@ -115,6 +117,7 @@ export class ClientPort<
   private readonly onCommunicationWarning?: (
     communicationWarning: ClientPortCommunicationWarning,
   ) => void;
+  private readonly retryPolicyConfig: RetryPolicyConfig;
 
   public constructor(
     public readonly backendInterface: BackendInterface<
@@ -130,6 +133,7 @@ export class ClientPort<
       errorDeserializer,
       verboseErrorMessage,
       onCommunicationWarning,
+      retryPolicy,
     }: {
       parentLogger?: LoggerInterface;
       errorDeserializer?: (
@@ -139,12 +143,22 @@ export class ClientPort<
       ) => Error;
       verboseErrorMessage?: boolean;
       onCommunicationWarning?: (communicationWarning: ClientPortCommunicationWarning) => void;
+      /**
+       * Retry policy configuration for RPC calls. Defaults to balanced retry policy.
+       */
+      retryPolicy?: RetryPolicyConfig;
     } = {},
   ) {
     this.logger = new SimpleLogger("ClientPort", parentLogger);
     this.errorDeserializer = errorDeserializer ?? defaultErrorDeserializer;
     this.verboseErrorMessage = verboseErrorMessage ?? true;
     this.onCommunicationWarning = onCommunicationWarning;
+    this.retryPolicyConfig = retryPolicy ?? {
+      maxRetries: 3,
+      initialDelayMs: 100,
+      maxDelayMs: 10000,
+      backoffMultiplier: 2,
+    };
     this.transport = factory(this.receivedMessage, this.onConnected, this.errored, this.logger);
   }
 
@@ -618,6 +632,17 @@ export class ClientPort<
     param: TRpcEndpoints[TEndpointName]["parameter"],
     { stack }: { stack?: string } = {},
   ): Promise<TRpcEndpoints[TEndpointName]["returns"]> {
+    return executeWithRetry(
+      () => this.callRpcOnce(endpointName, param, { stack }),
+      this.retryPolicyConfig,
+    );
+  }
+
+  private async callRpcOnce<TEndpointName extends keyof TRpcEndpoints & string>(
+    endpointName: TEndpointName,
+    param: TRpcEndpoints[TEndpointName]["parameter"],
+    { stack }: { stack?: string } = {},
+  ): Promise<TRpcEndpoints[TEndpointName]["returns"]> {
     const endpoint = this.backendInterface.getRpcEndpoint(endpointName);
     if (endpoint === undefined) {
       throw new Error(`No Rpc endpoint with name ${endpointName}`);
@@ -630,7 +655,7 @@ export class ClientPort<
 
     const { promise, resolve, reject } = makePromise();
 
-    stack = stack ?? getCurrentStack(1);
+    stack = stack ?? getCurrentStack(2);
     this.ongoingRpcs.set(callId, {
       endpoint,
       stack,
