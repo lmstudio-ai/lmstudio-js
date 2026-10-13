@@ -35,6 +35,12 @@ export {
   SerializedOpaque,
   serializedOpaqueSchema,
 } from "./serialization.js";
+export {
+  PayloadCodec,
+  type PayloadSchema,
+  type InferPayloadSchema,
+  type PayloadDecodeResult,
+} from "./PayloadCodec.js";
 export { KEEP_ALIVE_INTERVAL, KEEP_ALIVE_TIMEOUT } from "./timeoutConstants.js";
 export {
   ClientToServerMessage,

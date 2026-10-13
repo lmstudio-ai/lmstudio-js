@@ -1,16 +1,16 @@
-import { applyPatches } from "@lmstudio/immer-with-plugins";
+import { applyPatches, type Patch } from "@lmstudio/immer-with-plugins";
 import {
   Event,
   isAvailable,
   SimpleLogger,
-  text,
-  Validator,
   type LoggerInterface,
   type SignalLike,
+  type Setter,
   type WriteTag,
 } from "@lmstudio/lms-common";
 import {
   Channel,
+  PayloadCodec,
   deserialize,
   normalizeCommunicationWarningKind,
   serialize,
@@ -23,9 +23,7 @@ import {
   type ServerToClientMessage,
   type ServerTransport,
   type ServerTransportFactory,
-  type SignalEndpoint,
   type SignalEndpointsSpecBase,
-  type WritableSignalEndpoint,
   type WritableSignalEndpointsSpecBase,
 } from "@lmstudio/lms-communication";
 import { serializeError } from "@lmstudio/lms-shared-types";
@@ -41,12 +39,10 @@ interface OpenChannel {
 }
 
 interface OpenSignalSubscription {
-  endpoint: SignalEndpoint;
   unsubscribe: () => void;
 }
 
 interface OpenWritableSignalSubscription {
-  endpoint: WritableSignalEndpoint;
   unsubscribe: () => void;
   receivedPatches: (patches: Array<any>, tags: Array<WriteTag>) => void;
 }
@@ -59,26 +55,20 @@ export class ServerPort<
   TWritableSignalEndpoints extends WritableSignalEndpointsSpecBase,
 > {
   private readonly transport: ServerTransport;
+  private readonly payloadCodec: PayloadCodec;
+  private closed = false;
   private readonly logger;
   private readonly openChannels = new Map<number, OpenChannel>();
   private readonly openSignalSubscriptions = new Map<number, OpenSignalSubscription>();
-  /**
-   * Signal subscriptions that needs to be closed because unsubscribe comes before it is created.
-   */
-  private readonly signalSubscriptionsToClose = new Set<number>();
   private readonly openWritableSignalSubscriptions = new Map<
     number,
     OpenWritableSignalSubscription
   >();
-  /**
-   * Writable signal subscriptions that needs to be closed because unsubscribe comes before it is
-   * created.
-   */
-  private readonly writableSignalSubscriptionsToClose = new Set<number>();
   public readonly closeEvent: Event<void>;
   private readonly emitCloseEvent: () => void;
   private producedCommunicationWarningsCount = 0;
 
+  /** Creates a port with payload handling scoped to this connection. */
   public constructor(
     private readonly backendInterface: BackendInterface<
       TContext,
@@ -91,11 +81,14 @@ export class ServerPort<
     factory: ServerTransportFactory,
     {
       parentLogger,
+      payloadCodec,
     }: {
       parentLogger?: LoggerInterface;
+      payloadCodec?: PayloadCodec;
     } = {},
   ) {
     this.logger = new SimpleLogger("ServerPort", parentLogger);
+    this.payloadCodec = payloadCodec ?? new PayloadCodec();
     [this.closeEvent, this.emitCloseEvent] = Event.create();
     this.transport = factory(this.receivedMessage, this.errored, this.logger);
   }
@@ -167,50 +160,45 @@ export class ServerPort<
       );
       return;
     }
-    const deserializedCreationParameter = deserialize(
-      endpoint.serialization,
-      message.creationParameter,
-    );
-    const parseResult = endpoint.creationParameter.safeParse(deserializedCreationParameter);
-    if (!parseResult.success) {
-      this.communicationWarning(
-        text`
-          Received invalid creationParameter for channel, endpointName = ${endpoint.name},
-          creationParameter = ${deserializedCreationParameter}. Zod error:
-
-          ${Validator.prettyPrintZod("creationParameter", parseResult.error)}
-        `,
-        "channelCreationParameterTypeError",
-      );
-
+    const parseResult = this.payloadCodec.decode({
+      schema: endpoint.creationParameter,
+      serialization: endpoint.serialization,
+      value: message.creationParameter,
+    });
+    if (parseResult.success === false) {
+      this.safeSend({
+        type: "channelError",
+        channelId: message.channelId,
+        error: serializeError(parseResult.error),
+      });
       return;
     }
+
     const channelId = message.channelId;
     const openChannel: OpenChannel = {
       endpoint,
       ...Channel.create((message, ackId) => {
-        const result = endpoint.toClientPacket.safeParse(message);
-        if (!result.success) {
-          this.communicationWarning(
-            text`
-              Tried to send invalid message for channel, endpointName = ${endpoint.name},
-              message = ${message as object}. Zod error:
-
-              ${Validator.prettyPrintZod("message", result.error)}
-            `,
-            "channelMessageTypeError",
-          );
-          return;
+        try {
+          if (!this.openChannels.has(channelId)) {
+            return;
+          }
+          const value = endpoint.toClientPacket.parse(message);
+          this.transport.send({
+            type: "channelSend",
+            channelId,
+            ackId,
+            message: this.payloadCodec.encode({
+              schema: endpoint.toClientPacket,
+              serialization: endpoint.serialization,
+              value,
+            }),
+          });
+        } catch (error) {
+          this.failChannel(channelId, error);
         }
-        const serializedMessage = serialize(endpoint.serialization, result.data);
-        this.transport.send({
-          type: "channelSend",
-          channelId,
-          message: serializedMessage,
-          ackId: ackId,
-        });
       }),
     };
+
     this.openChannels.set(channelId, openChannel);
     const context = this.contextCreator({
       type: "channel",
@@ -221,6 +209,9 @@ export class ServerPort<
       .then(() => endpoint.handler!(context, parseResult.data, openChannel.channel))
       .then(
         () => {
+          if (!this.openChannels.delete(channelId)) {
+            return;
+          }
           this.safeSend(
             {
               type: "channelClose",
@@ -232,6 +223,9 @@ export class ServerPort<
           openChannel.closed();
         },
         error => {
+          if (!this.openChannels.delete(channelId)) {
+            return;
+          }
           this.safeSend(
             {
               type: "channelError",
@@ -253,30 +247,37 @@ export class ServerPort<
       });
   }
 
+  /** Validates incoming packets and fails the channel if its payload cannot be represented. */
   private receivedChannelSend(message: ClientToServerMessage & { type: "channelSend" }) {
     const openChannel = this.openChannels.get(message.channelId);
     if (openChannel === undefined) {
       this.communicationWarning(
-        `Received channelSend for unknown channel, channelId = ${message.channelId}`,
+        `Received channelSend for unknown channel ${message.channelId}`,
         "channelUnknown",
       );
       return;
     }
-    const deserializedMessage = deserialize(openChannel.endpoint.serialization, message.message);
-    const parsed = openChannel.endpoint.toServerPacket.safeParse(deserializedMessage);
-    if (!parsed.success) {
-      this.communicationWarning(
-        text`
-          Received invalid message for channel, endpointName = ${openChannel.endpoint.name},
-          message = ${message.message}. Zod error:
-
-          ${Validator.prettyPrintZod("message", parsed.error)}
-        `,
-        "channelMessageTypeError",
-      );
+    const parsed = this.payloadCodec.decode({
+      schema: openChannel.endpoint.toServerPacket,
+      serialization: openChannel.endpoint.serialization,
+      value: message.message,
+    });
+    if (parsed.success === false) {
+      this.failChannel(message.channelId, parsed.error);
       return;
     }
     openChannel.receivedMessage(parsed.data);
+  }
+
+  /** Reports a channel-local failure and settles its listeners. */
+  private failChannel(channelId: number, error: unknown): void {
+    const channel = this.openChannels.get(channelId);
+    if (channel === undefined) {
+      return;
+    }
+    this.openChannels.delete(channelId);
+    channel.errored(error);
+    this.safeSend({ type: "channelError", channelId, error: serializeError(error) });
   }
 
   private receivedChannelAck(message: ClientToServerMessage & { type: "channelAck" }) {
@@ -308,20 +309,20 @@ export class ServerPort<
       );
       return;
     }
-    const deserializedParameter = deserialize(endpoint.serialization, message.parameter);
-    const parseResult = endpoint.parameter.safeParse(deserializedParameter);
-    if (!parseResult.success) {
-      this.communicationWarning(
-        text`
-          Received invalid parameter for rpcCall, endpointName = ${endpoint.name},
-          parameter = ${message.parameter}. Zod error:
-
-          ${Validator.prettyPrintZod("parameter", parseResult.error)}
-        `,
-        "rpcParameterTypeError",
-      );
+    const parseResult = this.payloadCodec.decode({
+      schema: endpoint.parameter,
+      serialization: endpoint.serialization,
+      value: message.parameter,
+    });
+    if (parseResult.success === false) {
+      this.safeSend({
+        type: "rpcError",
+        callId: message.callId,
+        error: serializeError(parseResult.error),
+      });
       return;
     }
+
     const context = this.contextCreator({
       type: "rpc",
       endpointName: endpoint.name,
@@ -333,7 +334,11 @@ export class ServerPort<
         value => {
           let serializedResult;
           try {
-            serializedResult = serialize(endpoint.serialization, value);
+            serializedResult = this.payloadCodec.encode({
+              schema: endpoint.returns,
+              serialization: endpoint.serialization,
+              value,
+            });
           } catch (error) {
             this.safeSend(
               {
@@ -375,423 +380,212 @@ export class ServerPort<
       });
   }
 
-  /** Starts a signal subscription or reports why the endpoint cannot serve it. */
-  private receivedSignalSubscribe(message: ClientToServerMessage & { type: "signalSubscribe" }) {
-    const endpoint = this.backendInterface.getSignalEndpoint(message.endpoint);
+  /** Owns initial snapshots, conversion, and cleanup for both kinds of signal. */
+  private subscribeSignal(
+    message: ClientToServerMessage & { type: "signalSubscribe" | "writableSignalSubscribe" },
+  ): void {
+    const writable = message.type === "writableSignalSubscribe";
+    const endpoint = writable
+      ? this.backendInterface.getWritableSignalEndpoint(message.endpoint)
+      : this.backendInterface.getSignalEndpoint(message.endpoint);
+    const subscriptions = writable
+      ? this.openWritableSignalSubscriptions
+      : this.openSignalSubscriptions;
+    const fail = (error: unknown) =>
+      this.failSignalSubscription({ subscribeId: message.subscribeId, writable, error });
     if (endpoint === undefined || endpoint.handler === null) {
       const error = new Error(
-        `${endpoint === undefined ? "Unknown" : "Unhandled"} signal endpoint '${message.endpoint}'.`,
+        `${endpoint === undefined ? "Unknown" : "Unhandled"} ${writable ? "writable signal" : "signal"} endpoint '${message.endpoint}'.`,
       );
       this.communicationWarning(
         error.message,
-        endpoint === undefined ? "signalEndpointUnknown" : "signalEndpointUnhandled",
+        writable
+          ? endpoint === undefined
+            ? "writableSignalEndpointUnknown"
+            : "writableSignalEndpointUnhandled"
+          : endpoint === undefined
+            ? "signalEndpointUnknown"
+            : "signalEndpointUnhandled",
       );
-      this.safeSend(
-        { type: "signalError", subscribeId: message.subscribeId, error: serializeError(error) },
-        "signalError",
-      );
+      fail(error);
       return;
     }
-    if (this.openSignalSubscriptions.has(message.subscribeId)) {
-      this.communicationWarning(
-        text`
-          Received signalSubscribe for already open subscription, subscribeId =
-          ${message.subscribeId}
-        `,
-        "signalAlreadyOpen",
-      );
+    if (subscriptions.has(message.subscribeId)) {
+      fail(new Error(`Subscription ${message.subscribeId} is already open.`));
       return;
     }
-    const deserializedCreationParameter = deserialize(
-      endpoint.serialization,
-      message.creationParameter,
-    );
-    const parseResult = endpoint.creationParameter.safeParse(deserializedCreationParameter);
-    if (!parseResult.success) {
-      this.communicationWarning(
-        text`
-          Received invalid parameter for signalSubscribe, endpointName = ${endpoint.name},
-          creationParameter = ${deserializedCreationParameter}. Zod error:
-
-          ${Validator.prettyPrintZod("creationParameter", parseResult.error)}
-        `,
-        "signalCreationParameterTypeError",
-      );
+    const parsed = this.payloadCodec.decode({
+      schema: endpoint.creationParameter,
+      serialization: endpoint.serialization,
+      value: message.creationParameter,
+    });
+    if (parsed.success === false) {
+      fail(parsed.error);
       return;
     }
     const context = this.contextCreator({
-      type: "signal",
+      type: writable ? "writableSignal" : "signal",
       endpointName: endpoint.name,
     });
-    let initialized = false;
+    let active = true;
+    // Register before awaiting the handler so an early unsubscribe can cancel it.
+    const pending = {
+      unsubscribe: () => {
+        active = false;
+      },
+      receivedPatches: () => {},
+    };
+    subscriptions.set(message.subscribeId, pending);
     Promise.resolve()
-      .then(() => endpoint.handler!(context, parseResult.data))
-      .then(
-        (signal: SignalLike<any>) => {
-          const openSignalSubscription: OpenSignalSubscription = {
-            endpoint,
-            unsubscribe: signal.subscribeFull((value, patches, tags) => {
-              if (!isAvailable(value)) {
-                return;
-              }
-              if (initialized) {
-                let serializedPatches;
-                try {
-                  serializedPatches = patches.map(patch =>
-                    serialize(endpoint.serialization, patch),
-                  );
-                } catch (error) {
-                  context.logger.error("Error serializing signal update:", error);
-                  return;
-                }
-                this.safeSend(
-                  {
-                    type: "signalUpdate",
-                    subscribeId: message.subscribeId,
-                    patches: serializedPatches,
-                    tags,
-                  },
-                  "signalUpdate",
-                  context.logger,
-                );
-              } else {
-                let initialPatch;
-                try {
-                  initialPatch = serialize(endpoint.serialization, {
-                    op: "replace",
-                    path: [],
-                    value,
-                  });
-                } catch (error) {
-                  context.logger.error("Error serializing signal update:", error);
-                  return;
-                }
-                this.safeSend(
-                  {
-                    type: "signalUpdate",
-                    subscribeId: message.subscribeId,
-                    patches: [initialPatch],
-                    tags,
-                  },
-                  "signalUpdate",
-                  context.logger,
-                );
-                initialized = true;
-              }
-            }),
-          };
-          if (this.signalSubscriptionsToClose.has(message.subscribeId)) {
-            this.signalSubscriptionsToClose.delete(message.subscribeId);
-            openSignalSubscription.unsubscribe();
-          } else {
-            this.openSignalSubscriptions.set(message.subscribeId, openSignalSubscription);
-            const currentValue = signal.get();
-            if (isAvailable(currentValue)) {
-              let initialPatch;
-              try {
-                initialPatch = serialize(endpoint.serialization, {
-                  op: "replace",
-                  path: [],
-                  value: signal.get(),
-                });
-              } catch (error) {
-                this.safeSend(
-                  {
-                    type: "signalError",
-                    subscribeId: message.subscribeId,
-                    error: serializeError(error),
-                  },
-                  "signalError",
-                  context.logger,
-                );
-                return;
-              }
-              this.safeSend(
-                {
-                  type: "signalUpdate",
-                  subscribeId: message.subscribeId,
-                  patches: [initialPatch],
-                  tags: [],
-                },
-                "signalUpdate",
-                context.logger,
-              );
-              initialized = true;
-            }
+      .then(() => endpoint.handler!(context, parsed.data))
+      .then(source => {
+        if (this.closed || !active) {
+          return;
+        }
+        const [signal, setter] = writable
+          ? (source as readonly [SignalLike<unknown>, Setter<unknown>])
+          : ([source as SignalLike<unknown>, null] as const);
+        let initialized = false;
+        let stop = () => {};
+        const publish = (value: unknown, patches: Patch[], tags: WriteTag[]) => {
+          if (!active || !isAvailable(value)) {
+            return;
           }
-        },
-        error => {
-          this.safeSend(
-            {
-              type: "signalError",
+          try {
+            const wirePatches =
+              initialized && this.payloadCodec.preservesPatches(endpoint.signalData)
+                ? patches
+                : [
+                    {
+                      op: "replace" as const,
+                      path: [],
+                      value: this.payloadCodec.toWire(endpoint.signalData, value),
+                    },
+                  ];
+            this.transport.send({
+              type: writable ? "writableSignalUpdate" : "signalUpdate",
               subscribeId: message.subscribeId,
-              error: serializeError(error),
-            },
-            "signalError",
-            context.logger,
-          );
-          context.logger.error("Error in signal handler:", error);
-        },
-      )
+              patches: wirePatches.map(patch => serialize(endpoint.serialization, patch)),
+              tags,
+            });
+            initialized = true;
+          } catch (error) {
+            fail(error);
+          }
+        };
+        const subscription = {
+          unsubscribe: () => {
+            active = false;
+            stop();
+          },
+          receivedPatches: (patches: unknown[], tags: WriteTag[]) => {
+            if (!active || setter === null) {
+              return;
+            }
+            try {
+              const current = signal.get();
+              if (!isAvailable(current)) {
+                this.safeSend({
+                  type: "writableSignalUpdate",
+                  subscribeId: message.subscribeId,
+                  patches: [],
+                  tags,
+                });
+                return;
+              }
+              const preservesPatches = this.payloadCodec.preservesPatches(endpoint.signalData);
+              // A peer's paths address its representation, including any items omitted by conversion.
+              const wireBefore = preservesPatches
+                ? current
+                : this.payloadCodec.toWire(endpoint.signalData, current);
+              const decodedPatches = patches.map(patch =>
+                deserialize(endpoint.serialization, patch as Parameters<typeof deserialize>[1]),
+              ) as Patch[];
+              const wireAfter: unknown = applyPatches(
+                wireBefore as Parameters<typeof applyPatches>[0],
+                decodedPatches,
+              );
+              const decoded = this.payloadCodec.decode({
+                schema: endpoint.signalData,
+                value: wireAfter,
+              });
+              if (decoded.success === false) {
+                throw decoded.error;
+              }
+              if (preservesPatches) {
+                // Parsing may clone. The patched value retains references and matches these patches.
+                setter.withValueAndPatches(wireAfter, decodedPatches, tags);
+              } else {
+                setter(decoded.data, tags);
+              }
+            } catch (error) {
+              fail(error);
+            }
+          },
+        };
+        subscriptions.set(message.subscribeId, subscription);
+        stop = signal.subscribeFull(publish);
+        if (!active) {
+          stop();
+          return;
+        }
+        if (!initialized) {
+          publish(signal.get(), [], []);
+        }
+      })
       .catch(error => {
-        context.logger.error("Unhandled error in signal handling:", error);
+        if (active && !this.closed) {
+          fail(error);
+        }
+        context.logger.error("Error in signal handler:", error);
       });
   }
 
+  /** Fails the subscription and releases its source, including failed writes awaiting tags. */
+  private failSignalSubscription({
+    subscribeId,
+    writable,
+    error,
+  }: {
+    subscribeId: number;
+    writable: boolean;
+    error: unknown;
+  }): void {
+    const subscriptions = writable
+      ? this.openWritableSignalSubscriptions
+      : this.openSignalSubscriptions;
+    const subscription = subscriptions.get(subscribeId);
+    subscriptions.delete(subscribeId);
+    subscription?.unsubscribe();
+    this.safeSend({
+      type: writable ? "writableSignalError" : "signalError",
+      subscribeId,
+      error: serializeError(error),
+    });
+  }
+
+  /** Cancels an active readonly subscription or one whose handler has not resolved. */
   private receivedSignalUnsubscribe(
     message: ClientToServerMessage & { type: "signalUnsubscribe" },
   ) {
-    const openSignalSubscription = this.openSignalSubscriptions.get(message.subscribeId);
-    if (openSignalSubscription === undefined) {
-      this.signalSubscriptionsToClose.add(message.subscribeId);
+    const subscription = this.openSignalSubscriptions.get(message.subscribeId);
+    if (subscription === undefined) {
       return;
     }
-    openSignalSubscription.unsubscribe();
     this.openSignalSubscriptions.delete(message.subscribeId);
+    subscription.unsubscribe();
   }
 
-  /** Serves writable subscriptions, reports unavailable endpoints, and validates incoming edits. */
-  private receivedWritableSignalSubscribe(
-    message: ClientToServerMessage & { type: "writableSignalSubscribe" },
-  ) {
-    const endpoint = this.backendInterface.getWritableSignalEndpoint(message.endpoint);
-    if (endpoint === undefined || endpoint.handler === null) {
-      const error = new Error(
-        `${endpoint === undefined ? "Unknown" : "Unhandled"} writable signal endpoint '${message.endpoint}'.`,
-      );
-      this.communicationWarning(
-        error.message,
-        endpoint === undefined
-          ? "writableSignalEndpointUnknown"
-          : "writableSignalEndpointUnhandled",
-      );
-      this.safeSend(
-        {
-          type: "writableSignalError",
-          subscribeId: message.subscribeId,
-          error: serializeError(error),
-        },
-        "writableSignalError",
-      );
-      return;
-    }
-    if (this.openWritableSignalSubscriptions.has(message.subscribeId)) {
-      this.communicationWarning(
-        text`
-          Received writableSignalSubscribe for already open subscription, subscribeId =
-          ${message.subscribeId}
-        `,
-        "writableSignalAlreadyOpen",
-      );
-      return;
-    }
-    const deserializedCreationParameter = deserialize(
-      endpoint.serialization,
-      message.creationParameter,
-    );
-    const parseResult = endpoint.creationParameter.safeParse(deserializedCreationParameter);
-    if (!parseResult.success) {
-      this.communicationWarning(
-        text`
-          Received invalid parameter for writableSignalSubscribe, endpointName = ${endpoint.name},
-          creationParameter = ${deserializedCreationParameter}. Zod error:
-
-          ${Validator.prettyPrintZod("creationParameter", parseResult.error)}
-        `,
-        "writableSignalCreationParameterTypeError",
-      );
-      return;
-    }
-    const context = this.contextCreator({
-      type: "writableSignal",
-      endpointName: endpoint.name,
-    });
-    let initialized = false;
-    Promise.resolve()
-      .then(() => endpoint.handler!(context, parseResult.data))
-      .then(
-        ([signal, setter]) => {
-          const openWritableSignalSubscription: OpenWritableSignalSubscription = {
-            endpoint,
-            unsubscribe: signal.subscribeFull((value, patches, tags) => {
-              if (!isAvailable(value)) {
-                return;
-              }
-              if (initialized) {
-                let serializedPatches;
-                try {
-                  serializedPatches = patches.map(patch =>
-                    serialize(endpoint.serialization, patch),
-                  );
-                } catch (error) {
-                  context.logger.error("Error serializing writable signal update:", error);
-                  return;
-                }
-                this.safeSend(
-                  {
-                    type: "writableSignalUpdate",
-                    subscribeId: message.subscribeId,
-                    patches: serializedPatches,
-                    tags,
-                  },
-                  "writableSignalUpdate",
-                  context.logger,
-                );
-              } else {
-                let initialPatch;
-                try {
-                  initialPatch = serialize(endpoint.serialization, {
-                    op: "replace",
-                    path: [],
-                    value,
-                  });
-                } catch (error) {
-                  this.safeSend(
-                    {
-                      type: "writableSignalError",
-                      subscribeId: message.subscribeId,
-                      error: serializeError(error),
-                    },
-                    "writableSignalError",
-                    context.logger,
-                  );
-                  return;
-                }
-                this.safeSend(
-                  {
-                    type: "writableSignalUpdate",
-                    subscribeId: message.subscribeId,
-                    patches: [initialPatch],
-                    tags,
-                  },
-                  "writableSignalUpdate",
-                  context.logger,
-                );
-                initialized = true;
-              }
-            }),
-            receivedPatches: (patches, tags) => {
-              try {
-                const data = signal.get();
-                if (!isAvailable(data)) {
-                  // Backend is not ready, ignore the update and tell the frontend that the
-                  // optimistic update is completed.
-                  this.safeSend(
-                    {
-                      type: "writableSignalUpdate",
-                      subscribeId: message.subscribeId,
-                      patches: [],
-                      tags, // Here is where we send the tags back to the client.
-                    },
-                    "writableSignalUpdate",
-                    context.logger,
-                  );
-                  return;
-                }
-                const deserializedPatches = patches.map(patch =>
-                  deserialize(endpoint.serialization, patch),
-                ) as any;
-                const result = applyPatches(data, deserializedPatches);
-                const parseResult = endpoint.signalData.safeParse(result);
-                if (!parseResult.success) {
-                  this.communicationWarning(
-                    text`
-                      Received invalid data for writable signal, endpointName = ${endpoint.name},
-                      data = ${result}. Zod error:
-
-                      ${Validator.prettyPrintZod("data", parseResult.error)}
-                    `,
-                    "writableSignalDataTypeError",
-                  );
-                  return;
-                }
-                // Parsing clones the entire value. Keep the patch result so unchanged branches
-                // retain their references and the value still matches the forwarded patches.
-                setter.withValueAndPatches(result, deserializedPatches, tags);
-              } catch (error: any) {
-                this.communicationWarning(
-                  text`
-                    Error in receivedPatches for writable signal, endpointName = ${endpoint.name},
-                    error = ${error.message}
-                  `,
-                  "writableSignalPatchApplyError",
-                );
-              }
-            },
-          };
-          if (this.writableSignalSubscriptionsToClose.has(message.subscribeId)) {
-            this.writableSignalSubscriptionsToClose.delete(message.subscribeId);
-            openWritableSignalSubscription.unsubscribe();
-          } else {
-            this.openWritableSignalSubscriptions.set(
-              message.subscribeId,
-              openWritableSignalSubscription,
-            );
-            const currentValue = signal.get();
-            if (isAvailable(currentValue)) {
-              let initialPatch;
-              try {
-                initialPatch = serialize(endpoint.serialization, {
-                  op: "replace",
-                  path: [],
-                  value: signal.get(),
-                });
-              } catch (error) {
-                this.safeSend(
-                  {
-                    type: "writableSignalError",
-                    subscribeId: message.subscribeId,
-                    error: serializeError(error),
-                  },
-                  "writableSignalError",
-                  context.logger,
-                );
-                return;
-              }
-              this.safeSend(
-                {
-                  type: "writableSignalUpdate",
-                  subscribeId: message.subscribeId,
-                  patches: [initialPatch],
-                  tags: [],
-                },
-                "writableSignalUpdate",
-                context.logger,
-              );
-              initialized = true;
-            }
-          }
-        },
-        error => {
-          this.safeSend(
-            {
-              type: "writableSignalError",
-              subscribeId: message.subscribeId,
-              error: serializeError(error),
-            },
-            "writableSignalError",
-            context.logger,
-          );
-          context.logger.error("Error in writable signal handler:", error);
-        },
-      )
-      .catch(error => {
-        context.logger.error("Unhandled error in writable signal handling:", error);
-      });
-  }
-
+  /** Cancels an active writable subscription or one whose handler has not resolved. */
   private receivedWritableSignalUnsubscribe(
     message: ClientToServerMessage & { type: "writableSignalUnsubscribe" },
   ) {
-    const openWritableSignalSubscription = this.openWritableSignalSubscriptions.get(
-      message.subscribeId,
-    );
-    if (openWritableSignalSubscription === undefined) {
-      this.writableSignalSubscriptionsToClose.add(message.subscribeId);
+    const subscription = this.openWritableSignalSubscriptions.get(message.subscribeId);
+    if (subscription === undefined) {
       return;
     }
-    openWritableSignalSubscription.unsubscribe();
     this.openWritableSignalSubscriptions.delete(message.subscribeId);
+    subscription.unsubscribe();
   }
 
   private receivedWritableSignalUpdate(
@@ -851,16 +645,13 @@ export class ServerPort<
         this.receivedRpcCall(message);
         break;
       }
-      case "signalSubscribe": {
-        this.receivedSignalSubscribe(message);
+      case "signalSubscribe":
+      case "writableSignalSubscribe": {
+        this.subscribeSignal(message);
         break;
       }
       case "signalUnsubscribe": {
         this.receivedSignalUnsubscribe(message);
-        break;
-      }
-      case "writableSignalSubscribe": {
-        this.receivedWritableSignalSubscribe(message);
         break;
       }
       case "writableSignalUnsubscribe": {
@@ -881,7 +672,9 @@ export class ServerPort<
       }
     }
   };
-  private errored = (error: any) => {
+  /** Releases subscriptions and prevents late handlers from attaching after disconnect. */
+  private errored = (error: unknown) => {
+    this.closed = true;
     for (const openChannel of this.openChannels.values()) {
       openChannel.errored(error);
     }
@@ -891,6 +684,9 @@ export class ServerPort<
     for (const openWritableSignalSubscription of this.openWritableSignalSubscriptions.values()) {
       openWritableSignalSubscription.unsubscribe();
     }
+    this.openChannels.clear();
+    this.openSignalSubscriptions.clear();
+    this.openWritableSignalSubscriptions.clear();
     this.emitCloseEvent();
   };
 

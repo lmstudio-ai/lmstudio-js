@@ -187,6 +187,20 @@ export abstract class ClientTransport extends Transport<
     const result = clientToServerMessageSchema.parse(message);
     this.sendViaTransport(result);
   }
+  /** Prepares a payload when ready; null cancels work that ended while queued. */
+  public sendDeferred(
+    prepare: () => ClientToServerMessage | null,
+    failed: (error: unknown) => void,
+  ): void {
+    try {
+      const message = prepare();
+      if (message !== null) {
+        this.send(message);
+      }
+    } catch (error) {
+      failed(error);
+    }
+  }
   /**
    * Called by the client port when the number of open communications changes from 0 to 1. This
    * usually indicates the `socket.ref()` should be called to prevent the process from exiting.
