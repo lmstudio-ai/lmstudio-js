@@ -55,7 +55,7 @@ export const hubModelSharedMetadataSchema = z.object({
 });
 
 /**
- * Represents metadata for models in the Hub.
+ * Represents metadata for LLM, embedding, and decision models in the Hub.
  *
  * @deprecated [DEP-HUB-API-ACCESS] LM Studio Hub API access is still in active development. Stay
  * tuned for updates.
@@ -72,6 +72,10 @@ export type HubModelMetadata =
   | ({
       type: "embedding";
       contextLengths: Array<number>;
+    } & HubModelSharedMetadata)
+  | ({
+      type: "decision";
+      contextLengths: Array<number>;
     } & HubModelSharedMetadata);
 export const hubModelMetadataSchema = z.discriminatedUnion("type", [
   z.object({
@@ -84,6 +88,11 @@ export const hubModelMetadataSchema = z.discriminatedUnion("type", [
   }),
   z.object({
     type: z.literal("embedding"),
+    ...hubModelSharedMetadataSchema.shape,
+    contextLengths: z.array(z.number()),
+  }),
+  z.object({
+    type: z.literal("decision"),
     ...hubModelSharedMetadataSchema.shape,
     contextLengths: z.array(z.number()),
   }),
