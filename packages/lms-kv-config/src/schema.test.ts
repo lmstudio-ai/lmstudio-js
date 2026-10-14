@@ -213,6 +213,7 @@ describe("yuzu config", () => {
       "llm.load.maxMemoryBytes",
       "llm.load.yuzu.autoFit",
       "llm.load.yuzu.neuralEngine",
+      "llm.load.yuzu.drafter",
     ]);
     expect(() =>
       llmYuzuLoadConfigSchematics.buildPartialConfig({ numParallelSessions: 5 }),
@@ -287,6 +288,15 @@ describe("yuzu config", () => {
     expect(
       llmYuzuPredictionConfigSchematics.parseToMap(llmPredictionConfigToKVConfig(converted)),
     ).toEqual(llmYuzuPredictionConfigSchematics.parseToMap(config));
+  });
+
+  it("retains the Splash drafter only in Splash load configuration", () => {
+    const config = globalConfigSchematics.buildPartialConfig({
+      "llm.load.yuzu.drafter": "owner/drafter",
+    });
+    expect(llmYuzuLoadConfigSchematics.filterConfig(config)).toEqual(config);
+    expect(llmLlamaLoadConfigSchematics.filterConfig(config).fields).toEqual([]);
+    expect(llmMlxLoadConfigSchematics.filterConfig(config).fields).toEqual([]);
   });
 
   it("retains prediction seed through schematic filtering", () => {
