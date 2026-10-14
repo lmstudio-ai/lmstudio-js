@@ -359,6 +359,19 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
         { min: 1, max: 1023, int: true, isExperimental: true },
         4,
       )
+      .field(
+        "maxMemoryBytes",
+        "checkboxNumeric",
+        {
+          min: 1,
+          max: Number.MAX_SAFE_INTEGER,
+          int: true,
+          machineDependent: true,
+          displayName: "Maximum Memory (bytes)",
+          hint: "Caps Splash's Metal allocations. Leave unchecked to let Splash choose the budget automatically.",
+        },
+        { checked: false, value: 28 * 1024 ** 3 },
+      )
       .field("useUnifiedKvCache", "boolean", { isExperimental: true }, true)
       .scope("speculativeDecoding", builder =>
         builder
@@ -896,7 +909,13 @@ export const llmSharedLoadConfigSchematics = llmLoadSchematics.sliced(
 );
 
 export const llmYuzuLoadConfigSchematics = llmLoadSchematics
-  .sliced("contextLength", "autoFitMinContextLength", "numParallelSessions", "yuzu.*")
+  .sliced(
+    "contextLength",
+    "autoFitMinContextLength",
+    "numParallelSessions",
+    "maxMemoryBytes",
+    "yuzu.*",
+  )
   .withTypeParamOverride("numParallelSessions", param => ({ ...param, max: 4 }));
 
 const llamaLoadConfigSchematics = globalConfigSchematics.sliced("llama.load.*", "load.*");
