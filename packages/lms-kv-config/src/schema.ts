@@ -551,7 +551,7 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
               int: true,
               machineDependent: true,
               displayName: "Maximum Memory (bytes)",
-              hint: "Caps Splash's Metal allocations, not total process memory. Leave unchecked to let Splash choose the budget automatically. AutoFit chooses context length within this budget.",
+              hint: "Caps Splash's Metal allocations. Leave unchecked to let Splash choose the budget automatically.",
             },
             { checked: false, value: 28 * 1024 ** 3 },
           )
