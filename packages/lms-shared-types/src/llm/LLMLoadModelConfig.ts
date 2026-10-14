@@ -527,6 +527,11 @@ export interface LLMLoadModelConfig {
   autoFit?: boolean;
 
   /**
+   * Splash DFlash2 drafter model key. Omit to inherit the saved selection; use an empty string to clear it.
+   */
+  splashDrafter?: string;
+
+  /**
    * How to distribute the work to your GPUs. See {@link GPUSetting} for more information.
    *
    * @public
@@ -825,6 +830,7 @@ export const llmLoadModelConfigSchema = z
     engineConfigFileContents: z.string().optional(),
     engineCwd: z.string().optional(),
     autoFit: z.boolean().optional(),
+    splashDrafter: z.string().optional(),
     gpu: gpuSettingSchema.optional(),
     maxParallelPredictions: z.number().int().min(1).optional(),
     useUnifiedKvCache: z.boolean().optional(),
