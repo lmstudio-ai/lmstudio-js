@@ -819,13 +819,6 @@ export interface LLMLoadModelConfig {
    * Set to false to disable quantization and use full precision.
    */
   mlxKvCacheQuantization?: LLMMlxKvCacheQuantization | false;
-
-  /**
-   * Maximum Metal allocation budget for Splash, in bytes. This is not a process RSS limit.
-   * Set to false to let Splash choose its memory budget automatically. Omit to inherit the saved
-   * setting. Can be used with AutoFit to choose a context length within this budget.
-   */
-  splashMaxMemoryBytes?: number | false;
 }
 export const llmLoadModelConfigSchema = z
   .object({
@@ -870,7 +863,6 @@ export const llmLoadModelConfigSchema = z
       .optional(),
     mlxDiskCache: z.boolean().optional(),
     mlxKvCacheQuantization: llmMlxKvCacheQuantizationSchema.or(z.literal(false)).optional(),
-    splashMaxMemoryBytes: z.number().int().positive().safe().or(z.literal(false)).optional(),
   })
   .superRefine((config, context) => {
     if (

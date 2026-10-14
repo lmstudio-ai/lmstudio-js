@@ -464,14 +464,10 @@ export function kvConfigToLLMLoadModelConfig(
       const autoFit = parsed.get("yuzu.autoFit");
       const contextLength = parsed.get("contextLength");
       const maxParallelPredictions = parsed.get("numParallelSessions");
-      const maxMemoryBytes = parsed.get("yuzu.maxMemoryBytes");
       return {
         ...(autoFit === undefined ? {} : { autoFit }),
         ...(autoFit !== true && contextLength !== undefined ? { contextLength } : {}),
         ...(maxParallelPredictions === undefined ? {} : { maxParallelPredictions }),
-        ...(maxMemoryBytes === undefined
-          ? {}
-          : { splashMaxMemoryBytes: maxMemoryBytes.checked ? maxMemoryBytes.value : false }),
       };
     }
     default:
@@ -508,10 +504,6 @@ export function llmLoadModelConfigToKVConfig(config: LLMLoadModelConfig): KVConf
     "llama.autoFit": autoFit,
     "mlx.autoFit": autoFit,
     "yuzu.autoFit": autoFit,
-    "yuzu.maxMemoryBytes": maybeFalseValueToCheckboxValue(
-      config.splashMaxMemoryBytes,
-      28 * 1024 ** 3,
-    ),
     "vllm.autoFit": autoFit,
     "gpuSplitConfig": hasGpuSplitSetting
       ? convertGPUSettingToGPUSplitConfig(config.gpu)

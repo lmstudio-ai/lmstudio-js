@@ -62,13 +62,6 @@ describe("LLMLoadModelConfig schema", () => {
     ).toBe(true);
   });
 
-  it.each([0, -1, 1.5, Number.MAX_SAFE_INTEGER + 1, Infinity, NaN])(
-    "rejects an invalid Splash memory budget %p at the SDK boundary",
-    splashMaxMemoryBytes => {
-      expect(() => llmLoadModelConfigSchema.parse({ splashMaxMemoryBytes })).toThrow();
-    },
-  );
-
   it("accepts llama context checkpoints including 0", () => {
     expect(llmLoadModelConfigSchema.safeParse({ contextCheckpoints: 0 }).success).toBe(true);
     expect(llmLoadModelConfigSchema.safeParse({ contextCheckpoints: 32 }).success).toBe(true);

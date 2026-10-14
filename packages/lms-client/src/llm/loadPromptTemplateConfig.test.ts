@@ -361,34 +361,22 @@ describe("SDK load prompt template config", () => {
     expect((await model.getLoadConfig()).maxParallelPredictions).toBe(256);
   });
 
-  test.each([undefined, false, 28 * 1024 ** 3] as const)(
-    "getLoadConfig preserves Splash parallelism and memory budget %p for reuse",
-    async splashMaxMemoryBytes => {
-      const harness = createNamespaceHarness("yuzu");
-      harness.setLoadConfigResponse(
-        llmLoadModelConfigToKVConfig({
-          autoFit: true,
-          maxParallelPredictions: 4,
-          splashMaxMemoryBytes,
-        }),
-      );
-      const model = await harness.namespace.load("test/model", { verbose: false });
-      const loadConfig = await model.getLoadConfig();
-      expect(loadConfig).toEqual({
-        autoFit: true,
-        maxParallelPredictions: 4,
-        splashMaxMemoryBytes: splashMaxMemoryBytes ?? false,
-      });
+  test("getLoadConfig preserves Splash parallelism for reuse", async () => {
+    const harness = createNamespaceHarness("yuzu");
+    harness.setLoadConfigResponse(
+      llmLoadModelConfigToKVConfig({ autoFit: true, maxParallelPredictions: 4 }),
+    );
+    const model = await harness.namespace.load("test/model", { verbose: false });
+    const loadConfig = await model.getLoadConfig();
+    expect(loadConfig).toEqual({ autoFit: true, maxParallelPredictions: 4 });
 
-      await harness.namespace.load("test/model", { verbose: false, config: loadConfig });
-      const reapplied = collapseKVStack(
-        extractLoadConfigStack(harness.capturedChannelCreations[1]?.creationParameter),
-      );
-      expect(globalConfigSchematics.access(reapplied, "llm.load.numParallelSessions")).toBe(4);
-      expect(globalConfigSchematics.access(reapplied, "llm.load.yuzu.autoFit")).toBe(true);
-      expect(kvConfigToLLMLoadModelConfig(reapplied, { modelFormat: "yuzu" })).toEqual(loadConfig);
-    },
-  );
+    await harness.namespace.load("test/model", { verbose: false, config: loadConfig });
+    const reapplied = collapseKVStack(
+      extractLoadConfigStack(harness.capturedChannelCreations[1]?.creationParameter),
+    );
+    expect(globalConfigSchematics.access(reapplied, "llm.load.numParallelSessions")).toBe(4);
+    expect(globalConfigSchematics.access(reapplied, "llm.load.yuzu.autoFit")).toBe(true);
+  });
 
   test.each<GPUSplitConfig>([
     { strategy: "evenly", priority: [], disabledGpus: [2], customRatio: [] },
