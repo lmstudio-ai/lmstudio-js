@@ -211,6 +211,7 @@ describe("yuzu config", () => {
       "llm.load.autoFitMinContextLength",
       "llm.load.numParallelSessions",
       "llm.load.yuzu.autoFit",
+      "llm.load.yuzu.maxMemoryBytes",
       "llm.load.yuzu.neuralEngine",
     ]);
     expect(() =>
@@ -315,7 +316,7 @@ describe("yuzu config", () => {
         kvConfigToLLMLoadModelConfig(config, { modelFormat: "yuzu", useDefaultsForMissingKeys }),
       ).toEqual(
         useDefaultsForMissingKeys
-          ? { autoFit: true, maxParallelPredictions: 4 }
+          ? { autoFit: true, maxParallelPredictions: 4, splashMaxMemoryBytes: false }
           : { contextLength: 8192 },
       );
     },
@@ -329,8 +330,26 @@ describe("yuzu config", () => {
         modelFormat: "yuzu",
         useDefaultsForMissingKeys: true,
       }),
-    ).toEqual({ autoFit: true, maxParallelPredictions: 4 });
+    ).toEqual({ autoFit: true, maxParallelPredictions: 4, splashMaxMemoryBytes: false });
   });
+
+  it.each([false, 28 * 1024 ** 3] as const)(
+    "round trips Splash memory budget %p without disabling AutoFit",
+    splashMaxMemoryBytes => {
+      const sdkConfig = llmLoadModelConfigSchema.parse({ autoFit: true, splashMaxMemoryBytes });
+      const config = llmYuzuLoadConfigSchematics.filterConfig(
+        llmLoadModelConfigToKVConfig(sdkConfig),
+      );
+      expect(kvConfigToLLMLoadModelConfig(config, { modelFormat: "yuzu" })).toEqual(sdkConfig);
+      for (const schematics of [
+        llmLlamaLoadConfigSchematics,
+        llmMlxLoadConfigSchematics,
+        llmVllmLoadConfigSchematics,
+      ]) {
+        expect(schematics.filterConfig(config).fields).toEqual([]);
+      }
+    },
+  );
 
   it("filters unrelated preset fields but does not silently clamp a retained invalid top-k", () => {
     const preset = globalConfigSchematics.buildPartialConfig({

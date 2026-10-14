@@ -540,19 +540,34 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
           ),
       )
       .scope("yuzu", builder =>
-        builder.field("autoFit", "boolean", { machineDependent: true }, true).field(
-          "neuralEngine",
-          "select",
-          {
-            options: [
-              { value: "auto", displayName: "Auto" },
-              { value: "off", displayName: "Off" },
-            ],
-            displayName: "Neural Engine Prefill",
-            hint: "Auto uses the Neural Engine alongside the GPU to process long prompts when that is faster. Off keeps prompt processing on the GPU.",
-          },
-          "auto",
-        ),
+        builder
+          .field("autoFit", "boolean", { machineDependent: true }, true)
+          .field(
+            "maxMemoryBytes",
+            "checkboxNumeric",
+            {
+              min: 1,
+              max: Number.MAX_SAFE_INTEGER,
+              int: true,
+              machineDependent: true,
+              displayName: "Maximum Memory (bytes)",
+              hint: "Caps Splash's Metal allocations, not total process memory. Leave unchecked to let Splash choose the budget automatically. AutoFit chooses context length within this budget.",
+            },
+            { checked: false, value: 28 * 1024 ** 3 },
+          )
+          .field(
+            "neuralEngine",
+            "select",
+            {
+              options: [
+                { value: "auto", displayName: "Auto" },
+                { value: "off", displayName: "Off" },
+              ],
+              displayName: "Neural Engine Prefill",
+              hint: "Auto uses the Neural Engine alongside the GPU to process long prompts when that is faster. Off keeps prompt processing on the GPU.",
+            },
+            "auto",
+          ),
       )
       .scope("vllm", builder =>
         builder
