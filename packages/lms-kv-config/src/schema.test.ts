@@ -290,20 +290,14 @@ describe("yuzu config", () => {
     ).toEqual(llmYuzuPredictionConfigSchematics.parseToMap(config));
   });
 
-  it.each(["owner/drafter", ""])(
-    "round trips Splash drafter %p through SDK load config",
-    splashDraftModel => {
-      const sdkConfig = llmLoadModelConfigSchema.parse({ splashDraftModel });
-      const config = llmLoadModelConfigToKVConfig(sdkConfig);
-      const filtered = llmYuzuLoadConfigSchematics.filterConfig(config);
-      expect(filtered.fields).toEqual([{ key: "llm.load.yuzu.drafter", value: splashDraftModel }]);
-      expect(kvConfigToLLMLoadModelConfig(filtered, { modelFormat: "yuzu" })).toEqual({
-        splashDraftModel,
-      });
-      expect(llmLlamaLoadConfigSchematics.filterConfig(config).fields).toEqual([]);
-      expect(llmMlxLoadConfigSchematics.filterConfig(config).fields).toEqual([]);
-    },
-  );
+  it("retains the Splash drafter only in Splash load configuration", () => {
+    const config = globalConfigSchematics.buildPartialConfig({
+      "llm.load.yuzu.drafter": "owner/drafter",
+    });
+    expect(llmYuzuLoadConfigSchematics.filterConfig(config)).toEqual(config);
+    expect(llmLlamaLoadConfigSchematics.filterConfig(config).fields).toEqual([]);
+    expect(llmMlxLoadConfigSchematics.filterConfig(config).fields).toEqual([]);
+  });
 
   it("retains prediction seed through schematic filtering", () => {
     const config = globalConfigSchematics.buildPartialConfig({
@@ -332,7 +326,7 @@ describe("yuzu config", () => {
         kvConfigToLLMLoadModelConfig(config, { modelFormat: "yuzu", useDefaultsForMissingKeys }),
       ).toEqual(
         useDefaultsForMissingKeys
-          ? { autoFit: true, splashDraftModel: "", maxParallelPredictions: 4 }
+          ? { autoFit: true, maxParallelPredictions: 4 }
           : { contextLength: 8192 },
       );
     },
@@ -346,7 +340,7 @@ describe("yuzu config", () => {
         modelFormat: "yuzu",
         useDefaultsForMissingKeys: true,
       }),
-    ).toEqual({ autoFit: true, splashDraftModel: "", maxParallelPredictions: 4 });
+    ).toEqual({ autoFit: true, maxParallelPredictions: 4 });
   });
 
   it("filters unrelated preset fields but does not silently clamp a retained invalid top-k", () => {

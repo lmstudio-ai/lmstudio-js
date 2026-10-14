@@ -462,12 +462,10 @@ export function kvConfigToLLMLoadModelConfig(
           ? llmYuzuLoadConfigSchematics.parse(config)
           : llmYuzuLoadConfigSchematics.parsePartial(config);
       const autoFit = parsed.get("yuzu.autoFit");
-      const splashDraftModel = parsed.get("yuzu.drafter");
       const contextLength = parsed.get("contextLength");
       const maxParallelPredictions = parsed.get("numParallelSessions");
       return {
         ...(autoFit === undefined ? {} : { autoFit }),
-        ...(splashDraftModel === undefined ? {} : { splashDraftModel }),
         ...(autoFit !== true && contextLength !== undefined ? { contextLength } : {}),
         ...(maxParallelPredictions === undefined ? {} : { maxParallelPredictions }),
       };
@@ -506,7 +504,6 @@ export function llmLoadModelConfigToKVConfig(config: LLMLoadModelConfig): KVConf
     "llama.autoFit": autoFit,
     "mlx.autoFit": autoFit,
     "yuzu.autoFit": autoFit,
-    "yuzu.drafter": config.splashDraftModel,
     "vllm.autoFit": autoFit,
     "gpuSplitConfig": hasGpuSplitSetting
       ? convertGPUSettingToGPUSplitConfig(config.gpu)
