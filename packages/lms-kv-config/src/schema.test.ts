@@ -210,8 +210,8 @@ describe("yuzu config", () => {
       "llm.load.contextLength",
       "llm.load.autoFitMinContextLength",
       "llm.load.numParallelSessions",
+      "llm.load.maxMemoryBytes",
       "llm.load.yuzu.autoFit",
-      "llm.load.yuzu.maxMemoryBytes",
       "llm.load.yuzu.neuralEngine",
     ]);
     expect(() =>
