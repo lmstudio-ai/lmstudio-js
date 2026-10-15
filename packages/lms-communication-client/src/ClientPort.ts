@@ -31,10 +31,15 @@ import {
   type WritableSignalEndpoint,
   type WritableSignalEndpointsSpecBase,
 } from "@lmstudio/lms-communication";
-import { fromSerializedError, type SerializedLMSExtendedError } from "@lmstudio/lms-shared-types";
+import {
+  fromSerializedError,
+  serializeError,
+  type SerializedLMSExtendedError,
+} from "@lmstudio/lms-shared-types";
 
 interface OpenChannel {
   endpoint: ChannelEndpoint;
+  creationSent: boolean;
   stack: string;
   channel: Channel<any, any>;
   receivedAck: (ackId: number) => void;
@@ -235,7 +240,7 @@ export class ClientPort<
     openChannel.receivedMessage(parsed.data);
   }
 
-  /** Settles a channel's listeners and pending acknowledgements after a local failure. */
+  /** Fails local work and asks the peer to release the channel if creation reached the transport. */
   private failChannel(channelId: number, error: unknown): void {
     const channel = this.openChannels.get(channelId);
     if (channel === undefined) {
@@ -244,6 +249,9 @@ export class ClientPort<
     this.openChannels.delete(channelId);
     channel.errored(error);
     this.updateOpenCommunicationsCount();
+    if (channel.creationSent) {
+      this.safeSend({ type: "channelError", channelId, error: serializeError(error) });
+    }
   }
 
   private receivedChannelAck(message: ServerToClientMessage & { type: "channelAck" }) {
@@ -258,13 +266,10 @@ export class ClientPort<
     openChannel.receivedAck(message.ackId);
   }
 
+  /** Finishes a peer-closed channel; a local failure may already have removed it. */
   private receivedChannelClose(message: ServerToClientMessage & { type: "channelClose" }) {
     const openChannel = this.openChannels.get(message.channelId);
     if (openChannel === undefined) {
-      this.communicationWarning(
-        `Received channelClose for unknown channel, channelId = ${message.channelId}`,
-        "channelUnknown",
-      );
       return;
     }
     this.openChannels.delete(message.channelId);
@@ -272,13 +277,10 @@ export class ClientPort<
     this.updateOpenCommunicationsCount();
   }
 
+  /** Delivers a peer's failure without echoing it back or disturbing a terminated channel. */
   private receivedChannelError(message: ServerToClientMessage & { type: "channelError" }) {
     const openChannel = this.openChannels.get(message.channelId);
     if (openChannel === undefined) {
-      this.communicationWarning(
-        `Received channelError for unknown channel, channelId = ${message.channelId}`,
-        "channelUnknown",
-      );
       return;
     }
     this.openChannels.delete(message.channelId);
@@ -625,6 +627,7 @@ export class ClientPort<
     const channelId = this.nextChannelId++;
     const openChannel: OpenChannel = {
       endpoint,
+      creationSent: false,
       stack: stack ?? getCurrentStack(1),
       ...Channel.create((packet, ackId) => {
         this.transport.sendDeferred(
@@ -651,19 +654,24 @@ export class ClientPort<
     this.openChannels.set(channelId, openChannel);
     this.updateOpenCommunicationsCount();
     this.transport.sendDeferred(
-      () =>
-        !this.openChannels.has(channelId)
-          ? null
-          : {
-              type: "channelCreate",
-              endpoint: endpointName,
-              channelId,
-              creationParameter: this.payloadCodec.encode({
-                schema: endpoint.creationParameter,
-                serialization: endpoint.serialization,
-                value: creationParameter,
-              }),
-            },
+      () => {
+        if (!this.openChannels.has(channelId)) {
+          return null;
+        }
+        const encoded = this.payloadCodec.encode({
+          schema: endpoint.creationParameter,
+          serialization: endpoint.serialization,
+          value: creationParameter,
+        });
+        // Encoding can fail before the peer has a channel to release.
+        openChannel.creationSent = true;
+        return {
+          type: "channelCreate",
+          endpoint: endpointName,
+          channelId,
+          creationParameter: encoded,
+        };
+      },
       error => this.failChannel(channelId, error),
     );
     return openChannel.channel;

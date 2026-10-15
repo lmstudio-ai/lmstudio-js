@@ -26,7 +26,7 @@ import {
   type SignalEndpointsSpecBase,
   type WritableSignalEndpointsSpecBase,
 } from "@lmstudio/lms-communication";
-import { serializeError } from "@lmstudio/lms-shared-types";
+import { fromSerializedError, serializeError } from "@lmstudio/lms-shared-types";
 import { type Context, type ContextCreator } from "./Authenticator.js";
 
 interface OpenChannel {
@@ -179,7 +179,7 @@ export class ServerPort<
       endpoint,
       ...Channel.create((message, ackId) => {
         try {
-          if (!this.openChannels.has(channelId)) {
+          if (this.openChannels.get(channelId) !== openChannel) {
             return;
           }
           const value = endpoint.toClientPacket.parse(message);
@@ -206,12 +206,19 @@ export class ServerPort<
     });
 
     Promise.resolve()
-      .then(() => endpoint.handler!(context, parseResult.data, openChannel.channel))
+      .then(() => {
+        // Cancellation can arrive before the handler gets its first turn.
+        if (this.openChannels.get(channelId) !== openChannel) {
+          return;
+        }
+        return endpoint.handler!(context, parseResult.data, openChannel.channel);
+      })
       .then(
         () => {
-          if (!this.openChannels.delete(channelId)) {
+          if (this.openChannels.get(channelId) !== openChannel) {
             return;
           }
+          this.openChannels.delete(channelId);
           this.safeSend(
             {
               type: "channelClose",
@@ -223,27 +230,15 @@ export class ServerPort<
           openChannel.closed();
         },
         error => {
-          if (!this.openChannels.delete(channelId)) {
+          if (this.openChannels.get(channelId) !== openChannel) {
             return;
           }
-          this.safeSend(
-            {
-              type: "channelError",
-              channelId: channelId,
-              error: serializeError(error),
-            },
-            "channelError",
-            context.logger,
-          );
-          openChannel.errored(error);
+          this.failChannel(channelId, error);
           context.logger.error("Error in channel handler:", error);
         },
       )
       .catch(error => {
         context.logger.error("Unhandled error in channel handling:", error);
-      })
-      .finally(() => {
-        this.openChannels.delete(channelId);
       });
   }
 
@@ -278,6 +273,16 @@ export class ServerPort<
     this.openChannels.delete(channelId);
     channel.errored(error);
     this.safeSend({ type: "channelError", channelId, error: serializeError(error) });
+  }
+
+  /** Releases a failed peer's channel so its handler can abort and dispose its resources. */
+  private receivedChannelError(message: ClientToServerMessage & { type: "channelError" }) {
+    const channel = this.openChannels.get(message.channelId);
+    if (channel === undefined) {
+      return;
+    }
+    this.openChannels.delete(message.channelId);
+    channel.errored(fromSerializedError(message.error, "Client channel error"));
   }
 
   private receivedChannelAck(message: ClientToServerMessage & { type: "channelAck" }) {
@@ -627,6 +632,7 @@ export class ServerPort<
     );
   }
 
+  /** Dispatches transport envelopes, including peer failures that bypass payload conversion. */
   private receivedMessage = (message: ClientToServerMessage) => {
     switch (message.type) {
       case "channelCreate": {
@@ -639,6 +645,10 @@ export class ServerPort<
       }
       case "channelAck": {
         this.receivedChannelAck(message);
+        break;
+      }
+      case "channelError": {
+        this.receivedChannelError(message);
         break;
       }
       case "rpcCall": {

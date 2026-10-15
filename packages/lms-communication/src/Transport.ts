@@ -32,6 +32,11 @@ const clientToServerMessageSchema = z.discriminatedUnion("type", [
     channelId: z.number().int(),
     ackId: z.number().int(),
   }),
+  z.object({
+    type: z.literal("channelError"),
+    channelId: z.number().int(),
+    error: serializedLMSExtendedErrorSchema,
+  }),
 
   // RPC
   z.object({
