@@ -12,6 +12,7 @@ import {
   Channel,
   PayloadCodec,
   deserialize,
+  mapPortError,
   normalizeCommunicationWarningKind,
   serialize,
   type BackendInterface,
@@ -19,6 +20,7 @@ import {
   type ChannelEndpointsSpecBase,
   type ClientToServerMessage,
   type CommunicationWarningKind,
+  type PortErrorMapper,
   type RpcEndpointsSpecBase,
   type ServerToClientMessage,
   type ServerTransport,
@@ -56,6 +58,7 @@ export class ServerPort<
 > {
   private readonly transport: ServerTransport;
   private readonly payloadCodec: PayloadCodec;
+  private readonly mapError?: PortErrorMapper;
   private closed = false;
   private readonly logger;
   private readonly openChannels = new Map<number, OpenChannel>();
@@ -68,7 +71,7 @@ export class ServerPort<
   private readonly emitCloseEvent: () => void;
   private producedCommunicationWarningsCount = 0;
 
-  /** Creates a port with payload handling scoped to this connection. */
+  /** Creates a port with payload handling and error formatting scoped to this connection. */
   public constructor(
     private readonly backendInterface: BackendInterface<
       TContext,
@@ -82,13 +85,16 @@ export class ServerPort<
     {
       parentLogger,
       payloadCodec,
+      mapError,
     }: {
       parentLogger?: LoggerInterface;
       payloadCodec?: PayloadCodec;
+      mapError?: PortErrorMapper;
     } = {},
   ) {
     this.logger = new SimpleLogger("ServerPort", parentLogger);
     this.payloadCodec = payloadCodec ?? new PayloadCodec();
+    this.mapError = mapError;
     [this.closeEvent, this.emitCloseEvent] = Event.create();
     this.transport = factory(this.receivedMessage, this.errored, this.logger);
   }
@@ -148,7 +154,11 @@ export class ServerPort<
       );
       // Error replies must still reach the caller after communication warnings are capped.
       this.safeSend(
-        { type: "channelError", channelId: message.channelId, error: serializeError(error) },
+        {
+          type: "channelError",
+          channelId: message.channelId,
+          error: serializeError(mapPortError(this.mapError, error, message.endpoint, "channel")),
+        },
         "channelError",
       );
       return;
@@ -169,7 +179,9 @@ export class ServerPort<
       this.safeSend({
         type: "channelError",
         channelId: message.channelId,
-        error: serializeError(parseResult.error),
+        error: serializeError(
+          mapPortError(this.mapError, parseResult.error, endpoint.name, "channel"),
+        ),
       });
       return;
     }
@@ -270,6 +282,7 @@ export class ServerPort<
     if (channel === undefined) {
       return;
     }
+    error = mapPortError(this.mapError, error, channel.endpoint.name, "channel");
     this.openChannels.delete(channelId);
     channel.errored(error);
     this.safeSend({ type: "channelError", channelId, error: serializeError(error) });
@@ -309,7 +322,11 @@ export class ServerPort<
         endpoint === undefined ? "rpcEndpointUnknown" : "rpcEndpointUnhandled",
       );
       this.safeSend(
-        { type: "rpcError", callId: message.callId, error: serializeError(error) },
+        {
+          type: "rpcError",
+          callId: message.callId,
+          error: serializeError(mapPortError(this.mapError, error, message.endpoint, "rpc")),
+        },
         "rpcError",
       );
       return;
@@ -323,7 +340,7 @@ export class ServerPort<
       this.safeSend({
         type: "rpcError",
         callId: message.callId,
-        error: serializeError(parseResult.error),
+        error: serializeError(mapPortError(this.mapError, parseResult.error, endpoint.name, "rpc")),
       });
       return;
     }
@@ -349,7 +366,7 @@ export class ServerPort<
               {
                 type: "rpcError",
                 callId: message.callId,
-                error: serializeError(error),
+                error: serializeError(mapPortError(this.mapError, error, endpoint.name, "rpc")),
               },
               "rpcError",
               context.logger,
@@ -372,7 +389,7 @@ export class ServerPort<
             {
               type: "rpcError",
               callId: message.callId,
-              error: serializeError(error),
+              error: serializeError(mapPortError(this.mapError, error, endpoint.name, "rpc")),
             },
             "rpcError",
             context.logger,
@@ -396,8 +413,18 @@ export class ServerPort<
     const subscriptions = writable
       ? this.openWritableSignalSubscriptions
       : this.openSignalSubscriptions;
+    // Creation can fail before there is a subscription to hold the endpoint context.
     const fail = (error: unknown) =>
-      this.failSignalSubscription({ subscribeId: message.subscribeId, writable, error });
+      this.failSignalSubscription({
+        subscribeId: message.subscribeId,
+        writable,
+        error: mapPortError(
+          this.mapError,
+          error,
+          message.endpoint,
+          writable ? "writableSignal" : "signal",
+        ),
+      });
     if (endpoint === undefined || endpoint.handler === null) {
       const error = new Error(
         `${endpoint === undefined ? "Unknown" : "Unhandled"} ${writable ? "writable signal" : "signal"} endpoint '${message.endpoint}'.`,

@@ -14,6 +14,7 @@ import {
   Channel,
   PayloadCodec,
   deserialize,
+  mapPortError,
   normalizeCommunicationWarningKind,
   serialize,
   type BackendInterface,
@@ -23,6 +24,7 @@ import {
   type ClientTransport,
   type ClientTransportFactory,
   type CommunicationWarningKind,
+  type PortErrorMapper,
   type RpcEndpoint,
   type RpcEndpointsSpecBase,
   type ServerToClientMessage,
@@ -98,6 +100,7 @@ export class ClientPort<
 > {
   private readonly transport: ClientTransport;
   private readonly payloadCodec: PayloadCodec;
+  private readonly mapError?: PortErrorMapper;
   private readonly logger;
   private openChannels = new Map<number, OpenChannel>();
   private ongoingRpcs = new Map<number, OngoingRpc>();
@@ -123,7 +126,7 @@ export class ClientPort<
     communicationWarning: ClientPortCommunicationWarning,
   ) => void;
 
-  /** Creates a port with connection-specific payload handling. */
+  /** Creates a port with connection-specific payload handling and error formatting. */
   public constructor(
     public readonly backendInterface: BackendInterface<
       unknown,
@@ -139,9 +142,11 @@ export class ClientPort<
       verboseErrorMessage,
       onCommunicationWarning,
       payloadCodec,
+      mapError,
     }: {
       parentLogger?: LoggerInterface;
       payloadCodec?: PayloadCodec;
+      mapError?: PortErrorMapper;
       errorDeserializer?: (
         serialized: SerializedLMSExtendedError,
         directCause: string,
@@ -153,6 +158,7 @@ export class ClientPort<
   ) {
     this.logger = new SimpleLogger("ClientPort", parentLogger);
     this.payloadCodec = payloadCodec ?? new PayloadCodec();
+    this.mapError = mapError;
     this.errorDeserializer = errorDeserializer ?? defaultErrorDeserializer;
     this.verboseErrorMessage = verboseErrorMessage ?? true;
     this.onCommunicationWarning = onCommunicationWarning;
@@ -246,6 +252,7 @@ export class ClientPort<
     if (channel === undefined) {
       return;
     }
+    error = mapPortError(this.mapError, error, channel.endpoint.name, "channel");
     this.openChannels.delete(channelId);
     channel.errored(error);
     this.updateOpenCommunicationsCount();
@@ -311,7 +318,7 @@ export class ClientPort<
     this.ongoingRpcs.delete(message.callId);
     this.updateOpenCommunicationsCount();
     if (parsed.success === false) {
-      ongoingRpc.reject(parsed.error);
+      ongoingRpc.reject(mapPortError(this.mapError, parsed.error, ongoingRpc.endpoint.name, "rpc"));
     } else {
       ongoingRpc.resolve(parsed.data);
     }
@@ -397,6 +404,12 @@ export class ClientPort<
     if (subscription === undefined) {
       return;
     }
+    error = mapPortError(
+      this.mapError,
+      error,
+      subscription.endpoint.name,
+      writable ? "writableSignal" : "signal",
+    );
     subscriptions.delete(subscribeId);
     subscription.errored(error);
     this.safeSend({
@@ -603,7 +616,7 @@ export class ClientPort<
       error => {
         this.ongoingRpcs.delete(callId);
         this.updateOpenCommunicationsCount();
-        reject(error);
+        reject(mapPortError(this.mapError, error, endpoint.name, "rpc"));
       },
     );
     return await promise;
