@@ -553,27 +553,19 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
           ),
       )
       .scope("yuzu", builder =>
-        builder
-          .field("autoFit", "boolean", { machineDependent: true }, true)
-          .field(
-            "neuralEngine",
-            "select",
-            {
-              options: [
-                { value: "auto", displayName: "Auto" },
-                { value: "off", displayName: "Off" },
-              ],
-              displayName: "Neural Engine Prefill",
-              hint: "Auto uses the Neural Engine alongside the GPU to process long prompts when that is faster. Off keeps prompt processing on the GPU.",
-            },
-            "auto",
-          )
-          .field(
-            "drafter",
-            "string",
-            { displayName: "Drafter", hint: "Model key of the Splash drafter." },
-            "",
-          ),
+        builder.field("autoFit", "boolean", { machineDependent: true }, true).field(
+          "neuralEngine",
+          "select",
+          {
+            options: [
+              { value: "auto", displayName: "Auto" },
+              { value: "off", displayName: "Off" },
+            ],
+            displayName: "Neural Engine Prefill",
+            hint: "Auto uses the Neural Engine alongside the GPU to process long prompts when that is faster. Off keeps prompt processing on the GPU.",
+          },
+          "auto",
+        ),
       )
       .scope("vllm", builder =>
         builder
@@ -922,6 +914,7 @@ export const llmYuzuLoadConfigSchematics = llmLoadSchematics
     "autoFitMinContextLength",
     "numParallelSessions",
     "maxMemoryBytes",
+    "speculativeDecoding.draftModel",
     "yuzu.*",
   )
   .withTypeParamOverride("numParallelSessions", param => ({ ...param, max: 4 }));
