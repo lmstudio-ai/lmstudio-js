@@ -914,6 +914,7 @@ export const llmYuzuLoadConfigSchematics = llmLoadSchematics
     "autoFitMinContextLength",
     "numParallelSessions",
     "maxMemoryBytes",
+    "speculativeDecoding.draftModel",
     "yuzu.*",
   )
   .withTypeParamOverride("numParallelSessions", param => ({ ...param, max: 4 }));
