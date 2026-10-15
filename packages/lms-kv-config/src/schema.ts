@@ -838,6 +838,26 @@ export const llmVllmPredictionConfigSchematics = llmPredictionConfigSchematics.s
   "llama.logitBias",
 );
 
+export const llmOpenVinoPredictionConfigSchematics = llmPredictionConfigSchematics.sliced(
+  "temperature",
+  "maxPredictedTokens",
+  "stopStrings",
+  "structured",
+  "tools",
+  "toolChoice",
+  "toolNaming",
+  "systemPrompt",
+  "seed",
+  "topKSampling",
+  "repeatPenalty",
+  "minPSampling",
+  "topPSampling",
+  "reasoning.enableThinking",
+  "llama.presencePenalty",
+  "llama.frequencyPenalty",
+  "vision.userMaxImageDimensionPixels",
+);
+
 // Keep yuzu defaults and limits local to its slice; other engines retain their sampler defaults.
 export const llmYuzuPredictionConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypesLibrary)
   .scope("llm.prediction", builder =>
@@ -941,6 +961,11 @@ export const llmMlxLoadConfigSchematics = llmSharedLoadConfigSchematics.union(
 
 export const llmOmlxLoadConfigSchematics = llmLoadSchematics.sliced(
   "contextLength",
+  "numParallelSessions",
+  "envVars",
+);
+
+export const llmOpenVinoLoadConfigSchematics = llmLoadSchematics.sliced(
   "numParallelSessions",
   "envVars",
 );
