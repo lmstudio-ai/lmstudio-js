@@ -2,6 +2,7 @@ import { type LoggerInterface } from "@lmstudio/lms-common";
 import { serializedLMSExtendedErrorSchema } from "@lmstudio/lms-shared-types";
 import { z } from "zod";
 import { serializedOpaqueSchema } from "./serialization.js";
+import { type PayloadSchema } from "./PayloadCodec.js";
 
 const clientToServerMessageSchema = z.discriminatedUnion("type", [
   // Communication
@@ -12,6 +13,7 @@ const clientToServerMessageSchema = z.discriminatedUnion("type", [
   }),
   z.object({
     type: z.literal("keepAlive"),
+    metadata: z.unknown().optional(),
   }),
 
   // Channel
@@ -31,6 +33,11 @@ const clientToServerMessageSchema = z.discriminatedUnion("type", [
     type: z.literal("channelAck"),
     channelId: z.number().int(),
     ackId: z.number().int(),
+  }),
+  z.object({
+    type: z.literal("channelError"),
+    channelId: z.number().int(),
+    error: serializedLMSExtendedErrorSchema,
   }),
 
   // RPC
@@ -83,6 +90,7 @@ const serverToClientMessageSchema = z.discriminatedUnion("type", [
   }),
   z.object({
     type: z.literal("keepAliveAck"),
+    metadata: z.unknown().optional(),
   }),
 
   // Channel
@@ -148,12 +156,46 @@ const serverToClientMessageSchema = z.discriminatedUnion("type", [
 
 export type ServerToClientMessage = z.infer<typeof serverToClientMessageSchema>;
 
-export abstract class Transport<TIncoming, TOutgoing> {
+export interface TransportOpts<TMetadata = unknown> {
+  handshake?: {
+    schema: PayloadSchema<TMetadata>;
+    value: TMetadata;
+    /** Receives validated metadata once per connection, or undefined for a peer without metadata. */
+    onPeer: (metadata: TMetadata | undefined) => void;
+  };
+}
+
+export abstract class Transport<TIncoming, TOutgoing, TMetadata = unknown> {
+  protected readonly handshakeMetadata: unknown;
+  private readonly onPeerMetadata?: (metadata: unknown) => void;
+  private handshakeReceived = false;
+
+  /** Binds the application's handshake schema and local metadata to this transport. */
+  public constructor({ handshake }: TransportOpts<TMetadata> = {}) {
+    if (handshake !== undefined) {
+      this.handshakeMetadata = handshake.schema.parse(handshake.value);
+      this.onPeerMetadata = metadata =>
+        handshake.onPeer(metadata === undefined ? undefined : handshake.schema.parse(metadata));
+    }
+  }
+
+  /** Fixes peer metadata before the first message reaches its handler. Later keepalives cannot change it. */
+  protected acceptHandshake(metadata: unknown): void {
+    if (this.handshakeReceived) return;
+    this.handshakeReceived = true;
+    this.onPeerMetadata?.(metadata);
+  }
+
+  /** Reconnecting transports call this when releasing a connection, before accepting another peer. */
+  protected resetHandshake(): void {
+    this.handshakeReceived = false;
+  }
+
   /**
    * Implemented by ClientTransport / ServerTransport. Called by transport implementation to verify
    * incoming message.
    */
-  protected abstract parseIncomingMessage(message: any): TIncoming;
+  protected abstract parseIncomingMessage(message: unknown): TIncoming;
   /**
    * Implemented by transport. At this point, message is already validated.
    */
@@ -176,16 +218,38 @@ export abstract class Transport<TIncoming, TOutgoing> {
   }
 }
 
-export abstract class ClientTransport extends Transport<
+export abstract class ClientTransport<TMetadata = unknown> extends Transport<
   ServerToClientMessage,
-  ClientToServerMessage
+  ClientToServerMessage,
+  TMetadata
 > {
-  protected override parseIncomingMessage(message: any): ServerToClientMessage {
-    return serverToClientMessageSchema.parse(message);
+  /** Validates the envelope and establishes peer metadata before dispatching the first response. */
+  protected override parseIncomingMessage(message: unknown): ServerToClientMessage {
+    const result = serverToClientMessageSchema.parse(message);
+    this.acceptHandshake(result.type === "keepAliveAck" ? result.metadata : undefined);
+    return result;
   }
+  /** Validates outgoing envelopes and attaches local metadata to keepalives. */
   public override send(message: ClientToServerMessage) {
     const result = clientToServerMessageSchema.parse(message);
+    if (result.type === "keepAlive" && this.handshakeMetadata !== undefined) {
+      result.metadata = this.handshakeMetadata;
+    }
     this.sendViaTransport(result);
+  }
+  /** Prepares a payload when ready; null cancels work that ended while queued. */
+  public sendDeferred(
+    prepare: () => ClientToServerMessage | null,
+    failed: (error: unknown) => void,
+  ): void {
+    try {
+      const message = prepare();
+      if (message !== null) {
+        this.send(message);
+      }
+    } catch (error) {
+      failed(error);
+    }
   }
   /**
    * Called by the client port when the number of open communications changes from 0 to 1. This
@@ -222,15 +286,23 @@ export type ClientTransportFactory = (
   parentLogger: LoggerInterface,
 ) => ClientTransport;
 
-export abstract class ServerTransport extends Transport<
+export abstract class ServerTransport<TMetadata = unknown> extends Transport<
   ClientToServerMessage,
-  ServerToClientMessage
+  ServerToClientMessage,
+  TMetadata
 > {
-  protected override parseIncomingMessage(message: any): ClientToServerMessage {
-    return clientToServerMessageSchema.parse(message);
+  /** Validates the envelope; a first request without a keepalive establishes absent metadata. */
+  protected override parseIncomingMessage(message: unknown): ClientToServerMessage {
+    const result = clientToServerMessageSchema.parse(message);
+    this.acceptHandshake(result.type === "keepAlive" ? result.metadata : undefined);
+    return result;
   }
+  /** Validates outgoing envelopes and attaches local metadata to keepalive acknowledgements. */
   public override send(message: ServerToClientMessage) {
     const result = serverToClientMessageSchema.parse(message);
+    if (result.type === "keepAliveAck" && this.handshakeMetadata !== undefined) {
+      result.metadata = this.handshakeMetadata;
+    }
     this.sendViaTransport(result);
   }
 }

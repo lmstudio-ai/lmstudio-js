@@ -35,6 +35,13 @@ export {
   SerializedOpaque,
   serializedOpaqueSchema,
 } from "./serialization.js";
+export {
+  PayloadCodec,
+  type PayloadSchema,
+  type InferPayloadSchema,
+  type PayloadDecodeResult,
+} from "./PayloadCodec.js";
+export { mapPortError, type PortErrorContext, type PortErrorMapper } from "./PortError.js";
 export { KEEP_ALIVE_INTERVAL, KEEP_ALIVE_TIMEOUT } from "./timeoutConstants.js";
 export {
   ClientToServerMessage,
@@ -43,6 +50,7 @@ export {
   ServerToClientMessage,
   ServerTransport,
   ServerTransportFactory,
+  type TransportOpts,
 } from "./Transport.js";
 export { WsAuthenticationResult, wsAuthenticationResultSchema } from "./WsAuthenticationResult.js";
 export { WsMessageEvent } from "./wsTypes.js";

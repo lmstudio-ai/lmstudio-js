@@ -5,8 +5,6 @@ import {
   makePromise,
   OWLSignal,
   SimpleLogger,
-  text,
-  Validator,
   type LoggerInterface,
   type NotAvailable,
   type Setter,
@@ -14,7 +12,9 @@ import {
 } from "@lmstudio/lms-common";
 import {
   Channel,
+  PayloadCodec,
   deserialize,
+  mapPortError,
   normalizeCommunicationWarningKind,
   serialize,
   type BackendInterface,
@@ -24,6 +24,7 @@ import {
   type ClientTransport,
   type ClientTransportFactory,
   type CommunicationWarningKind,
+  type PortErrorMapper,
   type RpcEndpoint,
   type RpcEndpointsSpecBase,
   type ServerToClientMessage,
@@ -32,10 +33,15 @@ import {
   type WritableSignalEndpoint,
   type WritableSignalEndpointsSpecBase,
 } from "@lmstudio/lms-communication";
-import { fromSerializedError, type SerializedLMSExtendedError } from "@lmstudio/lms-shared-types";
+import {
+  fromSerializedError,
+  serializeError,
+  type SerializedLMSExtendedError,
+} from "@lmstudio/lms-shared-types";
 
 interface OpenChannel {
   endpoint: ChannelEndpoint;
+  creationSent: boolean;
   stack: string;
   channel: Channel<any, any>;
   receivedAck: (ackId: number) => void;
@@ -54,6 +60,7 @@ interface OngoingRpc {
 interface OpenSignalSubscription {
   endpoint: SignalEndpoint;
   getValue: () => any;
+  wireValue: unknown;
   receivedPatches: (newValue: any, patches: Array<Patch>, tags: Array<WriteTag>) => void;
   errored: (error: any) => void;
   stack?: string;
@@ -63,6 +70,7 @@ interface OpenSignalSubscription {
 interface OpenWritableSignalSubscription {
   endpoint: WritableSignalEndpoint;
   getValue: () => any;
+  wireValue: unknown;
   receivedPatches: (newValue: any, patches: Array<Patch>, tags: Array<WriteTag>) => void;
   firstUpdateReceived: boolean;
   errored: (error: any) => void;
@@ -91,6 +99,8 @@ export class ClientPort<
   TWritableSignalEndpoints extends WritableSignalEndpointsSpecBase,
 > {
   private readonly transport: ClientTransport;
+  private readonly payloadCodec: PayloadCodec;
+  private readonly mapError?: PortErrorMapper;
   private readonly logger;
   private openChannels = new Map<number, OpenChannel>();
   private ongoingRpcs = new Map<number, OngoingRpc>();
@@ -116,6 +126,7 @@ export class ClientPort<
     communicationWarning: ClientPortCommunicationWarning,
   ) => void;
 
+  /** Creates a port with connection-specific payload handling and error formatting. */
   public constructor(
     public readonly backendInterface: BackendInterface<
       unknown,
@@ -130,8 +141,12 @@ export class ClientPort<
       errorDeserializer,
       verboseErrorMessage,
       onCommunicationWarning,
+      payloadCodec,
+      mapError,
     }: {
       parentLogger?: LoggerInterface;
+      payloadCodec?: PayloadCodec;
+      mapError?: PortErrorMapper;
       errorDeserializer?: (
         serialized: SerializedLMSExtendedError,
         directCause: string,
@@ -142,6 +157,8 @@ export class ClientPort<
     } = {},
   ) {
     this.logger = new SimpleLogger("ClientPort", parentLogger);
+    this.payloadCodec = payloadCodec ?? new PayloadCodec();
+    this.mapError = mapError;
     this.errorDeserializer = errorDeserializer ?? defaultErrorDeserializer;
     this.verboseErrorMessage = verboseErrorMessage ?? true;
     this.onCommunicationWarning = onCommunicationWarning;
@@ -207,30 +224,41 @@ export class ClientPort<
     }
   }
 
+  /** Delivers a decoded packet or terminates the channel on conversion failure. */
   private receivedChannelSend(message: ServerToClientMessage & { type: "channelSend" }) {
     const openChannel = this.openChannels.get(message.channelId);
     if (openChannel === undefined) {
       this.communicationWarning(
-        `Received channelSend for unknown channel, channelId = ${message.channelId}`,
+        `Received channelSend for unknown channel ${message.channelId}`,
         "channelUnknown",
       );
       return;
     }
-    const deserializedMessage = deserialize(openChannel.endpoint.serialization, message.message);
-    const parsed = openChannel.endpoint.toClientPacket.safeParse(deserializedMessage);
-    if (!parsed.success) {
-      this.communicationWarning(
-        text`
-          Received invalid message for channel: endpointName = ${openChannel.endpoint.name}, message =
-          ${deserializedMessage}. Zod error:
-
-          ${Validator.prettyPrintZod("message", parsed.error)}
-        `,
-        "channelMessageTypeError",
-      );
+    const parsed = this.payloadCodec.decode({
+      schema: openChannel.endpoint.toClientPacket,
+      serialization: openChannel.endpoint.serialization,
+      value: message.message,
+    });
+    if (parsed.success === false) {
+      this.failChannel(message.channelId, parsed.error);
       return;
     }
     openChannel.receivedMessage(parsed.data);
+  }
+
+  /** Fails local work and asks the peer to release the channel if creation reached the transport. */
+  private failChannel(channelId: number, error: unknown): void {
+    const channel = this.openChannels.get(channelId);
+    if (channel === undefined) {
+      return;
+    }
+    error = mapPortError(this.mapError, error, channel.endpoint.name, "channel");
+    this.openChannels.delete(channelId);
+    channel.errored(error);
+    this.updateOpenCommunicationsCount();
+    if (channel.creationSent) {
+      this.safeSend({ type: "channelError", channelId, error: serializeError(error) });
+    }
   }
 
   private receivedChannelAck(message: ServerToClientMessage & { type: "channelAck" }) {
@@ -245,13 +273,10 @@ export class ClientPort<
     openChannel.receivedAck(message.ackId);
   }
 
+  /** Finishes a peer-closed channel; a local failure may already have removed it. */
   private receivedChannelClose(message: ServerToClientMessage & { type: "channelClose" }) {
     const openChannel = this.openChannels.get(message.channelId);
     if (openChannel === undefined) {
-      this.communicationWarning(
-        `Received channelClose for unknown channel, channelId = ${message.channelId}`,
-        "channelUnknown",
-      );
       return;
     }
     this.openChannels.delete(message.channelId);
@@ -259,13 +284,10 @@ export class ClientPort<
     this.updateOpenCommunicationsCount();
   }
 
+  /** Delivers a peer's failure without echoing it back or disturbing a terminated channel. */
   private receivedChannelError(message: ServerToClientMessage & { type: "channelError" }) {
     const openChannel = this.openChannels.get(message.channelId);
     if (openChannel === undefined) {
-      this.communicationWarning(
-        `Received channelError for unknown channel, channelId = ${message.channelId}`,
-        "channelUnknown",
-      );
       return;
     }
     this.openChannels.delete(message.channelId);
@@ -278,32 +300,28 @@ export class ClientPort<
     this.updateOpenCommunicationsCount();
   }
 
+  /** Settles the call even when its result cannot be decoded. */
   private receivedRpcResult(message: ServerToClientMessage & { type: "rpcResult" }) {
     const ongoingRpc = this.ongoingRpcs.get(message.callId);
     if (ongoingRpc === undefined) {
       this.communicationWarning(
-        `Received rpcResult for unknown rpc, callId = ${message.callId}`,
+        `Received rpcResult for unknown RPC ${message.callId}`,
         "rpcUnknown",
       );
       return;
     }
-    const deserializedResult = deserialize(ongoingRpc.endpoint.serialization, message.result);
-    const parsed = ongoingRpc.endpoint.returns.safeParse(deserializedResult);
-    if (!parsed.success) {
-      this.communicationWarning(
-        text`
-          Received invalid result for rpc, endpointName = ${ongoingRpc.endpoint.name}, result =
-          ${deserializedResult}. Zod error:
-
-          ${Validator.prettyPrintZod("result", parsed.error)}
-        `,
-        "rpcResultTypeError",
-      );
-      return;
-    }
-    ongoingRpc.resolve(parsed.data);
+    const parsed = this.payloadCodec.decode({
+      schema: ongoingRpc.endpoint.returns,
+      serialization: ongoingRpc.endpoint.serialization,
+      value: message.result,
+    });
     this.ongoingRpcs.delete(message.callId);
     this.updateOpenCommunicationsCount();
+    if (parsed.success === false) {
+      ongoingRpc.reject(mapPortError(this.mapError, parsed.error, ongoingRpc.endpoint.name, "rpc"));
+    } else {
+      ongoingRpc.resolve(parsed.data);
+    }
   }
 
   private receivedRpcError(message: ServerToClientMessage & { type: "rpcError" }) {
@@ -325,64 +343,80 @@ export class ClientPort<
     this.updateOpenCommunicationsCount();
   }
 
-  private receivedSignalUpdate(message: ServerToClientMessage & { type: "signalUpdate" }) {
-    const openSignalSubscription = this.openSignalSubscriptions.get(message.subscribeId);
-    if (openSignalSubscription === undefined) {
-      // This is caused by update and unsubscribe event happening at the same time. By the time the
-      // update has arrived at the client side, as far as the client is considered, the signal is
-      // already unsubscribed. This is a normal behavior and is especially prevalent when React
-      // StrictMode is enabled, because components are rendered twice where signals are oftentimes
-      // subscribed and then unsubscribed immediately after.
+  /** Applies patches in their wire representation and publishes matching local patches. */
+  private receivedSignalUpdate(
+    message: ServerToClientMessage & { type: "signalUpdate" | "writableSignalUpdate" },
+  ) {
+    const writable = message.type === "writableSignalUpdate";
+    const subscription = writable
+      ? this.openWritableSignalSubscriptions.get(message.subscribeId)
+      : this.openSignalSubscriptions.get(message.subscribeId);
+    // Updates can arrive after unsubscribe, especially when React StrictMode resubscribes.
+    if (subscription === undefined) {
       return;
     }
-    const patches = message.patches.map(patch =>
-      deserialize(openSignalSubscription.endpoint.serialization, patch),
-    );
-    const beforeValue = openSignalSubscription.getValue();
-    let afterValue: any;
-    // Freeze for performance. See https://immerjs.github.io/immer/performance#pre-freeze-data
-    Object.freeze(beforeValue);
     try {
-      afterValue = applyPatches(beforeValue, patches);
-    } catch (error) {
-      this.communicationWarning(
-        text`
-          Failed to apply patches to signal on signalUpdate. subscribeId = ${message.subscribeId}.
-
-          beforeValue = ${JSON.stringify(beforeValue, null, 2)},
-
-          patches = ${JSON.stringify(patches, null, 2)}.
-
-          Error: ${String(error)}
-        `,
-        "signalUpdatePatchApplyError",
+      const { endpoint } = subscription;
+      const preservesPatches = this.payloadCodec.preservesPatches(endpoint.signalData);
+      const patches = message.patches.map(patch => deserialize(endpoint.serialization, patch));
+      const before = preservesPatches ? subscription.getValue() : subscription.wireValue;
+      Object.freeze(before);
+      const wireValue: unknown = applyPatches(before, patches);
+      let value = wireValue;
+      if (!endpoint.skipSignalDataValidation || !preservesPatches) {
+        const parsed = this.payloadCodec.decode({ schema: endpoint.signalData, value: wireValue });
+        if (parsed.success === false) {
+          throw parsed.error;
+        }
+        // Validation-only parsers may clone. Keep the patch result on the ordinary path.
+        if (!preservesPatches) {
+          value = parsed.data;
+        }
+      }
+      subscription.wireValue = wireValue;
+      if ("firstUpdateReceived" in subscription) {
+        subscription.firstUpdateReceived = true;
+      }
+      subscription.receivedPatches(
+        value,
+        preservesPatches ? patches : [{ op: "replace", path: [], value }],
+        message.tags,
       );
+    } catch (error) {
+      this.failSignalSubscription({ subscribeId: message.subscribeId, writable, error });
+    }
+  }
+
+  /** Stops a failed subscription so subsequent patches cannot use an invalid base. */
+  private failSignalSubscription({
+    subscribeId,
+    writable,
+    error,
+  }: {
+    subscribeId: number;
+    writable: boolean;
+    error: unknown;
+  }): void {
+    const subscriptions = writable
+      ? this.openWritableSignalSubscriptions
+      : this.openSignalSubscriptions;
+    const subscription = subscriptions.get(subscribeId);
+    if (subscription === undefined) {
       return;
     }
-    if (!openSignalSubscription.endpoint.skipSignalDataValidation) {
-      const parseResult = openSignalSubscription.endpoint.signalData.safeParse(afterValue);
-      if (!parseResult.success) {
-        this.communicationWarning(
-          text`
-            Received invalid signal patch data, subscribeId = ${message.subscribeId}
-
-            patches = ${patches},
-
-            beforeValue = ${beforeValue},
-
-            afterValue = ${afterValue}.
-
-            Zod error:
-
-            ${Validator.prettyPrintZod("value", parseResult.error)}
-          `,
-          "signalPatchTypeError",
-        );
-        return;
-      }
-    }
-    // Don't use the parsed value, as it loses the substructure identities
-    openSignalSubscription.receivedPatches(afterValue, patches, message.tags);
+    error = mapPortError(
+      this.mapError,
+      error,
+      subscription.endpoint.name,
+      writable ? "writableSignal" : "signal",
+    );
+    subscriptions.delete(subscribeId);
+    subscription.errored(error);
+    this.safeSend({
+      type: writable ? "writableSignalUnsubscribe" : "signalUnsubscribe",
+      subscribeId,
+    });
+    this.updateOpenCommunicationsCount();
   }
 
   private receivedSignalError(message: ServerToClientMessage & { type: "signalError" }) {
@@ -402,69 +436,6 @@ export class ClientPort<
     openSignalSubscription.errored(error);
     this.openSignalSubscriptions.delete(message.subscribeId);
     this.updateOpenCommunicationsCount();
-  }
-
-  private receivedWritableSignalUpdate(
-    message: ServerToClientMessage & { type: "writableSignalUpdate" },
-  ) {
-    const openSignalSubscription = this.openWritableSignalSubscriptions.get(message.subscribeId);
-    if (openSignalSubscription === undefined) {
-      // This is caused by update and unsubscribe event happening at the same time. By the time the
-      // update has arrived at the client side, as far as the client is considered, the signal is
-      // already unsubscribed. This is a normal behavior and is especially prevalent when React
-      // StrictMode is enabled, because components are rendered twice where signals are oftentimes
-      // subscribed and then unsubscribed immediately after.
-      return;
-    }
-    const patches = message.patches.map(patch =>
-      deserialize(openSignalSubscription.endpoint.serialization, patch),
-    );
-    const beforeValue = openSignalSubscription.getValue();
-    // Freeze for performance. See https://immerjs.github.io/immer/performance#pre-freeze-data
-    Object.freeze(beforeValue);
-    let afterValue: any;
-    try {
-      afterValue = applyPatches(beforeValue, patches);
-    } catch (error) {
-      this.communicationWarning(
-        text`
-          Failed to apply patches to writable signal on writableSignalUpdate. subscribeId =
-          ${message.subscribeId}.
-
-          beforeValue = ${JSON.stringify(beforeValue, null, 2)},
-
-          patches = ${JSON.stringify(patches, null, 2)}.
-
-          Error: ${String(error)}
-        `,
-        "writableSignalPatchApplyError",
-      );
-    }
-    if (!openSignalSubscription.endpoint.skipSignalDataValidation) {
-      const parseResult = openSignalSubscription.endpoint.signalData.safeParse(afterValue);
-      if (!parseResult.success) {
-        this.communicationWarning(
-          text`
-          Received invalid writable signal patch data, subscribeId = ${message.subscribeId}
-
-          patches = ${patches},
-
-          beforeValue = ${beforeValue},
-
-          afterValue = ${afterValue}.
-
-          Zod error:
-
-          ${Validator.prettyPrintZod("value", parseResult.error)}
-        `,
-          "writableSignalPatchTypeError",
-        );
-        return;
-      }
-    }
-    // Don't use the parsed value, as it loses the substructure identities
-    openSignalSubscription.firstUpdateReceived = true;
-    openSignalSubscription.receivedPatches(afterValue, patches, message.tags);
   }
 
   private receivedWritableSignalError(
@@ -559,7 +530,7 @@ export class ClientPort<
         break;
       }
       case "writableSignalUpdate": {
-        this.receivedWritableSignalUpdate(message);
+        this.receivedSignalUpdate(message);
         break;
       }
       case "writableSignalError": {
@@ -613,6 +584,7 @@ export class ClientPort<
     this.openWritableSignalSubscriptions.clear();
     this.updateOpenCommunicationsCount();
   };
+  /** Queues a call while leaving peer-dependent encoding to the ready transport. */
   public async callRpc<TEndpointName extends keyof TRpcEndpoints & string>(
     endpointName: TEndpointName,
     param: TRpcEndpoints[TEndpointName]["parameter"],
@@ -623,38 +595,34 @@ export class ClientPort<
       throw new Error(`No Rpc endpoint with name ${endpointName}`);
     }
     const parameter = endpoint.parameter.parse(param);
-    const serializedParameter = serialize(endpoint.serialization, parameter);
-
-    const callId = this.nextChannelId;
-    this.nextChannelId++;
-
-    const { promise, resolve, reject } = makePromise();
-
-    stack = stack ?? getCurrentStack(1);
-    this.ongoingRpcs.set(callId, {
-      endpoint,
-      stack,
-      resolve,
-      reject,
-    });
-
-    try {
-      this.transport.send({
-        type: "rpcCall",
-        endpoint: endpointName,
-        callId,
-        parameter: serializedParameter,
-      });
-    } catch (error) {
-      this.ongoingRpcs.delete(callId);
-      this.updateOpenCommunicationsCount();
-      throw error;
-    }
-
+    const callId = this.nextChannelId++;
+    const { promise, resolve, reject } = makePromise<TRpcEndpoints[TEndpointName]["returns"]>();
+    this.ongoingRpcs.set(callId, { endpoint, stack: stack ?? getCurrentStack(1), resolve, reject });
     this.updateOpenCommunicationsCount();
-
+    this.transport.sendDeferred(
+      () =>
+        !this.ongoingRpcs.has(callId)
+          ? null
+          : {
+              type: "rpcCall",
+              endpoint: endpointName,
+              callId,
+              parameter: this.payloadCodec.encode({
+                schema: endpoint.parameter,
+                serialization: endpoint.serialization,
+                value: parameter,
+              }),
+            },
+      error => {
+        this.ongoingRpcs.delete(callId);
+        this.updateOpenCommunicationsCount();
+        reject(mapPortError(this.mapError, error, endpoint.name, "rpc"));
+      },
+    );
     return await promise;
   }
+
+  /** Creates a channel whose creation and packet encoding use the current connection. */
   public createChannel<TEndpointName extends keyof TChannelEndpoints & string>(
     endpointName: TEndpointName,
     param: TChannelEndpoints[TEndpointName]["creationParameter"],
@@ -664,102 +632,120 @@ export class ClientPort<
     TChannelEndpoints[TEndpointName]["toClientPacket"],
     TChannelEndpoints[TEndpointName]["toServerPacket"]
   > {
-    const channelEndpoint = this.backendInterface.getChannelEndpoint(endpointName);
-    if (channelEndpoint === undefined) {
+    const endpoint = this.backendInterface.getChannelEndpoint(endpointName);
+    if (endpoint === undefined) {
       throw new Error(`No channel endpoint with name ${endpointName}`);
     }
-    const creationParameter = channelEndpoint.creationParameter.parse(param);
-    const serializedCreationParameter = serialize(channelEndpoint.serialization, creationParameter);
-
-    const channelId = this.nextChannelId;
-    this.nextChannelId++;
-
-    this.transport.send({
-      type: "channelCreate",
-      endpoint: endpointName,
-      channelId,
-      creationParameter: serializedCreationParameter,
-    });
-
-    stack = stack ?? getCurrentStack(1);
-
+    const creationParameter = endpoint.creationParameter.parse(param);
+    const channelId = this.nextChannelId++;
     const openChannel: OpenChannel = {
-      endpoint: channelEndpoint,
-      stack,
-      ...Channel.create(packet => {
-        const parsed = channelEndpoint.toServerPacket.parse(packet);
-        const serializedMessage = serialize(channelEndpoint.serialization, parsed);
-        this.transport.send({
-          type: "channelSend",
-          channelId,
-          message: serializedMessage,
-        });
+      endpoint,
+      creationSent: false,
+      stack: stack ?? getCurrentStack(1),
+      ...Channel.create((packet, ackId) => {
+        this.transport.sendDeferred(
+          () =>
+            !this.openChannels.has(channelId)
+              ? null
+              : {
+                  type: "channelSend",
+                  channelId,
+                  ackId,
+                  message: this.payloadCodec.encode({
+                    schema: endpoint.toServerPacket,
+                    serialization: endpoint.serialization,
+                    value: endpoint.toServerPacket.parse(packet),
+                  }),
+                },
+          error => this.failChannel(channelId, error),
+        );
       }),
     };
-
     if (onMessage !== undefined) {
       openChannel.channel.onMessage.subscribe(onMessage);
     }
-
     this.openChannels.set(channelId, openChannel);
     this.updateOpenCommunicationsCount();
+    this.transport.sendDeferred(
+      () => {
+        if (!this.openChannels.has(channelId)) {
+          return null;
+        }
+        const encoded = this.payloadCodec.encode({
+          schema: endpoint.creationParameter,
+          serialization: endpoint.serialization,
+          value: creationParameter,
+        });
+        // Encoding can fail before the peer has a channel to release.
+        openChannel.creationSent = true;
+        return {
+          type: "channelCreate",
+          endpoint: endpointName,
+          channelId,
+          creationParameter: encoded,
+        };
+      },
+      error => this.failChannel(channelId, error),
+    );
     return openChannel.channel;
   }
-  /**
-   * Creates a readonly lazy signal will subscribe to the signal endpoint with the given name.
-   */
+
+  /** Re-encodes creation parameters for each subscription, including after reconnect. */
   public createSignal<TEndpointName extends keyof TSignalEndpoints & string>(
     endpointName: TEndpointName,
     param: TSignalEndpoints[TEndpointName]["creationParameter"],
     { stack }: { stack?: string } = {},
   ): LazySignal<TSignalEndpoints[TEndpointName]["signalData"] | NotAvailable> {
-    const signalEndpoint = this.backendInterface.getSignalEndpoint(endpointName);
-    if (signalEndpoint === undefined) {
+    const endpoint = this.backendInterface.getSignalEndpoint(endpointName);
+    if (endpoint === undefined) {
       throw new Error(`No signal endpoint with name ${endpointName}`);
     }
-    const creationParameter = signalEndpoint.creationParameter.parse(param);
-    const serializedCreationParameter = serialize(signalEndpoint.serialization, creationParameter);
-
+    const creationParameter = endpoint.creationParameter.parse(param);
     stack = stack ?? getCurrentStack(1);
-
-    const signal = LazySignal.createWithoutInitialValue((setDownstream, errorListener) => {
-      const subscribeId = this.nextSubscribeId;
-      this.nextSubscribeId++;
-      this.safeSend(
-        {
-          type: "signalSubscribe",
-          endpoint: endpointName,
-          subscribeId,
-          creationParameter: serializedCreationParameter,
-        },
-        "signalSubscribe",
-      );
+    const signal = LazySignal.createWithoutInitialValue<
+      TSignalEndpoints[TEndpointName]["signalData"]
+    >((setDownstream, errorListener) => {
+      const subscribeId = this.nextSubscribeId++;
       this.openSignalSubscriptions.set(subscribeId, {
-        endpoint: signalEndpoint,
+        endpoint,
         getValue: () => signal.get(),
+        wireValue: LazySignal.NOT_AVAILABLE,
         receivedPatches: setDownstream.withValueAndPatches,
         errored: errorListener,
         stack,
         signal,
       });
       this.updateOpenCommunicationsCount();
+      this.transport.sendDeferred(
+        () =>
+          !this.openSignalSubscriptions.has(subscribeId)
+            ? null
+            : {
+                type: "signalSubscribe",
+                endpoint: endpointName,
+                subscribeId,
+                creationParameter: this.payloadCodec.encode({
+                  schema: endpoint.creationParameter,
+                  serialization: endpoint.serialization,
+                  value: creationParameter,
+                }),
+              },
+        error => {
+          this.logger.error("Failed to subscribe to signal:", error);
+          this.failSignalSubscription({ subscribeId, writable: false, error });
+        },
+      );
       return () => {
-        this.safeSend(
-          {
-            type: "signalUnsubscribe",
-            subscribeId,
-          },
-          "signalUnsubscribe",
-        );
+        this.safeSend({ type: "signalUnsubscribe", subscribeId }, "signalUnsubscribe");
         this.openSignalSubscriptions.delete(subscribeId);
-        // Remove from recoverable set if present (signal unsubscribed before recovery)
         this.recoverableSignals.delete(signal);
+        this.updateOpenCommunicationsCount();
       };
     });
-
     return signal;
   }
 
+  /** Preserves optimistic write tags while converting whole values when patches cannot cross the boundary. */
   public createWritableSignal<TEndpointName extends keyof TWritableSignalEndpoints & string>(
     endpointName: TEndpointName,
     param: TWritableSignalEndpoints[TEndpointName]["creationParameter"],
@@ -768,77 +754,91 @@ export class ClientPort<
     signal: OWLSignal<TWritableSignalEndpoints[TEndpointName]["signalData"] | NotAvailable>,
     setter: Setter<TWritableSignalEndpoints[TEndpointName]["signalData"]>,
   ] {
-    const signalEndpoint = this.backendInterface.getWritableSignalEndpoint(endpointName);
-    if (signalEndpoint === undefined) {
+    const endpoint = this.backendInterface.getWritableSignalEndpoint(endpointName);
+    if (endpoint === undefined) {
       throw new Error(`No writable signal endpoint with name ${endpointName}`);
     }
-    const creationParameter = signalEndpoint.creationParameter.parse(param);
-    const serializedCreationParameter = serialize(signalEndpoint.serialization, creationParameter);
-
+    const creationParameter = endpoint.creationParameter.parse(param);
     stack = stack ?? getCurrentStack(1);
-
     let currentSubscribeId: number | null = null;
-    const writeUpstream = (_data: any, patches: Array<Patch>, tags: Array<WriteTag>) => {
-      if (currentSubscribeId === null) {
-        console.warn("writeUpstream called when not subscribed");
-        return false;
-      }
-      const subscription = this.openWritableSignalSubscriptions.get(currentSubscribeId);
-      if (!subscription?.firstUpdateReceived) {
-        console.warn("writeUpstream called before the first update is received");
-        return false;
-      }
-      try {
-        this.transport.send({
-          type: "writableSignalUpdate",
-          subscribeId: currentSubscribeId as any,
-          patches: patches.map(patch => serialize(signalEndpoint.serialization, patch)),
-          tags,
+    const [signal, setter] = OWLSignal.createWithoutInitialValue<
+      TWritableSignalEndpoints[TEndpointName]["signalData"]
+    >(
+      (setDownstream, errorListener) => {
+        const subscribeId = this.nextWritableSubscribeId++;
+        currentSubscribeId = subscribeId;
+        this.openWritableSignalSubscriptions.set(subscribeId, {
+          endpoint,
+          getValue: () => signal.getPessimistic(),
+          wireValue: LazySignal.NOT_AVAILABLE,
+          receivedPatches: setDownstream.withValueAndPatches,
+          firstUpdateReceived: false,
+          errored: errorListener,
+          stack,
+          signal,
         });
-        return true;
-      } catch (error) {
-        this.logger.error("Error sending writable signal update:", error);
-        return false;
-      }
-    };
-
-    const [signal, setter] = OWLSignal.createWithoutInitialValue((setDownstream, errorListener) => {
-      const subscribeId = this.nextWritableSubscribeId;
-      currentSubscribeId = subscribeId;
-      this.nextWritableSubscribeId++;
-      this.safeSend(
-        {
-          type: "writableSignalSubscribe",
-          endpoint: endpointName,
-          subscribeId,
-          creationParameter: serializedCreationParameter,
-        },
-        "writableSignalSubscribe",
-      );
-      this.openWritableSignalSubscriptions.set(subscribeId, {
-        endpoint: signalEndpoint,
-        getValue: () => signal.getPessimistic(),
-        receivedPatches: setDownstream.withValueAndPatches,
-        firstUpdateReceived: false,
-        errored: errorListener,
-        stack,
-        signal,
-      });
-      this.updateOpenCommunicationsCount();
-      return () => {
-        currentSubscribeId = null;
-        this.safeSend(
-          {
-            type: "writableSignalUnsubscribe",
-            subscribeId,
-          },
-          "writableSignalUnsubscribe",
+        this.updateOpenCommunicationsCount();
+        this.transport.sendDeferred(
+          () =>
+            !this.openWritableSignalSubscriptions.has(subscribeId)
+              ? null
+              : {
+                  type: "writableSignalSubscribe",
+                  endpoint: endpointName,
+                  subscribeId,
+                  creationParameter: this.payloadCodec.encode({
+                    schema: endpoint.creationParameter,
+                    serialization: endpoint.serialization,
+                    value: creationParameter,
+                  }),
+                },
+          error => this.failSignalSubscription({ subscribeId, writable: true, error }),
         );
-        this.openWritableSignalSubscriptions.delete(subscribeId);
-        // Remove from recoverable set if present (signal unsubscribed before recovery)
-        this.recoverableWritableSignals.delete(signal);
-      };
-    }, writeUpstream);
+        return () => {
+          currentSubscribeId = null;
+          this.safeSend(
+            { type: "writableSignalUnsubscribe", subscribeId },
+            "writableSignalUnsubscribe",
+          );
+          this.openWritableSignalSubscriptions.delete(subscribeId);
+          this.recoverableWritableSignals.delete(signal);
+          this.updateOpenCommunicationsCount();
+        };
+      },
+      (data, patches, tags) => {
+        const subscribeId = currentSubscribeId;
+        if (
+          subscribeId === null ||
+          this.openWritableSignalSubscriptions.get(subscribeId)?.firstUpdateReceived !== true
+        ) {
+          return false;
+        }
+        this.transport.sendDeferred(
+          () => {
+            if (!this.openWritableSignalSubscriptions.has(subscribeId)) {
+              return null;
+            }
+            const wirePatches = this.payloadCodec.preservesPatches(endpoint.signalData)
+              ? patches
+              : [
+                  {
+                    op: "replace" as const,
+                    path: [],
+                    value: this.payloadCodec.toWire(endpoint.signalData, data),
+                  },
+                ];
+            return {
+              type: "writableSignalUpdate",
+              subscribeId,
+              tags,
+              patches: wirePatches.map(patch => serialize(endpoint.serialization, patch)),
+            };
+          },
+          error => this.failSignalSubscription({ subscribeId, writable: true, error }),
+        );
+        return true;
+      },
+    );
     return [signal, setter];
   }
 

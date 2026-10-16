@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/ban-types */
 import { type NotAvailable, type Setter, type SignalLike } from "@lmstudio/lms-common";
-import { type z, type ZodType } from "zod";
+import { type InferPayloadSchema, type PayloadSchema } from "./PayloadCodec.js";
 import type { Channel } from "./Channel.js";
 import { type SerializationType } from "./serialization.js";
 
@@ -38,36 +38,40 @@ export type WritableSignalEndpointHandler<TContext = any, TCreationParameter = a
   | readonly [signal: SignalLike<TData | NotAvailable>, setter: Setter<TData>]
   | Promise<readonly [signal: SignalLike<TData | NotAvailable>, setter: Setter<TData>]>;
 
-export interface RpcEndpoint {
+export interface RpcEndpoint<TParameter = unknown, TReturns = unknown> {
   name: string;
-  parameter: z.ZodType;
-  returns: z.ZodType;
+  parameter: PayloadSchema<TParameter>;
+  returns: PayloadSchema<TReturns>;
   serialization: SerializationType;
   handler: RpcEndpointHandler | null;
 }
 
-export interface ChannelEndpoint {
+export interface ChannelEndpoint<
+  TCreationParameter = unknown,
+  TToServerPacket = unknown,
+  TToClientPacket = unknown,
+> {
   name: string;
-  creationParameter: z.ZodType;
-  toServerPacket: z.ZodType;
-  toClientPacket: z.ZodType;
+  creationParameter: PayloadSchema<TCreationParameter>;
+  toServerPacket: PayloadSchema<TToServerPacket>;
+  toClientPacket: PayloadSchema<TToClientPacket>;
   serialization: SerializationType;
   handler: ChannelEndpointHandler | null;
 }
 
-export interface SignalEndpoint {
+export interface SignalEndpoint<TCreationParameter = unknown, TSignalData = unknown> {
   name: string;
-  creationParameter: z.ZodType;
-  signalData: z.ZodType;
+  creationParameter: PayloadSchema<TCreationParameter>;
+  signalData: PayloadSchema<TSignalData>;
   serialization: SerializationType;
   skipSignalDataValidation: boolean;
   handler: SignalEndpointHandler | null;
 }
 
-export interface WritableSignalEndpoint {
+export interface WritableSignalEndpoint<TCreationParameter = unknown, TSignalData = unknown> {
   name: string;
-  creationParameter: z.ZodType;
-  signalData: z.ZodType;
+  creationParameter: PayloadSchema<TCreationParameter>;
+  signalData: PayloadSchema<TSignalData>;
   serialization: SerializationType;
   skipSignalDataValidation: boolean;
   handler: WritableSignalEndpointHandler | null;
@@ -147,8 +151,8 @@ export class BackendInterface<
    */
   public addRpcEndpoint<
     TEndpointName extends string,
-    TParametersZod extends ZodType,
-    TReturnsZod extends ZodType,
+    TParameterSchema extends PayloadSchema,
+    TReturnsSchema extends PayloadSchema,
   >(
     endpointName: TEndpointName,
     {
@@ -156,16 +160,16 @@ export class BackendInterface<
       returns,
       serialization = "raw",
     }: {
-      parameter: TParametersZod;
-      returns: TReturnsZod;
+      parameter: TParameterSchema;
+      returns: TReturnsSchema;
       serialization?: SerializationType;
     },
   ): BackendInterface<
     TContext,
     TRpcEndpoints & {
       [endpointName in TEndpointName]: {
-        parameter: z.infer<TParametersZod>;
-        returns: z.infer<TReturnsZod>;
+        parameter: InferPayloadSchema<TParameterSchema>;
+        returns: InferPayloadSchema<TReturnsSchema>;
       };
     },
     TChannelEndpoints,
@@ -184,11 +188,12 @@ export class BackendInterface<
     return this;
   }
 
+  /** Registers both packet directions independently from the creation parameters. */
   public addChannelEndpoint<
     TEndpointName extends string,
-    TCreationParameterZod extends ZodType,
-    TToServerPacketZod extends ZodType,
-    TToClientPacketZod extends ZodType,
+    TCreationParameterSchema extends PayloadSchema,
+    TToServerPacketSchema extends PayloadSchema,
+    TToClientPacketSchema extends PayloadSchema,
   >(
     endpointName: TEndpointName,
     {
@@ -197,9 +202,9 @@ export class BackendInterface<
       toClientPacket,
       serialization = "raw",
     }: {
-      creationParameter: TCreationParameterZod;
-      toServerPacket: TToServerPacketZod;
-      toClientPacket: TToClientPacketZod;
+      creationParameter: TCreationParameterSchema;
+      toServerPacket: TToServerPacketSchema;
+      toClientPacket: TToClientPacketSchema;
       serialization?: SerializationType;
     },
   ): BackendInterface<
@@ -207,9 +212,9 @@ export class BackendInterface<
     TRpcEndpoints,
     TChannelEndpoints & {
       [endpointName in TEndpointName]: {
-        creationParameter: z.infer<TCreationParameterZod>;
-        toServerPacket: z.infer<TToServerPacketZod>;
-        toClientPacket: z.infer<TToClientPacketZod>;
+        creationParameter: InferPayloadSchema<TCreationParameterSchema>;
+        toServerPacket: InferPayloadSchema<TToServerPacketSchema>;
+        toClientPacket: InferPayloadSchema<TToClientPacketSchema>;
       };
     },
     TSignalEndpoints,
@@ -228,10 +233,11 @@ export class BackendInterface<
     return this;
   }
 
+  /** Registers a readonly signal with its exposed payload type. */
   public addSignalEndpoint<
     TEndpointName extends string,
-    TCreationParameterZod extends ZodType,
-    TSignalDataZod extends ZodType,
+    TCreationParameterSchema extends PayloadSchema,
+    TSignalDataSchema extends PayloadSchema,
   >(
     endpointName: TEndpointName,
     {
@@ -240,8 +246,8 @@ export class BackendInterface<
       serialization = "raw",
       skipSignalDataValidation = false,
     }: {
-      creationParameter: TCreationParameterZod;
-      signalData: TSignalDataZod;
+      creationParameter: TCreationParameterSchema;
+      signalData: TSignalDataSchema;
       serialization?: SerializationType;
       skipSignalDataValidation?: boolean;
     },
@@ -251,8 +257,8 @@ export class BackendInterface<
     TChannelEndpoints,
     TSignalEndpoints & {
       [endpointName in TEndpointName]: {
-        creationParameter: z.infer<TCreationParameterZod>;
-        signalData: z.infer<TSignalDataZod>;
+        creationParameter: InferPayloadSchema<TCreationParameterSchema>;
+        signalData: InferPayloadSchema<TSignalDataSchema>;
       };
     },
     TWritableSignalEndpoints
@@ -270,10 +276,11 @@ export class BackendInterface<
     return this;
   }
 
+  /** Registers a writable signal using one payload type for reads and writes. */
   public addWritableSignalEndpoint<
     TEndpointName extends string,
-    TCreationParameterZod extends ZodType,
-    TSignalDataZod extends ZodType,
+    TCreationParameterSchema extends PayloadSchema,
+    TSignalDataSchema extends PayloadSchema,
   >(
     endpointName: TEndpointName,
     {
@@ -282,8 +289,8 @@ export class BackendInterface<
       serialization = "raw",
       skipSignalDataValidation = false,
     }: {
-      creationParameter: TCreationParameterZod;
-      signalData: TSignalDataZod;
+      creationParameter: TCreationParameterSchema;
+      signalData: TSignalDataSchema;
       serialization?: SerializationType;
       skipSignalDataValidation?: boolean;
     },
@@ -294,8 +301,8 @@ export class BackendInterface<
     TSignalEndpoints,
     TWritableSignalEndpoints & {
       [endpointName in TEndpointName]: {
-        creationParameter: z.infer<TCreationParameterZod>;
-        signalData: z.infer<TSignalDataZod>;
+        creationParameter: InferPayloadSchema<TCreationParameterSchema>;
+        signalData: InferPayloadSchema<TSignalDataSchema>;
       };
     }
   > {
@@ -461,6 +468,11 @@ export class BackendInterface<
     }
   }
 
+  /** Retains the declared payload types when looking up a known RPC. */
+  public getRpcEndpoint<TName extends keyof TRpcEndpoints & string>(
+    endpointName: TName,
+  ): RpcEndpoint<TRpcEndpoints[TName]["parameter"], TRpcEndpoints[TName]["returns"]> | undefined;
+  public getRpcEndpoint(endpointName: string): RpcEndpoint | undefined;
   public getRpcEndpoint(endpointName: string) {
     return this.rpcEndpoints.get(endpointName);
   }
@@ -469,6 +481,17 @@ export class BackendInterface<
     return [...this.rpcEndpoints.values()];
   }
 
+  /** Retains both packet types when looking up a known channel. */
+  public getChannelEndpoint<TName extends keyof TChannelEndpoints & string>(
+    endpointName: TName,
+  ):
+    | ChannelEndpoint<
+        TChannelEndpoints[TName]["creationParameter"],
+        TChannelEndpoints[TName]["toServerPacket"],
+        TChannelEndpoints[TName]["toClientPacket"]
+      >
+    | undefined;
+  public getChannelEndpoint(endpointName: string): ChannelEndpoint | undefined;
   public getChannelEndpoint(endpointName: string) {
     return this.channelEndpoints.get(endpointName);
   }
@@ -477,6 +500,16 @@ export class BackendInterface<
     return [...this.channelEndpoints.values()];
   }
 
+  /** Retains the declared signal type when looking up a known subscription. */
+  public getSignalEndpoint<TName extends keyof TSignalEndpoints & string>(
+    endpointName: TName,
+  ):
+    | SignalEndpoint<
+        TSignalEndpoints[TName]["creationParameter"],
+        TSignalEndpoints[TName]["signalData"]
+      >
+    | undefined;
+  public getSignalEndpoint(endpointName: string): SignalEndpoint | undefined;
   public getSignalEndpoint(endpointName: string) {
     return this.signalEndpoints.get(endpointName);
   }
@@ -485,6 +518,16 @@ export class BackendInterface<
     return [...this.signalEndpoints.values()];
   }
 
+  /** Retains the declared writable value type when looking up a known subscription. */
+  public getWritableSignalEndpoint<TName extends keyof TWritableSignalEndpoints & string>(
+    endpointName: TName,
+  ):
+    | WritableSignalEndpoint<
+        TWritableSignalEndpoints[TName]["creationParameter"],
+        TWritableSignalEndpoints[TName]["signalData"]
+      >
+    | undefined;
+  public getWritableSignalEndpoint(endpointName: string): WritableSignalEndpoint | undefined;
   public getWritableSignalEndpoint(endpointName: string) {
     return this.writableSignalEndpoints.get(endpointName);
   }
