@@ -29,8 +29,9 @@ export const serializedLMSExtendedErrorSchema = z.object({
   rootTitle: failOk(z.string()).optional(),
 });
 export type SerializedLMSExtendedError = z.infer<typeof serializedLMSExtendedErrorSchema>;
+/** Preserves structured error fields and turns primitive thrown values into error titles. */
 export function serializeError(error: any): SerializedLMSExtendedError {
-  if (typeof error === "object") {
+  if (error !== null && typeof error === "object") {
     const title = error.title ?? error.lmstudioRawError ?? error.message ?? "Unknown error";
     return serializedLMSExtendedErrorSchema.parse({
       title,
