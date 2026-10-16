@@ -7,6 +7,7 @@ import type {
 } from "@lmstudio/lms-communication";
 import { ServerTransport } from "@lmstudio/lms-communication";
 
+/** A single connection backed by caller-owned events. The owner must close it when the port fails. */
 export class GenericServerTransport<TMetadata = unknown> extends ServerTransport<TMetadata> {
   protected readonly logger;
   private closed = false;
@@ -61,7 +62,11 @@ export class GenericServerTransport<TMetadata = unknown> extends ServerTransport
         opts,
       );
   }
+  /** Prevents late handlers from sending replies after this connection has failed. */
   public override sendViaTransport(message: ServerToClientMessage) {
+    if (this.closed) {
+      throw new Error("Cannot send through a closed server transport.");
+    }
     this.sendMessage(message);
   }
 }

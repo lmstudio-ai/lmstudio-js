@@ -69,7 +69,7 @@ test.each([true, false])("exchanges metadata once (keepalive first: %s)", async 
   }
 });
 
-/** Invalid envelopes and metadata terminate dispatch; buffered messages must not slip through afterward. */
+/** A protocol failure ends the connection in both directions, even before its owner closes it. */
 test.each([
   ["client", "envelope"],
   ["client", "metadata"],
@@ -84,17 +84,16 @@ test.each([
   const opts = { handshake: { schema: metadataSchema, value: { name: "local" }, onPeer } };
   const transport =
     side === "server"
-      ? GenericServerTransport.createFactory(
+      ? new GenericServerTransport(incoming, closed, () => {}, received, failed, logger, opts)
+      : new GenericClientTransport(
           incoming,
           closed,
           () => {},
-          opts,
-        )(received, failed, logger)
-      : GenericClientTransport.createFactory(incoming, closed, () => {}, opts)(
           received,
           () => {},
           failed,
           logger,
+          opts,
         );
   const type = side === "server" ? "keepAlive" : "keepAliveAck";
   emitIncoming({
@@ -103,6 +102,13 @@ test.each([
   });
   emitIncoming({ type, metadata: { name: "peer" } });
   await new Promise(resolve => setImmediate(resolve));
+  expect(() => {
+    if (transport instanceof GenericServerTransport) {
+      transport.send({ type: "keepAliveAck" });
+    } else {
+      transport.send({ type: "keepAlive" });
+    }
+  }).toThrow("closed");
   emitClosed();
   await new Promise(resolve => setImmediate(resolve));
   expect(failed).toHaveBeenCalledTimes(1);
@@ -112,23 +118,48 @@ test.each([
   await transport[Symbol.asyncDispose]();
 });
 
-/** A bad handshake must reject an outstanding RPC instead of leaving its promise unresolved. */
-test("rejects pending client work when peer metadata is invalid", async () => {
-  const [incoming, emitIncoming] = BufferedEvent.create<unknown>();
-  const [closed] = BufferedEvent.create<void>();
-  const backend = new BackendInterface().addRpcEndpoint("echo", {
-    parameter: z.string(),
-    returns: z.string(),
-  });
-  const client = new ClientPort(
-    backend,
-    GenericClientTransport.createFactory(incoming, closed, () => {}, {
-      handshake: { schema: metadataSchema, value: { name: "client" }, onPeer: () => {} },
-    }),
-    { parentLogger: logger },
-  );
-  const request = client.callRpc("echo", "pending");
-  emitIncoming({ type: "keepAliveAck", metadata: null });
-  await expect(request).rejects.toThrow();
-  await client[Symbol.asyncDispose]();
-});
+/** A closed connection must reject later RPCs and expose errors on newly subscribed signals. */
+test.each(["metadata", "envelope", "close"] as const)(
+  "rejects pending and subsequent client work after %s failure",
+  async failure => {
+    const [incoming, emitIncoming] = BufferedEvent.create<unknown>();
+    const [closed, emitClosed] = BufferedEvent.create<void>();
+    const backend = new BackendInterface()
+      .addRpcEndpoint("echo", { parameter: z.string(), returns: z.string() })
+      .addSignalEndpoint("state", { creationParameter: z.void(), signalData: z.string() })
+      .addWritableSignalEndpoint("writable", {
+        creationParameter: z.void(),
+        signalData: z.string(),
+      });
+    const client = new ClientPort(
+      backend,
+      GenericClientTransport.createFactory(incoming, closed, () => {}, {
+        handshake: { schema: metadataSchema, value: { name: "client" }, onPeer: () => {} },
+      }),
+      { parentLogger: logger },
+    );
+    const request = client.callRpc("echo", "pending");
+    if (failure === "close") {
+      emitClosed();
+    } else {
+      emitIncoming(
+        failure === "metadata" ? { type: "keepAliveAck", metadata: null } : { type: "invalid" },
+      );
+    }
+    await expect(request).rejects.toThrow();
+    await expect(client.callRpc("echo", "after failure")).rejects.toThrow("closed");
+    // pull() waits for recovery; subscription failures are exposed through errorSignal.
+    const signal = client.createSignal("state", undefined);
+    const [writable] = client.createWritableSignal("writable", undefined);
+    const stopSignal = signal.subscribe(() => {});
+    const stopWritable = writable.subscribe(() => {});
+    try {
+      expect(signal.errorSignal.get()?.message).toContain("closed");
+      expect(writable.errorSignal.get()?.message).toContain("closed");
+    } finally {
+      stopSignal();
+      stopWritable();
+      await client[Symbol.asyncDispose]();
+    }
+  },
+);

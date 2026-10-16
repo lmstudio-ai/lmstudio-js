@@ -7,6 +7,7 @@ import type {
 } from "@lmstudio/lms-communication";
 import { ClientTransport } from "@lmstudio/lms-communication";
 
+/** A single connection backed by caller-owned events. Create a new transport after it closes. */
 export class GenericClientTransport<TMetadata = unknown> extends ClientTransport<TMetadata> {
   protected readonly logger;
   private closed = false;
@@ -67,7 +68,11 @@ export class GenericClientTransport<TMetadata = unknown> extends ClientTransport
         opts,
       );
   }
+  /** Rejects new work once this connection can no longer receive its responses. */
   public override sendViaTransport(message: ClientToServerMessage) {
+    if (this.closed) {
+      throw new Error("Cannot send through a closed client transport.");
+    }
     this.sendMessage(message);
   }
 }
