@@ -575,7 +575,7 @@ export interface LLMLoadModelConfig {
   contextLength?: number;
 
   /**
-   * Overrides the chat template used by engine-protocol llama-server runtimes at model load time.
+   * Overrides the chat template used by supported engine-protocol runtimes at model load time.
    *
    * Absence means the runtime should use the resolved model/default template. Custom Jinja
    * templates are applied per loaded model instance and require a reload to change.
