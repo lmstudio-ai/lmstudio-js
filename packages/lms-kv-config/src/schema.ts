@@ -940,11 +940,16 @@ export const llmMlxLoadConfigSchematics = llmSharedLoadConfigSchematics.union(
   llmLoadSchematics.sliced("mlx.*", "numParallelSessions"),
 );
 
-export const llmOmlxLoadConfigSchematics = llmLoadSchematics.sliced(
-  "contextLength",
-  "numParallelSessions",
-  "envVars",
-);
+export const llmOmlxLoadConfigSchematics = llmLoadSchematics
+  .sliced("contextLength", "numParallelSessions", "envVars")
+  // oMLX grows its KV cache as the conversation grows, so context length is a cap, not a
+  // reservation.
+  .withTypeParamOverride("contextLength", param => ({
+    ...param,
+    hint:
+      "The maximum number of tokens this engine accepts in one prompt. Memory is allocated as " +
+      "the conversation grows, so the model may run out of memory before reaching this limit.",
+  }));
 
 export const llmVllmLoadConfigSchematics = llmSharedLoadConfigSchematics
   .union(
