@@ -385,6 +385,15 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
             false,
           )
           .field(
+            "draftDspark",
+            "boolean",
+            {
+              displayName: "Draft DSpark",
+              hint: "Use bundled DSpark heads when loading the model.",
+            },
+            false,
+          )
+          .field(
             "draftSimple",
             "boolean",
             {
@@ -931,7 +940,15 @@ export const llmLlamaLoadConfigSchematics = llmSharedLoadConfigSchematics
       "lazyMode",
       "numParallelSessions",
       "useUnifiedKvCache",
-      "speculativeDecoding.*",
+      "speculativeDecoding.draftMtp",
+      "speculativeDecoding.draftSimple",
+      "speculativeDecoding.draftDflashSidecar",
+      "speculativeDecoding.draftDsparkSidecar",
+      "speculativeDecoding.draftMtpSidecar",
+      "speculativeDecoding.draftModel",
+      "speculativeDecoding.draftMaxTokens",
+      "speculativeDecoding.draftMinTokens",
+      "speculativeDecoding.draftMinContinueProbability",
     ),
   )
   .union(llamaLoadConfigSchematics);
@@ -941,7 +958,17 @@ export const llmMlxLoadConfigSchematics = llmSharedLoadConfigSchematics.union(
 );
 
 export const llmOmlxLoadConfigSchematics = llmLoadSchematics
-  .sliced("contextLength", "numParallelSessions", "promptTemplate", "envVars")
+  .sliced(
+    "contextLength",
+    "numParallelSessions",
+    "promptTemplate",
+    "envVars",
+    "speculativeDecoding.draftMtp",
+    "speculativeDecoding.draftDspark",
+    "speculativeDecoding.draftDflashSidecar",
+    "speculativeDecoding.draftMtpSidecar",
+    "speculativeDecoding.draftModel",
+  )
   // oMLX grows its KV cache as the conversation grows, so context length is a cap, not a
   // reservation.
   .withTypeParamOverride("contextLength", param => ({
@@ -959,7 +986,15 @@ export const llmVllmLoadConfigSchematics = llmSharedLoadConfigSchematics
       "promptTemplate",
       "engineConfigFileContents",
       "engineCwd",
-      "speculativeDecoding.*",
+      "speculativeDecoding.draftMtp",
+      "speculativeDecoding.draftSimple",
+      "speculativeDecoding.draftDflashSidecar",
+      "speculativeDecoding.draftDsparkSidecar",
+      "speculativeDecoding.draftMtpSidecar",
+      "speculativeDecoding.draftModel",
+      "speculativeDecoding.draftMaxTokens",
+      "speculativeDecoding.draftMinTokens",
+      "speculativeDecoding.draftMinContinueProbability",
     ),
   )
   .union(globalConfigSchematics.sliced("load.gpuSplitConfig"));
