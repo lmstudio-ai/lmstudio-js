@@ -941,7 +941,7 @@ export const llmMlxLoadConfigSchematics = llmSharedLoadConfigSchematics.union(
 );
 
 export const llmOmlxLoadConfigSchematics = llmLoadSchematics
-  .sliced("contextLength", "numParallelSessions", "envVars")
+  .sliced("contextLength", "numParallelSessions", "promptTemplate", "envVars")
   // oMLX grows its KV cache as the conversation grows, so context length is a cap, not a
   // reservation.
   .withTypeParamOverride("contextLength", param => ({
