@@ -534,6 +534,7 @@ export function llmLoadModelConfigToKVConfig(config: LLMLoadModelConfig): KVConf
     ...(publicSpeculativeSelectorIsSpecified
       ? {
           "speculativeDecoding.draftDflashSidecar": false,
+          "speculativeDecoding.draftDspark": false,
           "speculativeDecoding.draftDsparkSidecar": false,
           "speculativeDecoding.draftMtpSidecar": false,
         }
