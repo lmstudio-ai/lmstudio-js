@@ -963,7 +963,11 @@ export const llmOmlxLoadConfigSchematics = llmLoadSchematics
     "numParallelSessions",
     "promptTemplate",
     "envVars",
+    "speculativeDecoding.draftMtp",
     "speculativeDecoding.draftDspark",
+    "speculativeDecoding.draftDflashSidecar",
+    "speculativeDecoding.draftMtpSidecar",
+    "speculativeDecoding.draftModel",
   )
   // oMLX grows its KV cache as the conversation grows, so context length is a cap, not a
   // reservation.
