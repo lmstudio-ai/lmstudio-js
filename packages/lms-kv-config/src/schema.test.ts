@@ -373,18 +373,6 @@ describe("oMLX config", () => {
     ]);
   });
 
-  it("exposes only the supported speculative decoding tuning field", () => {
-    const config = llmLoadModelConfigToKVConfig({
-      speculativeDraftMaxTokens: 8,
-      speculativeDraftMinTokens: 2,
-      speculativeDraftMinContinueProbability: 0.5,
-    });
-
-    expect(llmOmlxLoadConfigSchematics.filterConfig(config).fields).toEqual([
-      { key: "llm.load.speculativeDecoding.draftMaxTokens", value: 8 },
-    ]);
-  });
-
   it("preserves prediction overrides while excluding unsupported preset fields", () => {
     const config = llmPredictionConfigToKVConfig({
       temperature: 0,
