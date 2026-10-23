@@ -23,6 +23,7 @@ import {
   defaultLlmLoadPromptTemplate,
   globalConfigSchematics,
   llmLlamaLoadConfigSchematics,
+  llmLlamaMoeLoadConfigSchematics,
   llmLoadSchematics,
   llmMlxLoadConfigSchematics,
   llmOmlxLoadConfigSchematics,
@@ -456,6 +457,25 @@ describe("llmLoadModelConfig conversion", () => {
       true,
     );
     expect(kvConfigToLLMLoadModelConfig(loadConfig, { modelFormat: "yuzu" }).autoFit).toBe(true);
+  });
+
+  it("round trips the MoE expert cache without disabling AutoFit", () => {
+    const config = llmLoadModelConfigToKVConfig({ moeCacheMiB: 4096 });
+    const fieldMap = new Map(config.fields.map(field => [field.key, field.value]));
+
+    expect(fieldMap.get("llm.load.moeCacheMiB")).toBe(4096);
+    expect(fieldMap.get("llm.load.llama.autoFit")).toBeUndefined();
+    expect(kvConfigToLLMLoadModelConfig(config)).toEqual({ moeCacheMiB: 4096 });
+    expect(
+      kvConfigToLLMLoadModelConfig(
+        llmLoadModelConfigToKVConfig({ autoFit: true, moeCacheMiB: 4096 }),
+      ),
+    ).toEqual({ autoFit: true, moeCacheMiB: 4096 });
+  });
+
+  it("exposes the MoE expert cache only on the MoE schematic", () => {
+    expect(llmLlamaMoeLoadConfigSchematics.hasFullKey("llm.load.moeCacheMiB")).toBe(true);
+    expect(llmLlamaLoadConfigSchematics.hasFullKey("llm.load.moeCacheMiB")).toBe(false);
   });
 
   it("disables AutoFit for explicit manual settings", () => {
