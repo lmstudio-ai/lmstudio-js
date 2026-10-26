@@ -246,6 +246,11 @@ function kvConfigToLLMLlamaLoadModelConfig(
     result.numExperts = numExperts;
   }
 
+  const moeCacheMiB = parsed.get("moeCacheMiB");
+  if (moeCacheMiB !== undefined) {
+    result.moeCacheMiB = moeCacheMiB;
+  }
+
   const llamaKCacheQuantizationType = parsed.get("llama.kCacheQuantizationType");
   if (llamaKCacheQuantizationType !== undefined) {
     result.llamaKCacheQuantizationType = llamaKCacheQuantizationType.checked
@@ -552,6 +557,7 @@ export function llmLoadModelConfigToKVConfig(config: LLMLoadModelConfig): KVConf
     "lazyMode": config.lazyMode,
     "llama.argumentsOverride": config.llamaCppArgumentsOverride,
     "numExperts": config.numExperts,
+    "moeCacheMiB": config.moeCacheMiB,
     "llama.kCacheQuantizationType": maybeFalseValueToCheckboxValue(
       config.llamaKCacheQuantizationType,
       "f16",

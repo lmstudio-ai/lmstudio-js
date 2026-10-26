@@ -354,6 +354,21 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
         "off",
       )
       .field(
+        "moeCacheMiB",
+        "numeric",
+        {
+          min: 0,
+          int: true,
+          machineDependent: true,
+          isExperimental: true,
+          displayName: "MoE Expert Cache (MiB)",
+          hint:
+            "GPU memory reserved to cache MoE expert weights that stay in system RAM. " +
+            "0 disables the cache.",
+        },
+        0,
+      )
+      .field(
         "numParallelSessions",
         "numeric",
         { min: 1, max: 1023, int: true, isExperimental: true },
@@ -659,6 +674,20 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
         "llamaAccelerationOffloadRatio",
         { machineDependent: true },
         "off",
+      )
+      .field(
+        "moeCacheMiB",
+        "numeric",
+        {
+          min: 0,
+          int: true,
+          machineDependent: true,
+          displayName: "MoE Expert Cache (MiB)",
+          hint:
+            "GPU memory reserved to cache MoE expert weights that stay in system RAM. " +
+            "0 disables the cache.",
+        },
+        0,
       )
       .field("numExperts", "numeric", { min: 0, int: true }, 0)
       .field(
@@ -1010,6 +1039,7 @@ export const llmOnnxLoadConfigSchematics = llmSharedLoadConfigSchematics.union(
 const llmLlamaMoeAdditionalLoadConfigSchematics = llmLoadSchematics.sliced(
   "numExperts",
   "numCpuExpertLayersRatio",
+  "moeCacheMiB",
 );
 
 export const llmLlamaMoeLoadConfigSchematics = llmLlamaLoadConfigSchematics.union(

@@ -62,6 +62,17 @@ describe("LLMLoadModelConfig schema", () => {
     ).toBe(true);
   });
 
+  it("allows AutoFit with a MoE expert cache", () => {
+    expect(
+      llmLoadModelConfigSchema.safeParse({ autoFit: true, moeCacheMiB: 4096 }).success,
+    ).toBe(true);
+  });
+
+  it("rejects invalid MoE expert cache values", () => {
+    expect(llmLoadModelConfigSchema.safeParse({ moeCacheMiB: -1 }).success).toBe(false);
+    expect(llmLoadModelConfigSchema.safeParse({ moeCacheMiB: 1.5 }).success).toBe(false);
+  });
+
   it("accepts llama context checkpoints including 0", () => {
     expect(llmLoadModelConfigSchema.safeParse({ contextCheckpoints: 0 }).success).toBe(true);
     expect(llmLoadModelConfigSchema.safeParse({ contextCheckpoints: 32 }).success).toBe(true);

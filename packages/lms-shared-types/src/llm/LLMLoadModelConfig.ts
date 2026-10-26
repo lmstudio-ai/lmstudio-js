@@ -769,6 +769,14 @@ export interface LLMLoadModelConfig {
    * architecture.
    */
   numExperts?: number;
+
+  /**
+   * GPU memory, in MiB, reserved to cache MoE expert weights that remain in system RAM.
+   *
+   * @experimental
+   */
+  moeCacheMiB?: number;
+
   /**
    * Quantization type for the Llama model's key cache.
    *
@@ -853,6 +861,7 @@ export const llmLoadModelConfigSchema = z
     lazyMode: llmLlamaLazyModeSchema.optional(),
     llamaCppArgumentsOverride: llmLlamaCppArgumentsOverrideSchema.optional(),
     numExperts: z.number().int().optional(),
+    moeCacheMiB: z.number().int().min(0).optional(),
     llamaKCacheQuantizationType: z
       .enum(llmLlamaCacheQuantizationTypes)
       .or(z.literal(false))
