@@ -364,8 +364,7 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
           displayName: "MoE Expert Cache (MiB)",
           hint:
             "GPU memory reserved to cache MoE expert weights that stay in system RAM. " +
-            "0 disables the cache. Most useful when system RAM is slow relative to the GPU " +
-            "link; it can reduce performance on machines with very fast RAM.",
+            "0 disables the cache.",
         },
         0,
       )
@@ -677,8 +676,7 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
           displayName: "MoE Expert Cache (MiB)",
           hint:
             "GPU memory reserved to cache MoE expert weights that stay in system RAM. " +
-            "0 disables the cache. Most useful when system RAM is slow relative to the GPU " +
-            "link; it can reduce performance on machines with very fast RAM.",
+            "0 disables the cache.",
         },
         0,
       )
