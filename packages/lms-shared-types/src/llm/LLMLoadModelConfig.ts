@@ -773,11 +773,6 @@ export interface LLMLoadModelConfig {
   /**
    * GPU memory, in MiB, reserved to cache MoE expert weights that remain in system RAM.
    *
-   * `0` disables the cache. Only applies to MoE models loaded by llama.cpp runtimes that
-   * support `--moe-cache-mib` (2.55.0 or newer). This is a fixed GPU reservation and can be
-   * used together with AutoFit. It is most useful when system RAM bandwidth is low relative
-   * to the GPU link; on machines with very fast RAM it can reduce generation speed.
-   *
    * @experimental
    */
   moeCacheMiB?: number;
