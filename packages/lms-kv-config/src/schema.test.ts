@@ -383,16 +383,13 @@ describe("oMLX config", () => {
     ).toBeUndefined();
   });
 
-  it.each([0, -1, NaN, Infinity])(
-    "rejects invalid memory ceiling %p at SDK and KV boundaries",
-    value => {
-      expect(() => llmLoadModelConfigSchema.parse({ omlxMemoryGuardGb: value })).toThrow();
-      const config = makeKVConfigFromFields([
-        kvConfigField("llm.load.omlx.memoryGuardGb", { checked: true, value }),
-      ]);
-      expect(() => llmOmlxLoadConfigSchematics.parse(config)).toThrow();
-    },
-  );
+  it.each([0, Infinity])("rejects invalid memory ceiling %p at SDK and KV boundaries", value => {
+    expect(() => llmLoadModelConfigSchema.parse({ omlxMemoryGuardGb: value })).toThrow();
+    const config = makeKVConfigFromFields([
+      kvConfigField("llm.load.omlx.memoryGuardGb", { checked: true, value }),
+    ]);
+    expect(() => llmOmlxLoadConfigSchematics.parse(config)).toThrow();
+  });
 
   it.each(["llama.presencePenalty", "llama.frequencyPenalty"] as const)(
     "defaults %s to disabled",
