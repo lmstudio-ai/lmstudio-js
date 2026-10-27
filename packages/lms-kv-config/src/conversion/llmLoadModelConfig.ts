@@ -298,6 +298,11 @@ function kvConfigToLLMMlxLoadModelConfig(
     result.contextLength = contextLength;
   }
 
+  const memoryGuardGb = llmOmlxLoadConfigSchematics.accessPartial(config, "omlx.memoryGuardGb");
+  if (memoryGuardGb !== undefined) {
+    result.omlxMemoryGuardGb = memoryGuardGb.checked ? memoryGuardGb.value : false;
+  }
+
   const promptTemplate = llmOmlxLoadConfigSchematics.accessPartial(config, "promptTemplate");
   if (promptTemplate !== undefined) {
     result.promptTemplate = promptTemplate;
@@ -523,6 +528,7 @@ export function llmLoadModelConfigToKVConfig(config: LLMLoadModelConfig): KVConf
     "llama.acceleration.offloadRatio": config.gpu?.ratio,
     "numCpuExpertLayersRatio": config.gpu?.numCpuExpertLayersRatio,
     "numParallelSessions": config.maxParallelPredictions,
+    "omlx.memoryGuardGb": maybeFalseValueToCheckboxValue(config.omlxMemoryGuardGb, 8),
     "useUnifiedKvCache": config.useUnifiedKvCache,
     "offloadKVCacheToGpu": config.offloadKVCacheToGpu,
     "contextLength": config.contextLength,
