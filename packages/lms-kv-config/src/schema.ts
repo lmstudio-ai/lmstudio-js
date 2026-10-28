@@ -990,7 +990,6 @@ export const llmOmlxLoadConfigSchematics = llmLoadSchematics
   .sliced(
     "contextLength",
     "numParallelSessions",
-    "promptTemplate",
     "envVars",
     "speculativeDecoding.draftMtp",
     "speculativeDecoding.draftDspark",
