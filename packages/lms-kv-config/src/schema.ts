@@ -369,6 +369,21 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
         0,
       )
       .field(
+        "moeExpertResidentRatio",
+        "checkboxNumeric",
+        {
+          min: 0.01,
+          max: 1,
+          step: 0.01,
+          precision: 2,
+          machineDependent: true,
+          isExperimental: true,
+          displayName: "Resident MoE Experts",
+          hint: "Fraction of MoE experts kept in memory. Lower values save memory but can slow responses.",
+        },
+        { checked: false, value: 0.25 },
+      )
+      .field(
         "numParallelSessions",
         "numeric",
         { min: 1, max: 1023, int: true, isExperimental: true },
@@ -991,6 +1006,7 @@ export const llmOmlxLoadConfigSchematics = llmLoadSchematics
     "contextLength",
     "numParallelSessions",
     "maxMemoryBytes",
+    "moeExpertResidentRatio",
     "envVars",
     "speculativeDecoding.draftMtp",
     "speculativeDecoding.draftDspark",
