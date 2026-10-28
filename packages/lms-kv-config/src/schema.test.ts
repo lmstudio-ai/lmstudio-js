@@ -350,47 +350,6 @@ describe("yuzu config", () => {
 });
 
 describe("oMLX config", () => {
-  it.each([false, 0.1, 5.5] as const)(
-    "round trips the SDK memory ceiling %p through the engine load schema",
-    omlxMemoryGuardGb => {
-      const sdkConfig = llmLoadModelConfigSchema.parse({ omlxMemoryGuardGb });
-      const config = llmLoadModelConfigToKVConfig(sdkConfig);
-      const filtered = llmOmlxLoadConfigSchematics.filterConfig(config);
-      expect(kvConfigToLLMLoadModelConfig(filtered, { modelFormat: "safetensors" })).toEqual({
-        omlxMemoryGuardGb,
-      });
-
-      for (const schematics of [
-        llmLlamaLoadConfigSchematics,
-        llmMlxLoadConfigSchematics,
-        llmVllmLoadConfigSchematics,
-      ]) {
-        expect(schematics.filterConfig(config).fields).toEqual([]);
-      }
-    },
-  );
-
-  it("does not create an oMLX memory override when no ceiling was specified", () => {
-    const config = llmLoadModelConfigToKVConfig({});
-    expect(
-      kvConfigToLLMLoadModelConfig(config, { modelFormat: "safetensors" }).omlxMemoryGuardGb,
-    ).toBeUndefined();
-    expect(
-      kvConfigToLLMLoadModelConfig(config, {
-        modelFormat: "safetensors",
-        useDefaultsForMissingKeys: true,
-      }).omlxMemoryGuardGb,
-    ).toBeUndefined();
-  });
-
-  it.each([0, Infinity])("rejects invalid memory ceiling %p at SDK and KV boundaries", value => {
-    expect(() => llmLoadModelConfigSchema.parse({ omlxMemoryGuardGb: value })).toThrow();
-    const config = makeKVConfigFromFields([
-      kvConfigField("llm.load.omlx.memoryGuardGb", { checked: true, value }),
-    ]);
-    expect(() => llmOmlxLoadConfigSchematics.parse(config)).toThrow();
-  });
-
   it.each(["llama.presencePenalty", "llama.frequencyPenalty"] as const)(
     "defaults %s to disabled",
     key => {

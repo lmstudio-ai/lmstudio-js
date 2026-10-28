@@ -813,13 +813,6 @@ export interface LLMLoadModelConfig {
   mlxDiskCache?: boolean;
 
   /**
-   * Custom oMLX process memory ceiling in GB, including model weights and context. Must be at
-   * least 0.1 GB. Set to false to use oMLX's automatic memory guard, not to disable the guard.
-   * Omit to inherit the saved load setting. Applies on model load or reload.
-   */
-  omlxMemoryGuardGb?: number | false;
-
-  /**
    * Quantization settings for the MLX model's key-value cache.
    *
    * Similar to Llama cache quantization, this option allows for reducing the precision of the
@@ -878,13 +871,6 @@ export const llmLoadModelConfigSchema = z
       .or(z.literal(false))
       .optional(),
     mlxDiskCache: z.boolean().optional(),
-    omlxMemoryGuardGb: z
-      .number()
-      .finite()
-      .min(0.1)
-      .max(Number.MAX_SAFE_INTEGER)
-      .or(z.literal(false))
-      .optional(),
     mlxKvCacheQuantization: llmMlxKvCacheQuantizationSchema.or(z.literal(false)).optional(),
   })
   .superRefine((config, context) => {

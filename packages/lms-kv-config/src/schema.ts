@@ -565,24 +565,6 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
             { checked: false, value: "f16" },
           ),
       )
-      .scope("omlx", builder =>
-        builder.field(
-          "memoryGuardGb",
-          "checkboxNumeric",
-          {
-            min: 0.1,
-            max: Number.MAX_SAFE_INTEGER,
-            step: 0.1,
-            precision: 1,
-            machineDependent: true,
-            displayName: "Memory Guard Ceiling (GB)",
-            hint:
-              "Caps oMLX's process memory budget, including model weights and context. " +
-              "Leave unchecked to use oMLX's automatic memory guard. Applies on model load or reload.",
-          },
-          { checked: false, value: 8 },
-        ),
-      )
       .scope("mlx", builder =>
         builder
           .field("autoFit", "boolean", { machineDependent: true }, true)
@@ -1008,7 +990,7 @@ export const llmOmlxLoadConfigSchematics = llmLoadSchematics
   .sliced(
     "contextLength",
     "numParallelSessions",
-    "omlx.*",
+    "maxMemoryBytes",
     "promptTemplate",
     "envVars",
     "speculativeDecoding.draftMtp",
@@ -1018,6 +1000,12 @@ export const llmOmlxLoadConfigSchematics = llmLoadSchematics
     "speculativeDecoding.draftModel",
     "speculativeDecoding.draftMaxTokens",
   )
+  .withTypeParamOverride("maxMemoryBytes", param => ({
+    ...param,
+    hint:
+      "Sets oMLX's process memory budget, including model weights and context. " +
+      "Leave unchecked to use oMLX's automatic memory guard. Applies on model load or reload.",
+  }))
   // oMLX grows its KV cache as the conversation grows, so context length is a cap, not a
   // reservation.
   .withTypeParamOverride("contextLength", param => ({
