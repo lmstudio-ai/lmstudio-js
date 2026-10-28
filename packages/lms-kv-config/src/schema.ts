@@ -991,7 +991,6 @@ export const llmOmlxLoadConfigSchematics = llmLoadSchematics
     "contextLength",
     "numParallelSessions",
     "maxMemoryBytes",
-    "promptTemplate",
     "envVars",
     "speculativeDecoding.draftMtp",
     "speculativeDecoding.draftDspark",
