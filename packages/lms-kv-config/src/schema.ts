@@ -1002,9 +1002,7 @@ export const llmOmlxLoadConfigSchematics = llmLoadSchematics
   )
   .withTypeParamOverride("maxMemoryBytes", param => ({
     ...param,
-    hint:
-      "Sets oMLX's process memory budget, including model weights and context. " +
-      "Leave unchecked to use oMLX's automatic memory guard. Applies on model load or reload.",
+    hint: "Memory budget for model weights and context. Leave unchecked for automatic sizing.",
   }))
   // oMLX grows its KV cache as the conversation grows, so context length is a cap, not a
   // reservation.
