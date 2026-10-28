@@ -990,6 +990,7 @@ export const llmOmlxLoadConfigSchematics = llmLoadSchematics
   .sliced(
     "contextLength",
     "numParallelSessions",
+    "maxMemoryBytes",
     "envVars",
     "speculativeDecoding.draftMtp",
     "speculativeDecoding.draftDspark",
@@ -998,6 +999,10 @@ export const llmOmlxLoadConfigSchematics = llmLoadSchematics
     "speculativeDecoding.draftModel",
     "speculativeDecoding.draftMaxTokens",
   )
+  .withTypeParamOverride("maxMemoryBytes", param => ({
+    ...param,
+    hint: "Memory budget for model weights and context. Leave unchecked for automatic sizing.",
+  }))
   // oMLX grows its KV cache as the conversation grows, so context length is a cap, not a
   // reservation.
   .withTypeParamOverride("contextLength", param => ({
