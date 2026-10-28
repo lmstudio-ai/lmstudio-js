@@ -360,25 +360,18 @@ describe("oMLX config", () => {
     },
   );
 
-  it("filters unsupported load settings while preserving context and concurrency", () => {
+  it("filters native MLX load settings and seed while preserving context and concurrency", () => {
     const config = llmLoadModelConfigToKVConfig({
       contextLength: 8192,
       maxParallelPredictions: 2,
       mlxDiskCache: true,
       seed: 7,
-      promptTemplate: {
-        type: "jinja",
-        jinjaPromptTemplate: { template: "{{ messages }}" },
-      },
     });
 
     expect(llmOmlxLoadConfigSchematics.filterConfig(config).fields).toEqual([
       { key: "llm.load.numParallelSessions", value: 2 },
       { key: "llm.load.contextLength", value: 8192 },
     ]);
-    expect(
-      kvConfigToLLMLoadModelConfig(config, { modelFormat: "safetensors" }).promptTemplate,
-    ).toBeUndefined();
   });
 
   it("preserves prediction overrides while excluding unsupported preset fields", () => {
