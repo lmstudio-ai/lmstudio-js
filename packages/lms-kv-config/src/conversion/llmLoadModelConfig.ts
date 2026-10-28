@@ -14,7 +14,6 @@ import {
   llmLlamaMoeLoadConfigSchematics,
   llmLoadSchematics,
   llmMlxLoadConfigSchematics,
-  llmOmlxLoadConfigSchematics,
   llmVllmLoadConfigSchematics,
   llmYuzuLoadConfigSchematics,
 } from "../schema.js";
@@ -296,11 +295,6 @@ function kvConfigToLLMMlxLoadModelConfig(
   const contextLength = parsed.get("contextLength");
   if (autoFit !== true && contextLength !== undefined) {
     result.contextLength = contextLength;
-  }
-
-  const promptTemplate = llmOmlxLoadConfigSchematics.accessPartial(config, "promptTemplate");
-  if (promptTemplate !== undefined) {
-    result.promptTemplate = promptTemplate;
   }
 
   const seed = parsed.get("seed");
