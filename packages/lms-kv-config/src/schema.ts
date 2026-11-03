@@ -891,6 +891,26 @@ export const llmVllmPredictionConfigSchematics = llmPredictionConfigSchematics.s
   "llama.logitBias",
 );
 
+export const llmOpenVinoPredictionConfigSchematics = llmPredictionConfigSchematics.sliced(
+  "temperature",
+  "maxPredictedTokens",
+  "stopStrings",
+  "structured",
+  "tools",
+  "toolChoice",
+  "toolNaming",
+  "systemPrompt",
+  "seed",
+  "topKSampling",
+  "repeatPenalty",
+  "minPSampling",
+  "topPSampling",
+  "reasoning.enableThinking",
+  "llama.presencePenalty",
+  "llama.frequencyPenalty",
+  "vision.userMaxImageDimensionPixels",
+);
+
 // Keep yuzu defaults and limits local to its slice; other engines retain their sampler defaults.
 export const llmYuzuPredictionConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypesLibrary)
   .scope("llm.prediction", builder =>
@@ -1027,6 +1047,11 @@ export const llmOmlxLoadConfigSchematics = llmLoadSchematics
       "The maximum number of tokens this engine accepts in one prompt. Memory is allocated as " +
       "the conversation grows, so the model may run out of memory before reaching this limit.",
   }));
+
+export const llmOpenVinoLoadConfigSchematics = llmLoadSchematics.sliced(
+  "numParallelSessions",
+  "envVars",
+);
 
 export const llmVllmLoadConfigSchematics = llmSharedLoadConfigSchematics
   .union(

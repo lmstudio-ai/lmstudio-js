@@ -83,6 +83,8 @@ export {
   llmOmlxPredictionConfigSchematics,
   llmOnnxLoadConfigSchematics,
   llmOnnxPredictionConfigSchematics,
+  llmOpenVinoLoadConfigSchematics,
+  llmOpenVinoPredictionConfigSchematics,
   llmPredictionConfigSchematics,
   llmSharedLoadConfigSchematics,
   llmSharedPredictionConfigSchematics,
