@@ -1,6 +1,9 @@
+//packages/lms-client/src/ChatInput.ts
 import {
   type ChatHistoryData,
   type ChatMessageData,
+  type ChatMessageRoleData,
+  chatMessageRoleDataSchema,
   type ChatMessagePartFileData,
   type ChatMessagePartTextData,
 } from "@lmstudio/lms-shared-types";
@@ -17,7 +20,7 @@ export interface ChatMessageInput {
    * The sender of this message. Only "user", "assistant", and "system" is allowed. Defaults to
    * "user" if not specified.
    */
-  role?: "user" | "assistant" | "system";
+  role?: ChatMessageRoleData;
   /**
    * Text content of the message.
    */
@@ -29,7 +32,7 @@ export interface ChatMessageInput {
   images?: Array<FileHandle>;
 }
 export const chatMessageInputSchema = z.object({
-  role: z.enum(["user", "assistant", "system"]).optional(),
+  role: chatMessageRoleDataSchema.optional(),
   content: z.string().optional(),
   images: z.array(z.instanceof(FileHandle)).optional(),
 });
@@ -72,10 +75,27 @@ export function chatMessageInputToChatMessageData(
   chatMessageInput: ChatMessageInput,
 ): ChatMessageData {
   const { role, content, images } = chatMessageInput;
+  
+  // Jeśli rola to "tool", zwróć specjalną strukturę
+  if (role === "tool") {
+    if (content === undefined) {
+      throw new Error("Tool messages must have content");
+    }
+    // Tool messages wymagają toolCallResult parts
+    return {
+      role: "tool",
+      content: [{
+        type: "toolCallResult",
+        content: content,
+        // toolCallId i name są opcjonalne
+      }],
+    };
+  }
+  
+  // Reszta kodu dla user/assistant/system bez zmian...
   const parts: Array<ChatMessagePartTextData | ChatMessagePartFileData> = [];
   if (images === undefined || images.length === 0) {
     if (content === undefined) {
-      // If both content and file are undefined, let's just create an empty part.
       parts.push({
         type: "text",
         text: "",
@@ -101,5 +121,5 @@ export function chatMessageInputToChatMessageData(
   return {
     role: role ?? "user",
     content: parts,
-  };
+  } as ChatMessageData;
 }
