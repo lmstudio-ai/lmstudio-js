@@ -57,7 +57,7 @@ const fuzzyFindStaffPickResultSchema = z.object({
   exact: z.boolean(),
 });
 
-/** Defines the validated repository contract shared by external clients and LM Studio. */
+/** Defines the SDK's validated repository, authentication, and LM Link management endpoints. */
 export function createRepositoryBackendInterface() {
   return (
     new BackendInterface()
@@ -333,6 +333,16 @@ export function createRepositoryBackendInterface() {
         parameter: z.object({
           disabled: z.boolean(),
         }),
+        returns: z.void(),
+      })
+      /** Reports the saved agent opt-in, or effective policy for a managed Runner. */
+      .addRpcEndpoint("lmLinkGetAgentStatus", {
+        parameter: z.void(),
+        returns: z.object({ enabled: z.boolean(), managed: z.boolean() }),
+      })
+      /** Changes the host's agent opt-in without changing LM Link connectivity. */
+      .addRpcEndpoint("lmLinkSetAgentEnabled", {
+        parameter: z.object({ enabled: z.boolean() }),
         returns: z.void(),
       })
       .addRpcEndpoint("lmLinkUpdateDeviceName", {

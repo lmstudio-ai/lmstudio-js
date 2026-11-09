@@ -38,6 +38,18 @@ export class RepositoryLMLinkNamespace {
     return await this.repositoryPort.callRpc("lmLinkStatus", undefined, { stack });
   }
 
+  /** Reports the saved agent opt-in, or effective policy for a managed Runner. */
+  public async getAgentStatus(): Promise<{ enabled: boolean; managed: boolean }> {
+    const stack = getCurrentStack(1);
+    return await this.repositoryPort.callRpc("lmLinkGetAgentStatus", undefined, { stack });
+  }
+
+  /** Changes the host's agent opt-in. Managed Runners are controlled by Runner policy. */
+  public async setAgentEnabled(enabled: boolean): Promise<void> {
+    const stack = getCurrentStack(1);
+    return await this.repositoryPort.callRpc("lmLinkSetAgentEnabled", { enabled }, { stack });
+  }
+
   /**
    * @deprecated [DEP-HUB-API-ACCESS] LM Studio Hub API access is still in active development
    * and will change. Not recommended for public adoption.
