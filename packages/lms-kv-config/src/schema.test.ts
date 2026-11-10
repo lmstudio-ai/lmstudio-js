@@ -1429,6 +1429,14 @@ describe("globalConfigSchematics", () => {
         "load.gpuSplitConfig",
       ]),
     );
+    expect(
+      llmVllmLoadConfigSchematics.hasFullKey("llm.load.speculativeDecoding.draftMinTokens"),
+    ).toBe(false);
+    expect(
+      llmVllmLoadConfigSchematics.hasFullKey(
+        "llm.load.speculativeDecoding.draftMinContinueProbability",
+      ),
+    ).toBe(false);
   });
 
   it("exposes only the approved vLLM prediction controls", () => {
