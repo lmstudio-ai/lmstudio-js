@@ -428,18 +428,8 @@ function kvConfigToLLMVllmLoadModelConfig(
     result.speculativeDraftMaxTokens = speculativeDraftMaxTokens;
   }
 
-  const speculativeDraftMinTokens = parsed.get("speculativeDecoding.draftMinTokens");
-  if (speculativeDraftMinTokens !== undefined) {
-    result.speculativeDraftMinTokens = speculativeDraftMinTokens;
-  }
-
-  const speculativeDraftMinContinueProbability = parsed.get(
-    "speculativeDecoding.draftMinContinueProbability",
-  );
-  if (speculativeDraftMinContinueProbability !== undefined) {
-    result.speculativeDraftMinContinueProbability = speculativeDraftMinContinueProbability;
-  }
-
+  // vLLM does not apply LM Studio's minimum-token or continuation-probability controls.
+  // Do not report inert defaults that callers cannot safely round-trip to a vLLM load.
   return result;
 }
 
