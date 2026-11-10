@@ -428,8 +428,6 @@ function kvConfigToLLMVllmLoadModelConfig(
     result.speculativeDraftMaxTokens = speculativeDraftMaxTokens;
   }
 
-  // vLLM does not apply LM Studio's minimum-token or continuation-probability controls.
-  // Do not report inert defaults that callers cannot safely round-trip to a vLLM load.
   return result;
 }
 
