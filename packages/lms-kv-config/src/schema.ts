@@ -1043,8 +1043,6 @@ export const llmVllmLoadConfigSchematics = llmSharedLoadConfigSchematics
       "speculativeDecoding.draftMtpSidecar",
       "speculativeDecoding.draftModel",
       "speculativeDecoding.draftMaxTokens",
-      "speculativeDecoding.draftMinTokens",
-      "speculativeDecoding.draftMinContinueProbability",
     ),
   )
   .union(globalConfigSchematics.sliced("load.gpuSplitConfig"));
