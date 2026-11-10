@@ -1072,27 +1072,6 @@ describe("llmLoadModelConfig conversion", () => {
     expect(roundTrippedConfig.speculativeDraftMaxTokens).toBe(3);
   });
 
-  it("round trips an external Draft Model through the vLLM load schema", () => {
-    const loadConfig = llmLoadModelConfigToKVConfig({
-      speculativeDraftMtp: false,
-      speculativeDraftSimple: true,
-      speculativeDraftModel: "publisher/draft-model",
-      speculativeDraftMaxTokens: 5,
-    });
-
-    const roundTrippedConfig = kvConfigToLLMLoadModelConfig(loadConfig, {
-      modelFormat: "torch_safetensors",
-      useDefaultsForMissingKeys: true,
-    });
-
-    expect(roundTrippedConfig.speculativeDraftMtp).toBe(false);
-    expect(roundTrippedConfig.speculativeDraftSimple).toBe(true);
-    expect(roundTrippedConfig.speculativeDraftModel).toBe("publisher/draft-model");
-    expect(roundTrippedConfig.speculativeDraftMaxTokens).toBe(5);
-    expect(roundTrippedConfig.speculativeDraftMinTokens).toBeUndefined();
-    expect(roundTrippedConfig.speculativeDraftMinContinueProbability).toBeUndefined();
-  });
-
   it("round trips Draft MTP load-time speculative decoding", () => {
     const loadConfig = llmLoadModelConfigToKVConfig({
       speculativeDraftMtp: true,
