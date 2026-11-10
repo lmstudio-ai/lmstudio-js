@@ -1037,6 +1037,7 @@ export const llmVllmLoadConfigSchematics = llmSharedLoadConfigSchematics
       "engineConfigFileContents",
       "engineCwd",
       "speculativeDecoding.draftMtp",
+      "speculativeDecoding.draftDspark",
       "speculativeDecoding.draftSimple",
       "speculativeDecoding.draftDflashSidecar",
       "speculativeDecoding.draftDsparkSidecar",
