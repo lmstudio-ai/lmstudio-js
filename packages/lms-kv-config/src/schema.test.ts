@@ -1425,6 +1425,7 @@ describe("globalConfigSchematics", () => {
         "llm.load.vllm.reasoningParser",
         "llm.load.vllm.toolCallParser",
         "llm.load.speculativeDecoding.draftMtp",
+        "llm.load.speculativeDecoding.draftDspark",
         "llm.load.speculativeDecoding.draftMaxTokens",
         "load.gpuSplitConfig",
       ]),
