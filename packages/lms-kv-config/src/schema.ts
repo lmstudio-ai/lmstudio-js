@@ -631,6 +631,31 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
             },
             0.92,
           )
+          .field(
+            "kvCacheDtype",
+            "select",
+            {
+              options: [
+                { value: "auto", displayName: "Auto" },
+                { value: "bfloat16", displayName: "BFloat16" },
+                { value: "float16", displayName: "Float16" },
+                { value: "fp8", displayName: "FP8 (platform default)" },
+                { value: "fp8_e4m3", displayName: "FP8 E4M3" },
+                { value: "fp8_e5m2", displayName: "FP8 E5M2" },
+                { value: "fp8_ds_mla", displayName: "FP8 DeepSeek MLA" },
+                { value: "fp8_per_token_head", displayName: "FP8 per token/head" },
+                { value: "int4_per_token_head", displayName: "INT4 per token/head" },
+                { value: "int8_per_token_head", displayName: "INT8 per token/head" },
+                { value: "nvfp4", displayName: "NVFP4" },
+                { value: "nvfp4_4over6", displayName: "NVFP4 4-over-6" },
+                { value: "nvfp4_ds_mla", displayName: "NVFP4 DeepSeek MLA" },
+              ],
+              machineDependent: true,
+              displayName: "KV Cache Data Type",
+              hint: "Lower-precision cache types save GPU memory but may affect output quality.",
+            },
+            "auto",
+          )
           .field("reasoningParser", "string", { displayName: "Reasoning Parser" }, "")
           .field("toolCallParser", "string", { displayName: "Tool Call Parser" }, ""),
       ),
