@@ -1,3 +1,4 @@
+import { getEventListeners } from "node:events";
 import { handleAbortSignal } from "./handleAbortSignal.js";
 
 describe("handleAbortSignal", () => {
@@ -47,5 +48,26 @@ describe("handleAbortSignal", () => {
     abortController.abort();
 
     expect(onAbortHandler).not.toHaveBeenCalled();
+  });
+
+  it("removes the abort listener when cleanup is called", () => {
+    const controller = new AbortController();
+    const cleanup = handleAbortSignal(controller.signal, jest.fn());
+
+    cleanup();
+    cleanup();
+
+    expect(getEventListeners(controller.signal, "abort")).toHaveLength(0);
+  });
+
+  it("removes the abort listener after handling cancellation", () => {
+    const controller = new AbortController();
+    const onAbort = jest.fn();
+    handleAbortSignal(controller.signal, onAbort);
+
+    controller.abort();
+
+    expect(onAbort).toHaveBeenCalledTimes(1);
+    expect(getEventListeners(controller.signal, "abort")).toHaveLength(0);
   });
 });
