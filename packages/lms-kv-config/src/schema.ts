@@ -967,6 +967,7 @@ export const llmYuzuLoadConfigSchematics = llmLoadSchematics
     "autoFitMinContextLength",
     "numParallelSessions",
     "maxMemoryBytes",
+    "speculativeDecoding.draftDflashSidecar",
     "speculativeDecoding.draftModel",
     "yuzu.*",
   )
