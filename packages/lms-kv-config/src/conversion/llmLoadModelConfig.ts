@@ -428,18 +428,6 @@ function kvConfigToLLMVllmLoadModelConfig(
     result.speculativeDraftMaxTokens = speculativeDraftMaxTokens;
   }
 
-  const speculativeDraftMinTokens = parsed.get("speculativeDecoding.draftMinTokens");
-  if (speculativeDraftMinTokens !== undefined) {
-    result.speculativeDraftMinTokens = speculativeDraftMinTokens;
-  }
-
-  const speculativeDraftMinContinueProbability = parsed.get(
-    "speculativeDecoding.draftMinContinueProbability",
-  );
-  if (speculativeDraftMinContinueProbability !== undefined) {
-    result.speculativeDraftMinContinueProbability = speculativeDraftMinContinueProbability;
-  }
-
   return result;
 }
 

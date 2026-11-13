@@ -1425,10 +1425,19 @@ describe("globalConfigSchematics", () => {
         "llm.load.vllm.reasoningParser",
         "llm.load.vllm.toolCallParser",
         "llm.load.speculativeDecoding.draftMtp",
+        "llm.load.speculativeDecoding.draftDspark",
         "llm.load.speculativeDecoding.draftMaxTokens",
         "load.gpuSplitConfig",
       ]),
     );
+    expect(
+      llmVllmLoadConfigSchematics.hasFullKey("llm.load.speculativeDecoding.draftMinTokens"),
+    ).toBe(false);
+    expect(
+      llmVllmLoadConfigSchematics.hasFullKey(
+        "llm.load.speculativeDecoding.draftMinContinueProbability",
+      ),
+    ).toBe(false);
   });
 
   it("exposes only the approved vLLM prediction controls", () => {
