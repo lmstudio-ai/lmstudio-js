@@ -43,7 +43,9 @@ export {
 } from "./PayloadCodec.js";
 export {
   ParallelDataStreams,
-  PDSFrame,
+  isPDSFrame,
+  toCloneablePDSFrame,
+  type PDSFrame,
   type PDSChunk,
   type PDSIdentifier,
   type PDSMessage,

@@ -5,7 +5,7 @@ import type {
   ServerToClientMessage,
   TransportOpts,
 } from "@lmstudio/lms-communication";
-import { ClientTransport, PDSFrame } from "@lmstudio/lms-communication";
+import { ClientTransport, isPDSFrame, type PDSFrame } from "@lmstudio/lms-communication";
 
 /** A single connection backed by caller-owned events. Create a new transport after it closes. */
 export class GenericClientTransport<TMetadata = unknown> extends ClientTransport<TMetadata> {
@@ -32,7 +32,7 @@ export class GenericClientTransport<TMetadata = unknown> extends ClientTransport
     onMessage.subscribe(message => {
       if (this.closed) return;
       // Frames share the message queue so they can't overtake the messages sent before them.
-      if (message instanceof PDSFrame) {
+      if (isPDSFrame(message)) {
         receivedPDSFrame(message);
         return;
       }

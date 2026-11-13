@@ -18,16 +18,42 @@ export interface PDSIdentifier {
 }
 
 /**
- * What transports carry for parallel data streams. It is a class so that a transport can keep
- * frames and messages in one queue and still tell them apart.
+ * What transports carry for parallel data streams. It is plain data, so it survives structured
+ * clone (Electron IPC). Transports that keep frames and messages in one queue tell them apart by
+ * `type`.
  */
-export class PDSFrame {
-  public constructor(
-    public readonly pdsId: number,
-    /** Null marks the end of the stream. */
-    public readonly data: Uint8Array | null,
-    public readonly compressed: boolean,
-  ) {}
+export interface PDSFrame {
+  type: "pdsFrame";
+  pdsId: number;
+  /** Null marks the end of the stream. */
+  data: Uint8Array | null;
+  compressed: boolean;
+}
+
+/**
+ * Tells a frame apart from a message in a shared queue. The peer controls what arrives, so the
+ * whole shape is checked before the frame reaches the streams.
+ */
+export function isPDSFrame(value: unknown): value is PDSFrame {
+  const frame = value as Partial<PDSFrame> | null;
+  return (
+    typeof frame === "object" &&
+    frame !== null &&
+    frame.type === "pdsFrame" &&
+    Number.isInteger(frame.pdsId) &&
+    (frame.data === null || frame.data instanceof Uint8Array) &&
+    typeof frame.compressed === "boolean"
+  );
+}
+
+/**
+ * Prepares a frame for structured clone, which Electron IPC and `postMessage` use. Structured clone
+ * copies the whole buffer behind a view, and a frame is usually a small view into a larger buffer,
+ * so only the frame's own bytes are kept.
+ */
+export function toCloneablePDSFrame(frame: PDSFrame): PDSFrame {
+  // `Buffer#slice` would return another view, so copy through the Uint8Array constructor.
+  return { ...frame, data: frame.data === null ? null : new Uint8Array(frame.data) };
 }
 
 export type PDSMessage = Extract<
@@ -138,11 +164,11 @@ export class ParallelDataStreams {
       write: async ({ data, compressed }) => {
         for (let offset = 0; offset < data.byteLength; offset += maximumFrameBytes) {
           const frameData = data.subarray(offset, offset + maximumFrameBytes);
-          await this.send(pdsId, pds, new PDSFrame(pdsId, frameData, compressed));
+          await this.send(pdsId, pds, { type: "pdsFrame", pdsId, data: frameData, compressed });
         }
       },
       close: async () => {
-        await this.send(pdsId, pds, new PDSFrame(pdsId, null, false));
+        await this.send(pdsId, pds, { type: "pdsFrame", pdsId, data: null, compressed: false });
         this.outgoing.delete(pdsId);
       },
     });

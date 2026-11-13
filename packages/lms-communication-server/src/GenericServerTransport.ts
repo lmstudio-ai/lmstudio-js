@@ -5,7 +5,7 @@ import type {
   ServerTransportFactory,
   TransportOpts,
 } from "@lmstudio/lms-communication";
-import { PDSFrame, ServerTransport } from "@lmstudio/lms-communication";
+import { isPDSFrame, type PDSFrame, ServerTransport } from "@lmstudio/lms-communication";
 
 /** A single connection backed by caller-owned events. The owner must close it when the port fails. */
 export class GenericServerTransport<TMetadata = unknown> extends ServerTransport<TMetadata> {
@@ -31,7 +31,7 @@ export class GenericServerTransport<TMetadata = unknown> extends ServerTransport
     onMessage.subscribe(message => {
       if (this.closed) return;
       // Frames share the message queue so they can't overtake the messages sent before them.
-      if (message instanceof PDSFrame) {
+      if (isPDSFrame(message)) {
         receivedPDSFrame(message);
         return;
       }

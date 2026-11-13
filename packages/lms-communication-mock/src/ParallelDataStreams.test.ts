@@ -1,8 +1,10 @@
 import { BufferedEvent, SimpleLogger } from "@lmstudio/lms-common";
 import {
   BackendInterface,
+  toCloneablePDSFrame,
   type ParallelDataStreams,
   type PDSChunk,
+  type PDSFrame,
 } from "@lmstudio/lms-communication";
 import { ClientPort, GenericClientTransport } from "@lmstudio/lms-communication-client";
 import { GenericServerTransport, ServerPort } from "@lmstudio/lms-communication-server";
@@ -29,9 +31,15 @@ backend.handleRpcEndpoint("relay", (ctx, identifier) => {
 });
 backend.handleRpcEndpoint("ping", () => "pong");
 
-function connect(pdsSupported = true) {
-  const [toServer, emitToServer] = BufferedEvent.create<unknown>();
-  const [toClient, emitToClient] = BufferedEvent.create<unknown>();
+/** With `overIpc`, everything goes through structured clone, as it does over Electron IPC. */
+function connect(pdsSupported = true, overIpc = false) {
+  const [toServer, emitToServerDirectly] = BufferedEvent.create<unknown>();
+  const [toClient, emitToClientDirectly] = BufferedEvent.create<unknown>();
+  const emitToServer = (message: unknown) =>
+    emitToServerDirectly(overIpc ? structuredClone(message) : message);
+  const emitToClient = (message: unknown) =>
+    emitToClientDirectly(overIpc ? structuredClone(message) : message);
+  const prepareFrame = (frame: PDSFrame) => (overIpc ? toCloneablePDSFrame(frame) : frame);
   const [serverClosed, emitServerClosed] = BufferedEvent.create<void>();
   const [clientClosed, emitClientClosed] = BufferedEvent.create<void>();
   const server = new ServerPort(
@@ -41,7 +49,7 @@ function connect(pdsSupported = true) {
       toServer,
       serverClosed,
       emitToClient,
-      pdsSupported ? { sendPDSFrame: emitToClient } : {},
+      pdsSupported ? { sendPDSFrame: frame => emitToClient(prepareFrame(frame)) } : {},
     ),
     { parentLogger: logger },
   );
@@ -51,7 +59,7 @@ function connect(pdsSupported = true) {
       toClient,
       clientClosed,
       emitToServer,
-      pdsSupported ? { sendPDSFrame: emitToServer } : {},
+      pdsSupported ? { sendPDSFrame: frame => emitToServer(prepareFrame(frame)) } : {},
     ),
     { parentLogger: logger },
   );
@@ -102,6 +110,37 @@ test("relays a stream through the server and back", async () => {
   expect(received[1].data.byteLength).toBe(36 * 1024);
   expect(received.slice(2)).toEqual(sent.slice(1));
   disconnect();
+});
+
+/** Frames are plain data, so they survive the structured clone that Electron IPC performs. */
+test("relays a stream through structured clone", async () => {
+  const { client, disconnect } = connect(true, true);
+  const sent = Array.from({ length: 40 }, (_, index) => ({
+    data: new Uint8Array(8 * 1024).fill(index),
+    compressed: false,
+  }));
+  const [writable, identifier] = client.pds.create();
+  const writing = (async () => {
+    const writer = writable.getWriter();
+    for (const chunk of sent) {
+      await writer.write(chunk);
+    }
+    await writer.close();
+  })();
+  const relayed = await client.callRpc("relay", identifier);
+  expect(await readAll(client.pds.accept(relayed))).toEqual(sent);
+  await writing;
+  disconnect();
+});
+
+/** A frame is usually a view into a larger buffer, which structured clone would copy whole. */
+test("keeps only a frame's own bytes for structured clone", () => {
+  const data = Buffer.alloc(1024, 7).subarray(10, 20);
+  const cloned = structuredClone(
+    toCloneablePDSFrame({ type: "pdsFrame", pdsId: 1, data, compressed: false }),
+  );
+  expect(cloned.data?.buffer.byteLength).toBe(10);
+  expect(cloned.data).toEqual(new Uint8Array(10).fill(7));
 });
 
 /** An unaccepted stream holds little memory and does not hold its writer forever. */
