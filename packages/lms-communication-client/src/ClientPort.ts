@@ -12,6 +12,7 @@ import {
 } from "@lmstudio/lms-common";
 import {
   Channel,
+  ParallelDataStreams,
   PayloadCodec,
   deserialize,
   mapPortError,
@@ -125,6 +126,12 @@ export class ClientPort<
   private readonly onCommunicationWarning?: (
     communicationWarning: ClientPortCommunicationWarning,
   ) => void;
+  /** Byte streams to and from the server that run next to this port's messages. */
+  public readonly pds = new ParallelDataStreams(
+    1,
+    () => this.transport,
+    message => this.safeSend(message),
+  );
 
   /** Creates a port with connection-specific payload handling and error formatting. */
   public constructor(
@@ -162,7 +169,13 @@ export class ClientPort<
     this.errorDeserializer = errorDeserializer ?? defaultErrorDeserializer;
     this.verboseErrorMessage = verboseErrorMessage ?? true;
     this.onCommunicationWarning = onCommunicationWarning;
-    this.transport = factory(this.receivedMessage, this.onConnected, this.errored, this.logger);
+    this.transport = factory(
+      this.receivedMessage,
+      this.onConnected,
+      this.errored,
+      this.logger,
+      frame => this.pds.receivedFrame(frame),
+    );
   }
 
   private communicationWarning(warning: string, kind: CommunicationWarningKind = "unknown") {
@@ -545,13 +558,21 @@ export class ClientPort<
         this.receivedKeepAliveAck(message);
         break;
       }
+      case "pdsOpen":
+      case "pdsCredit":
+      case "pdsCancel": {
+        this.pds.receivedMessage(message);
+        break;
+      }
     }
   };
   /**
    * Called when the transport connection is established.
-   * Triggers recovery for all signals that errored due to transport issues.
+   * Triggers recovery for all signals that errored due to transport issues, and lets streams that
+   * waited for the connection start.
    */
   private onConnected = () => {
+    this.pds.wake();
     for (const signal of this.recoverableSignals) {
       signal.recoverFromError();
     }
@@ -563,6 +584,7 @@ export class ClientPort<
     this.recoverableWritableSignals.clear();
   };
   private errored = (error: any) => {
+    this.pds.fail(error);
     for (const openChannel of this.openChannels.values()) {
       openChannel.errored(error);
     }

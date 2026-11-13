@@ -139,7 +139,7 @@ test.each([false, true])(
       : WsClientTransport.createWsClientTransportFactory(url);
     const client = new ClientPort(
       backend,
-      (received, connected, errored, parentLogger) =>
+      (received, connected, errored, parentLogger, receivedPDSFrame) =>
         factory(
           received,
           () => {
@@ -148,6 +148,7 @@ test.each([false, true])(
           },
           errored,
           parentLogger,
+          receivedPDSFrame,
         ),
       { payloadCodec: codec, parentLogger: logger },
     );
@@ -176,6 +177,7 @@ test("cancels queued preparation without reordering other sends", async () => {
     () => {},
     finished.reject,
     logger,
+    () => {},
   );
   disposables.add(transport);
   let canceled = false;
@@ -211,6 +213,7 @@ test("reconnects after authentication failure without replaying failed work", as
     () => {},
     () => {},
     logger,
+    () => {},
   );
   disposables.add(transport);
   transport.send({ type: "keepAlive", metadata: "failed-direct" });
@@ -234,6 +237,7 @@ test.each(["rejected URL", "invalid URL", "aborted"] as const)(
       () => {},
       () => {},
       logger,
+      () => {},
     );
     disposables.add(transport);
     const result = makePromise<void>();

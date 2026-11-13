@@ -3,6 +3,27 @@ import { serializedLMSExtendedErrorSchema } from "@lmstudio/lms-shared-types";
 import { z } from "zod";
 import { serializedOpaqueSchema } from "./serialization.js";
 import { type PayloadSchema } from "./PayloadCodec.js";
+import type { PDSFrame } from "./ParallelDataStreams.js";
+
+// Either side can create parallel data streams, so these travel in both directions.
+const pdsMessageSchemas = [
+  z.object({
+    type: z.literal("pdsOpen"),
+    pdsId: z.number().int(),
+  }),
+  z.object({
+    type: z.literal("pdsCredit"),
+    pdsId: z.number().int().optional(),
+    frames: z.number().int().min(1),
+  }),
+  // Ends a stream from either side. Client stream IDs are positive and server ones negative, so
+  // the ID says whose stream it is.
+  z.object({
+    type: z.literal("pdsCancel"),
+    pdsId: z.number().int(),
+    error: serializedLMSExtendedErrorSchema,
+  }),
+] as const;
 
 const clientToServerMessageSchema = z.discriminatedUnion("type", [
   // Communication
@@ -77,6 +98,8 @@ const clientToServerMessageSchema = z.discriminatedUnion("type", [
     patches: z.array(serializedOpaqueSchema),
     tags: z.array(z.string()),
   }),
+
+  ...pdsMessageSchemas,
 ]);
 
 export type ClientToServerMessage = z.infer<typeof clientToServerMessageSchema>;
@@ -152,6 +175,8 @@ const serverToClientMessageSchema = z.discriminatedUnion("type", [
     subscribeId: z.number().int(),
     error: serializedLMSExtendedErrorSchema,
   }),
+
+  ...pdsMessageSchemas,
 ]);
 
 export type ServerToClientMessage = z.infer<typeof serverToClientMessageSchema>;
@@ -163,20 +188,37 @@ export interface TransportOpts<TMetadata = unknown> {
     /** Receives validated metadata once per connection, or undefined for a peer without metadata. */
     onPeer: (metadata: TMetadata | undefined) => void;
   };
+  /**
+   * Sends one frame of a parallel data stream. Pass it when the peer handles parallel data streams
+   * for the whole life of the transport, like the other end of an in-process pair.
+   */
+  sendPDSFrame?: (frame: PDSFrame) => void;
 }
 
 export abstract class Transport<TIncoming, TOutgoing, TMetadata = unknown> {
   protected readonly handshakeMetadata: unknown;
   private readonly onPeerMetadata?: (metadata: unknown) => void;
   private handshakeReceived = false;
+  /**
+   * Whether parallel data streams work on the current connection. Undefined while the transport
+   * doesn't know yet, for example while it is connecting.
+   */
+  public pdsSupported: boolean | undefined;
+  /**
+   * Sends one frame of a parallel data stream. Only called while `pdsSupported` is true. A frame
+   * must never overtake a message sent before it, but messages may overtake frames.
+   */
+  public sendPDSFrame?: (frame: PDSFrame) => void;
 
   /** Binds the application's handshake schema and local metadata to this transport. */
-  public constructor({ handshake }: TransportOpts<TMetadata> = {}) {
+  public constructor({ handshake, sendPDSFrame }: TransportOpts<TMetadata> = {}) {
     if (handshake !== undefined) {
       this.handshakeMetadata = handshake.schema.parse(handshake.value);
       this.onPeerMetadata = metadata =>
         handshake.onPeer(metadata === undefined ? undefined : handshake.schema.parse(metadata));
     }
+    this.sendPDSFrame = sendPDSFrame;
+    this.pdsSupported = sendPDSFrame !== undefined;
   }
 
   /** Fixes peer metadata before the first message reaches its handler. Later keepalives cannot change it. */
@@ -284,6 +326,7 @@ export type ClientTransportFactory = (
   connected: () => void,
   errored: (error: any) => void,
   parentLogger: LoggerInterface,
+  receivedPDSFrame: (frame: PDSFrame) => void,
 ) => ClientTransport;
 
 export abstract class ServerTransport<TMetadata = unknown> extends Transport<
@@ -310,4 +353,5 @@ export type ServerTransportFactory = (
   receivedMessage: (message: ClientToServerMessage) => void,
   errored: (error: any) => void,
   parentLogger: LoggerInterface,
+  receivedPDSFrame: (frame: PDSFrame) => void,
 ) => ServerTransport;

@@ -3,6 +3,7 @@ import {
   type BackendInterface,
   type ChannelEndpointsSpecBase,
   type ClientToServerMessage,
+  type PDSFrame,
   type RpcEndpointsSpecBase,
   type ServerToClientMessage,
   type SignalEndpointsSpecBase,
@@ -16,6 +17,7 @@ import {
   type ContextCreator,
 } from "@lmstudio/lms-communication-server";
 
+/** Connects a client and server port in memory. Parallel data stream frames pass through uncopied. */
 export function createMockedPorts<
   TContext extends Context,
   TRpcEndpoints extends RpcEndpointsSpecBase,
@@ -46,10 +48,12 @@ export function createMockedPorts<
     TWritableSignalEndpoints
   >;
 } {
-  const [toClientMessageEvent, emitToClientMessageEvent] =
-    BufferedEvent.create<ServerToClientMessage>();
-  const [toServerMessageEvent, emitToServerMessageEvent] =
-    BufferedEvent.create<ClientToServerMessage>();
+  const [toClientMessageEvent, emitToClientMessageEvent] = BufferedEvent.create<
+    ServerToClientMessage | PDSFrame
+  >();
+  const [toServerMessageEvent, emitToServerMessageEvent] = BufferedEvent.create<
+    ClientToServerMessage | PDSFrame
+  >();
   const [clientCloseEvent, _emitClientCloseEvent] = BufferedEvent.create<void>();
   const [serverCloseEvent, _emitServerCloseEvent] = BufferedEvent.create<void>();
 
@@ -57,12 +61,14 @@ export function createMockedPorts<
     toClientMessageEvent,
     clientCloseEvent,
     emitToServerMessageEvent,
+    { sendPDSFrame: emitToServerMessageEvent },
   );
 
   const ServerTransportFactory = GenericServerTransport.createFactory(
     toServerMessageEvent,
     serverCloseEvent,
     emitToClientMessageEvent,
+    { sendPDSFrame: emitToClientMessageEvent },
   );
 
   const logger = new SimpleLogger("MockedCommunication");
