@@ -1,10 +1,11 @@
 import { BufferedEvent, SimpleLogger } from "@lmstudio/lms-common";
 import {
   BackendInterface,
+  ParallelDataStreams,
   toCloneablePDSFrame,
-  type ParallelDataStreams,
   type PDSChunk,
   type PDSFrame,
+  type PDSMessage,
 } from "@lmstudio/lms-communication";
 import { ClientPort, GenericClientTransport } from "@lmstudio/lms-communication-client";
 import { GenericServerTransport, ServerPort } from "@lmstudio/lms-communication-server";
@@ -76,6 +77,23 @@ async function readAll(readable: ReadableStream<PDSChunk>) {
     chunks.push(chunk);
   }
   return chunks;
+}
+
+/** One side's streams on their own, so a test can play the peer message by message. */
+function createSide(idSign: 1 | -1) {
+  const frames: Array<PDSFrame> = [];
+  const messages: Array<PDSMessage> = [];
+  const pds = new ParallelDataStreams(
+    idSign,
+    () => ({ pdsSupported: true, sendPDSFrame: frame => frames.push(frame) }),
+    message => messages.push(message),
+  );
+  return { pds, frames, messages };
+}
+
+/** Lets writers waiting for allowance send what they can. */
+async function settle() {
+  await new Promise(resolve => setTimeout(resolve, 0));
 }
 
 afterEach(() => {
@@ -195,6 +213,77 @@ test("ends streams in both directions when the connection closes", async () => {
   disconnect();
   await expect(writer.closed).rejects.toThrow("closed the connection");
   await expect(reader.read()).rejects.toThrow("closed the connection");
+});
+
+/** Frames can be any size, so the allowance counts bytes. */
+test("drops a stream whose frames go past its allowance", () => {
+  const reader = createSide(-1);
+  reader.pds.receivedMessage({ type: "pdsOpen", pdsId: 5 });
+  expect(reader.messages[0]).toEqual({
+    type: "pdsWindow",
+    connectionBytes: 64 * 1024 * 1024,
+    unacceptedStreamBytes: 1024 * 1024,
+    minimumFrameBytes: 64 * 1024,
+  });
+
+  reader.pds.receivedFrame({
+    type: "pdsFrame",
+    pdsId: 5,
+    data: new Uint8Array(2 * 1024 * 1024),
+    compressed: false,
+  });
+  expect(reader.messages[1]).toMatchObject({
+    type: "pdsCancel",
+    pdsId: 5,
+    error: { title: "The peer sent more than its stream allowance." },
+  });
+});
+
+test("sends only what the peer's window and credits allow", async () => {
+  const writer = createSide(1);
+  const [writable] = writer.pds.create();
+  void writable.getWriter().write({ data: new Uint8Array(3 * 1024 * 1024), compressed: false });
+  await settle();
+  expect(writer.messages).toEqual([{ type: "pdsOpen", pdsId: expect.any(Number) }]);
+  expect(writer.frames).toHaveLength(0);
+
+  writer.pds.receivedMessage({
+    type: "pdsWindow",
+    connectionBytes: 64 * 1024 * 1024,
+    unacceptedStreamBytes: 1024 * 1024,
+    minimumFrameBytes: 64 * 1024,
+  });
+  await settle();
+  const sentBytes = () => writer.frames.reduce((total, frame) => total + frame.data!.byteLength, 0);
+  expect(sentBytes()).toBe(1024 * 1024);
+
+  const pdsId = writer.frames[0]!.pdsId;
+  writer.pds.receivedMessage({ type: "pdsCredit", pdsId, bytes: 512 * 1024 });
+  await settle();
+  expect(sentBytes()).toBe(1536 * 1024);
+});
+
+/** Transports queue a limited number of frames, however small the peer lets them be. */
+test("keeps at most 1024 frames in flight until the connection is credited", async () => {
+  const writer = createSide(1);
+  writer.pds.receivedMessage({
+    type: "pdsWindow",
+    connectionBytes: 1024 * 1024 * 1024,
+    unacceptedStreamBytes: 1024 * 1024 * 1024,
+    minimumFrameBytes: 1,
+  });
+  const [writable] = writer.pds.create();
+  const streamWriter = writable.getWriter();
+  for (let index = 0; index < 2000; index++) {
+    void streamWriter.write({ data: new Uint8Array(1), compressed: false });
+  }
+  await settle();
+  expect(writer.frames).toHaveLength(1024);
+
+  // The reader credits what the oldest 512 frames cost.
+  writer.pds.receivedMessage({ type: "pdsCredit", bytes: 512 });
+  await settle();
+  expect(writer.frames).toHaveLength(1536);
 });
 
 test("throws without breaking the connection when streams are unsupported", async () => {

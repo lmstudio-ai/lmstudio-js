@@ -11,10 +11,20 @@ const pdsMessageSchemas = [
     type: z.literal("pdsOpen"),
     pdsId: z.number().int(),
   }),
+  // What the sender lets the peer send, announced once per connection with the peer's first stream.
+  // Every frame costs at least `minimumFrameBytes`.
+  z.object({
+    type: z.literal("pdsWindow"),
+    connectionBytes: z.number().int().nonnegative(),
+    unacceptedStreamBytes: z.number().int().nonnegative(),
+    minimumFrameBytes: z.number().int().nonnegative(),
+  }),
+  // Lets the peer send more on a stream, or with no `pdsId` returns what received frames cost to
+  // the connection's allowance.
   z.object({
     type: z.literal("pdsCredit"),
     pdsId: z.number().int().optional(),
-    frames: z.number().int().min(1),
+    bytes: z.number().int().min(1),
   }),
   // Ends a stream from either side. Client stream IDs are positive and server ones negative, so
   // the ID says whose stream it is.

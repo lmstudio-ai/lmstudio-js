@@ -58,24 +58,38 @@ export function toCloneablePDSFrame(frame: PDSFrame): PDSFrame {
 
 export type PDSMessage = Extract<
   ClientToServerMessage,
-  { type: "pdsOpen" | "pdsCredit" | "pdsCancel" }
+  { type: "pdsOpen" | "pdsWindow" | "pdsCredit" | "pdsCancel" }
 >;
+type PDSWindow = Omit<Extract<PDSMessage, { type: "pdsWindow" }>, "type">;
 
-// Allowances count frames, and a frame carries at most this many bytes.
+// What this side lets the peer send. It reaches the peer in `pdsWindow` and as credits, so these
+// numbers can change without breaking older writers.
+const ownWindow: PDSWindow = {
+  // Bounds the bytes in transit on the connection, so the queues between processes stay bounded.
+  connectionBytes: 64 * 1024 * 1024,
+  // How much may arrive on a stream before it is accepted.
+  unacceptedStreamBytes: 1024 * 1024,
+  // Every frame costs at least this much. Each frame has a fixed cost in queues, so tiny frames
+  // can't be free.
+  minimumFrameBytes: 64 * 1024,
+};
+// How far a writer may get ahead of the reader once its stream is accepted. Only the reader uses it.
+const acceptedStreamBytes = 64 * 1024 * 1024;
+// How writers on this side split data into frames. Readers take frames of any size.
 const maximumFrameBytes = 64 * 1024;
-// How many frames a writer may send before its stream is accepted, and how far ahead of the reader
-// it may get afterwards. Only the reader uses `acceptedAllowance`, so it can grow without breaking
-// older writers.
-const unacceptedAllowance = 16;
-const acceptedAllowance = 1024;
-// Bounds the frames in flight on one connection, so the queues between processes can't overflow.
-// The LM Link connector queues at most this many stream frames per connection.
-const connectionAllowance = 1024;
+// Transports queue a limited number of frames (the LM Link connector takes 1024 per connection), so
+// writers keep at most this many in flight however much the peer allows. Readers credit the
+// connection at least every half of this, so a later version may raise it but never lower it.
+const maximumFramesInFlight = 1024;
 const maximumUnacceptedStreams = 1024;
 const expiryMs = 60_000;
 
 interface OutgoingPDS {
   controller: WritableStreamDefaultController;
+  /**
+   * Bytes the reader credited to this stream minus what was sent on it. The peer's unaccepted
+   * allowance comes on top, so this goes below zero before the stream is accepted.
+   */
   allowance: number;
   /** Why the stream ended early. A write in progress rejects with it. */
   error?: unknown;
@@ -87,9 +101,9 @@ interface IncomingPDS {
   opened: boolean;
   accepted: boolean;
   ended: boolean;
-  /** Frames received so far, including the end frame. */
+  /** What the frames received so far cost, including the end frame. */
   received: number;
-  /** Frames the writer may send in total. */
+  /** What the writer may send in total. */
   allowed: number;
   expiry: ReturnType<typeof setTimeout>;
 }
@@ -98,14 +112,20 @@ interface IncomingPDS {
  * Byte streams that run next to a port's messages, for files and media that are wasteful to send
  * as JSON. Each port has one: `clientPort.pds`, or `ctx.pds` in handlers.
  *
- * The reader gives the writer an allowance of frames and tops it up as data is read, so a reader
- * that stops reading also stops the writer. Streams have lower priority than messages.
+ * The reader announces how much the writer may send, in bytes, and tops it up as data is read, so a
+ * reader that stops reading also stops the writer. Streams have lower priority than messages.
  */
 export class ParallelDataStreams {
   private readonly outgoing = new Map<number, OutgoingPDS>();
   private readonly incoming = new Map<number, IncomingPDS>();
-  private connectionAllowance = connectionAllowance;
-  /** Frames received on this connection that the writer hasn't been credited for yet. */
+  /** What the peer lets this side send. Writers wait until it arrives. */
+  private peerWindow: PDSWindow | null = null;
+  private windowAnnounced = false;
+  /** Costs of the frames sent on this connection that the peer hasn't credited yet, oldest first. */
+  private unconfirmed: Array<number> = [];
+  private unconfirmedBytes = 0;
+  /** What the frames received since the last connection credit cost, and how many there were. */
+  private uncreditedBytes = 0;
   private uncreditedFrames = 0;
   private changed = makePromise<void>();
 
@@ -143,7 +163,7 @@ export class ParallelDataStreams {
     let pds!: OutgoingPDS;
     const writable = new WritableStream<PDSChunk>({
       start: async controller => {
-        pds = { controller, allowance: unacceptedAllowance };
+        pds = { controller, allowance: 0 };
         this.outgoing.set(pdsId, pds);
         // Abort shows up here right away. The sink's own abort would wait for a write that may be
         // stuck waiting for allowance.
@@ -162,9 +182,14 @@ export class ParallelDataStreams {
         await this.send(pdsId, pds, null);
       },
       write: async ({ data, compressed }) => {
-        for (let offset = 0; offset < data.byteLength; offset += maximumFrameBytes) {
-          const frameData = data.subarray(offset, offset + maximumFrameBytes);
-          await this.send(pdsId, pds, { type: "pdsFrame", pdsId, data: frameData, compressed });
+        for (let offset = 0; offset < data.byteLength; ) {
+          const frameData = data.subarray(offset);
+          offset += await this.send(pdsId, pds, {
+            type: "pdsFrame",
+            pdsId,
+            data: frameData,
+            compressed,
+          });
         }
       },
       close: async () => {
@@ -211,6 +236,12 @@ export class ParallelDataStreams {
         if (Math.sign(message.pdsId) === this.idSign) {
           break;
         }
+        // The writer can't send data until it knows what this side takes. Announcing it with the
+        // first stream costs one round trip per connection, and needs no connection lifecycle.
+        if (!this.windowAnnounced) {
+          this.windowAnnounced = true;
+          this.sendMessage({ type: "pdsWindow", ...ownWindow });
+        }
         const unaccepted = [...this.incoming.values()].filter(pds => !pds.accepted).length;
         if (unaccepted >= maximumUnacceptedStreams) {
           const error = new Error("Too many parallel data streams are waiting to be accepted.");
@@ -228,15 +259,28 @@ export class ParallelDataStreams {
         }
         break;
       }
+      case "pdsWindow": {
+        const { type: _type, ...peerWindow } = message;
+        this.peerWindow = peerWindow;
+        this.wake();
+        break;
+      }
       case "pdsCredit": {
         if (message.pdsId === undefined) {
-          this.connectionAllowance += message.frames;
+          // Connection credits return what received frames cost. Frames arrive in the order they
+          // were sent, so a credit covers a run of the oldest unconfirmed frames.
+          let count = 0;
+          for (let rest = message.bytes; rest >= (this.unconfirmed[count] ?? Infinity); count++) {
+            rest -= this.unconfirmed[count]!;
+          }
+          this.unconfirmed.splice(0, count);
+          this.unconfirmedBytes -= message.bytes;
         } else {
           const pds = this.outgoing.get(message.pdsId);
           if (pds === undefined) {
             break;
           }
-          pds.allowance += message.frames;
+          pds.allowance += message.bytes;
         }
         this.wake();
         break;
@@ -267,17 +311,23 @@ export class ParallelDataStreams {
    * an unknown stream here is one that was already dropped.
    */
   public receivedFrame({ pdsId, data, compressed }: PDSFrame) {
+    const cost = Math.max(data?.byteLength ?? 0, ownWindow.minimumFrameBytes);
     // Dropped streams still used connection allowance, so their frames are credited too.
+    this.uncreditedBytes += cost;
     this.uncreditedFrames += 1;
-    if (this.uncreditedFrames >= connectionAllowance / 2) {
-      this.sendMessage({ type: "pdsCredit", frames: this.uncreditedFrames });
+    if (
+      this.uncreditedBytes >= ownWindow.connectionBytes / 2 ||
+      this.uncreditedFrames >= maximumFramesInFlight / 2
+    ) {
+      this.sendMessage({ type: "pdsCredit", bytes: this.uncreditedBytes });
+      this.uncreditedBytes = 0;
       this.uncreditedFrames = 0;
     }
     const pds = this.incoming.get(pdsId);
     if (pds === undefined) {
       return;
     }
-    pds.received += 1;
+    pds.received += cost;
     if (pds.received > pds.allowed) {
       this.dropIncoming(pdsId, pds, new Error("The peer sent more than its stream allowance."));
       return;
@@ -306,7 +356,11 @@ export class ParallelDataStreams {
     }
     this.outgoing.clear();
     this.incoming.clear();
-    this.connectionAllowance = connectionAllowance;
+    this.peerWindow = null;
+    this.windowAnnounced = false;
+    this.unconfirmed = [];
+    this.unconfirmedBytes = 0;
+    this.uncreditedBytes = 0;
     this.uncreditedFrames = 0;
     this.wake();
   }
@@ -318,12 +372,13 @@ export class ParallelDataStreams {
   }
 
   /**
-   * Waits until the peer can take `frame` and sends it. Without a frame, sends the `pdsOpen`, which
-   * only needs the peer to support PDS.
+   * Waits until the peer can take at least the start of `frame`, sends that much, and returns how
+   * many bytes of its data went out. Without a frame, sends the `pdsOpen`, which only needs the
+   * peer to support PDS.
    */
-  private async send(pdsId: number, pds: OutgoingPDS, frame: PDSFrame | null) {
-    // Credits, support changes, cancellation and disconnects all wake this loop, so each pass
-    // rechecks everything. Sending happens right after the check, before anything can change.
+  private async send(pdsId: number, pds: OutgoingPDS, frame: PDSFrame | null): Promise<number> {
+    // Credits, windows, support changes, cancellation and disconnects all wake this loop, so each
+    // pass rechecks everything. Sending happens right after the check, before anything can change.
     while (this.outgoing.get(pdsId) === pds) {
       const transport = this.getTransport();
       if (transport.pdsSupported === false) {
@@ -332,13 +387,29 @@ export class ParallelDataStreams {
       }
       if (transport.pdsSupported === true && frame === null) {
         this.sendMessage({ type: "pdsOpen", pdsId });
-        return;
+        return 0;
       }
-      if (transport.pdsSupported === true && pds.allowance > 0 && this.connectionAllowance > 0) {
-        pds.allowance -= 1;
-        this.connectionAllowance -= 1;
-        transport.sendPDSFrame!(frame!);
-        return;
+      const peerWindow = this.peerWindow;
+      if (
+        transport.pdsSupported === true &&
+        frame !== null &&
+        peerWindow !== null &&
+        this.unconfirmed.length < maximumFramesInFlight
+      ) {
+        const available = Math.min(
+          peerWindow.unacceptedStreamBytes + pds.allowance,
+          peerWindow.connectionBytes - this.unconfirmedBytes,
+        );
+        // A frame smaller than the peer's minimum still costs the minimum.
+        const size = Math.min(frame.data?.byteLength ?? 0, maximumFrameBytes, available);
+        const cost = Math.max(size, peerWindow.minimumFrameBytes);
+        if (cost <= available && (size > 0 || frame.data === null)) {
+          pds.allowance -= cost;
+          this.unconfirmed.push(cost);
+          this.unconfirmedBytes += cost;
+          transport.sendPDSFrame!({ ...frame, data: frame.data?.subarray(0, size) ?? null });
+          return size;
+        }
       }
       await this.changed.promise;
     }
@@ -361,8 +432,12 @@ export class ParallelDataStreams {
         pull: () => this.topUp(pdsId, pds),
         cancel: reason => this.dropIncoming(pdsId, pds, reason),
       },
-      // The high water mark only gives `desiredSize` a fixed point to count queued frames from.
-      { highWaterMark: acceptedAllowance },
+      // The high water mark only gives `desiredSize` a fixed point to count queued bytes from. Chunks
+      // are measured by what their frames cost.
+      {
+        highWaterMark: acceptedStreamBytes,
+        size: chunk => Math.max(chunk.data.byteLength, ownWindow.minimumFrameBytes),
+      },
     );
     const pds: IncomingPDS = {
       readable,
@@ -371,7 +446,7 @@ export class ParallelDataStreams {
       accepted: false,
       ended: false,
       received: 0,
-      allowed: unacceptedAllowance,
+      allowed: ownWindow.unacceptedStreamBytes,
       expiry: setTimeout(() => {
         const missing = pds.opened ? "accepted" : "opened";
         this.dropIncoming(
@@ -392,15 +467,15 @@ export class ParallelDataStreams {
     }
     // Received frames the reader hasn't taken are still queued. The end frame is never queued,
     // so it counts as read.
-    const read = pds.received - (acceptedAllowance - pds.controller.desiredSize!);
-    const frames = read + acceptedAllowance - pds.allowed;
+    const read = pds.received - (acceptedStreamBytes - pds.controller.desiredSize!);
+    const bytes = read + acceptedStreamBytes - pds.allowed;
     // Credits wait until the writer is down to half its allowance. That keeps them rare without
     // letting the writer run dry while the reader keeps up.
-    if (frames < acceptedAllowance / 2) {
+    if (bytes < acceptedStreamBytes / 2) {
       return;
     }
-    pds.allowed += frames;
-    this.sendMessage({ type: "pdsCredit", pdsId, frames });
+    pds.allowed += bytes;
+    this.sendMessage({ type: "pdsCredit", pdsId, bytes });
   }
 
   /** Forgets an incoming stream and fails its reader. Tells the writer to stop if it still sends. */

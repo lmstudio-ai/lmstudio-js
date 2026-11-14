@@ -559,6 +559,7 @@ export class ClientPort<
         break;
       }
       case "pdsOpen":
+      case "pdsWindow":
       case "pdsCredit":
       case "pdsCancel": {
         this.pds.receivedMessage(message);
