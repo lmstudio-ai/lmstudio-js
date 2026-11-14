@@ -10,6 +10,7 @@ import {
 } from "@lmstudio/lms-common";
 import {
   Channel,
+  ParallelDataStreams,
   PayloadCodec,
   deserialize,
   mapPortError,
@@ -70,6 +71,12 @@ export class ServerPort<
   public readonly closeEvent: Event<void>;
   private readonly emitCloseEvent: () => void;
   private producedCommunicationWarningsCount = 0;
+  /** Handlers reach these through `pds` in their context. */
+  private readonly pds = new ParallelDataStreams(
+    -1,
+    () => this.transport,
+    message => this.safeSend(message),
+  );
 
   /** Creates a port with payload handling and error formatting scoped to this connection. */
   public constructor(
@@ -96,7 +103,9 @@ export class ServerPort<
     this.payloadCodec = payloadCodec ?? new PayloadCodec();
     this.mapError = mapError;
     [this.closeEvent, this.emitCloseEvent] = Event.create();
-    this.transport = factory(this.receivedMessage, this.errored, this.logger);
+    this.transport = factory(this.receivedMessage, this.errored, this.logger, frame =>
+      this.pds.receivedFrame(frame),
+    );
   }
 
   private safeSend(
@@ -215,6 +224,7 @@ export class ServerPort<
     const context = this.contextCreator({
       type: "channel",
       endpointName: endpoint.name,
+      pds: this.pds,
     });
 
     Promise.resolve()
@@ -348,6 +358,7 @@ export class ServerPort<
     const context = this.contextCreator({
       type: "rpc",
       endpointName: endpoint.name,
+      pds: this.pds,
     });
 
     Promise.resolve()
@@ -458,6 +469,7 @@ export class ServerPort<
     const context = this.contextCreator({
       type: writable ? "writableSignal" : "signal",
       endpointName: endpoint.name,
+      pds: this.pds,
     });
     let active = true;
     // Register before awaiting the handler so an early unsubscribe can cancel it.
@@ -707,11 +719,19 @@ export class ServerPort<
         this.receivedKeepAlive(message);
         break;
       }
+      case "pdsOpen":
+      case "pdsWindow":
+      case "pdsCredit":
+      case "pdsCancel": {
+        this.pds.receivedMessage(message);
+        break;
+      }
     }
   };
-  /** Releases subscriptions and prevents late handlers from attaching after disconnect. */
+  /** Releases subscriptions and streams, and prevents late handlers from attaching after disconnect. */
   private errored = (error: unknown) => {
     this.closed = true;
+    this.pds.fail(error);
     for (const openChannel of this.openChannels.values()) {
       openChannel.errored(error);
     }

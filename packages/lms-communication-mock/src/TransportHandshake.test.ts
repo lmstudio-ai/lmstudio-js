@@ -84,7 +84,16 @@ test.each([
   const opts = { handshake: { schema: metadataSchema, value: { name: "local" }, onPeer } };
   const transport =
     side === "server"
-      ? new GenericServerTransport(incoming, closed, () => {}, received, failed, logger, opts)
+      ? new GenericServerTransport(
+          incoming,
+          closed,
+          () => {},
+          received,
+          failed,
+          () => {},
+          logger,
+          opts,
+        )
       : new GenericClientTransport(
           incoming,
           closed,
@@ -92,6 +101,7 @@ test.each([
           received,
           () => {},
           failed,
+          () => {},
           logger,
           opts,
         );

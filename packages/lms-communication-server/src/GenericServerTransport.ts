@@ -5,19 +5,24 @@ import type {
   ServerTransportFactory,
   TransportOpts,
 } from "@lmstudio/lms-communication";
-import { ServerTransport } from "@lmstudio/lms-communication";
+import { isPDSFrame, type PDSFrame, ServerTransport } from "@lmstudio/lms-communication";
 
 /** A single connection backed by caller-owned events. The owner must close it when the port fails. */
 export class GenericServerTransport<TMetadata = unknown> extends ServerTransport<TMetadata> {
   protected readonly logger;
   private closed = false;
-  /** Validates incoming messages and handshake metadata before delivering them to the port. */
+  /**
+   * Validates incoming messages and handshake metadata before delivering them to the port.
+   * `onMessage` carries messages and, when `opts.sendPDSFrame` is set, `PDSFrame`s in the order
+   * they arrived.
+   */
   public constructor(
     onMessage: Pick<BufferedEvent<unknown>, "subscribe">,
     onClose: BufferedEvent<void>,
     private readonly sendMessage: (message: ServerToClientMessage) => void,
     private readonly receivedMessage: (message: ClientToServerMessage) => void,
     private readonly errored: (error: unknown) => void,
+    receivedPDSFrame: (frame: PDSFrame) => void,
     parentLogger?: LoggerInterface,
     opts: TransportOpts<TMetadata> = {},
   ) {
@@ -25,6 +30,11 @@ export class GenericServerTransport<TMetadata = unknown> extends ServerTransport
     this.logger = new SimpleLogger("GenericServerTransport", parentLogger);
     onMessage.subscribe(message => {
       if (this.closed) return;
+      // Frames share the message queue so they can't overtake the messages sent before them.
+      if (isPDSFrame(message)) {
+        receivedPDSFrame(message);
+        return;
+      }
       let parsed: ClientToServerMessage;
       try {
         parsed = this.parseIncomingMessage(message);
@@ -51,13 +61,14 @@ export class GenericServerTransport<TMetadata = unknown> extends ServerTransport
     sendMessage: (message: ServerToClientMessage) => void,
     opts: TransportOpts<TMetadata> = {},
   ): ServerTransportFactory {
-    return (receivedMessage, errored, parentLogger) =>
+    return (receivedMessage, errored, parentLogger, receivedPDSFrame) =>
       new GenericServerTransport(
         onMessage,
         onClose,
         sendMessage,
         receivedMessage,
         errored,
+        receivedPDSFrame,
         parentLogger,
         opts,
       );
