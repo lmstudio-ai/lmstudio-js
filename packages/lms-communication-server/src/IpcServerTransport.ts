@@ -44,6 +44,8 @@ export class IpcServerTransport extends ServerTransport {
         return;
       }
       this.closed = true;
+      // This transport never reconnects, so streams started from now on could never be sent.
+      this.pdsSupported = false;
       this.errored(new Error("MessagePort closed by the client"));
     });
   }

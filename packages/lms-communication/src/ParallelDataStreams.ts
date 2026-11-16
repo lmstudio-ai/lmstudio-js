@@ -152,7 +152,7 @@ export class ParallelDataStreams {
    */
   public create(): [WritableStream<PDSChunk>, PDSIdentifier] {
     if (this.getTransport().pdsSupported === false) {
-      throw new Error("This connection does not support parallel data streams.");
+      throw new Error("This connection can't carry parallel data streams.");
     }
     let pdsId: number;
     do {
@@ -207,7 +207,7 @@ export class ParallelDataStreams {
    */
   public accept({ pdsId }: PDSIdentifier): ReadableStream<PDSChunk> {
     if (this.getTransport().pdsSupported === false) {
-      throw new Error("This connection does not support parallel data streams.");
+      throw new Error("This connection can't carry parallel data streams.");
     }
     if (Math.sign(pdsId) === this.idSign) {
       throw new Error(`Parallel data stream ${pdsId} was created on this side, not by the peer.`);
@@ -384,7 +384,7 @@ export class ParallelDataStreams {
       const transport = this.getTransport();
       if (transport.pdsSupported === false) {
         this.outgoing.delete(pdsId);
-        throw new Error("This connection does not support parallel data streams.");
+        throw new Error("This connection can't carry parallel data streams.");
       }
       if (transport.pdsSupported === true && frame === null) {
         this.sendMessage({ type: "pdsOpen", pdsId });

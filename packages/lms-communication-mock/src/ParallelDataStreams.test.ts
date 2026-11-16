@@ -30,7 +30,12 @@ backend.handleRpcEndpoint("relay", (ctx, identifier) => {
     .catch(() => {});
   return relayed;
 });
-backend.handleRpcEndpoint("ping", () => "pong");
+/** The server side's streams from the last ping, so a test can start one when no request runs. */
+let serverPDS: ParallelDataStreams | undefined;
+backend.handleRpcEndpoint("ping", ctx => {
+  serverPDS = ctx.pds;
+  return "pong";
+});
 
 /** With `overIpc`, everything goes through structured clone, as it does over Electron IPC. */
 function connect(pdsSupported = true, overIpc = false) {
@@ -197,6 +202,16 @@ test("ends streams in both directions when the connection closes", async () => {
   await expect(reader.read()).rejects.toThrow("closed the connection");
 });
 
+/** A handler that starts a stream after its client left must fail, or it would wait forever. */
+test("refuses new streams on both sides once the connection is gone", async () => {
+  const { client, disconnect } = connect();
+  await client.callRpc("ping", undefined);
+  disconnect();
+  await settle();
+  expect(() => client.pds.create()).toThrow("can't carry");
+  expect(() => serverPDS!.create()).toThrow("can't carry");
+});
+
 /** Frames can be any size, so the allowance counts bytes. */
 test("drops a stream whose frames go past its allowance", () => {
   const reader = createSide(-1);
@@ -289,9 +304,9 @@ test("keeps at most 1024 frames in flight until the connection is credited", asy
 
 test("throws without breaking the connection when streams are unsupported", async () => {
   const { client, disconnect } = connect(false);
-  expect(() => client.pds.create()).toThrow("does not support");
-  expect(() => client.pds.accept({ pdsId: 1 })).toThrow("does not support");
-  await expect(client.callRpc("relay", { pdsId: 1 })).rejects.toThrow("does not support");
+  expect(() => client.pds.create()).toThrow("can't carry");
+  expect(() => client.pds.accept({ pdsId: 1 })).toThrow("can't carry");
+  await expect(client.callRpc("relay", { pdsId: 1 })).rejects.toThrow("can't carry");
   expect(await client.callRpc("ping", undefined)).toBe("pong");
   disconnect();
 });

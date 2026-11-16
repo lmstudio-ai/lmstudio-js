@@ -42,6 +42,7 @@ export class GenericClientTransport<TMetadata = unknown> extends ClientTransport
       } catch (error) {
         this.logger.error("Received invalid message from server:", error);
         this.closed = true;
+        this.pdsSupported = false;
         this.errored(error);
         return;
       }
@@ -52,6 +53,8 @@ export class GenericClientTransport<TMetadata = unknown> extends ClientTransport
         return;
       }
       this.closed = true;
+      // This transport never reconnects, so streams started from now on could never be sent.
+      this.pdsSupported = false;
       this.errored(
         errorFactory !== undefined ? errorFactory() : new Error("Server closed the connection"),
       );

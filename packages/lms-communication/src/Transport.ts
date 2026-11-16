@@ -212,7 +212,8 @@ export abstract class Transport<TIncoming, TOutgoing, TMetadata = unknown> {
   private handshakeReceived = false;
   /**
    * Whether parallel data streams work on the current connection. Undefined while the transport
-   * doesn't know yet, for example while it is connecting.
+   * doesn't know yet, for example while it is connecting. A transport that can't reconnect sets it
+   * to false once it closes, so new streams fail instead of waiting for a connection forever.
    */
   public pdsSupported: boolean | undefined;
   /**
