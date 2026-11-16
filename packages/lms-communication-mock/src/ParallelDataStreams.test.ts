@@ -280,8 +280,8 @@ test("keeps at most 1024 frames in flight until the connection is credited", asy
   await settle();
   expect(writer.frames).toHaveLength(1024);
 
-  // The reader credits what the oldest 512 frames cost.
-  writer.pds.receivedMessage({ type: "pdsCredit", bytes: 512 });
+  // The reader credits the oldest 512 frames and what they cost.
+  writer.pds.receivedMessage({ type: "pdsCredit", bytes: 512, frames: 512 });
   await settle();
   expect(writer.frames).toHaveLength(1536);
 });

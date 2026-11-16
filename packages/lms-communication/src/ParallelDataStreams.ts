@@ -121,8 +121,8 @@ export class ParallelDataStreams {
   /** What the peer lets this side send. Writers wait until it arrives. */
   private peerWindow: PDSWindow | null = null;
   private windowAnnounced = false;
-  /** Costs of the frames sent on this connection that the peer hasn't credited yet, oldest first. */
-  private unconfirmed: Array<number> = [];
+  /** Frames sent on this connection that the peer hasn't credited yet, and what they cost. */
+  private unconfirmedFrames = 0;
   private unconfirmedBytes = 0;
   /** What the frames received since the last connection credit cost, and how many there were. */
   private uncreditedBytes = 0;
@@ -267,13 +267,8 @@ export class ParallelDataStreams {
       }
       case "pdsCredit": {
         if (message.pdsId === undefined) {
-          // Connection credits return what received frames cost. Frames arrive in the order they
-          // were sent, so a credit covers a run of the oldest unconfirmed frames.
-          let count = 0;
-          for (let rest = message.bytes; rest >= (this.unconfirmed[count] ?? Infinity); count++) {
-            rest -= this.unconfirmed[count]!;
-          }
-          this.unconfirmed.splice(0, count);
+          // Connection credits return received frames and what they cost.
+          this.unconfirmedFrames -= message.frames ?? 0;
           this.unconfirmedBytes -= message.bytes;
         } else {
           const pds = this.outgoing.get(message.pdsId);
@@ -319,7 +314,11 @@ export class ParallelDataStreams {
       this.uncreditedBytes >= ownWindow.connectionBytes / 2 ||
       this.uncreditedFrames >= maximumFramesInFlight / 2
     ) {
-      this.sendMessage({ type: "pdsCredit", bytes: this.uncreditedBytes });
+      this.sendMessage({
+        type: "pdsCredit",
+        bytes: this.uncreditedBytes,
+        frames: this.uncreditedFrames,
+      });
       this.uncreditedBytes = 0;
       this.uncreditedFrames = 0;
     }
@@ -358,7 +357,7 @@ export class ParallelDataStreams {
     this.incoming.clear();
     this.peerWindow = null;
     this.windowAnnounced = false;
-    this.unconfirmed = [];
+    this.unconfirmedFrames = 0;
     this.unconfirmedBytes = 0;
     this.uncreditedBytes = 0;
     this.uncreditedFrames = 0;
@@ -394,7 +393,7 @@ export class ParallelDataStreams {
         transport.pdsSupported === true &&
         frame !== null &&
         peerWindow !== null &&
-        this.unconfirmed.length < maximumFramesInFlight
+        this.unconfirmedFrames < maximumFramesInFlight
       ) {
         const available = Math.min(
           peerWindow.unacceptedStreamBytes + pds.allowance,
@@ -405,7 +404,7 @@ export class ParallelDataStreams {
         const cost = Math.max(size, peerWindow.minimumFrameBytes);
         if (cost <= available && (size > 0 || frame.data === null)) {
           pds.allowance -= cost;
-          this.unconfirmed.push(cost);
+          this.unconfirmedFrames += 1;
           this.unconfirmedBytes += cost;
           transport.sendPDSFrame!({ ...frame, data: frame.data?.subarray(0, size) ?? null });
           return size;
