@@ -218,7 +218,8 @@ export abstract class Transport<TIncoming, TOutgoing, TMetadata = unknown> {
   public pdsSupported: boolean | undefined;
   /**
    * Sends one frame of a parallel data stream. Only called while `pdsSupported` is true. A frame
-   * must never overtake a message sent before it, but messages may overtake frames.
+   * must never overtake a message sent before it, but messages may overtake frames. It must not
+   * throw: a transport that fails to send closes its connection, which ends every stream.
    */
   public sendPDSFrame?: (frame: PDSFrame) => void;
 
