@@ -221,6 +221,25 @@ test("drops a stream whose frames go past its allowance", () => {
   });
 });
 
+/** A peer that breaks the protocol must not break the connection, which would carry the throw. */
+test("ignores frames after a stream's end while it waits to be accepted", async () => {
+  const reader = createSide(-1);
+  reader.pds.receivedMessage({ type: "pdsOpen", pdsId: 5 });
+  const frame = (data: Uint8Array | null): PDSFrame => ({
+    type: "pdsFrame",
+    pdsId: 5,
+    data,
+    compressed: false,
+  });
+  reader.pds.receivedFrame(frame(new Uint8Array([1])));
+  reader.pds.receivedFrame(frame(null));
+  reader.pds.receivedFrame(frame(new Uint8Array([2])));
+  reader.pds.receivedFrame(frame(null));
+  expect(await readAll(reader.pds.accept({ pdsId: 5 }))).toEqual([
+    { data: new Uint8Array([1]), compressed: false },
+  ]);
+});
+
 test("sends only what the peer's window and credits allow", async () => {
   const writer = createSide(1);
   const [writable] = writer.pds.create();

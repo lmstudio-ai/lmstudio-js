@@ -303,7 +303,8 @@ export class ParallelDataStreams {
 
   /**
    * Handles a frame from the peer. Transports deliver a stream's frames after its `pdsOpen`, so
-   * an unknown stream here is one that was already dropped.
+   * an unknown stream here is one that was already dropped. A frame after a stream's end only
+   * comes from a peer that breaks the protocol, and is ignored like a frame for a dropped stream.
    */
   public receivedFrame({ pdsId, data, compressed }: PDSFrame) {
     const cost = Math.max(data?.byteLength ?? 0, ownWindow.minimumFrameBytes);
@@ -323,7 +324,8 @@ export class ParallelDataStreams {
       this.uncreditedFrames = 0;
     }
     const pds = this.incoming.get(pdsId);
-    if (pds === undefined) {
+    // An ended stream stays until it is accepted, and its controller is already closed.
+    if (pds === undefined || pds.ended) {
       return;
     }
     pds.received += cost;
