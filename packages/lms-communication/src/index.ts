@@ -41,6 +41,15 @@ export {
   type InferPayloadSchema,
   type PayloadDecodeResult,
 } from "./PayloadCodec.js";
+export {
+  ParallelDataStreams,
+  isPDSFrame,
+  toCloneablePDSFrame,
+  type PDSFrame,
+  type PDSChunk,
+  type PDSIdentifier,
+  type PDSMessage,
+} from "./ParallelDataStreams.js";
 export { mapPortError, type PortErrorContext, type PortErrorMapper } from "./PortError.js";
 export { KEEP_ALIVE_INTERVAL, KEEP_ALIVE_TIMEOUT } from "./timeoutConstants.js";
 export {
