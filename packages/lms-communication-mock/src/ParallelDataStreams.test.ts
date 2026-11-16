@@ -100,9 +100,12 @@ afterEach(() => {
   jest.useRealTimers();
 });
 
-/** More frames than any starting allowance, so the test only finishes if credits flow. */
-test("relays a stream through the server and back", async () => {
-  const { client, disconnect } = connect();
+/**
+ * More frames than any starting allowance, so the test only finishes if credits flow. Frames are
+ * plain data, so they also survive the structured clone that Electron IPC performs.
+ */
+test.each([false, true])("relays a stream through the server and back (IPC: %s)", async overIpc => {
+  const { client, disconnect } = connect(true, overIpc);
   const sent: Array<PDSChunk> = [
     { data: new Uint8Array(100 * 1024).fill(1), compressed: false },
     ...Array.from({ length: 2500 }, (_, index) => ({
@@ -127,27 +130,6 @@ test("relays a stream through the server and back", async () => {
   expect(received[0].data.byteLength).toBe(64 * 1024);
   expect(received[1].data.byteLength).toBe(36 * 1024);
   expect(received.slice(2)).toEqual(sent.slice(1));
-  disconnect();
-});
-
-/** Frames are plain data, so they survive the structured clone that Electron IPC performs. */
-test("relays a stream through structured clone", async () => {
-  const { client, disconnect } = connect(true, true);
-  const sent = Array.from({ length: 40 }, (_, index) => ({
-    data: new Uint8Array(8 * 1024).fill(index),
-    compressed: false,
-  }));
-  const [writable, identifier] = client.pds.create();
-  const writing = (async () => {
-    const writer = writable.getWriter();
-    for (const chunk of sent) {
-      await writer.write(chunk);
-    }
-    await writer.close();
-  })();
-  const relayed = await client.callRpc("relay", identifier);
-  expect(await readAll(client.pds.accept(relayed))).toEqual(sent);
-  await writing;
   disconnect();
 });
 
