@@ -110,8 +110,7 @@ export const modelInfoBaseSchema = z.object({
  */
 export interface ModelInstanceInfoBase extends ModelInfoBase {
   /**
-   * The engine family executing this instance (for example, `llama.cpp` or `mlx-llm`), not the
-   * runtime pack name or version. May be absent when connected to an older host.
+   * The engine family running this instance.
    */
   engine?: string;
   /**
