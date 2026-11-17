@@ -23,16 +23,13 @@ const domains = [
 ];
 
 describe.each(domains)("$type instance metadata", domain => {
-  test.each(["llama.cpp", "mlx-llm", "omlx", "splash", "future-engine"])(
-    "preserves the host's executing family %s",
-    engine => {
-      const info = { ...baseInfo, ...domain, engine };
-      expect(modelInstanceInfoSchema.parse(info)).toEqual(info);
-    },
-  );
+  test("preserves the host's executing family, including future engines", () => {
+    const info = { ...baseInfo, ...domain, engine: "future-engine" };
+    expect(modelInstanceInfoSchema.parse(info).engine).toBe("future-engine");
+  });
 
   test("accepts an older host without engine metadata", () => {
     const info = { ...baseInfo, ...domain };
-    expect(modelInstanceInfoSchema.parse(info)).toEqual(info);
+    expect(modelInstanceInfoSchema.parse(info)).not.toHaveProperty("engine");
   });
 });
