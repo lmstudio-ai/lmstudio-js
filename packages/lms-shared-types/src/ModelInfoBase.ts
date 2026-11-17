@@ -110,6 +110,11 @@ export const modelInfoBaseSchema = z.object({
  */
 export interface ModelInstanceInfoBase extends ModelInfoBase {
   /**
+   * The engine family executing this instance (for example, `llama.cpp` or `mlx-llm`), not the
+   * runtime pack name or version. May be absent when connected to an older host.
+   */
+  engine?: string;
+  /**
    * The identifier of the instance.
    */
   identifier: string;
@@ -127,6 +132,7 @@ export interface ModelInstanceInfoBase extends ModelInfoBase {
   lastUsedTime: number | null;
 }
 export const modelInstanceInfoBaseSchema = modelInfoBaseSchema.extend({
+  engine: z.string().optional(),
   identifier: z.string(),
   instanceReference: z.string(),
   ttlMs: z.number().nullable(),
