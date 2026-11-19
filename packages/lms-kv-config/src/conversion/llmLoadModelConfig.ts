@@ -456,7 +456,10 @@ export function kvConfigToLLMLoadModelConfig(
           ? llmOpenVinoLoadConfigSchematics.parse(config)
           : llmOpenVinoLoadConfigSchematics.parsePartial(config);
       const maxParallelPredictions = parsed.get("numParallelSessions");
+      // Context is not an OpenVINO load setting, but the driver supplies its actualized value.
+      const contextLength = llmLoadSchematics.accessPartial(config, "contextLength");
       return {
+        ...(contextLength === undefined ? {} : { contextLength }),
         ...(maxParallelPredictions === undefined ? {} : { maxParallelPredictions }),
       };
     }
