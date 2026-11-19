@@ -14,6 +14,7 @@ import {
   llmLlamaMoeLoadConfigSchematics,
   llmLoadSchematics,
   llmMlxLoadConfigSchematics,
+  llmOpenVinoLoadConfigSchematics,
   llmVllmLoadConfigSchematics,
   llmYuzuLoadConfigSchematics,
 } from "../schema.js";
@@ -449,6 +450,16 @@ export function kvConfigToLLMLoadModelConfig(
       return kvConfigToLLMVllmLoadModelConfig(config, {
         useDefaultsForMissingKeys,
       });
+    case "openvino": {
+      const parsed =
+        useDefaultsForMissingKeys === true
+          ? llmOpenVinoLoadConfigSchematics.parse(config)
+          : llmOpenVinoLoadConfigSchematics.parsePartial(config);
+      const maxParallelPredictions = parsed.get("numParallelSessions");
+      return {
+        ...(maxParallelPredictions === undefined ? {} : { maxParallelPredictions }),
+      };
+    }
     case "yuzu": {
       const parsed =
         useDefaultsForMissingKeys === true
