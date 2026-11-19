@@ -2,6 +2,39 @@ import { type LoggerInterface } from "@lmstudio/lms-common";
 import { serializedLMSExtendedErrorSchema } from "@lmstudio/lms-shared-types";
 import { z } from "zod";
 import { serializedOpaqueSchema } from "./serialization.js";
+import { type PayloadSchema } from "./PayloadCodec.js";
+import type { PDSFrame } from "./ParallelDataStreams.js";
+
+// Either side can create parallel data streams, so these travel in both directions.
+const pdsMessageSchemas = [
+  z.object({
+    type: z.literal("pdsOpen"),
+    pdsId: z.number().int(),
+  }),
+  // What the sender lets the peer send, announced once per connection with the peer's first stream.
+  // Every frame costs at least `minimumFrameBytes`.
+  z.object({
+    type: z.literal("pdsWindow"),
+    connectionBytes: z.number().int().nonnegative(),
+    unacceptedStreamBytes: z.number().int().nonnegative(),
+    minimumFrameBytes: z.number().int().nonnegative(),
+  }),
+  // Lets the peer send more on a stream, or with no `pdsId` returns received frames and what they
+  // cost to the connection's allowance.
+  z.object({
+    type: z.literal("pdsCredit"),
+    pdsId: z.number().int().optional(),
+    bytes: z.number().int().min(1),
+    frames: z.number().int().min(1).optional(),
+  }),
+  // Ends a stream from either side. Client stream IDs are positive and server ones negative, so
+  // the ID says whose stream it is.
+  z.object({
+    type: z.literal("pdsCancel"),
+    pdsId: z.number().int(),
+    error: serializedLMSExtendedErrorSchema,
+  }),
+] as const;
 
 const clientToServerMessageSchema = z.discriminatedUnion("type", [
   // Communication
@@ -12,6 +45,7 @@ const clientToServerMessageSchema = z.discriminatedUnion("type", [
   }),
   z.object({
     type: z.literal("keepAlive"),
+    metadata: z.unknown().optional(),
   }),
 
   // Channel
@@ -31,6 +65,11 @@ const clientToServerMessageSchema = z.discriminatedUnion("type", [
     type: z.literal("channelAck"),
     channelId: z.number().int(),
     ackId: z.number().int(),
+  }),
+  z.object({
+    type: z.literal("channelError"),
+    channelId: z.number().int(),
+    error: serializedLMSExtendedErrorSchema,
   }),
 
   // RPC
@@ -70,6 +109,8 @@ const clientToServerMessageSchema = z.discriminatedUnion("type", [
     patches: z.array(serializedOpaqueSchema),
     tags: z.array(z.string()),
   }),
+
+  ...pdsMessageSchemas,
 ]);
 
 export type ClientToServerMessage = z.infer<typeof clientToServerMessageSchema>;
@@ -83,6 +124,7 @@ const serverToClientMessageSchema = z.discriminatedUnion("type", [
   }),
   z.object({
     type: z.literal("keepAliveAck"),
+    metadata: z.unknown().optional(),
   }),
 
   // Channel
@@ -144,16 +186,71 @@ const serverToClientMessageSchema = z.discriminatedUnion("type", [
     subscribeId: z.number().int(),
     error: serializedLMSExtendedErrorSchema,
   }),
+
+  ...pdsMessageSchemas,
 ]);
 
 export type ServerToClientMessage = z.infer<typeof serverToClientMessageSchema>;
 
-export abstract class Transport<TIncoming, TOutgoing> {
+export interface TransportOpts<TMetadata = unknown> {
+  handshake?: {
+    schema: PayloadSchema<TMetadata>;
+    value: TMetadata;
+    /** Receives validated metadata once per connection, or undefined for a peer without metadata. */
+    onPeer: (metadata: TMetadata | undefined) => void;
+  };
+  /**
+   * Sends one frame of a parallel data stream. Pass it when the peer handles parallel data streams
+   * for the whole life of the transport, like the other end of an in-process pair.
+   */
+  sendPDSFrame?: (frame: PDSFrame) => void;
+}
+
+export abstract class Transport<TIncoming, TOutgoing, TMetadata = unknown> {
+  protected readonly handshakeMetadata: unknown;
+  private readonly onPeerMetadata?: (metadata: unknown) => void;
+  private handshakeReceived = false;
+  /**
+   * Whether parallel data streams work on the current connection. Undefined while the transport
+   * doesn't know yet, for example while it is connecting. A transport that can't reconnect sets it
+   * to false once it closes, so new streams fail instead of waiting for a connection forever.
+   */
+  public pdsSupported: boolean | undefined;
+  /**
+   * Sends one frame of a parallel data stream. Only called while `pdsSupported` is true. A frame
+   * must never overtake a message sent before it, but messages may overtake frames. It must not
+   * throw: a transport that fails to send closes its connection, which ends every stream.
+   */
+  public sendPDSFrame?: (frame: PDSFrame) => void;
+
+  /** Binds the application's handshake schema and local metadata to this transport. */
+  public constructor({ handshake, sendPDSFrame }: TransportOpts<TMetadata> = {}) {
+    if (handshake !== undefined) {
+      this.handshakeMetadata = handshake.schema.parse(handshake.value);
+      this.onPeerMetadata = metadata =>
+        handshake.onPeer(metadata === undefined ? undefined : handshake.schema.parse(metadata));
+    }
+    this.sendPDSFrame = sendPDSFrame;
+    this.pdsSupported = sendPDSFrame !== undefined;
+  }
+
+  /** Fixes peer metadata before the first message reaches its handler. Later keepalives cannot change it. */
+  protected acceptHandshake(metadata: unknown): void {
+    if (this.handshakeReceived) return;
+    this.handshakeReceived = true;
+    this.onPeerMetadata?.(metadata);
+  }
+
+  /** Reconnecting transports call this when releasing a connection, before accepting another peer. */
+  protected resetHandshake(): void {
+    this.handshakeReceived = false;
+  }
+
   /**
    * Implemented by ClientTransport / ServerTransport. Called by transport implementation to verify
    * incoming message.
    */
-  protected abstract parseIncomingMessage(message: any): TIncoming;
+  protected abstract parseIncomingMessage(message: unknown): TIncoming;
   /**
    * Implemented by transport. At this point, message is already validated.
    */
@@ -176,16 +273,38 @@ export abstract class Transport<TIncoming, TOutgoing> {
   }
 }
 
-export abstract class ClientTransport extends Transport<
+export abstract class ClientTransport<TMetadata = unknown> extends Transport<
   ServerToClientMessage,
-  ClientToServerMessage
+  ClientToServerMessage,
+  TMetadata
 > {
-  protected override parseIncomingMessage(message: any): ServerToClientMessage {
-    return serverToClientMessageSchema.parse(message);
+  /** Validates the envelope and establishes peer metadata before dispatching the first response. */
+  protected override parseIncomingMessage(message: unknown): ServerToClientMessage {
+    const result = serverToClientMessageSchema.parse(message);
+    this.acceptHandshake(result.type === "keepAliveAck" ? result.metadata : undefined);
+    return result;
   }
+  /** Validates outgoing envelopes and attaches local metadata to keepalives. */
   public override send(message: ClientToServerMessage) {
     const result = clientToServerMessageSchema.parse(message);
+    if (result.type === "keepAlive" && this.handshakeMetadata !== undefined) {
+      result.metadata = this.handshakeMetadata;
+    }
     this.sendViaTransport(result);
+  }
+  /** Prepares a payload when ready; null cancels work that ended while queued. */
+  public sendDeferred(
+    prepare: () => ClientToServerMessage | null,
+    failed: (error: unknown) => void,
+  ): void {
+    try {
+      const message = prepare();
+      if (message !== null) {
+        this.send(message);
+      }
+    } catch (error) {
+      failed(error);
+    }
   }
   /**
    * Called by the client port when the number of open communications changes from 0 to 1. This
@@ -220,17 +339,26 @@ export type ClientTransportFactory = (
   connected: () => void,
   errored: (error: any) => void,
   parentLogger: LoggerInterface,
+  receivedPDSFrame: (frame: PDSFrame) => void,
 ) => ClientTransport;
 
-export abstract class ServerTransport extends Transport<
+export abstract class ServerTransport<TMetadata = unknown> extends Transport<
   ClientToServerMessage,
-  ServerToClientMessage
+  ServerToClientMessage,
+  TMetadata
 > {
-  protected override parseIncomingMessage(message: any): ClientToServerMessage {
-    return clientToServerMessageSchema.parse(message);
+  /** Validates the envelope; a first request without a keepalive establishes absent metadata. */
+  protected override parseIncomingMessage(message: unknown): ClientToServerMessage {
+    const result = clientToServerMessageSchema.parse(message);
+    this.acceptHandshake(result.type === "keepAlive" ? result.metadata : undefined);
+    return result;
   }
+  /** Validates outgoing envelopes and attaches local metadata to keepalive acknowledgements. */
   public override send(message: ServerToClientMessage) {
     const result = serverToClientMessageSchema.parse(message);
+    if (result.type === "keepAliveAck" && this.handshakeMetadata !== undefined) {
+      result.metadata = this.handshakeMetadata;
+    }
     this.sendViaTransport(result);
   }
 }
@@ -238,4 +366,5 @@ export type ServerTransportFactory = (
   receivedMessage: (message: ClientToServerMessage) => void,
   errored: (error: any) => void,
   parentLogger: LoggerInterface,
+  receivedPDSFrame: (frame: PDSFrame) => void,
 ) => ServerTransport;

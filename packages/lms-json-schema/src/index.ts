@@ -55,6 +55,14 @@ for (const [key, value] of Object.entries(backendInterfaceCreators)) {
   const endpointPseudoSchemas = new Map<string, ZodSchema>();
 
   for (const rpcEndpoint of backendInterface.getAllRpcEndpoints()) {
+    if (
+      !(rpcEndpoint.parameter instanceof ZodSchema) ||
+      !(rpcEndpoint.returns instanceof ZodSchema)
+    ) {
+      throw new Error(
+        `JSON schema generation requires Zod payloads: ${namespaceCamelName}/${rpcEndpoint.name}`,
+      );
+    }
     const endpointPseudoSchemaFields = new Map<string, ZodSchema>();
     if (!(rpcEndpoint.parameter instanceof ZodVoid)) {
       schemas.set(`${namespaceCamelName}/rpc/${rpcEndpoint.name}/parameter`, rpcEndpoint.parameter);
@@ -72,6 +80,15 @@ for (const [key, value] of Object.entries(backendInterfaceCreators)) {
   }
 
   for (const channelEndpoint of backendInterface.getAllChannelEndpoints()) {
+    if (
+      !(channelEndpoint.creationParameter instanceof ZodSchema) ||
+      !(channelEndpoint.toClientPacket instanceof ZodSchema) ||
+      !(channelEndpoint.toServerPacket instanceof ZodSchema)
+    ) {
+      throw new Error(
+        `JSON schema generation requires Zod payloads: ${namespaceCamelName}/${channelEndpoint.name}`,
+      );
+    }
     const endpointPseudoSchemaFields = new Map<string, ZodSchema>();
     if (!(channelEndpoint.creationParameter instanceof ZodVoid)) {
       schemas.set(

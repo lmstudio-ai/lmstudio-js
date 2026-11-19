@@ -245,6 +245,11 @@ function kvConfigToLLMLlamaLoadModelConfig(
     result.numExperts = numExperts;
   }
 
+  const moeCacheMiB = parsed.get("moeCacheMiB");
+  if (moeCacheMiB !== undefined) {
+    result.moeCacheMiB = moeCacheMiB;
+  }
+
   const llamaKCacheQuantizationType = parsed.get("llama.kCacheQuantizationType");
   if (llamaKCacheQuantizationType !== undefined) {
     result.llamaKCacheQuantizationType = llamaKCacheQuantizationType.checked
@@ -423,18 +428,6 @@ function kvConfigToLLMVllmLoadModelConfig(
     result.speculativeDraftMaxTokens = speculativeDraftMaxTokens;
   }
 
-  const speculativeDraftMinTokens = parsed.get("speculativeDecoding.draftMinTokens");
-  if (speculativeDraftMinTokens !== undefined) {
-    result.speculativeDraftMinTokens = speculativeDraftMinTokens;
-  }
-
-  const speculativeDraftMinContinueProbability = parsed.get(
-    "speculativeDecoding.draftMinContinueProbability",
-  );
-  if (speculativeDraftMinContinueProbability !== undefined) {
-    result.speculativeDraftMinContinueProbability = speculativeDraftMinContinueProbability;
-  }
-
   return result;
 }
 
@@ -528,6 +521,7 @@ export function llmLoadModelConfigToKVConfig(config: LLMLoadModelConfig): KVConf
     ...(publicSpeculativeSelectorIsSpecified
       ? {
           "speculativeDecoding.draftDflashSidecar": false,
+          "speculativeDecoding.draftDspark": false,
           "speculativeDecoding.draftDsparkSidecar": false,
           "speculativeDecoding.draftMtpSidecar": false,
         }
@@ -545,6 +539,7 @@ export function llmLoadModelConfigToKVConfig(config: LLMLoadModelConfig): KVConf
     "lazyMode": config.lazyMode,
     "llama.argumentsOverride": config.llamaCppArgumentsOverride,
     "numExperts": config.numExperts,
+    "moeCacheMiB": config.moeCacheMiB,
     "llama.kCacheQuantizationType": maybeFalseValueToCheckboxValue(
       config.llamaKCacheQuantizationType,
       "f16",

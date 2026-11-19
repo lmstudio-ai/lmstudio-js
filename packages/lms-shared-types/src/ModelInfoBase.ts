@@ -110,6 +110,10 @@ export const modelInfoBaseSchema = z.object({
  */
 export interface ModelInstanceInfoBase extends ModelInfoBase {
   /**
+   * The engine family running this instance.
+   */
+  engine?: string;
+  /**
    * The identifier of the instance.
    */
   identifier: string;
@@ -127,6 +131,7 @@ export interface ModelInstanceInfoBase extends ModelInfoBase {
   lastUsedTime: number | null;
 }
 export const modelInstanceInfoBaseSchema = modelInfoBaseSchema.extend({
+  engine: z.string().optional(),
   identifier: z.string(),
   instanceReference: z.string(),
   ttlMs: z.number().nullable(),

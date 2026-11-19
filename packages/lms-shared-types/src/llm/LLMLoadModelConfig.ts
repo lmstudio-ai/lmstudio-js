@@ -575,7 +575,7 @@ export interface LLMLoadModelConfig {
   contextLength?: number;
 
   /**
-   * Overrides the chat template used by engine-protocol llama-server runtimes at model load time.
+   * Overrides the chat template used by supported engine-protocol runtimes at model load time.
    *
    * Absence means the runtime should use the resolved model/default template. Custom Jinja
    * templates are applied per loaded model instance and require a reload to change.
@@ -769,6 +769,14 @@ export interface LLMLoadModelConfig {
    * architecture.
    */
   numExperts?: number;
+
+  /**
+   * GPU memory, in MiB, reserved to cache MoE expert weights that remain in system RAM.
+   *
+   * @experimental
+   */
+  moeCacheMiB?: number;
+
   /**
    * Quantization type for the Llama model's key cache.
    *
@@ -853,6 +861,7 @@ export const llmLoadModelConfigSchema = z
     lazyMode: llmLlamaLazyModeSchema.optional(),
     llamaCppArgumentsOverride: llmLlamaCppArgumentsOverrideSchema.optional(),
     numExperts: z.number().int().optional(),
+    moeCacheMiB: z.number().int().min(0).optional(),
     llamaKCacheQuantizationType: z
       .enum(llmLlamaCacheQuantizationTypes)
       .or(z.literal(false))

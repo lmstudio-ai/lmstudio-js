@@ -1,6 +1,12 @@
-import { SimpleLogger, type LoggerInterface } from "@lmstudio/lms-common";
+import { BufferedEvent, SimpleLogger, type LoggerInterface } from "@lmstudio/lms-common";
 import { BackendInterface, ConnectionStatus } from "@lmstudio/lms-communication";
-import { type Context, type ContextCreator } from "@lmstudio/lms-communication-server";
+import { ClientPort, GenericClientTransport } from "@lmstudio/lms-communication-client";
+import {
+  GenericServerTransport,
+  ServerPort,
+  type Context,
+  type ContextCreator,
+} from "@lmstudio/lms-communication-server";
 import { z } from "zod";
 import { createMockedPorts } from "./createMockedPorts.js";
 
@@ -18,6 +24,39 @@ function createTestContextCreator(): ContextCreator<Context> {
 }
 
 describe("ServerPort handler errors", () => {
+  /** Null failures must reach the caller whether they came from a handler or an error mapper. */
+  test.each(["handler", "mapper"] as const)("propagates null from the %s", async source => {
+    const logger = new SimpleLogger("null error", silentLogger);
+    const [toServer, emitToServer] = BufferedEvent.create();
+    const [toClient, emitToClient] = BufferedEvent.create();
+    const [serverClosed] = BufferedEvent.create<void>();
+    const [clientClosed] = BufferedEvent.create<void>();
+    const backend = new BackendInterface().addRpcEndpoint("fail", {
+      parameter: z.void(),
+      returns: z.void(),
+    });
+    backend.handleRpcEndpoint("fail", () => {
+      throw source === "handler" ? null : new Error("original");
+    });
+    const server = new ServerPort(
+      backend,
+      createTestContextCreator(),
+      GenericServerTransport.createFactory(toServer, serverClosed, emitToClient),
+      { parentLogger: logger, mapError: source === "mapper" ? () => null : undefined },
+    );
+    const client = new ClientPort(
+      backend,
+      GenericClientTransport.createFactory(toClient, clientClosed, emitToServer),
+      { parentLogger: logger },
+    );
+    try {
+      await expect(client.callRpc("fail", undefined)).rejects.toThrow("null");
+    } finally {
+      await client[Symbol.asyncDispose]();
+      await server[Symbol.asyncDispose]();
+    }
+  });
+
   it("propagates sync rpc handler errors", async () => {
     const backendInterface = new BackendInterface().addRpcEndpoint("testRpc", {
       parameter: z.object({ value: z.number() }),

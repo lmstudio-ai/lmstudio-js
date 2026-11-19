@@ -1,6 +1,6 @@
 {
   "name": "@lmstudio/lms-json-schema",
-  "version": "0.0.22",
+  "version": "0.0.23",
   "description": "",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -10,9 +10,9 @@
     "make-schemas": "node ./dist/index.js"
   },
   "dependencies": {
-    "@lmstudio/lms-communication": "^0.7.0",
-    "@lmstudio/lms-external-backend-interfaces": "^0.6.0",
-    "@lmstudio/lms-shared-types": "^0.7.0",
+    "@lmstudio/lms-communication": "^0.7.1",
+    "@lmstudio/lms-external-backend-interfaces": "^0.6.1",
+    "@lmstudio/lms-shared-types": "^0.7.1",
     "zod": "^3.22.4",
     "zod-to-json-schema": "3.22.4"
   },
@@ -21,5 +21,5 @@
   },
   "author": "",
   "license": "Apache-2.0",
-  "gitHead": "f21fff9f316b39436860129bc3eef887c31c3cb7"
+  "gitHead": "0eca19214f508db23c0807598fcba63cb8ba7557"
 }

@@ -354,10 +354,53 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
         "off",
       )
       .field(
+        "moeCacheMiB",
+        "numeric",
+        {
+          min: 0,
+          int: true,
+          machineDependent: true,
+          isExperimental: true,
+          displayName: "MoE Expert Cache (MiB)",
+          hint:
+            "GPU memory reserved to cache MoE expert weights that stay in system RAM. " +
+            "0 disables the cache.",
+        },
+        0,
+      )
+      .field(
+        "moeExpertResidentRatio",
+        "checkboxNumeric",
+        {
+          min: 0.01,
+          max: 1,
+          step: 0.01,
+          precision: 2,
+          machineDependent: true,
+          isExperimental: true,
+          displayName: "Resident MoE Experts",
+          hint: "Fraction of MoE experts kept in memory. Lower values save memory but can slow responses.",
+        },
+        { checked: false, value: 0.25 },
+      )
+      .field(
         "numParallelSessions",
         "numeric",
         { min: 1, max: 1023, int: true, isExperimental: true },
         4,
+      )
+      .field(
+        "maxMemoryBytes",
+        "checkboxNumeric",
+        {
+          min: 1,
+          max: Number.MAX_SAFE_INTEGER,
+          int: true,
+          machineDependent: true,
+          displayName: "Maximum Memory (bytes)",
+          hint: "Caps Splash's Metal allocations. Leave unchecked to let Splash choose the budget automatically.",
+        },
+        { checked: false, value: 28 * 1024 ** 3 },
       )
       .field("useUnifiedKvCache", "boolean", { isExperimental: true }, true)
       .scope("speculativeDecoding", builder =>
@@ -368,6 +411,15 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
             {
               displayName: "Draft MTP",
               hint: "Use bundled multi-token prediction heads when loading the model.",
+            },
+            false,
+          )
+          .field(
+            "draftDspark",
+            "boolean",
+            {
+              displayName: "Draft DSpark",
+              hint: "Use bundled DSpark heads when loading the model.",
             },
             false,
           )
@@ -540,7 +592,19 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
           ),
       )
       .scope("yuzu", builder =>
-        builder.field("autoFit", "boolean", { machineDependent: true }, true),
+        builder.field("autoFit", "boolean", { machineDependent: true }, true).field(
+          "neuralEngine",
+          "select",
+          {
+            options: [
+              { value: "auto", displayName: "Auto" },
+              { value: "off", displayName: "Off" },
+            ],
+            displayName: "Neural Engine Prefill",
+            hint: "Auto uses the Neural Engine alongside the GPU to process long prompts when that is faster. Off keeps prompt processing on the GPU.",
+          },
+          "auto",
+        ),
       )
       .scope("vllm", builder =>
         builder
@@ -625,6 +689,20 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
         "llamaAccelerationOffloadRatio",
         { machineDependent: true },
         "off",
+      )
+      .field(
+        "moeCacheMiB",
+        "numeric",
+        {
+          min: 0,
+          int: true,
+          machineDependent: true,
+          displayName: "MoE Expert Cache (MiB)",
+          hint:
+            "GPU memory reserved to cache MoE expert weights that stay in system RAM. " +
+            "0 disables the cache.",
+        },
+        0,
       )
       .field("numExperts", "numeric", { min: 0, int: true }, 0)
       .field(
@@ -904,7 +982,14 @@ export const llmSharedLoadConfigSchematics = llmLoadSchematics.sliced(
 );
 
 export const llmYuzuLoadConfigSchematics = llmLoadSchematics
-  .sliced("contextLength", "autoFitMinContextLength", "numParallelSessions", "yuzu.*")
+  .sliced(
+    "contextLength",
+    "autoFitMinContextLength",
+    "numParallelSessions",
+    "maxMemoryBytes",
+    "speculativeDecoding.draftModel",
+    "yuzu.*",
+  )
   .withTypeParamOverride("numParallelSessions", param => ({ ...param, max: 4 }));
 
 const llamaLoadConfigSchematics = globalConfigSchematics.sliced("llama.load.*", "load.*");
@@ -919,7 +1004,15 @@ export const llmLlamaLoadConfigSchematics = llmSharedLoadConfigSchematics
       "lazyMode",
       "numParallelSessions",
       "useUnifiedKvCache",
-      "speculativeDecoding.*",
+      "speculativeDecoding.draftMtp",
+      "speculativeDecoding.draftSimple",
+      "speculativeDecoding.draftDflashSidecar",
+      "speculativeDecoding.draftDsparkSidecar",
+      "speculativeDecoding.draftMtpSidecar",
+      "speculativeDecoding.draftModel",
+      "speculativeDecoding.draftMaxTokens",
+      "speculativeDecoding.draftMinTokens",
+      "speculativeDecoding.draftMinContinueProbability",
     ),
   )
   .union(llamaLoadConfigSchematics);
@@ -928,11 +1021,32 @@ export const llmMlxLoadConfigSchematics = llmSharedLoadConfigSchematics.union(
   llmLoadSchematics.sliced("mlx.*", "numParallelSessions"),
 );
 
-export const llmOmlxLoadConfigSchematics = llmLoadSchematics.sliced(
-  "contextLength",
-  "numParallelSessions",
-  "envVars",
-);
+export const llmOmlxLoadConfigSchematics = llmLoadSchematics
+  .sliced(
+    "contextLength",
+    "numParallelSessions",
+    "maxMemoryBytes",
+    "moeExpertResidentRatio",
+    "envVars",
+    "speculativeDecoding.draftMtp",
+    "speculativeDecoding.draftDspark",
+    "speculativeDecoding.draftDflashSidecar",
+    "speculativeDecoding.draftMtpSidecar",
+    "speculativeDecoding.draftModel",
+    "speculativeDecoding.draftMaxTokens",
+  )
+  .withTypeParamOverride("maxMemoryBytes", param => ({
+    ...param,
+    hint: "Memory budget for model weights and context. Leave unchecked for automatic sizing.",
+  }))
+  // oMLX grows its KV cache as the conversation grows, so context length is a cap, not a
+  // reservation.
+  .withTypeParamOverride("contextLength", param => ({
+    ...param,
+    hint:
+      "The maximum number of tokens this engine accepts in one prompt. Memory is allocated as " +
+      "the conversation grows, so the model may run out of memory before reaching this limit.",
+  }));
 
 export const llmOpenVinoLoadConfigSchematics = llmLoadSchematics.sliced(
   "numParallelSessions",
@@ -947,7 +1061,14 @@ export const llmVllmLoadConfigSchematics = llmSharedLoadConfigSchematics
       "promptTemplate",
       "engineConfigFileContents",
       "engineCwd",
-      "speculativeDecoding.*",
+      "speculativeDecoding.draftMtp",
+      "speculativeDecoding.draftDspark",
+      "speculativeDecoding.draftSimple",
+      "speculativeDecoding.draftDflashSidecar",
+      "speculativeDecoding.draftDsparkSidecar",
+      "speculativeDecoding.draftMtpSidecar",
+      "speculativeDecoding.draftModel",
+      "speculativeDecoding.draftMaxTokens",
     ),
   )
   .union(globalConfigSchematics.sliced("load.gpuSplitConfig"));
@@ -963,6 +1084,7 @@ export const llmOnnxLoadConfigSchematics = llmSharedLoadConfigSchematics.union(
 const llmLlamaMoeAdditionalLoadConfigSchematics = llmLoadSchematics.sliced(
   "numExperts",
   "numCpuExpertLayersRatio",
+  "moeCacheMiB",
 );
 
 export const llmLlamaMoeLoadConfigSchematics = llmLlamaLoadConfigSchematics.union(

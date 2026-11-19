@@ -98,22 +98,20 @@ export class Channel<TIncomingPacket, TOutgoingPacket> {
     }
     this.emitOnMessage(packet);
   };
-  /**
-   * Returned as a part of create. It should be called by the controlling port.
-   */
-  private errored = (error: any) => {
+  /** Settles pending sends and reports the first failure supplied by the controlling port. */
+  private errored = (error: unknown) => {
     if (this.connectionStatus.get() !== ConnectionStatus.Connected) {
-      logger.warn("Received error while in status", this.connectionStatus.get());
       return;
     }
     this.rejectAllWaitingForAck(error);
     this.setConnectionStatus(ConnectionStatus.Errored);
     this.emitOnError(error);
   };
-  /**
-   * Returned as a part of create. It should be called by the controlling port.
-   */
+  /** Reports normal completion once; a late close must not overwrite an earlier error. */
   private closed = () => {
+    if (this.connectionStatus.get() !== ConnectionStatus.Connected) {
+      return;
+    }
     this.rejectAllWaitingForAck(new Error("Channel closed"));
     this.setConnectionStatus(ConnectionStatus.Closed);
     this.emitOnClose();
@@ -130,15 +128,29 @@ export class Channel<TIncomingPacket, TOutgoingPacket> {
       closed: channel.closed,
     };
   }
+  /** Sends a packet while the channel is open. */
   public send(packet: TOutgoingPacket) {
+    if (this.connectionStatus.get() !== ConnectionStatus.Connected) {
+      throw new Error("Cannot send on a terminated channel.");
+    }
     this.innerSend(packet);
   }
+
+  /** Waits for acknowledgement, rejecting if the channel ends or the send cannot start. */
   public sendAndWaitForACK(packet: TOutgoingPacket) {
+    if (this.connectionStatus.get() !== ConnectionStatus.Connected) {
+      return Promise.reject(new Error("Cannot send on a terminated channel."));
+    }
     const { promise, resolve, reject } = makePromise<void>();
     const ackId = this.nextAckId;
     this.nextAckId++;
     this.waitingForAck.set(ackId, { resolve, reject });
-    this.innerSend(packet, ackId);
+    try {
+      this.innerSend(packet, ackId);
+    } catch (error) {
+      this.waitingForAck.delete(ackId);
+      reject(error);
+    }
     return promise;
   }
 }

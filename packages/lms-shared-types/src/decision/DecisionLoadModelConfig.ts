@@ -25,6 +25,7 @@ export const decisionLoadModelConfigSchema: z.ZodEffects<z.ZodType<DecisionLoadM
       tryDirectIO: true,
       llamaCppArgumentsOverride: true,
       numExperts: true,
+      moeCacheMiB: true,
       llamaKCacheQuantizationType: true,
       llamaVCacheQuantizationType: true,
     })
@@ -62,6 +63,7 @@ export interface DecisionLoadModelConfig
     | "tryDirectIO"
     | "llamaCppArgumentsOverride"
     | "numExperts"
+    | "moeCacheMiB"
     | "llamaKCacheQuantizationType"
     | "llamaVCacheQuantizationType"
   > {

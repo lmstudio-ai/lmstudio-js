@@ -3,29 +3,47 @@ import type {
   ClientToServerMessage,
   ClientTransportFactory,
   ServerToClientMessage,
+  TransportOpts,
 } from "@lmstudio/lms-communication";
-import { ClientTransport } from "@lmstudio/lms-communication";
+import { ClientTransport, isPDSFrame, type PDSFrame } from "@lmstudio/lms-communication";
 
-export class GenericClientTransport extends ClientTransport {
+/** A single connection backed by caller-owned events. Create a new transport after it closes. */
+export class GenericClientTransport<TMetadata = unknown> extends ClientTransport<TMetadata> {
   protected readonly logger;
   private closed = false;
+  /**
+   * Validates incoming messages and handshake metadata before delivering them to the port.
+   * `onMessage` carries messages and, when `opts.sendPDSFrame` is set, `PDSFrame`s in the order
+   * they arrived.
+   */
   public constructor(
-    onMessage: BufferedEvent<ServerToClientMessage>,
+    onMessage: Pick<BufferedEvent<unknown>, "subscribe">,
     onClose: BufferedEvent<void | (() => Error)>,
     private readonly sendMessage: (message: ClientToServerMessage) => void,
     private readonly receivedMessage: (message: ServerToClientMessage) => void,
     connected: () => void,
-    private readonly errored: (error: any) => void,
+    private readonly errored: (error: unknown) => void,
+    receivedPDSFrame: (frame: PDSFrame) => void,
     parentLogger?: LoggerInterface,
+    opts: TransportOpts<TMetadata> = {},
   ) {
-    super();
+    super(opts);
     this.logger = new SimpleLogger("GenericClientTransport", parentLogger);
     onMessage.subscribe(message => {
+      if (this.closed) return;
+      // Frames share the message queue so they can't overtake the messages sent before them.
+      if (isPDSFrame(message)) {
+        receivedPDSFrame(message);
+        return;
+      }
       let parsed: ServerToClientMessage;
       try {
         parsed = this.parseIncomingMessage(message);
       } catch (error) {
-        this.logger.warn("Received invalid message from server:", message);
+        this.logger.error("Received invalid message from server:", error);
+        this.closed = true;
+        this.pdsSupported = false;
+        this.errored(error);
         return;
       }
       this.receivedMessage(parsed);
@@ -35,17 +53,23 @@ export class GenericClientTransport extends ClientTransport {
         return;
       }
       this.closed = true;
-      this.errored(errorFactory ? errorFactory() : new Error("Server closed the connection"));
+      // This transport never reconnects, so streams started from now on could never be sent.
+      this.pdsSupported = false;
+      this.errored(
+        errorFactory !== undefined ? errorFactory() : new Error("Server closed the connection"),
+      );
     });
     // GenericClientTransport is always "connected" - call immediately
     connected();
   }
-  public static createFactory(
-    onMessage: BufferedEvent<ServerToClientMessage>,
+  /** Supplies connection-specific handshake configuration to the client transport. */
+  public static createFactory<TMetadata = unknown>(
+    onMessage: Pick<BufferedEvent<unknown>, "subscribe">,
     onClose: BufferedEvent<void | (() => Error)>,
     sendMessage: (message: ClientToServerMessage) => void,
+    opts: TransportOpts<TMetadata> = {},
   ): ClientTransportFactory {
-    return (receivedMessage, connected, errored, parentLogger) =>
+    return (receivedMessage, connected, errored, parentLogger, receivedPDSFrame) =>
       new GenericClientTransport(
         onMessage,
         onClose,
@@ -53,10 +77,16 @@ export class GenericClientTransport extends ClientTransport {
         receivedMessage,
         connected,
         errored,
+        receivedPDSFrame,
         parentLogger,
+        opts,
       );
   }
+  /** Rejects new work once this connection can no longer receive its responses. */
   public override sendViaTransport(message: ClientToServerMessage) {
+    if (this.closed) {
+      throw new Error("Cannot send through a closed client transport.");
+    }
     this.sendMessage(message);
   }
 }

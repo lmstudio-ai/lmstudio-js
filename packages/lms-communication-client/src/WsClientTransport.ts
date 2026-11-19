@@ -22,7 +22,10 @@ interface WsClientTransportConstructorOpts {
 export class WsClientTransport extends ClientTransport {
   protected readonly logger: SimpleLogger;
   protected ws: WebSocket | null = null;
-  private queuedMessages: Array<ClientToServerMessage> = [];
+  private queuedMessages: Array<{
+    prepare: () => ClientToServerMessage | null;
+    failed: (error: unknown) => void;
+  }> = [];
   private status = WsClientTransportStatus.Disconnected;
   private resolvedUrl: string | null = null;
   /**
@@ -64,6 +67,7 @@ export class WsClientTransport extends ClientTransport {
       });
   }
 
+  /** Starts a socket connection and keeps events from an old socket out of its replacement. */
   private connect() {
     if (this.status !== WsClientTransportStatus.Disconnected) {
       this.logger.warn("connect() called while not disconnected");
@@ -78,39 +82,63 @@ export class WsClientTransport extends ClientTransport {
       throw new Error(this.abortSignal.reason);
     }
     this.status = WsClientTransportStatus.Connecting;
-    Promise.resolve(this.url).then(url => {
-      this.resolvedUrl = url;
-      this.ws = new WebSocket(url);
-      this.ws.addEventListener("open", this.onWsOpen.bind(this));
-      this.ws.addEventListener("error", event => this.onWsError(event.error));
-      this.ws.addEventListener("close", () => {
-        this.onWsError(new Error("WebSocket connection closed"));
-      });
-
-      const abortSignal = this.abortSignal;
-      if (abortSignal !== undefined) {
-        if (abortSignal.aborted) {
-          this.onWsError(abortSignal.reason);
-        } else {
+    Promise.resolve(this.url)
+      .then(url => {
+        if (this.status !== WsClientTransportStatus.Connecting) {
+          return;
+        }
+        const abortSignal = this.abortSignal;
+        if (abortSignal?.aborted === true) {
+          throw abortSignal.reason;
+        }
+        this.resolvedUrl = url;
+        const socket = new WebSocket(url);
+        this.ws = socket;
+        socket.addEventListener("open", () => {
+          if (this.ws === socket) {
+            this.onWsOpen();
+          }
+        });
+        socket.addEventListener("error", event => {
+          if (this.ws === socket) {
+            this.onWsError(event.error);
+          }
+        });
+        socket.addEventListener("close", () => {
+          if (this.ws === socket) {
+            this.onWsError(new Error("WebSocket connection closed"));
+          }
+        });
+        if (abortSignal !== undefined) {
           const abortListener = () => {
-            this.onWsError(abortSignal.reason);
+            if (this.ws === socket) {
+              this.onWsError(abortSignal.reason);
+            }
           };
           abortSignal.addEventListener("abort", abortListener, { once: true });
-          this.ws.addEventListener("close", () => {
+          socket.addEventListener("close", () => {
             abortSignal.removeEventListener("abort", abortListener);
           });
         }
+      })
+      .catch(error => this.onWsError(error));
+  }
+  /** Initializes connection state before preparing queued payloads. */
+  protected onWsOpen() {
+    const socket = this.ws!;
+    socket.addEventListener("message", event => {
+      if (this.ws === socket) {
+        this.onWsMessage(event);
       }
     });
-  }
-  protected onWsOpen() {
-    this.ws!.addEventListener("message", this.onWsMessage.bind(this));
     this.status = WsClientTransportStatus.Connected;
-    this.queuedMessages.forEach(message => this.sendViaTransport(message));
-    this.queuedMessages = [];
     this.updateShouldRef(this.shouldRef);
-    // this.setupWebsocketKeepAlive(this.ws!, this.onWsTimeout.bind(this));
+    // The owner may initialize its codec here. Recovered signals also use that state.
     this.connected();
+    while (this.status === WsClientTransportStatus.Connected && this.queuedMessages.length > 0) {
+      const { prepare, failed } = this.queuedMessages.shift()!;
+      super.sendDeferred(prepare, failed);
+    }
   }
   protected onWsMessage(event: WsMessageEvent) {
     if (this.status !== WsClientTransportStatus.Connected) {
@@ -133,52 +161,49 @@ export class WsClientTransport extends ClientTransport {
     }
     this.receivedMessage(parsed);
   }
-  protected onWsError(error: any) {
+  /** Releases the failed connection and settles its queue before another connection can use it. */
+  protected onWsError(error: unknown) {
     if (this.status === WsClientTransportStatus.Disconnected) {
       return;
     }
-    if (this.disposed) {
-      // Suppress errors during intentional disposal
-      this.status = WsClientTransportStatus.Disconnected;
-      return;
+    if (!this.disposed) {
+      this.logger.warn("WebSocket error:", error);
+      if (error instanceof Error && "code" in error && error.code === "ECONNREFUSED") {
+        this.logger.warnText`
+          WebSocket connection refused. This can happen if the server is not running or the client
+          is trying to connect to the wrong path. The server path that this client is
+          attempting to connect to is:
+          ${this.resolvedUrl ?? "Unknown" /* Should never be Unknown */}.
+
+          Please make sure the following:
+
+            1. LM Studio is running
+
+            2. The API server in LM Studio has started
+
+            3. The client is attempting to connect to the correct path
+        `;
+      }
     }
-    this.logger.warn("WebSocket error:", error);
-    if (error.code === "ECONNREFUSED") {
-      this.logger.warnText`
-        WebSocket connection refused. This can happen if the server is not running or the client
-        is trying to connect to the wrong path. The server path that this client is
-        attempting to connect to is:
-        ${this.resolvedUrl ?? "Unknown" /* Should never be Unknown */}.
-
-        Please make sure the following:
-
-          1. LM Studio is running
-
-          2. The API server in LM Studio has started
-
-          3. The client is attempting to connect to the correct path
-      `;
-    }
-    try {
-      this.ws?.close();
-    } catch (error) {
-      // Ignore
-    }
+    const queued = this.queuedMessages.splice(0);
+    const socket = this.ws;
+    this.ws = null;
     this.status = WsClientTransportStatus.Disconnected;
+    this.resetHandshake();
+    try {
+      socket?.close();
+    } catch {
+      // The socket may already be closed.
+    }
+    // The port must mark signals recoverable before individual send failures remove them.
     this.errored(error);
+    for (const message of queued) {
+      message.failed(error);
+    }
   }
+  /** A timeout releases the same pending work as any other connection failure. */
   protected onWsTimeout() {
-    if (this.status === WsClientTransportStatus.Disconnected) {
-      return;
-    }
-    this.logger.warn("Websocket timed out");
-    try {
-      this.ws?.close();
-    } catch (error) {
-      // Ignore
-    }
-    this.status = WsClientTransportStatus.Disconnected;
-    this.errored(new Error("WebSocket timed out"));
+    this.onWsError(new Error("WebSocket timed out"));
   }
   public override onHavingNoOpenCommunication() {
     this.updateShouldRef(false);
@@ -230,16 +255,35 @@ export class WsClientTransport extends ClientTransport {
     }
     return !("bun" in process.versions);
   }
+  /** Sends a prepared envelope, preserving its position among deferred sends while connecting. */
   public override sendViaTransport(message: ClientToServerMessage) {
     if (this.status === WsClientTransportStatus.Connected) {
       this.ws!.send(JSON.stringify(message));
     } else {
-      this.queuedMessages.push(message);
-      if (this.status === WsClientTransportStatus.Disconnected) {
-        this.connect();
-      }
+      this.ensureConnectedOrStartConnection();
+      this.queuedMessages.push({
+        prepare: () => message,
+        failed: error => this.logger.warn("Failed to send queued WebSocket message:", error),
+      });
     }
   }
+  /** Leaves payload preparation until the socket and any authentication are ready. */
+  public override sendDeferred(
+    prepare: () => ClientToServerMessage | null,
+    failed: (error: unknown) => void,
+  ): void {
+    if (this.status === WsClientTransportStatus.Connected) {
+      super.sendDeferred(prepare, failed);
+      return;
+    }
+    try {
+      this.ensureConnectedOrStartConnection();
+      this.queuedMessages.push({ prepare, failed });
+    } catch (error) {
+      failed(error);
+    }
+  }
+  /** Lets active communications finish before closing the socket and releasing queued sends. */
   public override async [Symbol.asyncDispose]() {
     await super[Symbol.asyncDispose]();
     // Only wait for communications to close in Node where ref/unref is supported
@@ -251,15 +295,6 @@ export class WsClientTransport extends ClientTransport {
       await disposedPromise;
     }
 
-    if (this.ws !== null) {
-      try {
-        this.ws.close();
-      } catch (error) {
-        // Ignore
-      }
-      this.ws = null;
-    }
-    this.errored(new Error("WebSocket client transport disposed"));
-    this.status = WsClientTransportStatus.Disconnected;
+    this.onWsError(new Error("WebSocket client transport disposed"));
   }
 }

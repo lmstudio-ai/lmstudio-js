@@ -23,6 +23,7 @@ import {
   defaultLlmLoadPromptTemplate,
   globalConfigSchematics,
   llmLlamaLoadConfigSchematics,
+  llmLlamaMoeLoadConfigSchematics,
   llmLoadSchematics,
   llmMlxLoadConfigSchematics,
   llmOmlxLoadConfigSchematics,
@@ -210,7 +211,10 @@ describe("yuzu config", () => {
       "llm.load.contextLength",
       "llm.load.autoFitMinContextLength",
       "llm.load.numParallelSessions",
+      "llm.load.maxMemoryBytes",
+      "llm.load.speculativeDecoding.draftModel",
       "llm.load.yuzu.autoFit",
+      "llm.load.yuzu.neuralEngine",
     ]);
     expect(() =>
       llmYuzuLoadConfigSchematics.buildPartialConfig({ numParallelSessions: 5 }),
@@ -453,6 +457,25 @@ describe("llmLoadModelConfig conversion", () => {
       true,
     );
     expect(kvConfigToLLMLoadModelConfig(loadConfig, { modelFormat: "yuzu" }).autoFit).toBe(true);
+  });
+
+  it("round trips the MoE expert cache without disabling AutoFit", () => {
+    const config = llmLoadModelConfigToKVConfig({ moeCacheMiB: 4096 });
+    const fieldMap = new Map(config.fields.map(field => [field.key, field.value]));
+
+    expect(fieldMap.get("llm.load.moeCacheMiB")).toBe(4096);
+    expect(fieldMap.get("llm.load.llama.autoFit")).toBeUndefined();
+    expect(kvConfigToLLMLoadModelConfig(config)).toEqual({ moeCacheMiB: 4096 });
+    expect(
+      kvConfigToLLMLoadModelConfig(
+        llmLoadModelConfigToKVConfig({ autoFit: true, moeCacheMiB: 4096 }),
+      ),
+    ).toEqual({ autoFit: true, moeCacheMiB: 4096 });
+  });
+
+  it("exposes the MoE expert cache only on the MoE schematic", () => {
+    expect(llmLlamaMoeLoadConfigSchematics.hasFullKey("llm.load.moeCacheMiB")).toBe(true);
+    expect(llmLlamaLoadConfigSchematics.hasFullKey("llm.load.moeCacheMiB")).toBe(false);
   });
 
   it("disables AutoFit for explicit manual settings", () => {
@@ -949,14 +972,16 @@ describe("llmLoadModelConfig conversion", () => {
     expect(roundTrippedConfig.speculativeDraftMinTokens).toBeUndefined();
     expect(roundTrippedConfig.speculativeDraftMinContinueProbability).toBeUndefined();
     expect(fieldKeys).not.toContain("llm.load.speculativeDecoding.draftDflashSidecar");
+    expect(fieldKeys).not.toContain("llm.load.speculativeDecoding.draftDspark");
     expect(fieldKeys).not.toContain("llm.load.speculativeDecoding.draftDsparkSidecar");
     expect(fieldKeys).not.toContain("llm.load.speculativeDecoding.draftMtpSidecar");
   });
 
-  it("adds internal sidecar speculative decoding fields as boolean defaults", () => {
+  it("adds internal speculative decoding fields as boolean defaults", () => {
     const emptyConfig = makeKVConfigFromFields([]);
     const loadConfig = llmLoadSchematics.buildPartialConfig({
       "speculativeDecoding.draftDflashSidecar": true,
+      "speculativeDecoding.draftDspark": true,
       "speculativeDecoding.draftDsparkSidecar": true,
       "speculativeDecoding.draftMtpSidecar": true,
     });
@@ -964,6 +989,7 @@ describe("llmLoadModelConfig conversion", () => {
     expect(llmLoadSchematics.access(emptyConfig, "speculativeDecoding.draftDflashSidecar")).toBe(
       false,
     );
+    expect(llmLoadSchematics.access(emptyConfig, "speculativeDecoding.draftDspark")).toBe(false);
     expect(llmLoadSchematics.access(emptyConfig, "speculativeDecoding.draftDsparkSidecar")).toBe(
       false,
     );
@@ -973,15 +999,17 @@ describe("llmLoadModelConfig conversion", () => {
     expect(llmLoadSchematics.access(loadConfig, "speculativeDecoding.draftDflashSidecar")).toBe(
       true,
     );
+    expect(llmLoadSchematics.access(loadConfig, "speculativeDecoding.draftDspark")).toBe(true);
     expect(llmLoadSchematics.access(loadConfig, "speculativeDecoding.draftDsparkSidecar")).toBe(
       true,
     );
     expect(llmLoadSchematics.access(loadConfig, "speculativeDecoding.draftMtpSidecar")).toBe(true);
   });
 
-  it("rejects non-boolean internal sidecar speculative decoding field values", () => {
+  it("rejects non-boolean internal speculative decoding field values", () => {
     for (const key of [
       "speculativeDecoding.draftDflashSidecar",
+      "speculativeDecoding.draftDspark",
       "speculativeDecoding.draftDsparkSidecar",
       "speculativeDecoding.draftMtpSidecar",
     ] as const) {
@@ -990,9 +1018,10 @@ describe("llmLoadModelConfig conversion", () => {
     }
   });
 
-  it("does not expose internal sidecar speculative decoding fields through public conversion", () => {
+  it("does not expose internal speculative decoding fields through public conversion", () => {
     const loadConfig = globalConfigSchematics.scoped("llm.load").buildPartialConfig({
       "speculativeDecoding.draftDflashSidecar": true,
+      "speculativeDecoding.draftDspark": true,
       "speculativeDecoding.draftDsparkSidecar": true,
       "speculativeDecoding.draftMtpSidecar": true,
     });
@@ -1006,7 +1035,7 @@ describe("llmLoadModelConfig conversion", () => {
     expect(convertedConfig.speculativeDraftMtpAssistant).toBeUndefined();
   });
 
-  it("clears internal sidecar speculative decoding fields for explicit public selectors", () => {
+  it("clears internal speculative decoding fields for explicit public selectors", () => {
     const loadConfig = llmLoadModelConfigToKVConfig({
       speculativeDraftSimple: true,
       speculativeDraftModel: "publisher/draft-model",
@@ -1014,6 +1043,7 @@ describe("llmLoadModelConfig conversion", () => {
     const fieldMap = new Map(loadConfig.fields.map(field => [field.key, field.value]));
 
     expect(fieldMap.get("llm.load.speculativeDecoding.draftDflashSidecar")).toBe(false);
+    expect(fieldMap.get("llm.load.speculativeDecoding.draftDspark")).toBe(false);
     expect(fieldMap.get("llm.load.speculativeDecoding.draftDsparkSidecar")).toBe(false);
     expect(fieldMap.get("llm.load.speculativeDecoding.draftMtpSidecar")).toBe(false);
   });
@@ -1395,10 +1425,19 @@ describe("globalConfigSchematics", () => {
         "llm.load.vllm.reasoningParser",
         "llm.load.vllm.toolCallParser",
         "llm.load.speculativeDecoding.draftMtp",
+        "llm.load.speculativeDecoding.draftDspark",
         "llm.load.speculativeDecoding.draftMaxTokens",
         "load.gpuSplitConfig",
       ]),
     );
+    expect(
+      llmVllmLoadConfigSchematics.hasFullKey("llm.load.speculativeDecoding.draftMinTokens"),
+    ).toBe(false);
+    expect(
+      llmVllmLoadConfigSchematics.hasFullKey(
+        "llm.load.speculativeDecoding.draftMinContinueProbability",
+      ),
+    ).toBe(false);
   });
 
   it("exposes only the approved vLLM prediction controls", () => {
