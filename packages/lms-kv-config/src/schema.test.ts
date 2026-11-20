@@ -1422,6 +1422,7 @@ describe("globalConfigSchematics", () => {
         "llm.load.seed",
         "llm.load.promptTemplate",
         "llm.load.vllm.gpuMemoryUtilization",
+        "llm.load.vllm.kvCacheDtype",
         "llm.load.vllm.reasoningParser",
         "llm.load.vllm.toolCallParser",
         "llm.load.speculativeDecoding.draftMtp",
@@ -1489,18 +1490,23 @@ describe("globalConfigSchematics", () => {
     ).toBe(false);
   });
 
-  it("defines internal vLLM load fields with bounded GPU memory utilization", () => {
+  it("defines internal vLLM memory controls", () => {
     const config = llmVllmLoadConfigSchematics.buildPartialConfig({
       "vllm.gpuMemoryUtilization": 0.73,
+      "vllm.kvCacheDtype": "fp8_e4m3",
       "vllm.reasoningParser": "deepseek_r1",
       "vllm.toolCallParser": "hermes",
     });
 
     expect(llmVllmLoadConfigSchematics.access(config, "vllm.gpuMemoryUtilization")).toBe(0.73);
+    expect(llmVllmLoadConfigSchematics.access(config, "vllm.kvCacheDtype")).toBe("fp8_e4m3");
     expect(llmVllmLoadConfigSchematics.access(config, "vllm.reasoningParser")).toBe("deepseek_r1");
     expect(llmVllmLoadConfigSchematics.access(config, "vllm.toolCallParser")).toBe("hermes");
     expect(llmVllmLoadConfigSchematics.obtainField("vllm.gpuMemoryUtilization").fullKey).toBe(
       "llm.load.vllm.gpuMemoryUtilization",
+    );
+    expect(llmVllmLoadConfigSchematics.obtainField("vllm.kvCacheDtype").fullKey).toBe(
+      "llm.load.vllm.kvCacheDtype",
     );
 
     const gpuMemoryUtilizationSchema = llmVllmLoadConfigSchematics.getSchemaForKey(
@@ -1511,8 +1517,13 @@ describe("globalConfigSchematics", () => {
     expect(gpuMemoryUtilizationSchema.safeParse(-0.01).success).toBe(false);
     expect(gpuMemoryUtilizationSchema.safeParse(1.01).success).toBe(false);
 
+    const kvCacheDtypeSchema = llmVllmLoadConfigSchematics.getSchemaForKey("vllm.kvCacheDtype");
+    expect(kvCacheDtypeSchema.safeParse("fp8").success).toBe(true);
+    expect(kvCacheDtypeSchema.safeParse("unsupported").success).toBe(false);
+
     const emptyConfig = makeKVConfigFromFields([]);
     expect(llmVllmLoadConfigSchematics.access(emptyConfig, "vllm.gpuMemoryUtilization")).toBe(0.92);
+    expect(llmVllmLoadConfigSchematics.access(emptyConfig, "vllm.kvCacheDtype")).toBe("auto");
     expect(llmVllmLoadConfigSchematics.access(emptyConfig, "vllm.reasoningParser")).toBe("");
     expect(llmVllmLoadConfigSchematics.access(emptyConfig, "vllm.toolCallParser")).toBe("");
   });
