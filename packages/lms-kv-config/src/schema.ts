@@ -176,7 +176,7 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
         { checked: false, value: -1 },
       )
       .field("contextPrefill", "context", {}, [])
-      .field("topKSampling", "numeric", { min: -1, max: 500, int: true }, 40)
+      .field("topKSampling", "numeric", { min: -1, int: true }, 40)
       .field(
         "repeatPenalty",
         "checkboxNumeric",
@@ -592,19 +592,35 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
           ),
       )
       .scope("yuzu", builder =>
-        builder.field("autoFit", "boolean", { machineDependent: true }, true).field(
-          "neuralEngine",
-          "select",
-          {
-            options: [
-              { value: "auto", displayName: "Auto" },
-              { value: "off", displayName: "Off" },
-            ],
-            displayName: "Neural Engine Prefill",
-            hint: "Auto uses the Neural Engine alongside the GPU to process long prompts when that is faster. Off keeps prompt processing on the GPU.",
-          },
-          "auto",
-        ),
+        builder
+          .field("autoFit", "boolean", { machineDependent: true }, true)
+          .field(
+            "activationPrecision",
+            "select",
+            {
+              options: [
+                { value: "auto", displayName: "Auto" },
+                { value: "bf16", displayName: "BF16" },
+              ],
+              displayName: "Activation Precision",
+              hint: "Advanced: Auto lets Splash choose activation precision. BF16 forces bfloat16 activations.",
+              isExperimental: true,
+            },
+            "auto",
+          )
+          .field(
+            "neuralEngine",
+            "select",
+            {
+              options: [
+                { value: "auto", displayName: "Auto" },
+                { value: "off", displayName: "Off" },
+              ],
+              displayName: "Neural Engine Prefill",
+              hint: "Auto uses the Neural Engine alongside the GPU to process long prompts when that is faster. Off keeps prompt processing on the GPU.",
+            },
+            "auto",
+          ),
       )
       .scope("vllm", builder =>
         builder
@@ -928,7 +944,7 @@ export const llmYuzuPredictionConfigSchematics = new KVConfigSchematicsBuilder(k
         },
         1,
       )
-      .field("topKSampling", "numeric", { min: 1, max: 32, int: true }, 20)
+      .field("topKSampling", "numeric", { min: -1, int: true }, 20)
       .field(
         "topPSampling",
         "checkboxNumeric",
@@ -991,7 +1007,7 @@ export const llmYuzuLoadConfigSchematics = llmLoadSchematics
     "speculativeDecoding.draftModel",
     "yuzu.*",
   )
-  .withTypeParamOverride("numParallelSessions", param => ({ ...param, max: 4 }));
+  .withTypeParamOverride("numParallelSessions", param => ({ ...param, max: 8 }));
 
 const llamaLoadConfigSchematics = globalConfigSchematics.sliced("llama.load.*", "load.*");
 

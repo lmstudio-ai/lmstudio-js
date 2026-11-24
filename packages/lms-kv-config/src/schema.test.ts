@@ -215,11 +215,12 @@ describe("yuzu config", () => {
       "llm.load.speculativeDecoding.draftDflashSidecar",
       "llm.load.speculativeDecoding.draftModel",
       "llm.load.yuzu.autoFit",
+      "llm.load.yuzu.activationPrecision",
       "llm.load.yuzu.neuralEngine",
     ]);
-    expect(() =>
-      llmYuzuLoadConfigSchematics.buildPartialConfig({ numParallelSessions: 5 }),
-    ).toThrow();
+    expect(
+      llmYuzuLoadConfigSchematics.access(makeKVConfigFromFields([]), "numParallelSessions"),
+    ).toBe(4);
     expect(
       llmYuzuPredictionConfigSchematics.getSchemaForKey("topKSampling").safeParse(20).success,
     ).toBe(true);
@@ -232,15 +233,71 @@ describe("yuzu config", () => {
     ).toBe(true);
   });
 
-  it.each([-1, 0, 33, 40, 20.5, NaN, Infinity])("rejects top-k %p", value => {
+  it.each([-2, -0.5, 20.5, NaN, Infinity])("rejects top-k %p", value => {
     expect(() =>
       llmYuzuPredictionConfigSchematics.buildPartialConfig({ topKSampling: value }),
     ).toThrow();
   });
-  it.each([1, 20, 32])("accepts top-k %p", value => {
-    expect(
-      llmYuzuPredictionConfigSchematics.getSchemaForKey("topKSampling").safeParse(value).success,
-    ).toBe(true);
+  it.each([-1, 0, 1, 20, 32, 33, 40, 501, 100000])(
+    "round trips top-k %p through SDK conversion",
+    topKSampling => {
+      const config = llmYuzuPredictionConfigSchematics.buildPartialConfig({ topKSampling });
+      const sdkConfig = kvConfigToLLMPredictionConfig(config);
+      expect(sdkConfig.topKSampling).toBe(topKSampling);
+      expect(
+        llmYuzuPredictionConfigSchematics.parseToMap(llmPredictionConfigToKVConfig(sdkConfig)),
+      ).toEqual(llmYuzuPredictionConfigSchematics.parseToMap(config));
+    },
+  );
+
+  it.each([1, 4, 5, 8])(
+    "round trips concurrency %p through SDK conversion",
+    maxParallelPredictions => {
+      const config = llmLoadModelConfigToKVConfig({ maxParallelPredictions });
+      const filtered = llmYuzuLoadConfigSchematics.filterConfig(config);
+      expect(kvConfigToLLMLoadModelConfig(filtered, { modelFormat: "yuzu" })).toEqual({
+        maxParallelPredictions,
+      });
+    },
+  );
+
+  it.each([0, 9, 4.5, NaN, Infinity])("rejects concurrency %p", numParallelSessions => {
+    expect(() => llmYuzuLoadConfigSchematics.buildPartialConfig({ numParallelSessions })).toThrow();
+  });
+
+  it.each(["auto", "bf16"] as const)(
+    "round trips activation precision %s without changing auto-fit",
+    yuzuActivationPrecision => {
+      const sdkConfig = llmLoadModelConfigSchema.parse({ yuzuActivationPrecision });
+      const config = llmLoadModelConfigToKVConfig(sdkConfig);
+      expect(globalConfigSchematics.access(config, "llm.load.yuzu.activationPrecision")).toBe(
+        yuzuActivationPrecision,
+      );
+      expect(kvConfigToLLMLoadModelConfig(config, { modelFormat: "yuzu" })).toEqual({
+        yuzuActivationPrecision,
+      });
+      expect(config.fields).toEqual([
+        { key: "llm.load.yuzu.activationPrecision", value: yuzuActivationPrecision },
+      ]);
+      for (const schematics of [
+        llmLlamaLoadConfigSchematics,
+        llmMlxLoadConfigSchematics,
+        llmVllmLoadConfigSchematics,
+        llmOmlxLoadConfigSchematics,
+      ]) {
+        expect(schematics.filterConfig(config).fields).toEqual([]);
+      }
+    },
+  );
+
+  it("rejects unsupported activation precision on SDK input and KV readback", () => {
+    expect(llmLoadModelConfigSchema.safeParse({ yuzuActivationPrecision: "fp16" }).success).toBe(
+      false,
+    );
+    const config = makeKVConfigFromFields([
+      kvConfigField("llm.load.yuzu.activationPrecision", "fp16"),
+    ]);
+    expect(() => kvConfigToLLMLoadModelConfig(config, { modelFormat: "yuzu" })).toThrow();
   });
   it.each([-0.1, 2.01, NaN, Infinity])("rejects temperature %p", value => {
     expect(() =>
@@ -319,7 +376,7 @@ describe("yuzu config", () => {
         kvConfigToLLMLoadModelConfig(config, { modelFormat: "yuzu", useDefaultsForMissingKeys }),
       ).toEqual(
         useDefaultsForMissingKeys
-          ? { autoFit: true, maxParallelPredictions: 4 }
+          ? { autoFit: true, maxParallelPredictions: 4, yuzuActivationPrecision: "auto" }
           : { contextLength: 8192 },
       );
     },
@@ -333,10 +390,10 @@ describe("yuzu config", () => {
         modelFormat: "yuzu",
         useDefaultsForMissingKeys: true,
       }),
-    ).toEqual({ autoFit: true, maxParallelPredictions: 4 });
+    ).toEqual({ autoFit: true, maxParallelPredictions: 4, yuzuActivationPrecision: "auto" });
   });
 
-  it("filters unrelated preset fields but does not silently clamp a retained invalid top-k", () => {
+  it("filters unrelated preset fields while retaining top-k above the legacy cap", () => {
     const preset = globalConfigSchematics.buildPartialConfig({
       "llm.prediction.topKSampling": 40,
       "llm.prediction.minPSampling": { checked: true, value: 0.05 },
@@ -345,7 +402,7 @@ describe("yuzu config", () => {
     });
     const filtered = llmYuzuPredictionConfigSchematics.filterConfig(preset);
     expect(filtered.fields).toEqual([{ key: "llm.prediction.topKSampling", value: 40 }]);
-    expect(() => llmYuzuPredictionConfigSchematics.parse(filtered)).toThrow(/topKSampling/);
+    expect(llmYuzuPredictionConfigSchematics.parse(filtered).get("topKSampling")).toBe(40);
     expect(preset.fields).toHaveLength(4);
   });
 });

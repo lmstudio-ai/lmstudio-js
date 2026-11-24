@@ -206,6 +206,7 @@ export type {
   LLMLlamaCppArgumentsOverride,
   LLMLlamaLazyMode,
   LLMLoadModelConfig,
+  LLMYuzuActivationPrecision,
   LLMLoadSpeculativeDecodingConfig,
   LLMLoadSpeculativeDecodingResolution,
   LLMManualPromptTemplate,
