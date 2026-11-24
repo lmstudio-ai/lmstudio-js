@@ -164,8 +164,7 @@ export interface LLMPredictionConfigInput<TStructuredOutputType = unknown> {
    * for the next token selection. A lower value (e.g., 20) will make the output more focused and
    * conservative, while a higher value (e.g., 100) allows for more creative and diverse outputs.
    *
-   * Typical values range from 20 to 100. Splash/Yuzu accepts integers greater than or equal to -1;
-   * both 0 and -1 disable top-k sampling. Its default is 20.
+   * Typical values range from 20 to 100.
    */
   topKSampling?: number;
   /**

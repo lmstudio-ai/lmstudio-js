@@ -176,7 +176,7 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
         { checked: false, value: -1 },
       )
       .field("contextPrefill", "context", {}, [])
-      .field("topKSampling", "numeric", { min: -1, int: true }, 40)
+      .field("topKSampling", "numeric", { min: -1, max: 500, int: true }, 40)
       .field(
         "repeatPenalty",
         "checkboxNumeric",
@@ -592,35 +592,19 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
           ),
       )
       .scope("yuzu", builder =>
-        builder
-          .field("autoFit", "boolean", { machineDependent: true }, true)
-          .field(
-            "activationPrecision",
-            "select",
-            {
-              options: [
-                { value: "auto", displayName: "Auto" },
-                { value: "bf16", displayName: "BF16" },
-              ],
-              displayName: "Activation Precision",
-              hint: "Advanced: Auto lets Splash choose activation precision. BF16 forces bfloat16 activations.",
-              isExperimental: true,
-            },
-            "auto",
-          )
-          .field(
-            "neuralEngine",
-            "select",
-            {
-              options: [
-                { value: "auto", displayName: "Auto" },
-                { value: "off", displayName: "Off" },
-              ],
-              displayName: "Neural Engine Prefill",
-              hint: "Auto uses the Neural Engine alongside the GPU to process long prompts when that is faster. Off keeps prompt processing on the GPU.",
-            },
-            "auto",
-          ),
+        builder.field("autoFit", "boolean", { machineDependent: true }, true).field(
+          "neuralEngine",
+          "select",
+          {
+            options: [
+              { value: "auto", displayName: "Auto" },
+              { value: "off", displayName: "Off" },
+            ],
+            displayName: "Neural Engine Prefill",
+            hint: "Auto uses the Neural Engine alongside the GPU to process long prompts when that is faster. Off keeps prompt processing on the GPU.",
+          },
+          "auto",
+        ),
       )
       .scope("vllm", builder =>
         builder
@@ -812,13 +796,6 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
 
 export const llmPredictionConfigSchematics = globalConfigSchematics.scoped("llm.prediction");
 
-// The shared SDK transport must accept Splash's uncapped top-k, but other engines retain
-// their existing limit. Derive their slices from this bounded view instead of the transport.
-const llmNonYuzuPredictionConfigSchematics = llmPredictionConfigSchematics.withTypeParamOverride(
-  "topKSampling",
-  param => ({ ...param, max: 500 }),
-);
-
 export const llmSharedPredictionConfigSchematics = llmPredictionConfigSchematics.sliced(
   "temperature",
   "maxPredictedTokens",
@@ -834,7 +811,7 @@ export const llmSharedPredictionConfigSchematics = llmPredictionConfigSchematics
 );
 
 export const llmLlamaPredictionConfigSchematics = llmSharedPredictionConfigSchematics.union(
-  llmNonYuzuPredictionConfigSchematics.sliced(
+  llmPredictionConfigSchematics.sliced(
     "llama.*",
     "contextOverflowPolicy",
     "stopStrings",
@@ -854,7 +831,7 @@ export const llmLlamaPredictionConfigSchematics = llmSharedPredictionConfigSchem
 );
 
 export const llmMlxPredictionConfigSchematics = llmSharedPredictionConfigSchematics.union(
-  llmNonYuzuPredictionConfigSchematics.sliced(
+  llmPredictionConfigSchematics.sliced(
     "mlx.*",
     "contextOverflowPolicy",
     "stopStrings",
@@ -870,7 +847,7 @@ export const llmMlxPredictionConfigSchematics = llmSharedPredictionConfigSchemat
   ),
 );
 
-export const llmOmlxPredictionConfigSchematics = llmNonYuzuPredictionConfigSchematics.sliced(
+export const llmOmlxPredictionConfigSchematics = llmPredictionConfigSchematics.sliced(
   "temperature",
   "maxPredictedTokens",
   "stopStrings",
@@ -891,7 +868,7 @@ export const llmOmlxPredictionConfigSchematics = llmNonYuzuPredictionConfigSchem
   "llama.frequencyPenalty",
 );
 
-export const llmVllmPredictionConfigSchematics = llmNonYuzuPredictionConfigSchematics.sliced(
+export const llmVllmPredictionConfigSchematics = llmPredictionConfigSchematics.sliced(
   "temperature",
   "maxPredictedTokens",
   "stopStrings",
@@ -914,7 +891,7 @@ export const llmVllmPredictionConfigSchematics = llmNonYuzuPredictionConfigSchem
   "llama.logitBias",
 );
 
-export const llmOpenVinoPredictionConfigSchematics = llmNonYuzuPredictionConfigSchematics.sliced(
+export const llmOpenVinoPredictionConfigSchematics = llmPredictionConfigSchematics.sliced(
   "temperature",
   "maxPredictedTokens",
   "stopStrings",
@@ -951,7 +928,6 @@ export const llmYuzuPredictionConfigSchematics = new KVConfigSchematicsBuilder(k
         },
         1,
       )
-      .field("topKSampling", "numeric", { min: -1, int: true }, 20)
       .field(
         "topPSampling",
         "checkboxNumeric",
@@ -970,6 +946,7 @@ export const llmYuzuPredictionConfigSchematics = new KVConfigSchematicsBuilder(k
   .scoped("llm.prediction")
   .union(
     llmPredictionConfigSchematics.sliced(
+      "topKSampling",
       "maxPredictedTokens",
       "systemPrompt",
       "tools",
@@ -987,12 +964,7 @@ export const llmTransformersPredictionConfigSchematics = llmSharedPredictionConf
 );
 
 export const llmOnnxPredictionConfigSchematics = llmSharedPredictionConfigSchematics.union(
-  llmNonYuzuPredictionConfigSchematics.sliced(
-    "onnx.*",
-    "repeatPenalty",
-    "topPSampling",
-    "topKSampling",
-  ),
+  llmPredictionConfigSchematics.sliced("onnx.*", "repeatPenalty", "topPSampling", "topKSampling"),
 );
 
 export const llmMistralrsPredictionConfigSchematics = llmSharedPredictionConfigSchematics;

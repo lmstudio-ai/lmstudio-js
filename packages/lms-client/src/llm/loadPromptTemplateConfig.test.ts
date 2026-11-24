@@ -361,31 +361,20 @@ describe("SDK load prompt template config", () => {
     expect((await model.getLoadConfig()).maxParallelPredictions).toBe(256);
   });
 
-  test("getLoadConfig preserves Splash parallelism and activation precision for reuse", async () => {
+  test("getLoadConfig preserves Splash parallelism for reuse", async () => {
     const harness = createNamespaceHarness("yuzu");
     harness.setLoadConfigResponse(
-      llmLoadModelConfigToKVConfig({
-        autoFit: true,
-        maxParallelPredictions: 8,
-        yuzuActivationPrecision: "bf16",
-      }),
+      llmLoadModelConfigToKVConfig({ autoFit: true, maxParallelPredictions: 4 }),
     );
     const model = await harness.namespace.load("test/model", { verbose: false });
     const loadConfig = await model.getLoadConfig();
-    expect(loadConfig).toEqual({
-      autoFit: true,
-      maxParallelPredictions: 8,
-      yuzuActivationPrecision: "bf16",
-    });
+    expect(loadConfig).toEqual({ autoFit: true, maxParallelPredictions: 4 });
 
     await harness.namespace.load("test/model", { verbose: false, config: loadConfig });
     const reapplied = collapseKVStack(
       extractLoadConfigStack(harness.capturedChannelCreations[1]?.creationParameter),
     );
-    expect(globalConfigSchematics.access(reapplied, "llm.load.numParallelSessions")).toBe(8);
-    expect(globalConfigSchematics.access(reapplied, "llm.load.yuzu.activationPrecision")).toBe(
-      "bf16",
-    );
+    expect(globalConfigSchematics.access(reapplied, "llm.load.numParallelSessions")).toBe(4);
     expect(globalConfigSchematics.access(reapplied, "llm.load.yuzu.autoFit")).toBe(true);
   });
 

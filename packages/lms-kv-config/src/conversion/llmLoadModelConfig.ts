@@ -2,7 +2,6 @@ import {
   convertGPUSettingToGPUSplitConfig,
   convertGPUSplitConfigToGPUSetting,
   llmLlamaLazyModeSchema,
-  llmYuzuActivationPrecisionSchema,
   type GPUSplitConfig,
   type GPUSetting,
   type KVConfig,
@@ -469,9 +468,6 @@ export function kvConfigToLLMLoadModelConfig(
         useDefaultsForMissingKeys === true
           ? llmYuzuLoadConfigSchematics.parse(config)
           : llmYuzuLoadConfigSchematics.parsePartial(config);
-      const yuzuActivationPrecision = llmYuzuActivationPrecisionSchema
-        .optional()
-        .parse(parsed.get("yuzu.activationPrecision"));
       const autoFit = parsed.get("yuzu.autoFit");
       const contextLength = parsed.get("contextLength");
       const maxParallelPredictions = parsed.get("numParallelSessions");
@@ -479,7 +475,6 @@ export function kvConfigToLLMLoadModelConfig(
         ...(autoFit === undefined ? {} : { autoFit }),
         ...(autoFit !== true && contextLength !== undefined ? { contextLength } : {}),
         ...(maxParallelPredictions === undefined ? {} : { maxParallelPredictions }),
-        ...(yuzuActivationPrecision === undefined ? {} : { yuzuActivationPrecision }),
       };
     }
     default:
@@ -516,7 +511,6 @@ export function llmLoadModelConfigToKVConfig(config: LLMLoadModelConfig): KVConf
     "llama.autoFit": autoFit,
     "mlx.autoFit": autoFit,
     "yuzu.autoFit": autoFit,
-    "yuzu.activationPrecision": config.yuzuActivationPrecision,
     "vllm.autoFit": autoFit,
     "gpuSplitConfig": hasGpuSplitSetting
       ? convertGPUSettingToGPUSplitConfig(config.gpu)

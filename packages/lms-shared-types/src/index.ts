@@ -199,8 +199,6 @@ export {
   LLMLoadSpeculativeDecodingResolution,
   LLMLoadModelConfig,
   llmLoadModelConfigSchema,
-  LLMYuzuActivationPrecision,
-  llmYuzuActivationPrecisionSchema,
   LLMMlxKvCacheBitsType,
   llmMlxKvCacheBitsTypes,
   llmMlxKvCacheBitsTypeSchema,

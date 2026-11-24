@@ -72,10 +72,6 @@ export const gpuSettingSchema = z.object({
   disabledGpus: z.array(z.number().int()).optional(),
 });
 
-export const llmYuzuActivationPrecisionSchema = z.enum(["auto", "bf16"]);
-/** Activation precision for Splash/Yuzu models. @public */
-export type LLMYuzuActivationPrecision = z.infer<typeof llmYuzuActivationPrecisionSchema>;
-
 export const llmLlamaLazyModes = ["auto", "on", "off"] as const;
 /** On-demand reading of eligible supplemental embedding tables by llama-server. @public */
 export type LLMLlamaLazyMode = (typeof llmLlamaLazyModes)[number];
@@ -542,19 +538,9 @@ export interface LLMLoadModelConfig {
   /**
    * Maximum number of predictions the model can run at a given time. The speed of each individual
    * prediction may decrease with concurrency, but each prediction will start faster and higher
-   * total throughput can be achieved. Splash/Yuzu accepts integers from 1 through 8 and defaults
-   * to 4 when no override is supplied.
+   * total throughput can be achieved.
    */
   maxParallelPredictions?: number;
-
-  /**
-   * Advanced activation precision override for Splash/Yuzu models only. `"auto"` lets the engine
-   * choose the precision; `"bf16"` forces bfloat16 activations. Defaults to `"auto"`.
-   * Does not control weight or KV cache precision. Ignored by other engines.
-   *
-   * @public
-   */
-  yuzuActivationPrecision?: LLMYuzuActivationPrecision;
 
   /**
    * Controls whether concurrent predictions share a single KV cache, saving memory. Disabling this
@@ -849,7 +835,6 @@ export const llmLoadModelConfigSchema = z
     autoFit: z.boolean().optional(),
     gpu: gpuSettingSchema.optional(),
     maxParallelPredictions: z.number().int().min(1).optional(),
-    yuzuActivationPrecision: llmYuzuActivationPrecisionSchema.optional(),
     useUnifiedKvCache: z.boolean().optional(),
     gpuStrictVramCap: z.boolean().optional(),
     offloadKVCacheToGpu: z.boolean().optional(),
