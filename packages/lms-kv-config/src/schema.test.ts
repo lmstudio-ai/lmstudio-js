@@ -24,10 +24,14 @@ import {
   globalConfigSchematics,
   llmLlamaLoadConfigSchematics,
   llmLlamaMoeLoadConfigSchematics,
+  llmLlamaPredictionConfigSchematics,
   llmLoadSchematics,
   llmMlxLoadConfigSchematics,
+  llmMlxPredictionConfigSchematics,
   llmOmlxLoadConfigSchematics,
   llmOmlxPredictionConfigSchematics,
+  llmOnnxPredictionConfigSchematics,
+  llmOpenVinoPredictionConfigSchematics,
   llmVllmLoadConfigSchematics,
   llmVllmPredictionConfigSchematics,
   llmYuzuLoadConfigSchematics,
@@ -249,6 +253,24 @@ describe("yuzu config", () => {
       ).toEqual(llmYuzuPredictionConfigSchematics.parseToMap(config));
     },
   );
+
+  it.each([
+    ["llama.cpp", llmLlamaPredictionConfigSchematics.sliced("topKSampling")],
+    ["MLX", llmMlxPredictionConfigSchematics.sliced("topKSampling")],
+    ["oMLX", llmOmlxPredictionConfigSchematics.sliced("topKSampling")],
+    ["vLLM", llmVllmPredictionConfigSchematics.sliced("topKSampling")],
+    ["OpenVINO", llmOpenVinoPredictionConfigSchematics.sliced("topKSampling")],
+    ["ONNX", llmOnnxPredictionConfigSchematics.sliced("topKSampling")],
+  ] as const)("preserves the existing top-k cap for %s", (_engine, schematics) => {
+    const schema = schematics.getSchemaForKey("topKSampling");
+    for (const topKSampling of [-1, 0, 40, 500]) {
+      expect(schema.safeParse(topKSampling).success).toBe(true);
+    }
+    expect(schema.safeParse(501).success).toBe(false);
+    const config = llmPredictionConfigToKVConfig({ topKSampling: 501 });
+    expect(llmYuzuPredictionConfigSchematics.parse(config).get("topKSampling")).toBe(501);
+    expect(() => schematics.parse(config).get("topKSampling")).toThrow();
+  });
 
   it.each([1, 4, 5, 8])(
     "round trips concurrency %p through SDK conversion",

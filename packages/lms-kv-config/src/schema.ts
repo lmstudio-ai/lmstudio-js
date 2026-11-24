@@ -812,6 +812,13 @@ export const globalConfigSchematics = new KVConfigSchematicsBuilder(kvValueTypes
 
 export const llmPredictionConfigSchematics = globalConfigSchematics.scoped("llm.prediction");
 
+// The shared SDK transport must accept Splash's uncapped top-k, but other engines retain
+// their existing limit. Derive their slices from this bounded view instead of the transport.
+const llmNonYuzuPredictionConfigSchematics = llmPredictionConfigSchematics.withTypeParamOverride(
+  "topKSampling",
+  param => ({ ...param, max: 500 }),
+);
+
 export const llmSharedPredictionConfigSchematics = llmPredictionConfigSchematics.sliced(
   "temperature",
   "maxPredictedTokens",
@@ -827,7 +834,7 @@ export const llmSharedPredictionConfigSchematics = llmPredictionConfigSchematics
 );
 
 export const llmLlamaPredictionConfigSchematics = llmSharedPredictionConfigSchematics.union(
-  llmPredictionConfigSchematics.sliced(
+  llmNonYuzuPredictionConfigSchematics.sliced(
     "llama.*",
     "contextOverflowPolicy",
     "stopStrings",
@@ -847,7 +854,7 @@ export const llmLlamaPredictionConfigSchematics = llmSharedPredictionConfigSchem
 );
 
 export const llmMlxPredictionConfigSchematics = llmSharedPredictionConfigSchematics.union(
-  llmPredictionConfigSchematics.sliced(
+  llmNonYuzuPredictionConfigSchematics.sliced(
     "mlx.*",
     "contextOverflowPolicy",
     "stopStrings",
@@ -863,7 +870,7 @@ export const llmMlxPredictionConfigSchematics = llmSharedPredictionConfigSchemat
   ),
 );
 
-export const llmOmlxPredictionConfigSchematics = llmPredictionConfigSchematics.sliced(
+export const llmOmlxPredictionConfigSchematics = llmNonYuzuPredictionConfigSchematics.sliced(
   "temperature",
   "maxPredictedTokens",
   "stopStrings",
@@ -884,7 +891,7 @@ export const llmOmlxPredictionConfigSchematics = llmPredictionConfigSchematics.s
   "llama.frequencyPenalty",
 );
 
-export const llmVllmPredictionConfigSchematics = llmPredictionConfigSchematics.sliced(
+export const llmVllmPredictionConfigSchematics = llmNonYuzuPredictionConfigSchematics.sliced(
   "temperature",
   "maxPredictedTokens",
   "stopStrings",
@@ -907,7 +914,7 @@ export const llmVllmPredictionConfigSchematics = llmPredictionConfigSchematics.s
   "llama.logitBias",
 );
 
-export const llmOpenVinoPredictionConfigSchematics = llmPredictionConfigSchematics.sliced(
+export const llmOpenVinoPredictionConfigSchematics = llmNonYuzuPredictionConfigSchematics.sliced(
   "temperature",
   "maxPredictedTokens",
   "stopStrings",
@@ -980,7 +987,12 @@ export const llmTransformersPredictionConfigSchematics = llmSharedPredictionConf
 );
 
 export const llmOnnxPredictionConfigSchematics = llmSharedPredictionConfigSchematics.union(
-  llmPredictionConfigSchematics.sliced("onnx.*", "repeatPenalty", "topPSampling", "topKSampling"),
+  llmNonYuzuPredictionConfigSchematics.sliced(
+    "onnx.*",
+    "repeatPenalty",
+    "topPSampling",
+    "topKSampling",
+  ),
 );
 
 export const llmMistralrsPredictionConfigSchematics = llmSharedPredictionConfigSchematics;
