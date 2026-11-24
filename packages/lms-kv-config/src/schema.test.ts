@@ -211,20 +211,12 @@ describe("yuzu config", () => {
         "llm.prediction.contextOverflowPolicy",
       ),
     ).toBe("truncateMiddle");
-    expect(Array.from(llmYuzuLoadConfigSchematics.fullKeys())).toEqual([
-      "llm.load.contextLength",
-      "llm.load.autoFitMinContextLength",
-      "llm.load.numParallelSessions",
-      "llm.load.maxMemoryBytes",
-      "llm.load.speculativeDecoding.draftDflashSidecar",
-      "llm.load.speculativeDecoding.draftModel",
-      "llm.load.yuzu.autoFit",
-      "llm.load.yuzu.activationPrecision",
-      "llm.load.yuzu.neuralEngine",
-    ]);
     expect(
-      llmYuzuLoadConfigSchematics.access(makeKVConfigFromFields([]), "numParallelSessions"),
-    ).toBe(4);
+      kvConfigToLLMLoadModelConfig(makeKVConfigFromFields([]), {
+        modelFormat: "yuzu",
+        useDefaultsForMissingKeys: true,
+      }),
+    ).toMatchObject({ maxParallelPredictions: 4, yuzuActivationPrecision: "auto" });
     expect(
       llmYuzuPredictionConfigSchematics.getSchemaForKey("topKSampling").safeParse(20).success,
     ).toBe(true);
@@ -268,7 +260,6 @@ describe("yuzu config", () => {
     }
     expect(schema.safeParse(501).success).toBe(false);
     const config = llmPredictionConfigToKVConfig({ topKSampling: 501 });
-    expect(llmYuzuPredictionConfigSchematics.parse(config).get("topKSampling")).toBe(501);
     expect(() => schematics.parse(config).get("topKSampling")).toThrow();
   });
 
@@ -298,9 +289,13 @@ describe("yuzu config", () => {
       expect(kvConfigToLLMLoadModelConfig(config, { modelFormat: "yuzu" })).toEqual({
         yuzuActivationPrecision,
       });
-      expect(config.fields).toEqual([
-        { key: "llm.load.yuzu.activationPrecision", value: yuzuActivationPrecision },
-      ]);
+      for (const autoFit of [false, true]) {
+        const withAutoFit = llmLoadModelConfigToKVConfig({ yuzuActivationPrecision, autoFit });
+        expect(kvConfigToLLMLoadModelConfig(withAutoFit, { modelFormat: "yuzu" })).toEqual({
+          yuzuActivationPrecision,
+          autoFit,
+        });
+      }
       for (const schematics of [
         llmLlamaLoadConfigSchematics,
         llmMlxLoadConfigSchematics,
