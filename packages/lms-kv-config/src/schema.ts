@@ -928,7 +928,6 @@ export const llmYuzuPredictionConfigSchematics = new KVConfigSchematicsBuilder(k
         },
         1,
       )
-      .field("topKSampling", "numeric", { min: 1, max: 32, int: true }, 20)
       .field(
         "topPSampling",
         "checkboxNumeric",
@@ -947,6 +946,7 @@ export const llmYuzuPredictionConfigSchematics = new KVConfigSchematicsBuilder(k
   .scoped("llm.prediction")
   .union(
     llmPredictionConfigSchematics.sliced(
+      "topKSampling",
       "maxPredictedTokens",
       "systemPrompt",
       "tools",
@@ -991,7 +991,7 @@ export const llmYuzuLoadConfigSchematics = llmLoadSchematics
     "speculativeDecoding.draftModel",
     "yuzu.*",
   )
-  .withTypeParamOverride("numParallelSessions", param => ({ ...param, max: 4 }));
+  .withTypeParamOverride("numParallelSessions", param => ({ ...param, max: 8 }));
 
 const llamaLoadConfigSchematics = globalConfigSchematics.sliced("llama.load.*", "load.*");
 

@@ -194,7 +194,7 @@ describe("yuzu config", () => {
     );
     expect(kvConfigToLLMPredictionConfig(config)).toMatchObject({
       temperature: 1,
-      topKSampling: 20,
+      topKSampling: 40,
       topPSampling: 0.95,
       maxTokens: false,
       enableThinking: true,
@@ -217,9 +217,6 @@ describe("yuzu config", () => {
       "llm.load.yuzu.autoFit",
       "llm.load.yuzu.neuralEngine",
     ]);
-    expect(() =>
-      llmYuzuLoadConfigSchematics.buildPartialConfig({ numParallelSessions: 5 }),
-    ).toThrow();
     expect(
       llmYuzuPredictionConfigSchematics.getSchemaForKey("topKSampling").safeParse(20).success,
     ).toBe(true);
@@ -232,15 +229,31 @@ describe("yuzu config", () => {
     ).toBe(true);
   });
 
-  it.each([-1, 0, 33, 40, 20.5, NaN, Infinity])("rejects top-k %p", value => {
+  it("accepts 1–8 parallel sessions while retaining the default of 4", () => {
+    const schema = llmYuzuLoadConfigSchematics.getSchemaForKey("numParallelSessions");
+    for (const value of [1, 4, 5, 8]) {
+      expect(schema.safeParse(value).success).toBe(true);
+    }
+    for (const value of [0, 9, 4.5]) {
+      expect(schema.safeParse(value).success).toBe(false);
+    }
+    expect(
+      llmYuzuLoadConfigSchematics.access(makeKVConfigFromFields([]), "numParallelSessions"),
+    ).toBe(4);
+  });
+
+  it.each([-2, 501, 20.5, NaN, Infinity])("rejects top-k %p", value => {
     expect(() =>
       llmYuzuPredictionConfigSchematics.buildPartialConfig({ topKSampling: value }),
     ).toThrow();
   });
-  it.each([1, 20, 32])("accepts top-k %p", value => {
+  it.each([-1, 0, 1, 20, 33, 40, 500])("round trips common top-k %p", topKSampling => {
+    const config = llmYuzuPredictionConfigSchematics.buildPartialConfig({ topKSampling });
+    const converted = kvConfigToLLMPredictionConfig(config);
+    expect(converted.topKSampling).toBe(topKSampling);
     expect(
-      llmYuzuPredictionConfigSchematics.getSchemaForKey("topKSampling").safeParse(value).success,
-    ).toBe(true);
+      llmYuzuPredictionConfigSchematics.parseToMap(llmPredictionConfigToKVConfig(converted)),
+    ).toEqual(llmYuzuPredictionConfigSchematics.parseToMap(config));
   });
   it.each([-0.1, 2.01, NaN, Infinity])("rejects temperature %p", value => {
     expect(() =>
@@ -336,7 +349,7 @@ describe("yuzu config", () => {
     ).toEqual({ autoFit: true, maxParallelPredictions: 4 });
   });
 
-  it("filters unrelated preset fields but does not silently clamp a retained invalid top-k", () => {
+  it("filters unrelated preset fields while retaining common top-k", () => {
     const preset = globalConfigSchematics.buildPartialConfig({
       "llm.prediction.topKSampling": 40,
       "llm.prediction.minPSampling": { checked: true, value: 0.05 },
@@ -345,7 +358,7 @@ describe("yuzu config", () => {
     });
     const filtered = llmYuzuPredictionConfigSchematics.filterConfig(preset);
     expect(filtered.fields).toEqual([{ key: "llm.prediction.topKSampling", value: 40 }]);
-    expect(() => llmYuzuPredictionConfigSchematics.parse(filtered)).toThrow(/topKSampling/);
+    expect(llmYuzuPredictionConfigSchematics.parse(filtered).get("topKSampling")).toBe(40);
     expect(preset.fields).toHaveLength(4);
   });
 });
