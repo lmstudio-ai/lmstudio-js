@@ -105,6 +105,24 @@ export const virtualModelDefinitionConcreteModelBaseSchema: ZodSchema<VirtualMod
     sources: z.array(modelDownloadSourceSchema),
   });
 
+/**
+ * A drafter model for speculative decoding. Apps download it with the model where one of `engines`
+ * can run, and load the model with one of those engines and this drafter when it is present.
+ */
+export interface VirtualModelDefinitionDrafter extends VirtualModelDefinitionConcreteModelBase {
+  /**
+   * Engine families, as in the runtime manifest's `engine` (for example `splash`), in order of
+   * preference.
+   */
+  engines: Array<string>;
+}
+export const virtualModelDefinitionDrafterSchema: ZodSchema<VirtualModelDefinitionDrafter> =
+  z.object({
+    key: z.string(),
+    sources: z.array(modelDownloadSourceSchema),
+    engines: z.array(z.string().min(1)).min(1),
+  });
+
 export interface VirtualModelCustomFieldSetJinjaVariableEffect {
   type: "setJinjaVariable";
   variable: string;
@@ -303,6 +321,39 @@ export const virtualModelSuggestionSchema = z.object({
   fields: z.array(kvConfigFieldSchema).optional(),
 }) as ZodSchema<VirtualModelSuggestion>;
 
+export interface VirtualModelConfigConditions {
+  /**
+   * Engine families, as in the runtime manifest's `engine` (for example `splash`, `mlx-llm`, or
+   * `llama.cpp`). Holds when the model is loaded with any of them.
+   */
+  engines?: Array<string>;
+  /**
+   * Conditions added by newer versions. Kept so that apps that don't understand a condition skip the
+   * entry instead of applying it more broadly than intended.
+   */
+  [condition: string]: unknown;
+}
+export const virtualModelConfigConditionsSchema = z
+  .object({
+    engines: z.array(z.string().min(1)).min(1).optional(),
+  })
+  .passthrough() as ZodSchema<VirtualModelConfigConditions>;
+
+/**
+ * Config that applies only when every condition in `when` holds. Applied after the unconditional
+ * config of the same definition, in order.
+ */
+export interface VirtualModelConditionalConfig {
+  when: VirtualModelConfigConditions;
+  load?: KVConfig;
+  operation?: KVConfig;
+}
+export const virtualModelConditionalConfigSchema = z.object({
+  when: virtualModelConfigConditionsSchema,
+  load: kvConfigSchema.optional(),
+  operation: kvConfigSchema.optional(),
+}) as ZodSchema<VirtualModelConditionalConfig>;
+
 export interface VirtualModelDefinition {
   /**
    * The self proclaimed indexed model identifier. Should always be in the shape of user/repo.
@@ -313,10 +364,15 @@ export interface VirtualModelDefinition {
    * a virtual model), or an array of concrete model bases.
    */
   base: string | Array<VirtualModelDefinitionConcreteModelBase>;
+  /**
+   * Drafter models, in order of preference.
+   */
+  drafters?: Array<VirtualModelDefinitionDrafter>;
   tags?: Array<string>;
   config?: {
     load?: KVConfig;
     operation?: KVConfig;
+    conditional?: Array<VirtualModelConditionalConfig>;
   };
   metadataOverrides?: VirtualModelDefinitionMetadataOverrides;
   customFields?: Array<VirtualModelCustomFieldDefinition>;
@@ -325,11 +381,13 @@ export interface VirtualModelDefinition {
 export const virtualModelDefinitionSchema: ZodSchema<VirtualModelDefinition> = z.object({
   model: z.string().regex(/^[^/]+\/[^/]+$/),
   base: z.union([z.string(), z.array(virtualModelDefinitionConcreteModelBaseSchema)]),
+  drafters: z.array(virtualModelDefinitionDrafterSchema).optional(),
   tags: z.array(z.string().max(100)).optional(),
   config: z
     .object({
       load: kvConfigSchema.optional(),
       operation: kvConfigSchema.optional(),
+      conditional: z.array(virtualModelConditionalConfigSchema).optional(),
     })
     .optional(),
   metadataOverrides: virtualModelDefinitionMetadataOverridesSchema.optional(),
