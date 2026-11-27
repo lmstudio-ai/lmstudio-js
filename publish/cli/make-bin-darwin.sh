@@ -84,4 +84,7 @@ if [[ -z "${LMS_NO_SIGN}" ]]; then
     exit 1
   fi
 
+else
+  # bun's compiled binary carries an invalid signature, which macOS kills on launch. Sign it ad hoc.
+  codesign --force --sign - "${DIST_DIR}/${EXE_NAME}"
 fi
